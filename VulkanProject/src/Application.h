@@ -9,6 +9,8 @@ public:
     void Init();
     void Run();
     void Release();
+    
+    VulkanContext* GetVulkanContext() const { return m_pContext; }
 
     static Application* Create();
     static Application& Get() { return *s_pInstance; }

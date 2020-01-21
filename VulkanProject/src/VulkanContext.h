@@ -16,12 +16,12 @@ class VulkanSwapChain;
 class VulkanContext
 {
 public:
-    bool IsInstanceExtensionAvailable(const char* pExtensionName);
-    bool IsDeviceExtensionAvailable(const char* pExtensionName);
-
     VulkanSwapChain* CreateSwapChain(GLFWwindow* pWindow);
     void DestroySwapChain(VulkanSwapChain** ppSwapChain);
     void Release();
+
+    bool IsInstanceExtensionAvailable(const char* pExtensionName);
+    bool IsDeviceExtensionAvailable(const char* pExtensionName);
 
     static VulkanContext* Create(const ContextParams& props);
 private:
@@ -46,14 +46,18 @@ private:
     VkQueue m_GraphicsQueue;
     VkQueue m_ComputeQueue;
     VkQueue m_TransferQueue;
+    
     VkPhysicalDeviceFeatures m_EnabledDeviceFeatures;
     VkPhysicalDeviceProperties m_DeviceProperties;
     VkPhysicalDeviceFeatures m_DeviceFeatures;
     VkPhysicalDeviceMemoryProperties m_DeviceMemoryProperties;
+    
     std::vector<VkExtensionProperties> m_AvailableInstanceExtension;
     std::vector<VkExtensionProperties> m_AvailableDeviceExtensions;
     std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
+    
     QueueFamilyIndices m_QueueFamilyIndices;
+    
     bool m_bValidationEnabled;
     bool m_bRayTracingEnabled;
 };

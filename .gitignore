@@ -23,3 +23,5 @@
 *.pbxproj
 Dependencies/.DS_Store
 .DS_Store
+Build/bin/Debug-macosx-x86_64/VulkanProject/VulkanProject.dSYM/Contents/Resources/DWARF/VulkanProject
+Build/bin/Debug-macosx-x86_64/VulkanProject/VulkanProject

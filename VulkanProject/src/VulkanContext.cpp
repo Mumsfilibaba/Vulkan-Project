@@ -412,14 +412,18 @@ bool VulkanContext::CreateDeviceAndQueues(const ContextParams& params)
 	if (deviceExtensions.size() > 0)
 	{
 		std::cout << "Enabled device extensions:" << std::endl;
-		for (auto it = deviceExtensions.begin(); it != deviceExtensions.end(); it++)
+		for (auto it = deviceExtensions.begin(); it != deviceExtensions.end();)
 		{
-			std::cout << "   " << (*it) << std::endl;
-			if (!IsDeviceExtensionAvailable((*it)))
-			{
-				std::cout << "WARNING: Extension '" << (*it) << "' not present" << std::endl;
-				it = deviceExtensions.erase(it);
-			}
+            if (!IsDeviceExtensionAvailable((*it)))
+            {
+                std::cout << "WARNING: Extension '" << (*it) << "' not present" << std::endl;
+                it = deviceExtensions.erase(it);
+            }
+            else
+            {
+                std::cout << "   " << (*it) << std::endl;
+                it++;
+            }
 		}
 
 		deviceCreateInfo.enabledExtensionCount = (uint32_t)deviceExtensions.size();

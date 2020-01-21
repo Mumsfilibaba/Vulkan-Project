@@ -82,6 +82,26 @@ workspace "Vulkan-Project"
 			{
 				"C:/VulkanSDK/1.1.121.2/Include",
 			}
+
+		-- macOS
+		filter "system:macosx"
+			links
+			{
+				"vulkan.1",
+				"vulkan.1.1.121",
+				"Cocoa.framework",
+				"OpenGL.framework",
+				"IOKit.framework",
+				"CoreFoundation.framework"
+			}
+			libdirs
+			{
+				"/usr/local/lib",
+			}
+			sysincludedirs
+			{
+				"/usr/local/include",
+			}
 		filter {}
 		
 		-- Includes
