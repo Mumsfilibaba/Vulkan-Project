@@ -4,6 +4,10 @@
 Application* Application::s_pInstance = nullptr;
 
 Application::Application()
+    : m_pWindow(nullptr),
+    m_pContext(nullptr),
+    m_pSwapChain(nullptr),
+    m_bIsRunning(false)
 {
 }
 
@@ -30,15 +34,26 @@ void Application::Init()
         return;
     }
 
-#ifdef _DEBUG
-    bool debug = true;
-#else
-    bool debug = false;
-#endif
     //Init vulkan
-    m_pContext = new VulkanContext();
-    if (!m_pContext->Init(m_pWindow, true))
+    ContextParams params = {};
+    params.bEnableRayTracing = true;
+    params.bEnableValidation = true;
+
+    m_pContext = VulkanContext::Create(params);
+    if (!m_pContext)
     {
+        std::cout << "Failed to init Vulkan" << std::endl;
+        return;
+    }
+
+    m_pSwapChain = m_pContext->CreateSwapChain(m_pWindow);
+    if (m_pSwapChain)
+    {
+        std::cout << "Created swapchain" << std::endl;
+    }
+    else
+    {
+        std::cout << "Failed to create swapchain" << std::endl;
         return;
     }
     
@@ -49,12 +64,21 @@ void Application::Init()
 
 void Application::CreateWindow()
 {
+    //Setup error
+    glfwSetErrorCallback([](int32, const char* pErrorMessage)
+    {
+        std::cerr << pErrorMessage << std::endl;
+    });
+
+    //Setup window
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
+    //Create window
     m_pWindow = glfwCreateWindow(1440, 900, "Vulkan Project", nullptr, nullptr);
     if (m_pWindow)
     {
+        //Setup callbacks
         glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow* window)
 		{
             Application::Get().OnWindowClose();
@@ -74,7 +98,11 @@ void Application::OnWindowClose()
 
 void Application::Release()
 {
+    m_pContext->DestroySwapChain(&m_pSwapChain);
+    m_pContext->Release();
+
     glfwDestroyWindow(m_pWindow);
     glfwTerminate();
+
     delete this;
 }

@@ -92,7 +92,7 @@ workspace "Vulkan-Project"
 		sysincludedirs
 		{
 			"Dependencies/stb",
-			"Dependencies/GLFW"
+			"Dependencies/GLFW/include",
 			"Dependencies/glm",
 		}
 		

@@ -6,3 +6,14 @@
 *.vcxproj
 *.sln
 .vs/Vulkan-Project/v16/.suo
+*.db-wal
+*.pdb
+*.obj
+*.exe
+*.tlog
+*.log
+*.idb
+*.db-shm
+*.enc
+*.ilk
+*.user

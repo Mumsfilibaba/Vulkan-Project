@@ -23,6 +23,7 @@ private:
 private:
     GLFWwindow* m_pWindow;
     VulkanContext* m_pContext;
+    VulkanSwapChain* m_pSwapChain;
     bool m_bIsRunning;
 
     static Application* s_pInstance;
