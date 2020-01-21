@@ -1,0 +1,7 @@
+
+*.db
+*.opendb
+*.ipch
+*.json
+*.vcxproj
+*.sln

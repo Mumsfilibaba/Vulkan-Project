@@ -7,9 +7,10 @@
 class VulkanContext
 {
 public:
+    DECL_NO_COPY(VulkanContext);
+    
     VulkanContext();
     ~VulkanContext() = default;
-    DECL_NO_COPY(VulkanContext);
 
     bool Init(GLFWwindow* pWindow, bool enableValidation);
 private:

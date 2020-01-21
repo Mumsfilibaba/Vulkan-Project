@@ -13,9 +13,10 @@ public:
     static Application* Create();
     static Application& Get() { return *s_pInstance; }
 private:
+    DECL_NO_COPY(Application);
+    
     Application();
     ~Application();
-    DECL_NO_COPY(Application);
 
     void CreateWindow();
     void OnWindowClose();
