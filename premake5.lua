@@ -39,12 +39,18 @@ workspace "Vulkan-Project"
 		}
 	filter {}
 	
+	-- Dependencies
+	group "Dependencies"
+		include "Dependencies/GLFW"
+	group ""
+	
 	-- Project
 	project "VulkanProject"
 		language "C++"
 		cppdialect "C++17"
 		systemversion "latest"
 		location "VulkanProject"
+		staticruntime "on"
 		kind "ConsoleApp"
 
 		-- Targets
@@ -86,6 +92,13 @@ workspace "Vulkan-Project"
 		sysincludedirs
 		{
 			"Dependencies/stb",
+			"Dependencies/GLFW"
 			"Dependencies/glm",
+		}
+		
+		-- Links
+		links 
+		{ 
+			"GLFW",
 		}
 	project "*"

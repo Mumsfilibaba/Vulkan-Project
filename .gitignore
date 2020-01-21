@@ -5,3 +5,4 @@
 *.json
 *.vcxproj
 *.sln
+.vs/Vulkan-Project/v16/.suo

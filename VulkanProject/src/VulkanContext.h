@@ -14,8 +14,8 @@ public:
 
     bool Init(GLFWwindow* pWindow, bool enableValidation);
 private:
-    void CreateInstance();
-    void CreateDevice();
+    bool CreateInstance();
+    bool CreateDevice();
 private:
     VkInstance m_Instance;
 };

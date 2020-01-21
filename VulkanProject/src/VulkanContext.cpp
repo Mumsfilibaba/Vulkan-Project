@@ -14,13 +14,17 @@ VulkanContext::~VulkanContext()
 
 bool VulkanContext::Init(GLFWwindow* pWindow, bool enableValidation)
 {
-    VkApplicationInfo appInfo = {};
+}
+
+bool VulkanContext::CreateInstance()
+{
+	VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = "Vulkan Project";
 	appInfo.pEngineName = "";
 	appInfo.apiVersion = VK_API_VERSION_1_1;
 
-    std::vector<const char*> instanceExtensions = { VK_KHR_SURFACE_EXTENSION_NAME };
+	std::vector<const char*> instanceExtensions = { VK_KHR_SURFACE_EXTENSION_NAME };
 	// Enable surface extensions depending on os
 #if defined(_WIN32)
 	instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
@@ -28,10 +32,10 @@ bool VulkanContext::Init(GLFWwindow* pWindow, bool enableValidation)
 	instanceExtensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 #endif
 
-	if (enabledInstanceExtensions.size() > 0) 
-    {
-		for (auto enabledExtension : enabledInstanceExtensions) 
-        {
+	if (enabledInstanceExtensions.size() > 0)
+	{
+		for (auto enabledExtension : enabledInstanceExtensions)
+		{
 			instanceExtensions.push_back(enabledExtension);
 		}
 	}
@@ -63,25 +67,30 @@ bool VulkanContext::Init(GLFWwindow* pWindow, bool enableValidation)
 		bool validationLayerPresent = false;
 
 
-		for (VkLayerProperties layer : instanceLayerProperties) 
-        {
-			if (strcmp(layer.layerName, validationLayerName) == 0) 
-            {
+		for (VkLayerProperties layer : instanceLayerProperties)
+		{
+			if (strcmp(layer.layerName, validationLayerName) == 0)
+			{
 				validationLayerPresent = true;
 				break;
 			}
 		}
 
-		if (validationLayerPresent) 
-        {
+		if (validationLayerPresent)
+		{
 			instanceCreateInfo.ppEnabledLayerNames = &validationLayerName;
 			instanceCreateInfo.enabledLayerCount = 1;
-		} else 
-        {
+		}
+		else
+		{
 			std::cerr << "Validation layer VK_LAYER_KHRONOS_validation not present, validation is disabled";
 		}
 	}
 
-    VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_Instance);
+	VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_Instance);
 	return result == VK_SUCCESS;
+}
+
+bool VulkanContext::CreateDevice()
+{
 }
