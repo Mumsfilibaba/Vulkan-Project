@@ -17,3 +17,9 @@
 *.enc
 *.ilk
 *.user
+*.xcworkspacedata
+*.plist
+*.xcuserstate
+*.pbxproj
+Dependencies/.DS_Store
+.DS_Store
