@@ -1,43 +1,61 @@
 #pragma once
 #include "Core.h"
 
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 #include <vector>
 
-struct ContextParams
+struct DeviceParams
 {
+    GLFWwindow* pWindow;
     bool bEnableRayTracing;
     bool bEnableValidation;
 };
 
-class VulkanSwapChain;
+struct QueueFamilyIndices
+{
+    uint32 Graphics     = UINT32_MAX;
+    uint32 Presentation = UINT32_MAX;
+    uint32 Compute      = UINT32_MAX;
+    uint32 Transfer     = UINT32_MAX;
+
+    bool IsValid() const
+    {
+        return Compute != UINT32_MAX && Presentation != UINT32_MAX && Graphics != UINT32_MAX && Transfer != UINT32_MAX;
+    }
+};
 
 class VulkanContext
 {
 public:
-    VulkanSwapChain* CreateSwapChain(GLFWwindow* pWindow);
-    void DestroySwapChain(VulkanSwapChain** ppSwapChain);
-    void Release();
-
+    DECL_NO_COPY(VulkanContext);
+    
     bool IsInstanceExtensionAvailable(const char* pExtensionName);
     bool IsDeviceExtensionAvailable(const char* pExtensionName);
 
-    static VulkanContext* Create(const ContextParams& props);
+    void Present();
+    void Destroy();
+
+    static VulkanContext* Create(const DeviceParams& props);
 private:
-    DECL_NO_COPY(VulkanContext);
-    
     VulkanContext();
     ~VulkanContext();
 
-    bool Init(const ContextParams& props);
-    bool CreateInstance(const ContextParams& props);
+    bool Init(const DeviceParams& props);
+    bool CreateInstance(const DeviceParams& props);
     bool CreateDebugMessenger();
+    bool CreateSurface(GLFWwindow* pWindow);
+    bool CreateDeviceAndQueues(const DeviceParams& props);
+    bool CreateSwapChain(uint32 width, uint32 height);
     bool QueryPhysicalDevice();
-    bool CreateDeviceAndQueues(const ContextParams& props);
+   
     void DestroyDebugMessenger();
+
     void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-    uint32 GetQueueFamilyIndex(VkQueueFlagBits queueFlags);
+
+    QueueFamilyIndices GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
+    std::vector<const char*> GetRequiredDeviceExtensions();
 private:
     VkInstance m_Instance;
     VkDebugUtilsMessengerEXT m_DebugMessenger;
@@ -46,7 +64,13 @@ private:
     VkQueue m_GraphicsQueue;
     VkQueue m_ComputeQueue;
     VkQueue m_TransferQueue;
-    
+    VkQueue m_PresentationQueue;
+    VkSurfaceKHR m_Surface;
+    VkSwapchainKHR m_SwapChain;
+    VkSurfaceFormatKHR m_Format;
+    VkExtent2D m_Extent;
+    VkPresentModeKHR m_PresentMode;
+
     VkPhysicalDeviceFeatures m_EnabledDeviceFeatures;
     VkPhysicalDeviceProperties m_DeviceProperties;
     VkPhysicalDeviceFeatures m_DeviceFeatures;

@@ -6,7 +6,6 @@ Application* Application::s_pInstance = nullptr;
 Application::Application()
     : m_pWindow(nullptr),
     m_pContext(nullptr),
-    m_pSwapChain(nullptr),
     m_bIsRunning(false)
 {
 }
@@ -35,7 +34,8 @@ void Application::Init()
     }
 
     //Init vulkan
-    ContextParams params = {};
+    DeviceParams params = {};
+    params.pWindow = m_pWindow;
     params.bEnableRayTracing = true;
     params.bEnableValidation = true;
 
@@ -43,17 +43,6 @@ void Application::Init()
     if (!m_pContext)
     {
         std::cout << "Failed to init Vulkan" << std::endl;
-        return;
-    }
-
-    m_pSwapChain = m_pContext->CreateSwapChain(m_pWindow);
-    if (m_pSwapChain)
-    {
-        std::cout << "Created swapchain" << std::endl;
-    }
-    else
-    {
-        std::cout << "Failed to create swapchain" << std::endl;
         return;
     }
     
@@ -98,8 +87,7 @@ void Application::OnWindowClose()
 
 void Application::Release()
 {
-    m_pContext->DestroySwapChain(&m_pSwapChain);
-    m_pContext->Release();
+    m_pContext->Destroy();
 
     glfwDestroyWindow(m_pWindow);
     glfwTerminate();

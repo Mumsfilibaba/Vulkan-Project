@@ -5,6 +5,8 @@
 class Application
 {
 public:
+    DECL_NO_COPY(Application);
+
     bool IsRunning() { return m_bIsRunning; } 
     void Init();
     void Run();
@@ -15,8 +17,6 @@ public:
     static Application* Create();
     static Application& Get() { return *s_pInstance; }
 private:
-    DECL_NO_COPY(Application);
-    
     Application();
     ~Application();
 
@@ -25,7 +25,6 @@ private:
 private:
     GLFWwindow* m_pWindow;
     VulkanContext* m_pContext;
-    VulkanSwapChain* m_pSwapChain;
     bool m_bIsRunning;
 
     static Application* s_pInstance;
