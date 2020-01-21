@@ -345,8 +345,13 @@ bool VulkanContext::QueryPhysicalDevice()
 		vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &deviceExtensionCount, nullptr);
 		std::vector<VkExtensionProperties> availableDeviceExtension(deviceExtensionCount);
 		vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &deviceExtensionCount, availableDeviceExtension.data());
-		m_AvailableDeviceExtensions.swap(availableDeviceExtension);
-
+        
+#ifdef DEBUG
+        std::cout << "      Available extensions:" << std::endl;
+        for (const auto& extension : availableDeviceExtension)
+            std::cout << "         " << extension.extensionName << std::endl;
+#endif
+        
 		bool extensionsFound = false;
 		for (const auto& extensionName : deviceExtensions)
 		{
@@ -359,14 +364,23 @@ bool VulkanContext::QueryPhysicalDevice()
 					break;
 				}
 			}
+            
+            if (!extensionsFound)
+            {
+                std::cout << extensionName << " is not supported" << std::endl;
+            }
 		}
 
-		if (extensionsFound)
-		{
+        if (extensionsFound)
+        {
 			//If we came this far we have found a suitable adapter
 			m_PhysicalDevice = physicalDevice;
 			break;
 		}
+        else
+        {
+            std::cout << "Some extensions were not supported on '" <<physicalDeviceProperties.deviceName << "'" << std::endl;
+        }
 	}
 
 	vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_DeviceProperties);
