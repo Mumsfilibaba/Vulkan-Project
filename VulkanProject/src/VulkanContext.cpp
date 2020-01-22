@@ -16,6 +16,10 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSev
 	return VK_FALSE;
 }
 
+PFN_vkSetDebugUtilsObjectNameEXT    VulkanContext::vkSetDebugUtilsObjectNameEXT     = nullptr;
+PFN_vkCreateDebugUtilsMessengerEXT  VulkanContext::vkCreateDebugUtilsMessengerEXT   = nullptr;
+PFN_vkDestroyDebugUtilsMessengerEXT VulkanContext::vkDestroyDebugUtilsMessengerEXT  = nullptr;
+
 VulkanContext* VulkanContext::Create(const DeviceParams& params)
 {
 	VulkanContext* pContext = new VulkanContext();
@@ -47,6 +51,7 @@ VulkanContext::VulkanContext()
 	m_AvailableInstanceExtension(),
 	m_AvailableDeviceExtensions(),
 	m_QueueFamilyIndices(),
+    m_FrameData(),
 	m_bValidationEnabled(false),
 	m_bRayTracingEnabled(false)
 {
@@ -54,11 +59,22 @@ VulkanContext::VulkanContext()
 
 VulkanContext::~VulkanContext()
 {
-	if (m_SwapChain != VK_NULL_HANDLE)
-	{
-		vkDestroySwapchainKHR(m_Device, m_SwapChain, nullptr);
-		m_SwapChain = VK_NULL_HANDLE;
-	}
+    for (FrameData& frame : m_FrameData)
+    {
+        if (frame.ImageSemaphore != VK_NULL_HANDLE)
+        {
+            vkDestroySemaphore(m_Device, frame.ImageSemaphore, nullptr);
+            frame.ImageSemaphore = VK_NULL_HANDLE;
+        }
+        
+        if (frame.RenderSemaphore != VK_NULL_HANDLE)
+        {
+            vkDestroySemaphore(m_Device, frame.RenderSemaphore, nullptr);
+            frame.RenderSemaphore = VK_NULL_HANDLE;
+        }
+    }
+    
+    ReleaseSwapChainResources();
 
 	if (m_Device)
 	{
@@ -72,14 +88,36 @@ VulkanContext::~VulkanContext()
 		m_Surface = VK_NULL_HANDLE;
 	}
 
-	if (m_bValidationEnabled)
-		DestroyDebugMessenger();
+    if (m_bValidationEnabled)
+    {
+        if (vkDestroyDebugUtilsMessengerEXT)
+        {
+            vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, nullptr);
+            m_DebugMessenger = nullptr;
+        }
+    }
 	
 	if (m_Instance)
 	{
 		vkDestroyInstance(m_Instance, nullptr);
 		m_Instance = VK_NULL_HANDLE;
 	}
+}
+
+void VulkanContext::SetDebugName(const std::string& name, uint64 vulkanHandle, VkObjectType type)
+{
+    if (vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT info = {};
+        info.sType          = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        info.pNext          = nullptr;
+        info.objectType     = type;
+        info.pObjectName    = name.c_str();
+        info.objectHandle   = vulkanHandle;
+
+        if (vkSetDebugUtilsObjectNameEXT(m_Device, &info) != VK_SUCCESS)
+            std::cout << "Failed to set name " << info.pObjectName << std::endl;
+    }
 }
 
 bool VulkanContext::Init(const DeviceParams& params)
@@ -113,13 +151,18 @@ bool VulkanContext::Init(const DeviceParams& params)
 	else
 		return false;
 
-	int32 width	 = 0;
-	int32 height = 0;
-	glfwGetWindowSize(params.pWindow, &width, &height);
-	if (CreateSwapChain(uint32(width), uint32(height)))
-		std::cout << "Created swapchain" << std::endl;
-	else
-		return false;
+    int32 width     = 0;
+    int32 height = 0;
+    glfwGetWindowSize(params.pWindow, &width, &height);
+    if (CreateSwapChain(uint32(width), uint32(height)))
+        std::cout << "Created swapchain" << std::endl;
+    else
+        return false;
+
+    if (CreateFencesAndSemaphores())
+        std::cout << "Created Fences and Semaphores" << std::endl;
+    else
+        return false;
 
 	return true;
 }
@@ -146,16 +189,70 @@ bool VulkanContext::IsDeviceExtensionAvailable(const char* pExtensionName)
 	return false;
 }
 
-bool VulkanContext::CreateInstance(const DeviceParams& params)
+void VulkanContext::Present()
+{
+    VkSemaphore waitSemaphores[] = {  };
+    
+    VkPresentInfoKHR info = {};
+    info.sType                  = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    info.pNext                  = nullptr;
+    info.waitSemaphoreCount     = 1;
+    info.pWaitSemaphores        = waitSemaphores;
+    info.swapchainCount         = 1;
+    info.pSwapchains            = &m_SwapChain;
+    info.pImageIndices          = &m_CurrentBufferIndex;
+    info.pResults               = nullptr;
+    
+    VkResult result = vkQueuePresentKHR(m_PresentationQueue, &info);
+    if (result == VK_SUCCESS)
+    {
+        //Aquire next image
+        m_SemaphoreIndex = (m_SemaphoreIndex + 1) % m_FrameCount;
+        result = AquireNextImage();
+    }
+    
+
+    //if presentation and aquire image failed
+    if (result != VK_SUCCESS)
+    {
+        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            RecreateSwapChain();
+            std::cout << "Suboptimal SwapChain result='%s'" << std::endl;
+        }
+        else
+        {
+            std::cout << "Present Failed. Error: %s\n" << std::endl;
+        }
+    }
+}
+
+VkResult VulkanContext::AquireNextImage()
+{
+    VkSemaphore signalSemaphore = m_FrameData[m_SemaphoreIndex].ImageSemaphore;
+    return vkAcquireNextImageKHR(m_Device, m_SwapChain, UINT64_MAX, signalSemaphore, VK_NULL_HANDLE, &m_CurrentBufferIndex);
+}
+
+void VulkanContext::RecreateSwapChain()
+{
+    vkDeviceWaitIdle(m_Device);
+    
+    ReleaseSwapChainResources();
+    CreateSwapChain(0, 0);
+
+    m_SemaphoreIndex = 0;
+}
+
+bool VulkanContext::CreateInstance(const DeviceParams&)
 {
 	VkApplicationInfo appInfo = {};
-	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = "Vulkan Project";
-	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.pEngineName = "";
-	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_1;
-
+	appInfo.sType               = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pNext               = nullptr;
+	appInfo.pApplicationName    = "Vulkan Project";
+	appInfo.applicationVersion  = VK_MAKE_VERSION(1, 0, 0);
+	appInfo.pEngineName         = "";
+	appInfo.engineVersion       = VK_MAKE_VERSION(1, 0, 0);
+	appInfo.apiVersion          = VK_API_VERSION_1_1;
 
 	//Enable GLFW extensions
 	std::vector<const char*> instanceExtensions;
@@ -252,38 +349,39 @@ bool VulkanContext::CreateInstance(const DeviceParams& params)
 		return false;
 	}
 
+    //Get instance functions
+    vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT");
+    if (!vkSetDebugUtilsObjectNameEXT)
+        std::cout << "Failed to retrive 'vkSetDebugUtilsObjectNameEXT'" << std::endl;
+    vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT");
+    if (!vkCreateDebugUtilsMessengerEXT)
+        std::cout << "Failed to retrive 'vkCreateDebugUtilsMessengerEXT'" << std::endl;
+    vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (!vkDestroyDebugUtilsMessengerEXT)
+        std::cout << "Failed to retrive 'vkDestroyDebugUtilsMessengerEXT'" << std::endl;
+    
 	return true;
 }
 
 bool VulkanContext::CreateDebugMessenger()
 {
-	VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
-	PopulateDebugMessengerCreateInfo(createInfo);
+    if (vkCreateDebugUtilsMessengerEXT)
+    {
+        VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
+        PopulateDebugMessengerCreateInfo(createInfo);
 
-	PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT");
-	if (func != nullptr) 
-	{
-		VkResult result = func(m_Instance, &createInfo, nullptr, &m_DebugMessenger);
+        VkResult result = vkCreateDebugUtilsMessengerEXT(m_Instance, &createInfo, nullptr, &m_DebugMessenger);
 		if (result != VK_SUCCESS)
-		{
-			std::cout << "vkCreateDebugUtilsMessengerEXT failed" << std::endl;
-		}
+        {
+            std::cout << "vkCreateDebugUtilsMessengerEXT failed" << std::endl;
+        }
 		else
-		{
-			return true;
-		}
+        {
+            return true;
+        }
 	}
 	
 	return false;
-}
-
-void VulkanContext::DestroyDebugMessenger()
-{
-	PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkDestroyDebugUtilsMessengerEXT");
-	if (func != nullptr) 
-	{
-		func(m_Instance, m_DebugMessenger, nullptr);
-	}
 }
 
 void VulkanContext::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
@@ -395,6 +493,7 @@ bool VulkanContext::QueryPhysicalDevice()
 
 	m_QueueFamilyProperties.resize(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, m_QueueFamilyProperties.data());
+    
 	return true;
 }
 
@@ -490,9 +589,9 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
 		queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		queueInfo.pNext = nullptr;
 		queueInfo.flags = 0;
-		queueInfo.pQueuePriorities = &defaultQueuePriority;
-		queueInfo.queueFamilyIndex = queueFamiliy;
-		queueInfo.queueCount = 1;
+		queueInfo.pQueuePriorities  = &defaultQueuePriority;
+		queueInfo.queueFamilyIndex  = queueFamiliy;
+		queueInfo.queueCount        = 1;
 
 		queueCreateInfos.push_back(queueInfo);
 	}
@@ -513,16 +612,19 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
 	//Enable device extensions
 	std::vector<const char*> deviceExtensions = GetRequiredDeviceExtensions();
 	if (params.bEnableRayTracing)
-		deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+    {
+        deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+        m_bRayTracingEnabled = true;
+    }
 
 	//TODO: Enable wanted features here
 
 	//Create the logical device
 	VkDeviceCreateInfo deviceCreateInfo = {};
-	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-	deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-	deviceCreateInfo.pEnabledFeatures = &m_EnabledDeviceFeatures;
+	deviceCreateInfo.sType                  = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	deviceCreateInfo.queueCreateInfoCount   = static_cast<uint32_t>(queueCreateInfos.size());
+	deviceCreateInfo.pQueueCreateInfos      = queueCreateInfos.data();
+	deviceCreateInfo.pEnabledFeatures       = &m_EnabledDeviceFeatures;
 	
 	//Verify extensions
 	if (deviceExtensions.size() > 0)
@@ -562,6 +664,39 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
 	{
 		return false;
 	}
+}
+
+bool VulkanContext::CreateFencesAndSemaphores()
+{
+    //Setup semaphore structure
+    VkSemaphoreCreateInfo semaphoreInfo = {};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphoreInfo.pNext = nullptr;
+    semaphoreInfo.flags = 0;
+
+    //Create semaphores
+    for (uint32 i = 0; i < m_FrameCount; i++)
+    {
+        VkSemaphore imageSemaphore  = VK_NULL_HANDLE;
+        VkSemaphore renderSemaphore = VK_NULL_HANDLE;
+        
+        if (vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &imageSemaphore) != VK_SUCCESS ||
+            vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &renderSemaphore) != VK_SUCCESS)
+        {
+            std::cout << "Failed to create Semaphore" << std::endl;
+            return false;
+        }
+        else
+        {
+            SetDebugName("ImageSemaphore[" +  std::to_string(i) + "]", (uint64)imageSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
+            SetDebugName("RenderSemaphore[" +  std::to_string(i) + "]", (uint64)renderSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
+        }
+        
+        m_FrameData[i].ImageSemaphore   = imageSemaphore;
+        m_FrameData[i].RenderSemaphore  = renderSemaphore;
+    }
+    
+    return true;
 }
 
 bool VulkanContext::CreateSurface(GLFWwindow* pWindow)
@@ -642,20 +777,21 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 	}
 
 	VkSwapchainCreateInfoKHR createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	createInfo.surface = m_Surface;
-	createInfo.minImageCount = imageCount;
-	createInfo.imageFormat = m_Format.format;
-	createInfo.imageColorSpace = m_Format.colorSpace;
-	createInfo.imageExtent = m_Extent;
+	createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    createInfo.pNext            = nullptr;
+	createInfo.surface          = m_Surface;
+	createInfo.minImageCount    = imageCount;
+	createInfo.imageFormat      = m_Format.format;
+	createInfo.imageColorSpace  = m_Format.colorSpace;
+	createInfo.imageExtent      = m_Extent;
 	createInfo.imageArrayLayers = 1;
-	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	createInfo.preTransform = capabilities.currentTransform;
-	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	createInfo.presentMode = m_PresentMode;
-	createInfo.clipped = VK_TRUE;
-	createInfo.oldSwapchain = VK_NULL_HANDLE;
+	createInfo.preTransform     = capabilities.currentTransform;
+	createInfo.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	createInfo.presentMode      = m_PresentMode;
+	createInfo.clipped          = VK_TRUE;
+	createInfo.oldSwapchain     = VK_NULL_HANDLE;
 
 	VkResult result = vkCreateSwapchainKHR(m_Device, &createInfo, nullptr, &m_SwapChain);
 	if (result != VK_SUCCESS)
@@ -663,6 +799,31 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 		std::cout << "vkCreateSwapchainKHR failed" << std::endl;
 		return false;
 	}
+    
+    //Get the images
+    m_FrameCount = 0;
+    vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &m_FrameCount, nullptr);
+    m_FrameData.resize(m_FrameCount);
+    
+    std::vector<VkImage> textures(m_FrameCount);
+    vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &m_FrameCount, textures.data());
+    
+    for (uint32 i = 0; i < m_FrameCount; i++)
+        m_FrameData[i].BackBuffer = textures[i];
 
 	return true;
+}
+
+void VulkanContext::ReleaseSwapChainResources()
+{
+    //Release backbuffers
+    for (FrameData& frame : m_FrameData)
+        frame.BackBuffer = VK_NULL_HANDLE;
+
+    //Destroy swapchain
+    if (m_SwapChain != VK_NULL_HANDLE)
+    {
+        vkDestroySwapchainKHR(m_Device, m_SwapChain, nullptr);
+        m_SwapChain = VK_NULL_HANDLE;
+    }
 }

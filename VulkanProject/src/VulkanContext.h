@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <string>
 
 struct DeviceParams
 {
@@ -28,12 +29,22 @@ struct QueueFamilyIndices
 
 class VulkanContext
 {
+private:
+    struct FrameData
+    {
+        VkImage BackBuffer = VK_NULL_HANDLE;
+        VkFence RenderFence = VK_NULL_HANDLE;
+        VkSemaphore ImageSemaphore = VK_NULL_HANDLE;
+        VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
+    };
 public:
     DECL_NO_COPY(VulkanContext);
     
     bool IsInstanceExtensionAvailable(const char* pExtensionName);
     bool IsDeviceExtensionAvailable(const char* pExtensionName);
 
+    void SetDebugName(const std::string& name, uint64 vulkanHandle, VkObjectType type);
+    
     void Present();
     void Destroy();
 
@@ -47,10 +58,13 @@ private:
     bool CreateDebugMessenger();
     bool CreateSurface(GLFWwindow* pWindow);
     bool CreateDeviceAndQueues(const DeviceParams& props);
+    bool CreateFencesAndSemaphores();
     bool CreateSwapChain(uint32 width, uint32 height);
     bool QueryPhysicalDevice();
    
-    void DestroyDebugMessenger();
+    void ReleaseSwapChainResources();
+    void RecreateSwapChain();
+    VkResult AquireNextImage();
 
     void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
@@ -71,6 +85,12 @@ private:
     VkExtent2D m_Extent;
     VkPresentModeKHR m_PresentMode;
 
+    VkImage m_DepthStencilBuffer;
+    std::vector<FrameData> m_FrameData;
+    uint32 m_FrameCount;
+    mutable uint32 m_SemaphoreIndex;
+    mutable uint32 m_CurrentBufferIndex;
+    
     VkPhysicalDeviceFeatures m_EnabledDeviceFeatures;
     VkPhysicalDeviceProperties m_DeviceProperties;
     VkPhysicalDeviceFeatures m_DeviceFeatures;
@@ -84,4 +104,8 @@ private:
     
     bool m_bValidationEnabled;
     bool m_bRayTracingEnabled;
+    
+    static PFN_vkSetDebugUtilsObjectNameEXT    vkSetDebugUtilsObjectNameEXT;
+    static PFN_vkCreateDebugUtilsMessengerEXT  vkCreateDebugUtilsMessengerEXT;
+    static PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT;
 };
