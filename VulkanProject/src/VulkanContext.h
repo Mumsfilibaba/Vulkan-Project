@@ -27,26 +27,54 @@ struct QueueFamilyIndices
     }
 };
 
+struct CommandBufferParams;
+struct RenderPassParams;
+struct FramebufferParams;
+struct GraphicsPipelineStateParams;
+
+class VulkanRenderPass;
+class VulkanFramebuffer;
+class VulkanShaderModule;
+class VulkanCommandBuffer;
+class VulkanGraphicsPipelineState;
+
 class VulkanContext
 {
 private:
     struct FrameData
     {
-        VkImage BackBuffer = VK_NULL_HANDLE;
-        VkFence RenderFence = VK_NULL_HANDLE;
-        VkSemaphore ImageSemaphore = VK_NULL_HANDLE;
+        VkImage BackBuffer          = VK_NULL_HANDLE;
+        VkImageView BackBufferView  = VK_NULL_HANDLE;
+        VkFence RenderFence         = VK_NULL_HANDLE;
+        VkSemaphore ImageSemaphore  = VK_NULL_HANDLE;
         VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
     };
 public:
     DECL_NO_COPY(VulkanContext);
     
+    VulkanRenderPass*            CreateRenderPass(const RenderPassParams& params);
+    VulkanFramebuffer*           CreateFrameBuffer(const FramebufferParams& params);
+    VulkanShaderModule*          CreateShaderModule(const char* pEntryPoint, const char* pSource, uint32 length);
+    VulkanCommandBuffer*         CreateCommandBuffer(const CommandBufferParams& params);
+    VulkanGraphicsPipelineState* CreateGraphicsPipelineState(const GraphicsPipelineStateParams& params);
+
+    void ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages);
+
+    void Present();
+    void Destroy();
+
     bool IsInstanceExtensionAvailable(const char* pExtensionName);
     bool IsDeviceExtensionAvailable(const char* pExtensionName);
 
     void SetDebugName(const std::string& name, uint64 vulkanHandle, VkObjectType type);
     
-    void Present();
-    void Destroy();
+    uint32 GetCurrentBackbufferIndex() const { return m_CurrentBufferIndex; }
+    VkImage GetBackBufferImage(uint32 index) const;
+    VkImageView GetBackBufferImageView(uint32 index) const;
+    uint32 GetFramebufferWidth() const { return m_Extent.width; }
+    uint32 GetFramebufferHeight() const { return m_Extent.height; }
+    uint32 GetImageCount() const { return m_FrameCount; }
+    VkFormat GetSwapChainFormat() const { return m_SwapChainFormat.format; }
 
     static VulkanContext* Create(const DeviceParams& props);
 private:
@@ -81,7 +109,7 @@ private:
     VkQueue m_PresentationQueue;
     VkSurfaceKHR m_Surface;
     VkSwapchainKHR m_SwapChain;
-    VkSurfaceFormatKHR m_Format;
+    VkSurfaceFormatKHR m_SwapChainFormat;
     VkExtent2D m_Extent;
     VkPresentModeKHR m_PresentMode;
 

@@ -1,4 +1,9 @@
 #include "VulkanContext.h"
+#include "VulkanRenderPass.h"
+#include "VulkanFramebuffer.h"
+#include "VulkanShaderModule.h"
+#include "VulkanPipelineState.h"
+#include "VulkanCommandBuffer.h"
 
 #include <iostream>
 #include <vector>
@@ -41,7 +46,7 @@ VulkanContext::VulkanContext()
 	m_TransferQueue(VK_NULL_HANDLE),
 	m_Surface(VK_NULL_HANDLE),
 	m_SwapChain(VK_NULL_HANDLE),
-	m_Format(),
+	m_SwapChainFormat(),
 	m_Extent(),
 	m_PresentMode(),
 	m_EnabledDeviceFeatures(),
@@ -104,6 +109,66 @@ VulkanContext::~VulkanContext()
 	}
 }
 
+VulkanRenderPass* VulkanContext::CreateRenderPass(const RenderPassParams& params)
+{
+	return new VulkanRenderPass(m_Device, params);
+}
+
+VulkanFramebuffer* VulkanContext::CreateFrameBuffer(const FramebufferParams& params)
+{
+	return new VulkanFramebuffer(m_Device, params);
+}
+
+VulkanShaderModule* VulkanContext::CreateShaderModule(const char* pEntryPoint, const char* pSource, uint32 length)
+{
+	return new VulkanShaderModule(m_Device, pEntryPoint, pSource, length);
+}
+
+VulkanCommandBuffer* VulkanContext::CreateCommandBuffer(const CommandBufferParams& params)
+{
+	uint32 queueFamilyIndex = 0;
+	if (params.QueueType == ECommandQueueType::COMMAND_QUEUE_TYPE_GRAPHICS)
+		queueFamilyIndex = m_QueueFamilyIndices.Graphics;
+	else if (params.QueueType == ECommandQueueType::COMMAND_QUEUE_TYPE_COMPUTE)
+		queueFamilyIndex = m_QueueFamilyIndices.Compute;
+	else if (params.QueueType == ECommandQueueType::COMMAND_QUEUE_TYPE_TRANSFER)
+		queueFamilyIndex = m_QueueFamilyIndices.Transfer;
+
+	return new VulkanCommandBuffer(m_Device, queueFamilyIndex, params);
+}
+
+VulkanGraphicsPipelineState* VulkanContext::CreateGraphicsPipelineState(const GraphicsPipelineStateParams& params)
+{
+	return new VulkanGraphicsPipelineState(m_Device, params);
+}
+
+void VulkanContext::ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages)
+{
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.pNext = nullptr;
+
+	VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].ImageSemaphore };
+	
+	submitInfo.waitSemaphoreCount	= 1;
+	submitInfo.pWaitSemaphores		= waitSemaphores;
+	submitInfo.pWaitDstStageMask	= pWaitStages;
+	submitInfo.commandBufferCount	= 1;
+
+	VkCommandBuffer commandBuffers[] = { pCommandBuffer->GetCommandBuffer() };
+	submitInfo.pCommandBuffers = commandBuffers;
+
+	VkSemaphore signalSemaphores[]	= { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores	= signalSemaphores;
+
+	VkResult result = vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	if (result != VK_SUCCESS)
+	{
+		std::cout << "vkQueueSubmit failed" << std::endl;
+	}
+}
+
 void VulkanContext::SetDebugName(const std::string& name, uint64 vulkanHandle, VkObjectType type)
 {
     if (vkSetDebugUtilsObjectNameEXT)
@@ -118,6 +183,18 @@ void VulkanContext::SetDebugName(const std::string& name, uint64 vulkanHandle, V
         if (vkSetDebugUtilsObjectNameEXT(m_Device, &info) != VK_SUCCESS)
             std::cout << "Failed to set name " << info.pObjectName << std::endl;
     }
+}
+
+VkImage VulkanContext::GetBackBufferImage(uint32 index) const
+{
+	assert(index < m_FrameCount);
+	return m_FrameData[index].BackBuffer;
+}
+
+VkImageView VulkanContext::GetBackBufferImageView(uint32 index) const
+{
+	assert(index < m_FrameCount);
+	return m_FrameData[index].BackBufferView;
 }
 
 bool VulkanContext::Init(const DeviceParams& params)
@@ -191,7 +268,7 @@ bool VulkanContext::IsDeviceExtensionAvailable(const char* pExtensionName)
 
 void VulkanContext::Present()
 {
-    VkSemaphore waitSemaphores[] = {  };
+    VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
     
     VkPresentInfoKHR info = {};
     info.sType                  = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -211,7 +288,6 @@ void VulkanContext::Present()
         result = AquireNextImage();
     }
     
-
     //if presentation and aquire image failed
     if (result != VK_SUCCESS)
     {
@@ -738,7 +814,7 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 		for (const auto& availableFormat : formats)
 		{
 			if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-				m_Format = availableFormat;
+				m_SwapChainFormat = availableFormat;
 		}
 	}
 	else
@@ -780,8 +856,8 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
     createInfo.pNext            = nullptr;
 	createInfo.surface          = m_Surface;
 	createInfo.minImageCount    = imageCount;
-	createInfo.imageFormat      = m_Format.format;
-	createInfo.imageColorSpace  = m_Format.colorSpace;
+	createInfo.imageFormat      = m_SwapChainFormat.format;
+	createInfo.imageColorSpace  = m_SwapChainFormat.colorSpace;
 	createInfo.imageExtent      = m_Extent;
 	createInfo.imageArrayLayers = 1;
 	createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -799,16 +875,42 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 		return false;
 	}
     
-    //Get the images
+    //Get the images and create imageviews
     m_FrameCount = 0;
     vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &m_FrameCount, nullptr);
     m_FrameData.resize(m_FrameCount);
     
-    std::vector<VkImage> textures(m_FrameCount);
-    vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &m_FrameCount, textures.data());
+    std::vector<VkImage> images(m_FrameCount);
+    vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &m_FrameCount, images.data());
     
-    for (uint32 i = 0; i < m_FrameCount; i++)
-        m_FrameData[i].BackBuffer = textures[i];
+	VkImageViewCreateInfo imageViewCreateInfo = {};
+	imageViewCreateInfo.sType		= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	imageViewCreateInfo.pNext		= nullptr;
+	imageViewCreateInfo.viewType	= VK_IMAGE_VIEW_TYPE_2D;
+	imageViewCreateInfo.format		= m_SwapChainFormat.format;
+	imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+	imageViewCreateInfo.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+	imageViewCreateInfo.subresourceRange.baseMipLevel	= 0;
+	imageViewCreateInfo.subresourceRange.levelCount		= 1;
+	imageViewCreateInfo.subresourceRange.baseArrayLayer	= 0;
+	imageViewCreateInfo.subresourceRange.layerCount		= 1;
+
+	for (uint32 i = 0; i < m_FrameCount; i++)
+	{
+		VkImageView imageView = VK_NULL_HANDLE;
+		imageViewCreateInfo.image = images[i];
+
+		if (vkCreateImageView(m_Device, &imageViewCreateInfo, nullptr, &imageView) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create image views!");
+		}
+
+		m_FrameData[i].BackBuffer = images[i];
+		m_FrameData[i].BackBufferView = imageView;
+	}
 
 	return true;
 }
@@ -816,8 +918,15 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 void VulkanContext::ReleaseSwapChainResources()
 {
     //Release backbuffers
-    for (FrameData& frame : m_FrameData)
+	for (FrameData& frame : m_FrameData)
+	{
         frame.BackBuffer = VK_NULL_HANDLE;
+		if (frame.BackBufferView != VK_NULL_HANDLE)
+		{
+			vkDestroyImageView(m_Device, frame.BackBufferView, nullptr);
+			frame.BackBufferView = VK_NULL_HANDLE;
+		}
+	}
 
     //Destroy swapchain
     if (m_SwapChain != VK_NULL_HANDLE)

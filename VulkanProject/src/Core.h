@@ -1,4 +1,6 @@
 #pragma once
+#include <iostream>
+#include <cassert>
 
 #define DECL_NO_COPY(type) \
     type(type&& other) = delete; \

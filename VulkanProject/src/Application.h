@@ -1,5 +1,6 @@
 #pragma once
 #include "VulkanContext.h"
+
 #include <GLFW/glfw3.h>
 
 class Application
@@ -25,6 +26,10 @@ private:
 private:
     GLFWwindow* m_pWindow;
     VulkanContext* m_pContext;
+    VulkanRenderPass* m_pRenderPass;
+    VulkanGraphicsPipelineState* m_PipelineState;
+    std::vector<VulkanFramebuffer*> m_Framebuffers;
+    std::vector<VulkanCommandBuffer*> m_CommandBuffers;
     bool m_bIsRunning;
 
     static Application* s_pInstance;

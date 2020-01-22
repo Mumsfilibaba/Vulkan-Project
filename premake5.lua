@@ -82,6 +82,8 @@ workspace "Vulkan-Project"
 			{
 				"C:/VulkanSDK/1.1.121.2/Include",
 			}
+			
+			prebuildcommands { "compile_shaders" }
 
 		-- macOS
 		filter "system:macosx"
