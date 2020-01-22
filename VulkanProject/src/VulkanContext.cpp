@@ -592,7 +592,6 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 		m_Extent = actualExtent;
 	}
 
-
 	std::vector<VkSurfaceFormatKHR> formats;
 	uint32_t formatCount;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &formatCount, nullptr);
