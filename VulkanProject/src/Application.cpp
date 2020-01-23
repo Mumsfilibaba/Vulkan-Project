@@ -20,8 +20,10 @@ Application::Application()
     m_pContext(nullptr),
     m_pRenderPass(nullptr),
     m_PipelineState(nullptr),
+    m_pCurrentCommandBuffer(nullptr),
     m_Width(1440),
     m_Height(900),
+    m_CommandBuffers(),
     m_Framebuffers(),
     m_bIsRunning(false)
 {
@@ -159,6 +161,9 @@ void Application::ReleaseFramebuffers()
 
 void Application::OnWindowResize(uint32 width, uint32 height)
 {
+    //Perform flush on commandbuffer
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    m_pContext->ExecuteGraphics(nullptr, waitStages);
     m_pContext->WaitForIdle();
     
     m_Width  = width;
@@ -180,29 +185,30 @@ void Application::Run()
     glfwPollEvents();
 
     uint32 frameIndex = m_pContext->GetCurrentBackBufferIndex();
-    VulkanCommandBuffer* pCurrentCommandBuffer = m_CommandBuffers[frameIndex];
-    pCurrentCommandBuffer->Reset();
-    pCurrentCommandBuffer->Begin();
+    m_pCurrentCommandBuffer = m_CommandBuffers[frameIndex];
+
+    m_pCurrentCommandBuffer->Reset();
+    m_pCurrentCommandBuffer->Begin();
 
     VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-    pCurrentCommandBuffer->BeginRenderPass(m_pRenderPass, m_Framebuffers[frameIndex], &clearColor, 1);
+    m_pCurrentCommandBuffer->BeginRenderPass(m_pRenderPass, m_Framebuffers[frameIndex], &clearColor, 1);
     
     VkExtent2D extent = m_pContext->GetFramebufferExtent();
     VkViewport viewport = { 0.0f, 0.0f, float(extent.width), float(extent.height), 0.0f, 1.0f };
-    pCurrentCommandBuffer->SetViewport(viewport);
+    m_pCurrentCommandBuffer->SetViewport(viewport);
     
     VkRect2D scissor = { { 0, 0}, extent };
-    pCurrentCommandBuffer->SetScissorRect(scissor);
+    m_pCurrentCommandBuffer->SetScissorRect(scissor);
     
-    pCurrentCommandBuffer->BindGraphicsPipelineState(m_PipelineState);
-    pCurrentCommandBuffer->DrawInstanced(3, 1, 0, 0);
+    m_pCurrentCommandBuffer->BindGraphicsPipelineState(m_PipelineState);
+    m_pCurrentCommandBuffer->DrawInstanced(3, 1, 0, 0);
     
-    pCurrentCommandBuffer->EndRenderPass();
+    m_pCurrentCommandBuffer->EndRenderPass();
 
-    pCurrentCommandBuffer->End();
+    m_pCurrentCommandBuffer->End();
 
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    m_pContext->ExecuteGraphics(pCurrentCommandBuffer, waitStages);
+    m_pContext->ExecuteGraphics(m_pCurrentCommandBuffer, waitStages);
     m_pContext->Present();
 }
 

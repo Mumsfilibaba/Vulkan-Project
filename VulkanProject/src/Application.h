@@ -33,6 +33,7 @@ private:
     VulkanContext* m_pContext;
     VulkanRenderPass* m_pRenderPass;
     VulkanGraphicsPipelineState* m_PipelineState;
+    VulkanCommandBuffer* m_pCurrentCommandBuffer;
     std::vector<VulkanFramebuffer*> m_Framebuffers;
     std::vector<VulkanCommandBuffer*> m_CommandBuffers;
     uint32 m_Width;

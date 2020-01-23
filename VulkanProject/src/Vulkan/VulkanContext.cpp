@@ -140,6 +140,8 @@ VulkanGraphicsPipelineState* VulkanContext::CreateGraphicsPipelineState(const Gr
 
 void VulkanContext::ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages)
 {
+	//std::cout << "ExecuteGraphics" << std::endl;
+
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.pNext = nullptr;
@@ -149,16 +151,31 @@ void VulkanContext::ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipel
 	submitInfo.waitSemaphoreCount	= 1;
 	submitInfo.pWaitSemaphores		= waitSemaphores;
 	submitInfo.pWaitDstStageMask	= pWaitStages;
-	submitInfo.commandBufferCount	= 1;
 
-	VkCommandBuffer commandBuffers[] = { pCommandBuffer->GetCommandBuffer() };
-	submitInfo.pCommandBuffers = commandBuffers;
+	//Calling execute with nullptr commandbuffer results in waiting for the current semaphore
+	//This seems to be the only way of handling this
+	VkFence fence = VK_NULL_HANDLE;
+	if (pCommandBuffer)
+	{
+		fence = pCommandBuffer->GetFence();
 
-	VkSemaphore signalSemaphores[]	= { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores	= signalSemaphores;
+		VkCommandBuffer commandBuffers[] = { pCommandBuffer->GetCommandBuffer() };
+		submitInfo.pCommandBuffers = commandBuffers;
+		submitInfo.commandBufferCount = 1;
 
-	VkFence fence = pCommandBuffer->GetFence();
+		VkSemaphore signalSemaphores[] = { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+	}
+	else
+	{
+		submitInfo.pCommandBuffers = nullptr;
+		submitInfo.commandBufferCount = 0;
+
+		submitInfo.signalSemaphoreCount = 0;
+		submitInfo.pSignalSemaphores = nullptr;
+	}
+
 	VkResult result = vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, fence);
 	if (result != VK_SUCCESS)
 	{
@@ -170,6 +187,8 @@ void VulkanContext::ResizeBuffers(uint32 width, uint32 height)
 {
 	if (m_Extent.width == width && m_Extent.height == height)
 		return;
+
+	std::cout << "Resize" << std::endl;
 
 	ReleaseSwapChainResources();
 	CreateSwapChain(width, height);
@@ -184,6 +203,8 @@ void VulkanContext::WaitForIdle()
 
 void VulkanContext::Present()
 {
+	//std::cout << "Present" << std::endl;
+
 	VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
 
 	VkPresentInfoKHR info = {};
@@ -687,10 +708,6 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 		std::cout << "vkCreateSwapchainKHR failed" << std::endl;
 		return false;
 	}
-	else
-	{
-		m_SemaphoreIndex = 0;
-	}
 
 	//Get the images and create imageviews
 	uint32 realImageCount = 0;
@@ -746,6 +763,8 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 
 VkResult VulkanContext::AquireNextImage()
 {
+	//std::cout << "AquireNextImage" << std::endl;
+
 	VkSemaphore signalSemaphore = m_FrameData[m_SemaphoreIndex].ImageSemaphore;
 	return vkAcquireNextImageKHR(m_Device, m_SwapChain, UINT64_MAX, signalSemaphore, VK_NULL_HANDLE, &m_CurrentBufferIndex);
 }
