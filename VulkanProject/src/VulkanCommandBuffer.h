@@ -39,11 +39,13 @@ public:
 	
 	void Reset(VkCommandPoolResetFlags flags = 0);
 
+	VkFence GetFence() const { return m_Fence; }
 	VkCommandBuffer GetCommandBuffer() const { return m_CommandBuffer; }
 private:
 	void Init(uint32 queueFamilyIndex, const CommandBufferParams& params);
 private:
 	VkDevice m_Device;
+	VkFence m_Fence;
 	VkCommandPool m_CommandPool;
 	VkCommandBuffer m_CommandBuffer;
 };

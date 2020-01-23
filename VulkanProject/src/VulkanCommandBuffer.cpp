@@ -6,13 +6,22 @@
 VulkanCommandBuffer::VulkanCommandBuffer(VkDevice device, uint32 queueFamilyIndex, const CommandBufferParams& params)
 	: m_Device(device),
 	m_CommandPool(VK_NULL_HANDLE),
-	m_CommandBuffer(VK_NULL_HANDLE)
+	m_CommandBuffer(VK_NULL_HANDLE),
+	m_Fence(VK_NULL_HANDLE)
 {
 	Init(queueFamilyIndex, params);
 }
 
 VulkanCommandBuffer::~VulkanCommandBuffer()
 {
+	if (m_Fence != VK_NULL_HANDLE)
+	{
+		vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, UINT64_MAX);
+
+		vkDestroyFence(m_Device, m_Fence, nullptr);
+		m_Fence = VK_NULL_HANDLE;
+	}
+
 	if (m_CommandPool != VK_NULL_HANDLE)
 	{
 		vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
@@ -88,6 +97,10 @@ void VulkanCommandBuffer::End()
 
 void VulkanCommandBuffer::Reset(VkCommandPoolResetFlags flags)
 {
+	//Wait for GPU to finish with this commanbuffer and then reset it
+	vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, UINT64_MAX);
+	vkResetFences(m_Device, 1, &m_Fence);
+
 	//Avoid using the VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT since we can reuse the memory
 	vkResetCommandPool(m_Device, m_CommandPool, flags);
 }
@@ -118,12 +131,28 @@ void VulkanCommandBuffer::Init(uint32 queueFamilyIndex, const CommandBufferParam
 	allocInfo.level		  = params.Level;
 	allocInfo.commandBufferCount = 1;
 
-	if (vkAllocateCommandBuffers(m_Device, &allocInfo, &m_CommandBuffer) != VK_SUCCESS) 
+	result = vkAllocateCommandBuffers(m_Device, &allocInfo, &m_CommandBuffer);
+	if (result != VK_SUCCESS) 
 	{
 		std::cout << "vkAllocateCommandBuffers failed" << std::endl;
 	}
 	else
 	{
 		std::cout << "Allocated CommandBuffer" << std::endl;
+	}
+
+	VkFenceCreateInfo fenceInfo = {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.pNext = nullptr;
+	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	result = vkCreateFence(m_Device, &fenceInfo, nullptr, &m_Fence);
+	if (result != VK_SUCCESS)
+	{
+		std::cout << "vkCreateFence failed" << std::endl;
+	}
+	else
+	{
+		std::cout << "Created Fence for commandbuffer" << std::endl;
 	}
 }

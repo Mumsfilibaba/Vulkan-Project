@@ -5,12 +5,19 @@
 
 class VulkanContext;
 
+struct ShaderModuleParams
+{
+	const char* pEntryPoint = nullptr;
+	const char* pSource = nullptr;
+	uint32 SourceSize = 0;
+};
+
 class VulkanShaderModule
 {
 public:
 	DECL_NO_COPY(VulkanShaderModule);
 
-	VulkanShaderModule(VkDevice device, const char* pEntryPoint, const char* pSource, uint32 length);
+	VulkanShaderModule(VkDevice device, const ShaderModuleParams& params);
 	~VulkanShaderModule();
 
 	VkShaderModule GetModule() const { return m_Module; }

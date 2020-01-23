@@ -4,17 +4,20 @@
 #include <fstream>
 #include <iostream>
 
-VulkanShaderModule::VulkanShaderModule(VkDevice device, const char* pEntryPoint, const char* pSource, uint32 length)
+VulkanShaderModule::VulkanShaderModule(VkDevice device, const ShaderModuleParams& params)
     : m_Device(device),
     m_Module(VK_NULL_HANDLE),
     m_pEntryPoint(nullptr)
 {
+    assert(params.pSource);
+    assert(params.pEntryPoint);
+
     VkShaderModuleCreateInfo createInfo = {};
     createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.pNext    = nullptr;
     createInfo.flags    = 0;
-    createInfo.codeSize = size_t(length);
-    createInfo.pCode    = reinterpret_cast<const uint32_t*>(pSource);
+    createInfo.codeSize = params.SourceSize;
+    createInfo.pCode    = reinterpret_cast<const uint32_t*>(params.pSource);
 
     VkResult result = vkCreateShaderModule(device, &createInfo, nullptr, &m_Module);
     if (result != VK_SUCCESS) 
@@ -23,10 +26,10 @@ VulkanShaderModule::VulkanShaderModule(VkDevice device, const char* pEntryPoint,
     }
     else
     {
-        size_t len = strlen(pEntryPoint);
+        size_t len = strlen(params.pEntryPoint);
         m_pEntryPoint = new char[len + 1];
 
-        strcpy(m_pEntryPoint, pEntryPoint);
+        strcpy(m_pEntryPoint, params.pEntryPoint);
 
         std::cout << "Created ShaderModule" << std::endl;
     }
@@ -68,7 +71,11 @@ VulkanShaderModule* VulkanShaderModule::CreateFromFile(VulkanContext* pContext, 
         file.read(buffer.data(), fileSize);
         file.close();
 
-        return pContext->CreateShaderModule(pEntryPoint, buffer.data(), uint32(buffer.size()));
+        ShaderModuleParams params = {};
+        params.pEntryPoint = pEntryPoint;
+        params.pSource = buffer.data();
+        params.SourceSize = uint32(buffer.size());
+        return pContext->CreateShaderModule(params);
     }
     else
     {

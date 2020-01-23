@@ -9,6 +9,12 @@
 
 Application* Application::s_pInstance = nullptr;
 
+Application* Application::Create()
+{
+    s_pInstance = new Application();
+    return s_pInstance;
+}
+
 Application::Application()
     : m_pWindow(nullptr),
     m_pContext(nullptr),
@@ -23,12 +29,6 @@ Application::Application()
 
 Application::~Application()
 {
-}
-
-Application* Application::Create()
-{
-    s_pInstance = new Application();
-    return s_pInstance;
 }
 
 void Application::Init()
@@ -79,8 +79,10 @@ void Application::Init()
 
     FramebufferParams framebufferParams = {};
     framebufferParams.AttachMentCount = 1;
-    framebufferParams.Width  = m_pContext->GetFramebufferWidth();
-    framebufferParams.Height = m_pContext->GetFramebufferHeight();
+
+    VkExtent2D extent = m_pContext->GetFramebufferExtent();
+    framebufferParams.Width  = extent.width;
+    framebufferParams.Height = extent.height;
     framebufferParams.pRenderPass = m_pRenderPass;
     
     CommandBufferParams commandBufferParams = {};
@@ -92,7 +94,7 @@ void Application::Init()
     m_CommandBuffers.resize(imageCount);
     for (size_t i = 0; i < m_Framebuffers.size(); i++)
     {
-        VkImageView imageView = m_pContext->GetBackBufferImageView(i);
+        VkImageView imageView = m_pContext->GetSwapChainImageView(i);
         framebufferParams.pAttachMents = &imageView;
         m_Framebuffers[i]   = m_pContext->CreateFrameBuffer(framebufferParams);
 
@@ -133,9 +135,8 @@ void Application::Run()
 {
     glfwPollEvents();
 
-    uint32 frameIndex = m_pContext->GetCurrentBackbufferIndex();
+    uint32 frameIndex = m_pContext->GetCurrentBackBufferIndex();
     VulkanCommandBuffer* pCurrentCommandBuffer = m_CommandBuffers[frameIndex];
-    
     pCurrentCommandBuffer->Reset();
     pCurrentCommandBuffer->Begin();
 
@@ -167,19 +168,20 @@ void Application::OnWindowClose()
 
 void Application::Release()
 {
-    for (auto& framebuffer : m_Framebuffers)
-    {
-        delete framebuffer;
-        framebuffer = nullptr;
-    }
-    m_Framebuffers.clear();
-
+    m_pContext->WaitForIdle();
     for (auto& commandBuffer : m_CommandBuffers)
     {
         delete commandBuffer;
         commandBuffer = nullptr;
     }
     m_CommandBuffers.clear();
+
+    for (auto& framebuffer : m_Framebuffers)
+    {
+        delete framebuffer;
+        framebuffer = nullptr;
+    }
+    m_Framebuffers.clear();
 
     delete m_pRenderPass;
     delete m_PipelineState;

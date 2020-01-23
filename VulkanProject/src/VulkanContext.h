@@ -29,6 +29,7 @@ struct QueueFamilyIndices
     }
 };
 
+struct ShaderModuleParams;
 struct CommandBufferParams;
 struct RenderPassParams;
 struct FramebufferParams;
@@ -47,36 +48,32 @@ private:
     {
         VkImage BackBuffer          = VK_NULL_HANDLE;
         VkImageView BackBufferView  = VK_NULL_HANDLE;
-        VkFence RenderFence         = VK_NULL_HANDLE;
         VkSemaphore ImageSemaphore  = VK_NULL_HANDLE;
         VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
     };
 public:
     DECL_NO_COPY(VulkanContext);
     
-    VulkanRenderPass*            CreateRenderPass(const RenderPassParams& params);
-    VulkanFramebuffer*           CreateFrameBuffer(const FramebufferParams& params);
-    VulkanShaderModule*          CreateShaderModule(const char* pEntryPoint, const char* pSource, uint32 length);
-    VulkanCommandBuffer*         CreateCommandBuffer(const CommandBufferParams& params);
+    VulkanRenderPass* CreateRenderPass(const RenderPassParams& params);
+    VulkanFramebuffer* CreateFrameBuffer(const FramebufferParams& params);
+    VulkanShaderModule* CreateShaderModule(const ShaderModuleParams& params);
+    VulkanCommandBuffer* CreateCommandBuffer(const CommandBufferParams& params);
     VulkanGraphicsPipelineState* CreateGraphicsPipelineState(const GraphicsPipelineStateParams& params);
 
     void ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages);
 
+    void WaitForIdle();
     void Present();
     void Destroy();
 
-    bool IsInstanceExtensionAvailable(const char* pExtensionName);
-    bool IsDeviceExtensionAvailable(const char* pExtensionName);
-
     void SetDebugName(const std::string& name, uint64 vulkanHandle, VkObjectType type);
     
-    uint32 GetCurrentBackbufferIndex() const { return m_CurrentBufferIndex; }
-    VkImage GetBackBufferImage(uint32 index) const;
-    VkImageView GetBackBufferImageView(uint32 index) const;
-    uint32 GetFramebufferWidth() const { return m_Extent.width; }
-    uint32 GetFramebufferHeight() const { return m_Extent.height; }
-    uint32 GetImageCount() const { return m_FrameCount; }
+    VkImage GetSwapChainImage(uint32 index) const { return m_FrameData[index].BackBuffer; }
+    VkImageView GetSwapChainImageView(uint32 index) const { return m_FrameData[index].BackBufferView; }
     VkFormat GetSwapChainFormat() const { return m_SwapChainFormat.format; }
+    VkExtent2D GetFramebufferExtent() const { return m_Extent; }
+    uint32 GetCurrentBackBufferIndex() const { return m_CurrentBufferIndex; }
+    uint32 GetImageCount() const { return m_FrameCount; }
 
     static VulkanContext* Create(const DeviceParams& props);
 private:
@@ -88,7 +85,8 @@ private:
     bool CreateDebugMessenger();
     bool CreateSurface(GLFWwindow* pWindow);
     bool CreateDeviceAndQueues(const DeviceParams& props);
-    bool CreateFencesAndSemaphores();
+    void InitFrameData(uint32 numFrames);
+    bool CreateSemaphores();
     bool CreateSwapChain(uint32 width, uint32 height);
     bool QueryPhysicalDevice();
    
@@ -125,11 +123,7 @@ private:
     VkPhysicalDeviceProperties m_DeviceProperties;
     VkPhysicalDeviceFeatures m_DeviceFeatures;
     VkPhysicalDeviceMemoryProperties m_DeviceMemoryProperties;
-    
-    std::vector<VkExtensionProperties> m_AvailableInstanceExtension;
-    std::vector<VkExtensionProperties> m_AvailableDeviceExtensions;
-    std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
-    
+        
     QueueFamilyIndices m_QueueFamilyIndices;
     
     bool m_bValidationEnabled;
