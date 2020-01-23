@@ -16,6 +16,7 @@ struct CommandBufferParams
 	ECommandQueueType QueueType;
 };
 
+class VulkanBuffer;
 class VulkanRenderPass;
 class VulkanFramebuffer;
 class VulkanGraphicsPipelineState;
@@ -30,10 +31,17 @@ public:
 
 	void Begin(VkCommandBufferUsageFlags flags = 0);
 	void BeginRenderPass(VulkanRenderPass* pRenderPass, VulkanFramebuffer* pFramebuffer, VkClearValue* pClearValues, uint32 clearValuesCount);
+	
 	void BindGraphicsPipelineState(VulkanGraphicsPipelineState* pPipelineState);
-    void SetViewport(const VkViewport& viewport);
+	void BindVertexBuffer(VulkanBuffer* pBuffer, VkDeviceSize offset, uint32 slot);
+	void BindIndexBuffer(VulkanBuffer* pBuffer, VkDeviceSize offset, VkIndexType indexType);
+    
+	void SetViewport(const VkViewport& viewport);
     void SetScissorRect(const VkRect2D& scissor);
+	
     void DrawInstanced(uint32 vertexCount, uint32 instanceCount, uint32 firstVertex, uint32 firstInstance);
+	void DrawIndexInstanced(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance);
+	
 	void EndRenderPass();
 	void End();
 	

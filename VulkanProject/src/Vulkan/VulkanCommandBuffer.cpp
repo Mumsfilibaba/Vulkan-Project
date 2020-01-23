@@ -1,6 +1,7 @@
 #include "VulkanCommandBuffer.h"
-#include "VulkanFramebuffer.h"
+#include "VulkanBuffer.h"
 #include "VulkanRenderPass.h"
+#include "VulkanFramebuffer.h"
 #include "VulkanPipelineState.h"
 
 VulkanCommandBuffer::VulkanCommandBuffer(VkDevice device, uint32 queueFamilyIndex, const CommandBufferParams& params)
@@ -42,7 +43,7 @@ void VulkanCommandBuffer::Begin(VkCommandBufferUsageFlags flags)
 	VkResult result = vkBeginCommandBuffer(m_CommandBuffer, &beginInfo);
 	if (result != VK_SUCCESS) 
 	{
-		std::cout << "vkBeginCommandBuffer failed" << std::endl;
+		std::cout << "vkBeginCommandBuffer failed. Error: " << result << std::endl;
 	}
 }
 
@@ -76,9 +77,30 @@ void VulkanCommandBuffer::BindGraphicsPipelineState(VulkanGraphicsPipelineState*
 	vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineState->GetPipeline());
 }
 
+void VulkanCommandBuffer::BindVertexBuffer(VulkanBuffer* pBuffer, VkDeviceSize offset, uint32 slot)
+{
+	assert(pBuffer);
+
+	VkBuffer buffer[] = { pBuffer->GetBuffer() };
+	VkDeviceSize offsets[] = { offset };
+	vkCmdBindVertexBuffers(m_CommandBuffer, slot, 1, buffer, offsets);
+}
+
+void VulkanCommandBuffer::BindIndexBuffer(VulkanBuffer* pBuffer, VkDeviceSize offset, VkIndexType indexType)
+{
+	assert(pBuffer != nullptr);
+
+	vkCmdBindIndexBuffer(m_CommandBuffer, pBuffer->GetBuffer(), offset, indexType);
+}
+
 void VulkanCommandBuffer::DrawInstanced(uint32 vertexCount, uint32 instanceCount, uint32 firstVertex, uint32 firstInstance)
 {
 	vkCmdDraw(m_CommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+}
+
+void VulkanCommandBuffer::DrawIndexInstanced(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance)
+{
+	vkCmdDrawIndexed(m_CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
 void VulkanCommandBuffer::EndRenderPass()
@@ -91,7 +113,7 @@ void VulkanCommandBuffer::End()
 	VkResult result = vkEndCommandBuffer(m_CommandBuffer);
 	if (result != VK_SUCCESS)
 	{
-		std::cout << "vkEndCommandBuffer failed" << std::endl;
+		std::cout << "vkEndCommandBuffer failed. Error: " << result << std::endl;
 	}
 }
 
@@ -116,7 +138,7 @@ void VulkanCommandBuffer::Init(uint32 queueFamilyIndex, const CommandBufferParam
 	VkResult result = vkCreateCommandPool(m_Device, &poolInfo, nullptr, &m_CommandPool);
 	if (result != VK_SUCCESS)
 	{
-		std::cout << "vkCreateCommandPool failed" << std::endl;
+		std::cout << "vkCreateCommandPool failed. Error: " << result << std::endl;
 		return;
 	}
 	else
@@ -134,7 +156,7 @@ void VulkanCommandBuffer::Init(uint32 queueFamilyIndex, const CommandBufferParam
 	result = vkAllocateCommandBuffers(m_Device, &allocInfo, &m_CommandBuffer);
 	if (result != VK_SUCCESS) 
 	{
-		std::cout << "vkAllocateCommandBuffers failed" << std::endl;
+		std::cout << "vkAllocateCommandBuffers failed. Error: " << result << std::endl;
 	}
 	else
 	{
@@ -149,7 +171,7 @@ void VulkanCommandBuffer::Init(uint32 queueFamilyIndex, const CommandBufferParam
 	result = vkCreateFence(m_Device, &fenceInfo, nullptr, &m_Fence);
 	if (result != VK_SUCCESS)
 	{
-		std::cout << "vkCreateFence failed" << std::endl;
+		std::cout << "vkCreateFence failed. Error: " << result << std::endl;
 	}
 	else
 	{

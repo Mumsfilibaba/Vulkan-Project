@@ -26,6 +26,9 @@
     <ClInclude Include="src\Vulkan\VulkanShaderModule.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
+    <ClInclude Include="src\Vulkan\VulkanBuffer.h" />
+    <ClInclude Include="src\Vulkan\VulkanHelper.h" />
+    <ClInclude Include="src\Vulkan\VulkanExtensionFuncs.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
@@ -48,5 +51,7 @@
       <Filter>Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanBuffer.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanExtensionFuncs.cpp" />
   </ItemGroup>
 </Project>

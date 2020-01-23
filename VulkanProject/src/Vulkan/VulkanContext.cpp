@@ -1,9 +1,12 @@
 #include "VulkanContext.h"
+#include "VulkanHelper.h"
+#include "VulkanBuffer.h"
 #include "VulkanRenderPass.h"
 #include "VulkanFramebuffer.h"
 #include "VulkanShaderModule.h"
 #include "VulkanPipelineState.h"
 #include "VulkanCommandBuffer.h"
+#include "VulkanExtensionFuncs.h"
 
 #include <iostream>
 #include <vector>
@@ -20,10 +23,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSev
 	}
 	return VK_FALSE;
 }
-
-PFN_vkSetDebugUtilsObjectNameEXT    VulkanContext::vkSetDebugUtilsObjectNameEXT     = nullptr;
-PFN_vkCreateDebugUtilsMessengerEXT  VulkanContext::vkCreateDebugUtilsMessengerEXT   = nullptr;
-PFN_vkDestroyDebugUtilsMessengerEXT VulkanContext::vkDestroyDebugUtilsMessengerEXT  = nullptr;
 
 VulkanContext* VulkanContext::Create(const DeviceParams& params)
 {
@@ -91,9 +90,9 @@ VulkanContext::~VulkanContext()
 
     if (m_bValidationEnabled)
     {
-        if (vkDestroyDebugUtilsMessengerEXT)
+        if (VkExt::vkDestroyDebugUtilsMessengerEXT)
         {
-            vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, nullptr);
+			VkExt::vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, nullptr);
             m_DebugMessenger = nullptr;
         }
     }
@@ -103,6 +102,11 @@ VulkanContext::~VulkanContext()
 		vkDestroyInstance(m_Instance, nullptr);
 		m_Instance = VK_NULL_HANDLE;
 	}
+}
+
+VulkanBuffer* VulkanContext::CreateBuffer(const BufferParams& params)
+{
+	return new VulkanBuffer(m_Device, m_PhysicalDevice, params);
 }
 
 VulkanRenderPass* VulkanContext::CreateRenderPass(const RenderPassParams& params)
@@ -179,7 +183,7 @@ void VulkanContext::ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipel
 	VkResult result = vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, fence);
 	if (result != VK_SUCCESS)
 	{
-		std::cout << "vkQueueSubmit failed" << std::endl;
+		std::cout << "vkQueueSubmit failed. Error: " << result << std::endl;
 	}
 }
 
@@ -231,11 +235,11 @@ void VulkanContext::Present()
 		if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			RecreateSwapChain();
-			std::cout << "Suboptimal SwapChain" << std::endl;
+			std::cout << "Suboptimal or Out Of Date SwapChain. Result: " << result << std::endl;
 		}
 		else
 		{
-			std::cout << "Present Failed\n" << std::endl;
+			std::cout << "Present Failed. Error: " << result << std::endl;
 		}
 	}
 }
@@ -243,22 +247,6 @@ void VulkanContext::Present()
 void VulkanContext::Destroy()
 {
 	delete this;
-}
-
-void VulkanContext::SetDebugName(const std::string& name, uint64 vulkanHandle, VkObjectType type)
-{
-    if (vkSetDebugUtilsObjectNameEXT)
-    {
-        VkDebugUtilsObjectNameInfoEXT info = {};
-        info.sType          = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-        info.pNext          = nullptr;
-        info.objectType     = type;
-        info.pObjectName    = name.c_str();
-        info.objectHandle   = vulkanHandle;
-
-        if (vkSetDebugUtilsObjectNameEXT(m_Device, &info) != VK_SUCCESS)
-            std::cout << "Failed to set name " << info.pObjectName << std::endl;
-    }
 }
 
 bool VulkanContext::Init(const DeviceParams& params)
@@ -282,7 +270,7 @@ bool VulkanContext::Init(const DeviceParams& params)
 	else
 		return false;
 
-	if (QueryPhysicalDevice())
+	if (QueryPhysicalDevice(params))
 		std::cout << "Queried physical device: " << m_DeviceProperties.deviceName << std::endl;
 	else
 		return false;
@@ -310,7 +298,7 @@ bool VulkanContext::Init(const DeviceParams& params)
 	return true;
 }
 
-bool VulkanContext::CreateInstance(const DeviceParams&)
+bool VulkanContext::CreateInstance(const DeviceParams& params)
 {
 	VkApplicationInfo appInfo = {};
 	appInfo.sType               = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -354,9 +342,12 @@ bool VulkanContext::CreateInstance(const DeviceParams&)
 	std::vector<VkExtensionProperties> instanceExtensionProperties(instanceExtensionCount);
 	vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, instanceExtensionProperties.data());
 
-	std::cout << "Abailable instance extensions:" << std::endl;
-	for (VkExtensionProperties extension : instanceExtensionProperties)
-		std::cout << "   " << extension.extensionName << std::endl;
+	if (params.bVerbose)
+	{
+		std::cout << "Abailable instance extensions:" << std::endl;
+		for (VkExtensionProperties extension : instanceExtensionProperties)
+			std::cout << "   " << extension.extensionName << std::endl;
+	}
 
 	std::cout << "Enabled instance extensions:" << std::endl;
 	for (const char* pEnabledExtension : instanceExtensions)
@@ -424,14 +415,14 @@ bool VulkanContext::CreateInstance(const DeviceParams&)
 	}
 
     //Get instance functions
-    vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT");
-    if (!vkSetDebugUtilsObjectNameEXT)
+    VkExt::vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT");
+    if (!VkExt::vkSetDebugUtilsObjectNameEXT)
         std::cout << "Failed to retrive 'vkSetDebugUtilsObjectNameEXT'" << std::endl;
-    vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT");
-    if (!vkCreateDebugUtilsMessengerEXT)
+	VkExt::vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT");
+    if (!VkExt::vkCreateDebugUtilsMessengerEXT)
         std::cout << "Failed to retrive 'vkCreateDebugUtilsMessengerEXT'" << std::endl;
-    vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (!vkDestroyDebugUtilsMessengerEXT)
+	VkExt::vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (!VkExt::vkDestroyDebugUtilsMessengerEXT)
         std::cout << "Failed to retrive 'vkDestroyDebugUtilsMessengerEXT'" << std::endl;
     
 	return true;
@@ -439,15 +430,15 @@ bool VulkanContext::CreateInstance(const DeviceParams&)
 
 bool VulkanContext::CreateDebugMessenger()
 {
-    if (vkCreateDebugUtilsMessengerEXT)
+    if (VkExt::vkCreateDebugUtilsMessengerEXT)
     {
         VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
         PopulateDebugMessengerCreateInfo(createInfo);
 
-        VkResult result = vkCreateDebugUtilsMessengerEXT(m_Instance, &createInfo, nullptr, &m_DebugMessenger);
+        VkResult result = VkExt::vkCreateDebugUtilsMessengerEXT(m_Instance, &createInfo, nullptr, &m_DebugMessenger);
 		if (result != VK_SUCCESS)
         {
-            std::cout << "vkCreateDebugUtilsMessengerEXT failed" << std::endl;
+            std::cout << "vkCreateDebugUtilsMessengerEXT failed. Error: " << result << std::endl;
         }
 		else
         {
@@ -460,9 +451,10 @@ bool VulkanContext::CreateDebugMessenger()
 
 bool VulkanContext::CreateSurface(GLFWwindow* pWindow)
 {
-	if (glfwCreateWindowSurface(m_Instance, pWindow, nullptr, &m_Surface) != VK_SUCCESS)
+	VkResult result = glfwCreateWindowSurface(m_Instance, pWindow, nullptr, &m_Surface);
+	if (result != VK_SUCCESS)
 	{
-		std::cout << "Failed to create a surface" << std::endl;
+		std::cout << "Failed to create a surface. Error: " << result << std::endl;
 		return false;
 	}
 
@@ -474,10 +466,10 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
 	m_QueueFamilyIndices = GetQueueFamilyIndices(m_PhysicalDevice);
 
 	std::cout << "Using following queueFamilyIndices: ";
-	std::cout << "Graphics = " << m_QueueFamilyIndices.Graphics;
-	std::cout << ", Presentation=" << m_QueueFamilyIndices.Presentation;
-	std::cout << ", Compute=" << m_QueueFamilyIndices.Compute;
-	std::cout << ", Transfer=" << m_QueueFamilyIndices.Transfer << std::endl;
+	std::cout << "Graphics = "		<< m_QueueFamilyIndices.Graphics;
+	std::cout << ", Presentation="	<< m_QueueFamilyIndices.Presentation;
+	std::cout << ", Compute="		<< m_QueueFamilyIndices.Compute;
+	std::cout << ", Transfer="		<< m_QueueFamilyIndices.Transfer << std::endl;
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	const float defaultQueuePriority = 0.0f;
@@ -509,9 +501,12 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
 	std::vector<VkExtensionProperties> availableDeviceExtension(deviceExtensionCount);
 	vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &deviceExtensionCount, availableDeviceExtension.data());
 
-	std::cout << "Abailable device extensions:" << std::endl;
-	for (VkExtensionProperties extension : availableDeviceExtension)
-		std::cout << "   " << extension.extensionName << std::endl;
+	if (params.bVerbose)
+	{
+		std::cout << "Available device extensions:" << std::endl;
+		for (VkExtensionProperties extension : availableDeviceExtension)
+			std::cout << "   " << extension.extensionName << std::endl;
+	}
 
 	//Enable device extensions
 	std::vector<const char*> deviceExtensions = GetRequiredDeviceExtensions();
@@ -608,8 +603,8 @@ bool VulkanContext::CreateSemaphores()
 		}
 		else
 		{
-			SetDebugName("ImageSemaphore[" + std::to_string(i) + "]", (uint64)imageSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
-			SetDebugName("RenderSemaphore[" + std::to_string(i) + "]", (uint64)renderSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
+			SetDebugName(m_Device, "ImageSemaphore[" + std::to_string(i) + "]", (uint64)imageSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
+			SetDebugName(m_Device, "RenderSemaphore[" + std::to_string(i) + "]", (uint64)renderSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
 		}
 
 		m_FrameData[i].ImageSemaphore = imageSemaphore;
@@ -705,7 +700,7 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 	VkResult result = vkCreateSwapchainKHR(m_Device, &createInfo, nullptr, &m_SwapChain);
 	if (result != VK_SUCCESS)
 	{
-		std::cout << "vkCreateSwapchainKHR failed" << std::endl;
+		std::cout << "vkCreateSwapchainKHR failed. Error: " << result << std::endl;
 		return false;
 	}
 
@@ -741,7 +736,7 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 		result = vkCreateImageView(m_Device, &imageViewCreateInfo, nullptr, &imageView);
 		if (result != VK_SUCCESS)
 		{
-			std::cout << "vkCreateImageView failed" << std::endl;
+			std::cout << "vkCreateImageView failed. Error: " << result << std::endl;
 		}
 		else
 		{
@@ -755,7 +750,7 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 	result = AquireNextImage();
 	if (result != VK_SUCCESS)
 	{
-		std::cout << "AquireNextImage failed" << std::endl;
+		std::cout << "AquireNextImage failed. Error: " << result << std::endl;
 	}
 
 	return true;
@@ -788,7 +783,7 @@ void VulkanContext::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreate
 	createInfo.pUserData		= nullptr;
 }
 
-bool VulkanContext::QueryPhysicalDevice()
+bool VulkanContext::QueryPhysicalDevice(const DeviceParams& params)
 {
 	//Enumerate devices
 	uint32_t gpuCount = 0;
@@ -798,7 +793,7 @@ bool VulkanContext::QueryPhysicalDevice()
 	result = vkEnumeratePhysicalDevices(m_Instance, &gpuCount, physicalDevices.data());
 	if (result != VK_SUCCESS || gpuCount < 1) 
 	{
-		std::cerr << "Could not enumerate physical devices" << std::endl;
+		std::cerr << "vkEnumeratePhysicalDevices failed. Error: " << result << std::endl;
 		return false;
 	}
 
@@ -840,11 +835,12 @@ bool VulkanContext::QueryPhysicalDevice()
 		std::vector<VkExtensionProperties> availableDeviceExtension(deviceExtensionCount);
 		vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &deviceExtensionCount, availableDeviceExtension.data());
         
-#ifdef DEBUG
-        std::cout << "      Available extensions:" << std::endl;
-        for (const auto& extension : availableDeviceExtension)
-            std::cout << "         " << extension.extensionName << std::endl;
-#endif
+		if (params.bVerbose)
+		{
+			std::cout << "      Available extensions:" << std::endl;
+			for (const auto& extension : availableDeviceExtension)
+				std::cout << "         " << extension.extensionName << std::endl;
+		}
         
 		bool extensionsFound = false;
 		for (const auto& extensionName : deviceExtensions)

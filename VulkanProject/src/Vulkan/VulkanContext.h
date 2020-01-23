@@ -11,9 +11,10 @@
 
 struct DeviceParams
 {
-    GLFWwindow* pWindow;
+    GLFWwindow* pWindow = nullptr;
     bool bEnableRayTracing;
     bool bEnableValidation;
+    bool bVerbose = false;
 };
 
 struct QueueFamilyIndices
@@ -29,12 +30,14 @@ struct QueueFamilyIndices
     }
 };
 
+struct BufferParams;
 struct ShaderModuleParams;
 struct CommandBufferParams;
 struct RenderPassParams;
 struct FramebufferParams;
 struct GraphicsPipelineStateParams;
 
+class VulkanBuffer;
 class VulkanRenderPass;
 class VulkanFramebuffer;
 class VulkanShaderModule;
@@ -54,6 +57,7 @@ private:
 public:
     DECL_NO_COPY(VulkanContext);
     
+    VulkanBuffer* CreateBuffer(const BufferParams& params);
     VulkanRenderPass* CreateRenderPass(const RenderPassParams& params);
     VulkanFramebuffer* CreateFrameBuffer(const FramebufferParams& params);
     VulkanShaderModule* CreateShaderModule(const ShaderModuleParams& params);
@@ -66,8 +70,6 @@ public:
     void WaitForIdle();
     void Present();
     void Destroy();
-
-    void SetDebugName(const std::string& name, uint64 vulkanHandle, VkObjectType type);
     
     VkImage GetSwapChainImage(uint32 index) const { return m_FrameData[index].BackBuffer; }
     VkImageView GetSwapChainImageView(uint32 index) const { return m_FrameData[index].BackBufferView; }
@@ -89,7 +91,7 @@ private:
     void InitFrameData(uint32 numFrames);
     bool CreateSemaphores();
     bool CreateSwapChain(uint32 width, uint32 height);
-    bool QueryPhysicalDevice();
+    bool QueryPhysicalDevice(const DeviceParams& props);
    
     void ReleaseSwapChainResources();
     void RecreateSwapChain();
@@ -129,8 +131,4 @@ private:
     
     bool m_bValidationEnabled;
     bool m_bRayTracingEnabled;
-    
-    static PFN_vkSetDebugUtilsObjectNameEXT    vkSetDebugUtilsObjectNameEXT;
-    static PFN_vkCreateDebugUtilsMessengerEXT  vkCreateDebugUtilsMessengerEXT;
-    static PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT;
 };

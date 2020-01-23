@@ -8,6 +8,10 @@ class VulkanShaderModule;
 
 struct GraphicsPipelineStateParams
 {
+	VkVertexInputAttributeDescription* pAttributeDescriptions = nullptr;
+	uint32 AttributeDescriptionCount = 0;
+	VkVertexInputBindingDescription* pBindingDescriptions = nullptr;
+	uint32 BindingDescriptionCount = 0;
 	VulkanRenderPass* pRenderPass	= nullptr;
 	VulkanShaderModule* pVertex		= nullptr;
 	VulkanShaderModule* pFragment	= nullptr;

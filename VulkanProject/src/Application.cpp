@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "Vulkan/VulkanBuffer.h"
 #include "Vulkan/VulkanRenderPass.h"
 #include "Vulkan/VulkanFramebuffer.h"
 #include "Vulkan/VulkanShaderModule.h"
@@ -21,6 +22,8 @@ Application::Application()
     m_pRenderPass(nullptr),
     m_PipelineState(nullptr),
     m_pCurrentCommandBuffer(nullptr),
+    m_pVertexBuffer(nullptr),
+    m_pIndexBuffer(nullptr),
     m_Width(1440),
     m_Height(900),
     m_CommandBuffers(),
@@ -51,6 +54,7 @@ void Application::Init()
     params.pWindow = m_pWindow;
     params.bEnableRayTracing = true;
     params.bEnableValidation = true;
+    params.bVerbose = false;
 
     m_pContext = VulkanContext::Create(params);
     if (!m_pContext)
@@ -70,14 +74,20 @@ void Application::Init()
     renderPassParams.pColorAttachments = attachments;
     m_pRenderPass = m_pContext->CreateRenderPass(renderPassParams);
 
+    VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+
     GraphicsPipelineStateParams pipelineParams = {};
+    pipelineParams.pBindingDescriptions = &bindingDescription;
+    pipelineParams.BindingDescriptionCount = 1;
+    pipelineParams.pAttributeDescriptions = Vertex::GetAttributeDescriptions();
+    pipelineParams.AttributeDescriptionCount = 2;
     pipelineParams.pVertex = pVertex;
     pipelineParams.pFragment = pFragment;
     pipelineParams.pRenderPass = m_pRenderPass;
     m_PipelineState = m_pContext->CreateGraphicsPipelineState(pipelineParams);
 
-    delete pVertex;
-    delete pFragment;
+    SafeDelete(pVertex);
+    SafeDelete(pFragment);
    
     CreateFramebuffers();
 
@@ -92,6 +102,40 @@ void Application::Init()
         VulkanCommandBuffer* pCommandBuffer = m_pContext->CreateCommandBuffer(commandBufferParams);
         m_CommandBuffers[i] = pCommandBuffer;
     }
+
+    const std::vector<Vertex> vertices = 
+    {
+        { {-0.5f, -0.5f},   {1.0f, 0.0f, 0.0f} },
+        { {0.5f, -0.5f},    {0.0f, 1.0f, 0.0f} },
+        { {0.5f, 0.5f},     {0.0f, 0.0f, 1.0f} },
+        { {-0.5f, 0.5f},    {1.0f, 1.0f, 1.0f} }
+    };
+
+    BufferParams vertexBufferParams = {};
+    vertexBufferParams.SizeInBytes = vertices.size() * sizeof(Vertex);
+    vertexBufferParams.Usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    m_pVertexBuffer = m_pContext->CreateBuffer(vertexBufferParams);
+
+    void* pCPUMem = nullptr;
+    m_pVertexBuffer->Map(&pCPUMem);
+    memcpy(pCPUMem, vertices.data(), vertexBufferParams.SizeInBytes);
+    m_pVertexBuffer->Unmap();
+
+    const std::vector<uint16> indices = 
+    {
+        0, 1, 2, 
+        2, 3, 0
+    };
+
+    BufferParams indexBufferParams = {};
+    indexBufferParams.SizeInBytes = indices.size() * sizeof(uint16);
+    indexBufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    m_pIndexBuffer = m_pContext->CreateBuffer(indexBufferParams);
+
+    pCPUMem = nullptr;
+    m_pIndexBuffer->Map(&pCPUMem);
+    memcpy(pCPUMem, indices.data(), indexBufferParams.SizeInBytes);
+    m_pIndexBuffer->Unmap();
 
     //Show window and start loop
     glfwShowWindow(m_pWindow);
@@ -142,7 +186,7 @@ void Application::CreateFramebuffers()
 
     for (size_t i = 0; i < m_Framebuffers.size(); i++)
     {
-        VkImageView imageView = m_pContext->GetSwapChainImageView(i);
+        VkImageView imageView = m_pContext->GetSwapChainImageView(uint32(i));
         framebufferParams.pAttachMents = &imageView;
         m_Framebuffers[i] = m_pContext->CreateFrameBuffer(framebufferParams);
     }
@@ -152,8 +196,7 @@ void Application::ReleaseFramebuffers()
 {
     for (auto& framebuffer : m_Framebuffers)
     {
-        delete framebuffer;
-        framebuffer = nullptr;
+        SafeDelete(framebuffer);
     }
 
     m_Framebuffers.clear();
@@ -201,7 +244,10 @@ void Application::Run()
     m_pCurrentCommandBuffer->SetScissorRect(scissor);
     
     m_pCurrentCommandBuffer->BindGraphicsPipelineState(m_PipelineState);
-    m_pCurrentCommandBuffer->DrawInstanced(3, 1, 0, 0);
+    m_pCurrentCommandBuffer->BindVertexBuffer(m_pVertexBuffer, 0, 0);
+    m_pCurrentCommandBuffer->BindIndexBuffer(m_pIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+    m_pCurrentCommandBuffer->DrawIndexInstanced(6, 1, 0, 0, 0);
     
     m_pCurrentCommandBuffer->EndRenderPass();
 
@@ -215,17 +261,20 @@ void Application::Run()
 void Application::Release()
 {
     m_pContext->WaitForIdle();
+
+    SafeDelete(m_pIndexBuffer);
+    SafeDelete(m_pVertexBuffer);
+
     for (auto& commandBuffer : m_CommandBuffers)
     {
-        delete commandBuffer;
-        commandBuffer = nullptr;
+        SafeDelete(commandBuffer);
     }
     m_CommandBuffers.clear();
 
     ReleaseFramebuffers();
 
-    delete m_pRenderPass;
-    delete m_PipelineState;
+    SafeDelete(m_pRenderPass);
+    SafeDelete(m_PipelineState);
 
     m_pContext->Destroy();
 
