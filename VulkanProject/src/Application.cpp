@@ -130,10 +130,12 @@ void Application::CreateFramebuffers()
     uint32 imageCount = m_pContext->GetImageCount();
     m_Framebuffers.resize(imageCount);
 
+    VkExtent2D extent = m_pContext->GetFramebufferExtent();
+    
     FramebufferParams framebufferParams = {};
     framebufferParams.AttachMentCount   = 1;
-    framebufferParams.Width             = m_Width;
-    framebufferParams.Height            = m_Height;
+    framebufferParams.Width             = extent.width;
+    framebufferParams.Height            = extent.height;
     framebufferParams.pRenderPass       = m_pRenderPass;
 
     for (size_t i = 0; i < m_Framebuffers.size(); i++)
@@ -185,10 +187,11 @@ void Application::Run()
     VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
     pCurrentCommandBuffer->BeginRenderPass(m_pRenderPass, m_Framebuffers[frameIndex], &clearColor, 1);
     
-    VkViewport viewport = { 0.0f, 0.0f, float(m_Width), float(m_Height), 0.0f, 1.0f };
+    VkExtent2D extent = m_pContext->GetFramebufferExtent();
+    VkViewport viewport = { 0.0f, 0.0f, float(extent.width), float(extent.height), 0.0f, 1.0f };
     pCurrentCommandBuffer->SetViewport(viewport);
     
-    VkRect2D scissor = { { 0, 0}, { m_Width, m_Height } };
+    VkRect2D scissor = { { 0, 0}, extent };
     pCurrentCommandBuffer->SetScissorRect(scissor);
     
     pCurrentCommandBuffer->BindGraphicsPipelineState(m_PipelineState);

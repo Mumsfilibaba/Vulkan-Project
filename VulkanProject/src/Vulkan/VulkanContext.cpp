@@ -174,7 +174,7 @@ void VulkanContext::ResizeBuffers(uint32 width, uint32 height)
 	ReleaseSwapChainResources();
 	CreateSwapChain(width, height);
 
-	std::cout << "Resized Buffers: w=" << width << ", h=" << height << std::endl;
+	std::cout << "Resized Buffers: w=" << m_Extent.width << ", h=" << m_Extent.height << std::endl;
 }
 
 void VulkanContext::WaitForIdle()
@@ -610,9 +610,10 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 	else
 	{
 		VkExtent2D actualExtent = { width, height };
-		actualExtent.width	= std::max(capabilities.minImageExtent.width,	std::min(capabilities.maxImageExtent.width,		actualExtent.width));
-		actualExtent.height = std::max(capabilities.minImageExtent.height,	std::min(capabilities.maxImageExtent.height,	actualExtent.height));
-		m_Extent = actualExtent;
+		actualExtent.width	= std::max(capabilities.minImageExtent.width,  std::min(capabilities.maxImageExtent.width,  actualExtent.width));
+		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height,	actualExtent.height));
+		
+        m_Extent = actualExtent;
 	}
 
 	std::vector<VkSurfaceFormatKHR> formats;
