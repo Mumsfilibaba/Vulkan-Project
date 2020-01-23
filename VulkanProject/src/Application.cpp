@@ -1,9 +1,9 @@
 #include "Application.h"
-#include "VulkanRenderPass.h"
-#include "VulkanFramebuffer.h"
-#include "VulkanShaderModule.h"
-#include "VulkanPipelineState.h"
-#include "VulkanCommandBuffer.h"
+#include "Vulkan/VulkanRenderPass.h"
+#include "Vulkan/VulkanFramebuffer.h"
+#include "Vulkan/VulkanShaderModule.h"
+#include "Vulkan/VulkanPipelineState.h"
+#include "Vulkan/VulkanCommandBuffer.h"
 
 #include <iostream>
 
@@ -76,28 +76,17 @@ void Application::Init()
 
     delete pVertex;
     delete pFragment;
+   
+    CreateFramebuffers();
 
-    FramebufferParams framebufferParams = {};
-    framebufferParams.AttachMentCount = 1;
-
-    VkExtent2D extent = m_pContext->GetFramebufferExtent();
-    framebufferParams.Width  = extent.width;
-    framebufferParams.Height = extent.height;
-    framebufferParams.pRenderPass = m_pRenderPass;
-    
     CommandBufferParams commandBufferParams = {};
     commandBufferParams.Level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferParams.QueueType   = ECommandQueueType::COMMAND_QUEUE_TYPE_GRAPHICS;
 
     uint32 imageCount = m_pContext->GetImageCount();
-    m_Framebuffers.resize(imageCount);
     m_CommandBuffers.resize(imageCount);
-    for (size_t i = 0; i < m_Framebuffers.size(); i++)
+    for (size_t i = 0; i < m_CommandBuffers.size(); i++)
     {
-        VkImageView imageView = m_pContext->GetSwapChainImageView(i);
-        framebufferParams.pAttachMents = &imageView;
-        m_Framebuffers[i]   = m_pContext->CreateFrameBuffer(framebufferParams);
-
         VulkanCommandBuffer* pCommandBuffer = m_pContext->CreateCommandBuffer(commandBufferParams);
         m_CommandBuffers[i] = pCommandBuffer;
     }
@@ -116,7 +105,7 @@ void Application::CreateWindow()
     });
 
     //Setup window
-    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     //Create window
@@ -124,11 +113,64 @@ void Application::CreateWindow()
     if (m_pWindow)
     {
         //Setup callbacks
-        glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow* window)
-		{
-            Application::Get().OnWindowClose();
-		});
+        glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow*)
+		    {
+                Application::Get().OnWindowClose();
+		    });
+
+        glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow*, int32 width, int32 height) 
+            {
+                Application::Get().OnWindowResize(width, height);
+            });
     }
+}
+
+void Application::CreateFramebuffers()
+{
+    uint32 imageCount = m_pContext->GetImageCount();
+    m_Framebuffers.resize(imageCount);
+
+    FramebufferParams framebufferParams = {};
+    framebufferParams.AttachMentCount   = 1;
+    framebufferParams.Width             = m_Width;
+    framebufferParams.Height            = m_Height;
+    framebufferParams.pRenderPass       = m_pRenderPass;
+
+    for (size_t i = 0; i < m_Framebuffers.size(); i++)
+    {
+        VkImageView imageView = m_pContext->GetSwapChainImageView(i);
+        framebufferParams.pAttachMents = &imageView;
+        m_Framebuffers[i] = m_pContext->CreateFrameBuffer(framebufferParams);
+    }
+}
+
+void Application::ReleaseFramebuffers()
+{
+    for (auto& framebuffer : m_Framebuffers)
+    {
+        delete framebuffer;
+        framebuffer = nullptr;
+    }
+
+    m_Framebuffers.clear();
+}
+
+void Application::OnWindowResize(uint32 width, uint32 height)
+{
+    m_pContext->WaitForIdle();
+    
+    m_Width  = width;
+    m_Height = height;
+        
+    m_pContext->ResizeBuffers(m_Width, m_Height);
+
+    ReleaseFramebuffers();
+    CreateFramebuffers();
+}
+
+void Application::OnWindowClose()
+{
+    m_bIsRunning = false;
 }
 
 void Application::Run()
@@ -161,11 +203,6 @@ void Application::Run()
     m_pContext->Present();
 }
 
-void Application::OnWindowClose()
-{
-    m_bIsRunning = false;
-}
-
 void Application::Release()
 {
     m_pContext->WaitForIdle();
@@ -176,12 +213,7 @@ void Application::Release()
     }
     m_CommandBuffers.clear();
 
-    for (auto& framebuffer : m_Framebuffers)
-    {
-        delete framebuffer;
-        framebuffer = nullptr;
-    }
-    m_Framebuffers.clear();
+    ReleaseFramebuffers();
 
     delete m_pRenderPass;
     delete m_PipelineState;

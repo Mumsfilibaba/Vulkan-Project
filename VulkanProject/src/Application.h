@@ -1,5 +1,5 @@
 #pragma once
-#include "VulkanContext.h"
+#include "Vulkan/VulkanContext.h"
 
 #include <GLFW/glfw3.h>
 
@@ -22,6 +22,11 @@ private:
     ~Application();
 
     void CreateWindow();
+    void CreateFramebuffers();
+
+    void ReleaseFramebuffers();
+
+    void OnWindowResize(uint32 width, uint32 height);
     void OnWindowClose();
 private:
     GLFWwindow* m_pWindow;

@@ -97,7 +97,7 @@ void VulkanCommandBuffer::End()
 
 void VulkanCommandBuffer::Reset(VkCommandPoolResetFlags flags)
 {
-	//Wait for GPU to finish with this commanbuffer and then reset it
+	//Wait for GPU to finish with this commandbuffer and then reset it
 	vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, UINT64_MAX);
 	vkResetFences(m_Device, 1, &m_Fence);
 
@@ -110,11 +110,11 @@ void VulkanCommandBuffer::Init(uint32 queueFamilyIndex, const CommandBufferParam
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.pNext = nullptr;
-	poolInfo.flags = 0; 
+	poolInfo.flags = 0;
 	poolInfo.queueFamilyIndex = queueFamilyIndex;
 
 	VkResult result = vkCreateCommandPool(m_Device, &poolInfo, nullptr, &m_CommandPool);
-	if (result != VK_SUCCESS) 
+	if (result != VK_SUCCESS)
 	{
 		std::cout << "vkCreateCommandPool failed" << std::endl;
 		return;

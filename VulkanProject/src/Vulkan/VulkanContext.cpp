@@ -166,6 +166,17 @@ void VulkanContext::ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipel
 	}
 }
 
+void VulkanContext::ResizeBuffers(uint32 width, uint32 height)
+{
+	if (m_Extent.width == width && m_Extent.height == height)
+		return;
+
+	ReleaseSwapChainResources();
+	CreateSwapChain(width, height);
+
+	std::cout << "Resized Buffers: w=" << width << ", h=" << height << std::endl;
+}
+
 void VulkanContext::WaitForIdle()
 {
 	vkDeviceWaitIdle(m_Device);
@@ -199,11 +210,11 @@ void VulkanContext::Present()
 		if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			RecreateSwapChain();
-			std::cout << "Suboptimal SwapChain result='%s'" << std::endl;
+			std::cout << "Suboptimal SwapChain" << std::endl;
 		}
 		else
 		{
-			std::cout << "Present Failed. Error: %s\n" << std::endl;
+			std::cout << "Present Failed\n" << std::endl;
 		}
 	}
 }
@@ -675,6 +686,10 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 		std::cout << "vkCreateSwapchainKHR failed" << std::endl;
 		return false;
 	}
+	else
+	{
+		m_SemaphoreIndex = 0;
+	}
 
 	//Get the images and create imageviews
 	uint32 realImageCount = 0;
@@ -740,8 +755,6 @@ void VulkanContext::RecreateSwapChain()
 
 	ReleaseSwapChainResources();
 	CreateSwapChain(0, 0);
-
-	m_SemaphoreIndex = 0;
 }
 
 void VulkanContext::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)

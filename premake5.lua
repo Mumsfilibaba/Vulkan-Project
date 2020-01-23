@@ -112,12 +112,19 @@ workspace "Vulkan-Project"
 			{ 
 				"./compile_shaders.command" 
 			}
-	filter {}
 		
+		-- Visual Studio
+		filter { "action:vs*" }
+			defines
+			{
+				"_CRT_SECURE_NO_WARNINGS"
+			}
+		filter {}
+	
 		-- Includes
 		includedirs
 		{
-			"%{prj.name}/Include",
+			"%{prj.name}/src",
 		}
 		sysincludedirs
 		{

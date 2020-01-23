@@ -62,6 +62,7 @@ public:
 
     void ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages);
 
+    void ResizeBuffers(uint32 width, uint32 height);
     void WaitForIdle();
     void Present();
     void Destroy();
