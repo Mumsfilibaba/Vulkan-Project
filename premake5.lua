@@ -5,7 +5,7 @@ workspace "Vulkan-Project"
 	
 	-- Were to output files
 	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
-	
+
 	-- Confingurations
 	configurations 
 	{
@@ -56,7 +56,7 @@ workspace "Vulkan-Project"
 		-- Targets
 		targetdir 	("Build/bin/" .. outputdir .. "/%{prj.name}")
 		objdir 		("Build/bin-int/" .. outputdir .. "/%{prj.name}")	
-		
+
 		-- Files to include
 		files 
 		{ 
@@ -83,10 +83,13 @@ workspace "Vulkan-Project"
 				"C:/VulkanSDK/1.1.121.2/Include",
 			}
 			
-			prebuildcommands { "compile_shaders" }
+			prebuildcommands
+			{ 
+				"compile_shaders" 
+			}
 
 		-- macOS
-		filter "system:macosx"
+		filter { "system:macosx" }
 			links
 			{
 				"vulkan.1",
@@ -104,7 +107,12 @@ workspace "Vulkan-Project"
 			{
 				"/usr/local/include",
 			}
-		filter {}
+
+			prebuildcommands 
+			{ 
+				"./compile_shaders.command" 
+			}
+	filter {}
 		
 		-- Includes
 		includedirs

@@ -14,6 +14,8 @@ Application::Application()
     m_pContext(nullptr),
     m_pRenderPass(nullptr),
     m_PipelineState(nullptr),
+    m_Width(1440),
+    m_Height(900),
     m_Framebuffers(),
     m_bIsRunning(false)
 {
@@ -116,7 +118,7 @@ void Application::CreateWindow()
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     //Create window
-    m_pWindow = glfwCreateWindow(1440, 900, "Vulkan Project", nullptr, nullptr);
+    m_pWindow = glfwCreateWindow(m_Width, m_Height, "Vulkan Project", nullptr, nullptr);
     if (m_pWindow)
     {
         //Setup callbacks
@@ -140,6 +142,13 @@ void Application::Run()
     VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
     pCurrentCommandBuffer->BeginRenderPass(m_pRenderPass, m_Framebuffers[frameIndex], &clearColor, 1);
     
+    VkViewport viewport = { 0.0f, 0.0f, float(m_Width), float(m_Height), 0.0f, 1.0f };
+    pCurrentCommandBuffer->SetViewport(viewport);
+    
+    VkRect2D scissor = { { 0, 0}, { m_Width, m_Height } };
+    pCurrentCommandBuffer->SetScissorRect(scissor);
+    
+    pCurrentCommandBuffer->BindGraphicsPipelineState(m_PipelineState);
     pCurrentCommandBuffer->DrawInstanced(3, 1, 0, 0);
     
     pCurrentCommandBuffer->EndRenderPass();

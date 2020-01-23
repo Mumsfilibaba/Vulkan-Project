@@ -31,7 +31,9 @@ public:
 	void Begin(VkCommandBufferUsageFlags flags = 0);
 	void BeginRenderPass(VulkanRenderPass* pRenderPass, VulkanFramebuffer* pFramebuffer, VkClearValue* pClearValues, uint32 clearValuesCount);
 	void BindGraphicsPipelineState(VulkanGraphicsPipelineState* pPipelineState);
-	void DrawInstanced(uint32 vertexCount, uint32 instanceCount, uint32 firstVertex, uint32 firstInstance);
+    void SetViewport(const VkViewport& viewport);
+    void SetScissorRect(const VkRect2D& scissor);
+    void DrawInstanced(uint32 vertexCount, uint32 instanceCount, uint32 firstVertex, uint32 firstInstance);
 	void EndRenderPass();
 	void End();
 	

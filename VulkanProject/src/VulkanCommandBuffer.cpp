@@ -52,6 +52,16 @@ void VulkanCommandBuffer::BeginRenderPass(VulkanRenderPass* pRenderPass, VulkanF
 	vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
+void VulkanCommandBuffer::SetViewport(const VkViewport& viewport)
+{
+    vkCmdSetViewport(m_CommandBuffer, 0, 1, &viewport);
+}
+
+void VulkanCommandBuffer::SetScissorRect(const VkRect2D& scissor)
+{
+    vkCmdSetScissor(m_CommandBuffer, 0, 1, &scissor);
+}
+
 void VulkanCommandBuffer::BindGraphicsPipelineState(VulkanGraphicsPipelineState* pPipelineState)
 {
 	vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineState->GetPipeline());

@@ -7,6 +7,8 @@
 #include <vector>
 #include <string>
 
+#define FRAME_COUNT 3
+
 struct DeviceParams
 {
     GLFWwindow* pWindow;

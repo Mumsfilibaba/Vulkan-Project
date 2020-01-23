@@ -57,6 +57,9 @@ VulkanContext::VulkanContext()
 	m_AvailableDeviceExtensions(),
 	m_QueueFamilyIndices(),
     m_FrameData(),
+    m_FrameCount(0),
+    m_SemaphoreIndex(0),
+    m_CurrentBufferIndex(0),
 	m_bValidationEnabled(false),
 	m_bRayTracingEnabled(false)
 {
@@ -149,7 +152,6 @@ void VulkanContext::ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipel
 	submitInfo.pNext = nullptr;
 
 	VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].ImageSemaphore };
-	
 	submitInfo.waitSemaphoreCount	= 1;
 	submitInfo.pWaitSemaphores		= waitSemaphores;
 	submitInfo.pWaitDstStageMask	= pWaitStages;
@@ -228,16 +230,12 @@ bool VulkanContext::Init(const DeviceParams& params)
 	else
 		return false;
 
-    int32 width     = 0;
+    int32 width  = 0;
     int32 height = 0;
     glfwGetWindowSize(params.pWindow, &width, &height);
+    
     if (CreateSwapChain(uint32(width), uint32(height)))
         std::cout << "Created swapchain" << std::endl;
-    else
-        return false;
-
-    if (CreateFencesAndSemaphores())
-        std::cout << "Created Fences and Semaphores" << std::endl;
     else
         return false;
 
@@ -759,7 +757,7 @@ bool VulkanContext::CreateFencesAndSemaphores()
         if (vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &imageSemaphore) != VK_SUCCESS ||
             vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &renderSemaphore) != VK_SUCCESS)
         {
-            std::cout << "Failed to create Semaphore" << std::endl;
+            std::cout << "vkCreateSemaphore failed" << std::endl;
             return false;
         }
         else
@@ -845,7 +843,7 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 		return false;
 	}
 
-	uint32_t imageCount = capabilities.minImageCount + 1;
+	uint32_t imageCount = FRAME_COUNT;
 	if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)
 	{
 		imageCount = capabilities.maxImageCount;
@@ -903,15 +901,31 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 		VkImageView imageView = VK_NULL_HANDLE;
 		imageViewCreateInfo.image = images[i];
 
-		if (vkCreateImageView(m_Device, &imageViewCreateInfo, nullptr, &imageView) != VK_SUCCESS)
+        result = vkCreateImageView(m_Device, &imageViewCreateInfo, nullptr, &imageView);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("failed to create image views!");
+			std::cout << "vkCreateImageView failed" << std::endl;
 		}
+        else
+        {
+            std::cout << "Created ImageView" << std::endl;
+        }
 
 		m_FrameData[i].BackBuffer = images[i];
 		m_FrameData[i].BackBufferView = imageView;
 	}
-
+    
+    if (CreateFencesAndSemaphores())
+        std::cout << "Created Fences and Semaphores" << std::endl;
+    else
+        return false;
+    
+    result = AquireNextImage();
+    if (result != VK_SUCCESS)
+    {
+        std::cout << "AquireNextImage failed" << std::endl;
+    }
+    
 	return true;
 }
 

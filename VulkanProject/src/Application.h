@@ -30,6 +30,8 @@ private:
     VulkanGraphicsPipelineState* m_PipelineState;
     std::vector<VulkanFramebuffer*> m_Framebuffers;
     std::vector<VulkanCommandBuffer*> m_CommandBuffers;
+    uint32 m_Width;
+    uint32 m_Height;
     bool m_bIsRunning;
 
     static Application* s_pInstance;
