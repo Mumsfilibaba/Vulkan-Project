@@ -7,6 +7,7 @@
 #include "VulkanPipelineState.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanExtensionFuncs.h"
+#include "VulkanDeviceAllocator.h"
 
 #include <iostream>
 #include <vector>
@@ -104,9 +105,9 @@ VulkanContext::~VulkanContext()
 	}
 }
 
-VulkanBuffer* VulkanContext::CreateBuffer(const BufferParams& params)
+VulkanBuffer* VulkanContext::CreateBuffer(const BufferParams& params, VulkanDeviceAllocator* pAllocator)
 {
-	return new VulkanBuffer(m_Device, m_PhysicalDevice, params);
+	return new VulkanBuffer(m_Device, m_PhysicalDevice, params, pAllocator);
 }
 
 VulkanRenderPass* VulkanContext::CreateRenderPass(const RenderPassParams& params)
@@ -135,6 +136,11 @@ VulkanCommandBuffer* VulkanContext::CreateCommandBuffer(const CommandBufferParam
 		queueFamilyIndex = m_QueueFamilyIndices.Transfer;
 
 	return new VulkanCommandBuffer(m_Device, queueFamilyIndex, params);
+}
+
+VulkanDeviceAllocator* VulkanContext::CreateDeviceAllocator()
+{
+	return new VulkanDeviceAllocator(m_Device, m_PhysicalDevice);
 }
 
 VulkanGraphicsPipelineState* VulkanContext::CreateGraphicsPipelineState(const GraphicsPipelineStateParams& params)

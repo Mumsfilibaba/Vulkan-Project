@@ -5,6 +5,7 @@
 #include "Vulkan/VulkanShaderModule.h"
 #include "Vulkan/VulkanPipelineState.h"
 #include "Vulkan/VulkanCommandBuffer.h"
+#include "Vulkan/VulkanDeviceAllocator.h"
 
 #include <iostream>
 
@@ -24,6 +25,7 @@ Application::Application()
     m_pCurrentCommandBuffer(nullptr),
     m_pVertexBuffer(nullptr),
     m_pIndexBuffer(nullptr),
+    m_pDeviceAllocator(nullptr),
     m_Width(1440),
     m_Height(900),
     m_CommandBuffers(),
@@ -63,6 +65,7 @@ void Application::Init()
         return;
     }
     
+    //PipelineState, RenderPass and Shaders
     VulkanShaderModule* pVertex   = VulkanShaderModule::CreateFromFile(m_pContext, "main", "res/shaders/vertex.spv");
     VulkanShaderModule* pFragment = VulkanShaderModule::CreateFromFile(m_pContext, "main", "res/shaders/fragment.spv");
 
@@ -89,8 +92,10 @@ void Application::Init()
     SafeDelete(pVertex);
     SafeDelete(pFragment);
    
+    //Framebuffers
     CreateFramebuffers();
 
+    //Commandbuffers
     CommandBufferParams commandBufferParams = {};
     commandBufferParams.Level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferParams.QueueType   = ECommandQueueType::COMMAND_QUEUE_TYPE_GRAPHICS;
@@ -103,6 +108,10 @@ void Application::Init()
         m_CommandBuffers[i] = pCommandBuffer;
     }
 
+    //Allocator for GPU mem
+    m_pDeviceAllocator = m_pContext->CreateDeviceAllocator();
+
+    //Vertex- and indexbuffers
     const std::vector<Vertex> vertices = 
     {
         { {-0.5f, -0.5f},   {1.0f, 0.0f, 0.0f} },
@@ -114,7 +123,8 @@ void Application::Init()
     BufferParams vertexBufferParams = {};
     vertexBufferParams.SizeInBytes = vertices.size() * sizeof(Vertex);
     vertexBufferParams.Usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    m_pVertexBuffer = m_pContext->CreateBuffer(vertexBufferParams);
+    vertexBufferParams.MemoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    m_pVertexBuffer = m_pContext->CreateBuffer(vertexBufferParams, m_pDeviceAllocator);
 
     void* pCPUMem = nullptr;
     m_pVertexBuffer->Map(&pCPUMem);
@@ -130,7 +140,8 @@ void Application::Init()
     BufferParams indexBufferParams = {};
     indexBufferParams.SizeInBytes = indices.size() * sizeof(uint16);
     indexBufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    m_pIndexBuffer = m_pContext->CreateBuffer(indexBufferParams);
+    indexBufferParams.MemoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    m_pIndexBuffer = m_pContext->CreateBuffer(indexBufferParams, nullptr);
 
     pCPUMem = nullptr;
     m_pIndexBuffer->Map(&pCPUMem);
@@ -276,6 +287,7 @@ void Application::Release()
     SafeDelete(m_pRenderPass);
     SafeDelete(m_PipelineState);
 
+    SafeDelete(m_pDeviceAllocator);
     m_pContext->Destroy();
 
     glfwDestroyWindow(m_pWindow);

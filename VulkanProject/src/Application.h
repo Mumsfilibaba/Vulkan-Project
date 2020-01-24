@@ -69,6 +69,7 @@ private:
     VulkanCommandBuffer* m_pCurrentCommandBuffer;
     VulkanBuffer* m_pVertexBuffer;
     VulkanBuffer* m_pIndexBuffer;
+    VulkanDeviceAllocator* m_pDeviceAllocator;
     std::vector<VulkanFramebuffer*> m_Framebuffers;
     std::vector<VulkanCommandBuffer*> m_CommandBuffers;
     uint32 m_Width;

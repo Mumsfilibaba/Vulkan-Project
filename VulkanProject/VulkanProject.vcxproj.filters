@@ -8,13 +8,25 @@
   <ItemGroup>
     <ClInclude Include="src\Application.h" />
     <ClInclude Include="src\Core.h" />
+    <ClInclude Include="src\Vulkan\VulkanBuffer.h">
+      <Filter>Vulkan</Filter>
+    </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanCommandBuffer.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanContext.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
+    <ClInclude Include="src\Vulkan\VulkanDeviceAllocator.h">
+      <Filter>Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Vulkan\VulkanExtensionFuncs.h">
+      <Filter>Vulkan</Filter>
+    </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanFramebuffer.h">
+      <Filter>Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Vulkan\VulkanHelper.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanPipelineState.h">
@@ -26,16 +38,23 @@
     <ClInclude Include="src\Vulkan\VulkanShaderModule.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="src\Vulkan\VulkanBuffer.h" />
-    <ClInclude Include="src\Vulkan\VulkanHelper.h" />
-    <ClInclude Include="src\Vulkan\VulkanExtensionFuncs.h" />
+    <ClInclude Include="src\MathHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanBuffer.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
     <ClCompile Include="src\Vulkan\VulkanCommandBuffer.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="src\Vulkan\VulkanContext.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Vulkan\VulkanDeviceAllocator.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Vulkan\VulkanExtensionFuncs.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="src\Vulkan\VulkanFramebuffer.cpp">
@@ -51,7 +70,5 @@
       <Filter>Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Vulkan\VulkanBuffer.cpp" />
-    <ClCompile Include="src\Vulkan\VulkanExtensionFuncs.cpp" />
   </ItemGroup>
 </Project>

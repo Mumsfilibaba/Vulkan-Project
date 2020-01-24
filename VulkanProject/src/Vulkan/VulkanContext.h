@@ -42,6 +42,7 @@ class VulkanRenderPass;
 class VulkanFramebuffer;
 class VulkanShaderModule;
 class VulkanCommandBuffer;
+class VulkanDeviceAllocator;
 class VulkanGraphicsPipelineState;
 
 class VulkanContext
@@ -57,11 +58,12 @@ private:
 public:
     DECL_NO_COPY(VulkanContext);
     
-    VulkanBuffer* CreateBuffer(const BufferParams& params);
+    VulkanBuffer* CreateBuffer(const BufferParams& params, VulkanDeviceAllocator* pAllocator);
     VulkanRenderPass* CreateRenderPass(const RenderPassParams& params);
     VulkanFramebuffer* CreateFrameBuffer(const FramebufferParams& params);
     VulkanShaderModule* CreateShaderModule(const ShaderModuleParams& params);
     VulkanCommandBuffer* CreateCommandBuffer(const CommandBufferParams& params);
+    VulkanDeviceAllocator* CreateDeviceAllocator();
     VulkanGraphicsPipelineState* CreateGraphicsPipelineState(const GraphicsPipelineStateParams& params);
 
     void ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages);
