@@ -27,3 +27,4 @@ Build/bin/Debug-macosx-x86_64/VulkanProject/VulkanProject.dSYM/Contents/Resource
 Build/bin/Debug-macosx-x86_64/VulkanProject/VulkanProject
 *.xcbkptlist
 Build/*
+*.xcscheme
