@@ -39,17 +39,26 @@ struct Vertex
 class Application
 {
 public:
-    DECL_NO_COPY(Application);
-
-    bool IsRunning() { return m_bIsRunning; } 
+    inline bool IsRunning()
+	{
+		return m_bIsRunning;
+	}
+	
     void Init();
     void Run();
     void Release();
     
-    VulkanContext* GetVulkanContext() const { return m_pContext; }
+    inline VulkanContext* GetVulkanContext() const
+	{
+		return m_pContext;
+	}
 
     static Application* Create();
-    static Application& Get() { return *s_pInstance; }
+    inline static Application& Get()
+	{
+		return *s_pInstance;
+	}
+	
 private:
     Application();
     ~Application();
@@ -59,8 +68,9 @@ private:
 
     void ReleaseFramebuffers();
 
-    void OnWindowResize(uint32 width, uint32 height);
+    void OnWindowResize(uint32_t width, uint32_t height);
     void OnWindowClose();
+	
 private:
     GLFWwindow* m_pWindow;
     VulkanContext* m_pContext;
@@ -70,10 +80,11 @@ private:
     VulkanBuffer* m_pVertexBuffer;
     VulkanBuffer* m_pIndexBuffer;
     VulkanDeviceAllocator* m_pDeviceAllocator;
+	
     std::vector<VulkanFramebuffer*> m_Framebuffers;
     std::vector<VulkanCommandBuffer*> m_CommandBuffers;
-    uint32 m_Width;
-    uint32 m_Height;
+    uint32_t m_Width;
+    uint32_t m_Height;
     bool m_bIsRunning;
 
     static Application* s_pInstance;

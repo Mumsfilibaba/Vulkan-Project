@@ -9,21 +9,27 @@ struct ShaderModuleParams
 {
 	const char* pEntryPoint = nullptr;
 	const char* pSource = nullptr;
-	uint32 SourceSize = 0;
+	uint32_t SourceSize = 0;
 };
 
 class VulkanShaderModule
 {
 public:
-	DECL_NO_COPY(VulkanShaderModule);
-
 	VulkanShaderModule(VkDevice device, const ShaderModuleParams& params);
 	~VulkanShaderModule();
 
-	VkShaderModule GetModule() const { return m_Module; }
-	const char* GetEntryPoint() const { return m_pEntryPoint; }
+	inline VkShaderModule GetModule() const
+	{
+		return m_Module;
+	}
+	
+	inline const char* GetEntryPoint() const
+	{
+		return m_pEntryPoint;
+	}
 
 	static VulkanShaderModule* CreateFromFile(VulkanContext* pContext, const char* pEntryPoint, const char* pFilePath);
+	
 private:
 	VkDevice m_Device;
 	VkShaderModule m_Module;

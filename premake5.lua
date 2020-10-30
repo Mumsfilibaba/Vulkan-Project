@@ -51,7 +51,7 @@ workspace "Vulkan-Project"
 		systemversion "latest"
 		location "VulkanProject"
 		staticruntime "on"
-		kind "ConsoleApp"
+		kind "WindowedApp"
 
 		-- Targets
 		targetdir 	("Build/bin/" .. outputdir .. "/%{prj.name}")

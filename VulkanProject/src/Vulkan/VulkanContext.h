@@ -19,10 +19,10 @@ struct DeviceParams
 
 struct QueueFamilyIndices
 {
-    uint32 Graphics     = UINT32_MAX;
-    uint32 Presentation = UINT32_MAX;
-    uint32 Compute      = UINT32_MAX;
-    uint32 Transfer     = UINT32_MAX;
+    uint32_t Graphics     = UINT32_MAX;
+    uint32_t Presentation = UINT32_MAX;
+    uint32_t Compute      = UINT32_MAX;
+    uint32_t Transfer     = UINT32_MAX;
 
     bool IsValid() const
     {
@@ -55,9 +55,8 @@ private:
         VkSemaphore ImageSemaphore  = VK_NULL_HANDLE;
         VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
     };
+	
 public:
-    DECL_NO_COPY(VulkanContext);
-    
     VulkanBuffer* CreateBuffer(const BufferParams& params, VulkanDeviceAllocator* pAllocator);
     VulkanRenderPass* CreateRenderPass(const RenderPassParams& params);
     VulkanFramebuffer* CreateFrameBuffer(const FramebufferParams& params);
@@ -68,19 +67,43 @@ public:
 
     void ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages);
 
-    void ResizeBuffers(uint32 width, uint32 height);
+    void ResizeBuffers(uint32_t width, uint32_t height);
     void WaitForIdle();
     void Present();
     void Destroy();
     
-    VkImage GetSwapChainImage(uint32 index) const { return m_FrameData[index].BackBuffer; }
-    VkImageView GetSwapChainImageView(uint32 index) const { return m_FrameData[index].BackBufferView; }
-    VkFormat GetSwapChainFormat() const { return m_SwapChainFormat.format; }
-    VkExtent2D GetFramebufferExtent() const { return m_Extent; }
-    uint32 GetCurrentBackBufferIndex() const { return m_CurrentBufferIndex; }
-    uint32 GetImageCount() const { return m_FrameCount; }
+	inline VkImage GetSwapChainImage(uint32_t index) const
+	{
+		return m_FrameData[index].BackBuffer;
+	}
+	
+	inline VkImageView GetSwapChainImageView(uint32_t index) const
+	{
+		return m_FrameData[index].BackBufferView;
+	}
+	
+	inline VkFormat GetSwapChainFormat() const
+	{
+		return m_SwapChainFormat.format;
+	}
+	
+	inline VkExtent2D GetFramebufferExtent() const
+	{
+		return m_Extent;
+	}
+	
+	inline uint32_t GetCurrentBackBufferIndex() const
+	{
+		return m_CurrentBufferIndex;
+	}
+	
+    inline uint32_t GetImageCount() const
+	{
+		return m_FrameCount;
+	}
 
     static VulkanContext* Create(const DeviceParams& props);
+	
 private:
     VulkanContext();
     ~VulkanContext();
@@ -90,9 +113,9 @@ private:
     bool CreateDebugMessenger();
     bool CreateSurface(GLFWwindow* pWindow);
     bool CreateDeviceAndQueues(const DeviceParams& props);
-    void InitFrameData(uint32 numFrames);
+    void InitFrameData(uint32_t numFrames);
     bool CreateSemaphores();
-    bool CreateSwapChain(uint32 width, uint32 height);
+    bool CreateSwapChain(uint32_t width, uint32_t height);
     bool QueryPhysicalDevice(const DeviceParams& props);
    
     void ReleaseSwapChainResources();
@@ -103,6 +126,7 @@ private:
 
     QueueFamilyIndices GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
     std::vector<const char*> GetRequiredDeviceExtensions();
+	
 private:
     VkInstance m_Instance;
     VkDebugUtilsMessengerEXT m_DebugMessenger;
@@ -120,9 +144,9 @@ private:
 
     VkImage m_DepthStencilBuffer;
     std::vector<FrameData> m_FrameData;
-    uint32 m_FrameCount;
-    mutable uint32 m_SemaphoreIndex;
-    mutable uint32 m_CurrentBufferIndex;
+    uint32_t m_FrameCount;
+    mutable uint32_t m_SemaphoreIndex;
+    mutable uint32_t m_CurrentBufferIndex;
     
     VkPhysicalDeviceFeatures m_EnabledDeviceFeatures;
     VkPhysicalDeviceProperties m_DeviceProperties;

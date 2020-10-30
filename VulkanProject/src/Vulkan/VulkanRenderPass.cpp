@@ -37,7 +37,7 @@ void VulkanRenderPass::Init(const RenderPassParams& params)
     VkAttachmentReference colorAttachmentRef = {};
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    for (uint32 i = 0; i < params.ColorAttachmentCount; i++)
+    for (uint32_t i = 0; i < params.ColorAttachmentCount; i++)
     {
         colorAttachment.format = params.pColorAttachments[i].Format;
         attachmentsInfos.push_back(colorAttachment);
@@ -52,7 +52,7 @@ void VulkanRenderPass::Init(const RenderPassParams& params)
     subpass.pInputAttachments       = nullptr;
     subpass.pDepthStencilAttachment = nullptr;
     subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount    = uint32(colorAttachmentRefInfos.size());
+    subpass.colorAttachmentCount    = uint32_t(colorAttachmentRefInfos.size());
     subpass.pColorAttachments       = colorAttachmentRefInfos.data();
     subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments    = nullptr;

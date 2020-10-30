@@ -9,7 +9,7 @@
 
 constexpr float mb = 1024.0f * 1024.0f;
 
-VkMemoryPage::VkMemoryPage(VkDevice device, VkPhysicalDevice phyicalDevice, uint32 id, VkDeviceSize sizeInBytes, uint32 memoryType, VkMemoryPropertyFlags properties)
+VkMemoryPage::VkMemoryPage(VkDevice device, VkPhysicalDevice phyicalDevice, uint32_t id, VkDeviceSize sizeInBytes, uint32_t memoryType, VkMemoryPropertyFlags properties)
 	: m_Device(device),
 	m_PhysicalDevice(phyicalDevice),
 	m_Properties(properties),
@@ -53,7 +53,7 @@ VkMemoryPage::~VkMemoryPage()
 			pCurrent = pCurrent->pNext;
 
 			//Delete block
-			SafeDelete(pOld);
+			delete pOld;
 		}
 
 		//Free memory
@@ -120,7 +120,7 @@ bool VkMemoryPage::Allocate(VkDeviceAllocation& allocation, VkDeviceSize sizeInB
 			continue;
 
 		//Align the offset
-		paddedDeviceOffset = Math::AlignUp<uint64>(pCurrent->DeviceMemoryOffset, alignment);
+		paddedDeviceOffset = Math::AlignUp<uint64_t>(pCurrent->DeviceMemoryOffset, alignment);
 
 		//Take granularity into account
 		if (pCurrent->pPrevious != nullptr && granularity > 1)
@@ -250,7 +250,7 @@ void VkMemoryPage::Map()
 		void* pMemory = nullptr;
 		vkMapMemory(m_Device, m_DeviceMemory, 0, VK_WHOLE_SIZE, 0, &pMemory);
 
-		m_pHostMemory = reinterpret_cast<uint8*>(pMemory);
+		m_pHostMemory = reinterpret_cast<uint8_t*>(pMemory);
 		m_IsMapped = true;
 	}
 }
@@ -353,13 +353,13 @@ VulkanDeviceAllocator::VulkanDeviceAllocator(VkDevice device, VkPhysicalDevice p
 VulkanDeviceAllocator::~VulkanDeviceAllocator()
 {
 	//Cleanup all garbage memory before deleting
-	for (uint32 i = 0; i < numFrames; i++)
+	for (uint32_t i = 0; i < numFrames; i++)
 		EmptyGarbageMemory();
 
 	//Delete allocator
 	std::cout << "Deleting DeviceAllocator. Number of Pages: " << m_Pages.size() << std::endl;
 	for (VkMemoryPage* page : m_Pages)
-		SafeDelete(page);
+		delete page;
 
 	std::cout << "Destroyed DeviceAllocator" << std::endl;
 }
@@ -368,7 +368,7 @@ VulkanDeviceAllocator::~VulkanDeviceAllocator()
 bool VulkanDeviceAllocator::Allocate(VkDeviceAllocation& allocation, const VkMemoryRequirements& memoryRequirements, VkMemoryPropertyFlags properties)
 {
 	m_TotalAllocated += memoryRequirements.size;
-	uint32 memoryType = FindMemoryType(m_PhysicalDevice, memoryRequirements.memoryTypeBits, properties);
+	uint32_t memoryType = FindMemoryType(m_PhysicalDevice, memoryRequirements.memoryTypeBits, properties);
 
 	//Try allocating from existing page
 	for (auto page : m_Pages)
@@ -386,7 +386,7 @@ bool VulkanDeviceAllocator::Allocate(VkDeviceAllocation& allocation, const VkMem
 	assert(m_Pages.size() < m_MaxAllocations);
 
 	//If allocated is large, make a dedicated allocation
-	uint64 bytesToReserve = MB(128);
+	uint64_t bytesToReserve = MB(128);
 	if (memoryRequirements.size > bytesToReserve)
 		bytesToReserve = memoryRequirements.size;
 
@@ -394,7 +394,7 @@ bool VulkanDeviceAllocator::Allocate(VkDeviceAllocation& allocation, const VkMem
 	m_TotalReserved += bytesToReserve;
 
 	//Allocate new page
-	VkMemoryPage* pPage = new VkMemoryPage(m_Device, m_PhysicalDevice, uint32(m_Pages.size()), bytesToReserve, memoryType, properties);
+	VkMemoryPage* pPage = new VkMemoryPage(m_Device, m_PhysicalDevice, uint32_t(m_Pages.size()), bytesToReserve, memoryType, properties);
 	m_Pages.emplace_back(pPage);
 
 	std::cout << "Allocated Memory-Page. Allocationcount: ' " << m_Pages.size() << "/" << m_MaxAllocations << "'. Memory-Type=" << memoryType << ". Total Allocated: " << float(m_TotalAllocated) / mb << " MB. Total Reserved " << float(m_TotalReserved) / mb << " MB"<< std::endl;
@@ -455,7 +455,7 @@ void VulkanDeviceAllocator::EmptyGarbageMemory()
 				//Erase from vector
 				m_TotalReserved -= (*it)->GetSizeInBytes();
 
-				SafeDelete(*it);
+				delete *it;
 				it = m_Pages.erase(it);
 
 				std::cout << "Destroyed Memory-Page. Allocationcount: '" << m_Pages.size() << "/" << m_MaxAllocations << "'. Total Allocated: " << float(m_TotalAllocated) / mb << " MB. Total Reserved " << float(m_TotalReserved) / mb << " MB" << std::endl;

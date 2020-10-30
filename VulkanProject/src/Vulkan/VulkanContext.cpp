@@ -127,7 +127,7 @@ VulkanShaderModule* VulkanContext::CreateShaderModule(const ShaderModuleParams& 
 
 VulkanCommandBuffer* VulkanContext::CreateCommandBuffer(const CommandBufferParams& params)
 {
-	uint32 queueFamilyIndex = 0;
+	uint32_t queueFamilyIndex = 0;
 	if (params.QueueType == ECommandQueueType::COMMAND_QUEUE_TYPE_GRAPHICS)
 		queueFamilyIndex = m_QueueFamilyIndices.Graphics;
 	else if (params.QueueType == ECommandQueueType::COMMAND_QUEUE_TYPE_COMPUTE)
@@ -193,7 +193,7 @@ void VulkanContext::ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipel
 	}
 }
 
-void VulkanContext::ResizeBuffers(uint32 width, uint32 height)
+void VulkanContext::ResizeBuffers(uint32_t width, uint32_t height)
 {
 	if (m_Extent.width == width && m_Extent.height == height)
 		return;
@@ -292,11 +292,11 @@ bool VulkanContext::Init(const DeviceParams& params)
 	else
 		return false;
 
-    int32 width  = 0;
-    int32 height = 0;
+    int32_t width  = 0;
+    int32_t height = 0;
     glfwGetWindowSize(params.pWindow, &width, &height);
     
-    if (CreateSwapChain(uint32(width), uint32(height)))
+    if (CreateSwapChain(uint32_t(width), uint32_t(height)))
         std::cout << "Created swapchain" << std::endl;
     else
         return false;
@@ -318,12 +318,12 @@ bool VulkanContext::CreateInstance(const DeviceParams& params)
 	//Enable GLFW extensions
 	std::vector<const char*> instanceExtensions;
 
-	uint32 requiredInstanceExtensionCount = 0;
+	uint32_t requiredInstanceExtensionCount = 0;
 	const char** ppRequiredInstanceExtension = glfwGetRequiredInstanceExtensions(&requiredInstanceExtensionCount);
 	if (requiredInstanceExtensionCount > 0)
 	{
 		std::cout << "Required instance extensions:" << std::endl;
-		for (uint32 i = 0; i < requiredInstanceExtensionCount; i++)
+		for (uint32_t i = 0; i < requiredInstanceExtensionCount; i++)
 		{
 			std::cout << "   " << ppRequiredInstanceExtension[i] << std::endl;
 			instanceExtensions.push_back(ppRequiredInstanceExtension[i]);
@@ -480,7 +480,7 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	const float defaultQueuePriority = 0.0f;
 
-	std::set<uint32> uniqueQueueFamilies =
+	std::set<uint32_t> uniqueQueueFamilies =
 	{
 		m_QueueFamilyIndices.Graphics,
 		m_QueueFamilyIndices.Compute,
@@ -488,7 +488,7 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
 		m_QueueFamilyIndices.Transfer
 	};
 
-	for (int32 queueFamiliy : uniqueQueueFamilies)
+	for (int32_t queueFamiliy : uniqueQueueFamilies)
 	{
 		VkDeviceQueueCreateInfo queueInfo = {};
 		queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -581,7 +581,7 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
 	}
 }
 
-void VulkanContext::InitFrameData(uint32 numFrames)
+void VulkanContext::InitFrameData(uint32_t numFrames)
 {
 	m_FrameCount = numFrames;
 	m_FrameData.resize(m_FrameCount);
@@ -596,7 +596,7 @@ bool VulkanContext::CreateSemaphores()
 	semaphoreInfo.flags = 0;
 
 	//Create semaphores
-	for (uint32 i = 0; i < m_FrameCount; i++)
+	for (uint32_t i = 0; i < m_FrameCount; i++)
 	{
 		VkSemaphore imageSemaphore = VK_NULL_HANDLE;
 		VkSemaphore renderSemaphore = VK_NULL_HANDLE;
@@ -609,8 +609,8 @@ bool VulkanContext::CreateSemaphores()
 		}
 		else
 		{
-			SetDebugName(m_Device, "ImageSemaphore[" + std::to_string(i) + "]", (uint64)imageSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
-			SetDebugName(m_Device, "RenderSemaphore[" + std::to_string(i) + "]", (uint64)renderSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
+			SetDebugName(m_Device, "ImageSemaphore[" + std::to_string(i) + "]", (uint64_t)imageSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
+			SetDebugName(m_Device, "RenderSemaphore[" + std::to_string(i) + "]", (uint64_t)renderSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
 		}
 
 		m_FrameData[i].ImageSemaphore = imageSemaphore;
@@ -620,7 +620,7 @@ bool VulkanContext::CreateSemaphores()
 	return true;
 }
 
-bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
+bool VulkanContext::CreateSwapChain(uint32_t width, uint32_t height)
 {
 	//Get capabilities and formats that are supported
 	VkSurfaceCapabilitiesKHR capabilities = {};
@@ -711,7 +711,7 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 	}
 
 	//Get the images and create imageviews
-	uint32 realImageCount = 0;
+	uint32_t realImageCount = 0;
 	vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &realImageCount, nullptr);
 	if (realImageCount < m_FrameCount)
 		std::cout << "WARNING: Less images than requested in swapchain" << std::endl;
@@ -734,7 +734,7 @@ bool VulkanContext::CreateSwapChain(uint32 width, uint32 height)
 	imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
 	imageViewCreateInfo.subresourceRange.layerCount		= 1;
 
-	for (uint32 i = 0; i < m_FrameCount; i++)
+	for (uint32_t i = 0; i < m_FrameCount; i++)
 	{
 		VkImageView imageView = VK_NULL_HANDLE;
 		imageViewCreateInfo.image = images[i];
@@ -886,11 +886,11 @@ bool VulkanContext::QueryPhysicalDevice(const DeviceParams& params)
 }
 
 //Helper function
-static uint32 GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const std::vector<VkQueueFamilyProperties>& queueFamilies)
+static uint32_t GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const std::vector<VkQueueFamilyProperties>& queueFamilies)
 {
 	if (queueFlags & VK_QUEUE_COMPUTE_BIT)
 	{
-		for (uint32 i = 0; i < uint32(queueFamilies.size()); i++)
+		for (uint32_t i = 0; i < uint32_t(queueFamilies.size()); i++)
 		{
 			if ((queueFamilies[i].queueFlags & queueFlags) && ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
 				return i;
@@ -899,14 +899,14 @@ static uint32 GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const std::vector<
 
 	if (queueFlags & VK_QUEUE_TRANSFER_BIT)
 	{
-		for (uint32 i = 0; i < uint32(queueFamilies.size()); i++)
+		for (uint32_t i = 0; i < uint32_t(queueFamilies.size()); i++)
 		{
 			if ((queueFamilies[i].queueFlags & queueFlags) && ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) && ((queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
 				return i;
 		}
 	}
 
-	for (uint32 i = 0; i < uint32(queueFamilies.size()); i++)
+	for (uint32_t i = 0; i < uint32_t(queueFamilies.size()); i++)
 	{
 		if (queueFamilies[i].queueFlags & queueFlags)
 			return i;
@@ -917,7 +917,7 @@ static uint32 GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const std::vector<
 
 QueueFamilyIndices VulkanContext::GetQueueFamilyIndices(VkPhysicalDevice physicalDevice)
 {
-	uint32 queueFamilyCount = 0;
+	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
@@ -929,7 +929,7 @@ QueueFamilyIndices VulkanContext::GetQueueFamilyIndices(VkPhysicalDevice physica
 	indices.Graphics	= GetQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, queueFamilies);
 
 	//Find a presentation queue
-	for (uint32 i = 0; i < queueFamilyCount; i++)
+	for (uint32_t i = 0; i < queueFamilyCount; i++)
 	{
 		VkBool32 presentSupport = false;
 		vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, m_Surface, &presentSupport);

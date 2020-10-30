@@ -6,7 +6,7 @@ struct BufferParams
 {
 	VkDeviceSize SizeInBytes = 0;
 	VkMemoryPropertyFlags MemoryProperties = 0;
-	uint32 Usage = 0;
+	uint32_t Usage = 0;
 };
 
 class VulkanDeviceAllocator;
@@ -14,8 +14,6 @@ class VulkanDeviceAllocator;
 class VulkanBuffer
 {
 public:
-	DECL_NO_COPY(VulkanBuffer);
-
 	VulkanBuffer(VkDevice device, VkPhysicalDevice physicalDevice, const BufferParams& params, VulkanDeviceAllocator* pAllocator);
 	~VulkanBuffer();
 
@@ -23,9 +21,14 @@ public:
 	void Map(void** ppCPUMem);
 	void Unmap();
 
-	VkBuffer GetBuffer() const { return m_Buffer; }
+	inline VkBuffer GetBuffer() const
+	{
+		return m_Buffer;
+	}
+	
 private:
 	void Init(const BufferParams& params);
+	
 private:
 	VulkanDeviceAllocator* m_pAllocator;
 	VkDevice m_Device;

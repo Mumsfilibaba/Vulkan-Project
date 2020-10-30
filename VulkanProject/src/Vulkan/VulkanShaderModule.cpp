@@ -74,7 +74,7 @@ VulkanShaderModule* VulkanShaderModule::CreateFromFile(VulkanContext* pContext, 
         ShaderModuleParams params = {};
         params.pEntryPoint = pEntryPoint;
         params.pSource = buffer.data();
-        params.SourceSize = uint32(buffer.size());
+        params.SourceSize = uint32_t(buffer.size());
         return pContext->CreateShaderModule(params);
     }
     else

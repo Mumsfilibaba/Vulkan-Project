@@ -1,4 +1,5 @@
 #include "Application.h"
+
 #include "Vulkan/VulkanBuffer.h"
 #include "Vulkan/VulkanRenderPass.h"
 #include "Vulkan/VulkanFramebuffer.h"
@@ -89,8 +90,8 @@ void Application::Init()
     pipelineParams.pRenderPass = m_pRenderPass;
     m_PipelineState = m_pContext->CreateGraphicsPipelineState(pipelineParams);
 
-    SafeDelete(pVertex);
-    SafeDelete(pFragment);
+    delete pVertex;
+    delete pFragment;
    
     //Framebuffers
     CreateFramebuffers();
@@ -100,7 +101,7 @@ void Application::Init()
     commandBufferParams.Level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferParams.QueueType   = ECommandQueueType::COMMAND_QUEUE_TYPE_GRAPHICS;
 
-    uint32 imageCount = m_pContext->GetImageCount();
+    uint32_t imageCount = m_pContext->GetImageCount();
     m_CommandBuffers.resize(imageCount);
     for (size_t i = 0; i < m_CommandBuffers.size(); i++)
     {
@@ -131,14 +132,14 @@ void Application::Init()
     memcpy(pCPUMem, vertices.data(), vertexBufferParams.SizeInBytes);
     m_pVertexBuffer->Unmap();
 
-    const std::vector<uint16> indices = 
+    const std::vector<uint16_t> indices =
     {
         0, 1, 2, 
         2, 3, 0
     };
 
     BufferParams indexBufferParams = {};
-    indexBufferParams.SizeInBytes = indices.size() * sizeof(uint16);
+    indexBufferParams.SizeInBytes = indices.size() * sizeof(uint16_t);
     indexBufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     indexBufferParams.MemoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     m_pIndexBuffer = m_pContext->CreateBuffer(indexBufferParams, nullptr);
@@ -156,12 +157,13 @@ void Application::Init()
 void Application::CreateWindow()
 {
     //Setup error
-    glfwSetErrorCallback([](int32, const char* pErrorMessage)
+    glfwSetErrorCallback([](int32_t, const char* pErrorMessage)
     {
         std::cerr << pErrorMessage << std::endl;
     });
 
     //Setup window
+    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_TRUE);
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
@@ -175,7 +177,7 @@ void Application::CreateWindow()
                 Application::Get().OnWindowClose();
 		    });
 
-        glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow*, int32 width, int32 height) 
+        glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow*, int32_t width, int32_t height)
             {
                 Application::Get().OnWindowResize(width, height);
             });
@@ -184,7 +186,7 @@ void Application::CreateWindow()
 
 void Application::CreateFramebuffers()
 {
-    uint32 imageCount = m_pContext->GetImageCount();
+    uint32_t imageCount = m_pContext->GetImageCount();
     m_Framebuffers.resize(imageCount);
 
     VkExtent2D extent = m_pContext->GetFramebufferExtent();
@@ -197,7 +199,7 @@ void Application::CreateFramebuffers()
 
     for (size_t i = 0; i < m_Framebuffers.size(); i++)
     {
-        VkImageView imageView = m_pContext->GetSwapChainImageView(uint32(i));
+        VkImageView imageView = m_pContext->GetSwapChainImageView(uint32_t(i));
         framebufferParams.pAttachMents = &imageView;
         m_Framebuffers[i] = m_pContext->CreateFrameBuffer(framebufferParams);
     }
@@ -207,13 +209,13 @@ void Application::ReleaseFramebuffers()
 {
     for (auto& framebuffer : m_Framebuffers)
     {
-        SafeDelete(framebuffer);
+        delete framebuffer;
     }
 
     m_Framebuffers.clear();
 }
 
-void Application::OnWindowResize(uint32 width, uint32 height)
+void Application::OnWindowResize(uint32_t width, uint32_t height)
 {
     //Perform flush on commandbuffer
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -238,7 +240,7 @@ void Application::Run()
 {
     glfwPollEvents();
 
-    uint32 frameIndex = m_pContext->GetCurrentBackBufferIndex();
+    uint32_t frameIndex = m_pContext->GetCurrentBackBufferIndex();
     m_pCurrentCommandBuffer = m_CommandBuffers[frameIndex];
 
     m_pCurrentCommandBuffer->Reset();
@@ -273,21 +275,21 @@ void Application::Release()
 {
     m_pContext->WaitForIdle();
 
-    SafeDelete(m_pIndexBuffer);
-    SafeDelete(m_pVertexBuffer);
+	delete m_pIndexBuffer;
+	delete m_pVertexBuffer;
 
     for (auto& commandBuffer : m_CommandBuffers)
     {
-        SafeDelete(commandBuffer);
+        delete commandBuffer;
     }
     m_CommandBuffers.clear();
 
     ReleaseFramebuffers();
 
-    SafeDelete(m_pRenderPass);
-    SafeDelete(m_PipelineState);
+	delete m_pRenderPass;
+	delete m_PipelineState;
 
-    SafeDelete(m_pDeviceAllocator);
+	delete m_pDeviceAllocator;
     m_pContext->Destroy();
 
     glfwDestroyWindow(m_pWindow);

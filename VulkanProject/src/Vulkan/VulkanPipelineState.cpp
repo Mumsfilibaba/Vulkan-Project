@@ -142,7 +142,7 @@ void VulkanGraphicsPipelineState::Init(const GraphicsPipelineStateParams& params
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = uint32(shaderStages.size());
+    pipelineInfo.stageCount = uint32_t(shaderStages.size());
     pipelineInfo.pStages    = shaderStages.data();
     pipelineInfo.pVertexInputState      = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState    = &inputAssembly;
