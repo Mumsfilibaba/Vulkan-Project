@@ -72,10 +72,17 @@ VulkanShaderModule* VulkanShaderModule::CreateFromFile(VulkanContext* pContext, 
         file.close();
 
         ShaderModuleParams params = {};
-        params.pEntryPoint = pEntryPoint;
-        params.pSource = buffer.data();
-        params.SourceSize = uint32_t(buffer.size());
-        return pContext->CreateShaderModule(params);
+        params.pEntryPoint 	= pEntryPoint;
+        params.pSource 		= buffer.data();
+        params.SourceSize 	= uint32_t(buffer.size());
+		
+		VulkanShaderModule* pShader = pContext->CreateShaderModule(params);
+        if (pShader)
+		{
+			std::cout << "Loaded Shader '" << filepath << "'" << std::endl;
+		}
+		
+		return pShader;
     }
     else
     {

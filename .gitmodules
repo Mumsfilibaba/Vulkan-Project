@@ -4,3 +4,6 @@
 [submodule "Dependencies/glm"]
 	path = Dependencies/glm
 	url = https://github.com/g-truc/glm
+[submodule "Dependencies/tinyobj"]
+	path = Dependencies/tinyobj
+	url = https://github.com/tinyobjloader/tinyobjloader

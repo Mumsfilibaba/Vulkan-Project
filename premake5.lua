@@ -42,6 +42,37 @@ workspace "Vulkan-Project"
 	-- Dependencies
 	group "Dependencies"
 		include "Dependencies/GLFW"
+
+		-- tinyobj Project
+		project "tinyobj"
+			kind "StaticLib"
+			language "C++"
+			cppdialect "C++17"
+			systemversion "latest"
+			location "Dependencies/projectfiles/tinyobj"
+			
+			filter "configurations:Debug or Release"
+				symbols "on"
+				runtime "Release"
+				optimize "Full"
+			filter{}
+			
+			filter "configurations:Production"
+				symbols "off"
+				runtime "Release"
+				optimize "Full"
+			filter{}
+			
+			-- Targets
+			targetdir ("Dependencies/bin/tinyobj/" .. outputdir)
+			objdir ("Dependencies/bin-int/tinyobj/" .. outputdir)
+					
+			-- Files
+			files 
+			{
+				"Dependencies/tinyobj/tiny_obj_loader.h",
+				"Dependencies/tinyobj/tiny_obj_loader.cc",
+			}
 	group ""
 	
 	-- Project
@@ -131,11 +162,13 @@ workspace "Vulkan-Project"
 			"Dependencies/stb",
 			"Dependencies/GLFW/include",
 			"Dependencies/glm",
+			"Dependencies/tinyobj",
 		}
 		
 		-- Links
 		links 
 		{ 
 			"GLFW",
+			"tinyobj"
 		}
 	project "*"
