@@ -49,11 +49,19 @@ workspace "Vulkan-Project"
 			language "C++"
 			cppdialect "C++17"
 			systemversion "latest"
+			staticruntime "on"
 			location "Dependencies/projectfiles/tinyobj"
 			
+			filter "configurations:Debug"
+				runtime "Debug"
+			filter {}
+			
+			filter "configurations:Release"
+				runtime "Release"
+			filter {}
+
 			filter "configurations:Debug or Release"
 				symbols "on"
-				runtime "Release"
 				optimize "Full"
 			filter{}
 			
@@ -82,10 +90,11 @@ workspace "Vulkan-Project"
 		systemversion "latest"
 		location "VulkanProject"
 		staticruntime "on"
-		kind "WindowedApp"
+		kind "ConsoleApp"
 
 		-- Targets
-		targetdir 	("Build/bin/" .. outputdir .. "/%{prj.name}")
+		builddir = "Build/bin/" .. outputdir .. "/%{prj.name}"
+		targetdir 	(builddir)
 		objdir 		("Build/bin-int/" .. outputdir .. "/%{prj.name}")	
 
 		-- Files to include
@@ -107,16 +116,21 @@ workspace "Vulkan-Project"
 			}
 			libdirs
 			{
-				"C:/VulkanSDK/1.1.121.2/Lib",
+				"C:/VulkanSDK/1.2.148.1/Lib",
 			}
 			sysincludedirs
 			{
-				"C:/VulkanSDK/1.1.121.2/Include",
+				"C:/VulkanSDK/1.2.148.1/Include",
 			}
 			
 			prebuildcommands
 			{ 
 				"compile_shaders" 
+			}
+
+			postbuildcommands 
+			{ 
+				"{COPY} res " .. builddir
 			}
 
 		-- macOS

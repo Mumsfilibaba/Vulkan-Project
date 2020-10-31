@@ -1,7 +1,7 @@
 #pragma once
-#include "VulkanBuffer.h"
-#include "VulkanContext.h"
-#include "VulkanDeviceAllocator.h"
+#include "Vulkan/VulkanBuffer.h"
+#include "Vulkan/VulkanContext.h"
+#include "Vulkan/VulkanDeviceAllocator.h"
 
 struct Vertex
 {
