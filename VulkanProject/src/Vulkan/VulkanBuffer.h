@@ -16,13 +16,13 @@ class VulkanBuffer
 {
 public:
 	inline VulkanBuffer(VkDevice device, VkPhysicalDevice physicalDevice, const BufferParams& params, VulkanDeviceAllocator* pAllocator)
-		: m_Device(device),
-		m_PhysicalDevice(physicalDevice),
-		m_pAllocator(pAllocator),
-		m_Buffer(VK_NULL_HANDLE),
-		m_DeviceMemory(VK_NULL_HANDLE),
-		m_SizeInBytes(0),
-		m_Allocation()
+		: m_Device(device)
+		, m_PhysicalDevice(physicalDevice)
+		, m_pAllocator(pAllocator)
+		, m_Buffer(VK_NULL_HANDLE)
+		, m_DeviceMemory(VK_NULL_HANDLE)
+		, m_SizeInBytes(0)
+		, m_Allocation()
 	{
 		Init(params);
 	}

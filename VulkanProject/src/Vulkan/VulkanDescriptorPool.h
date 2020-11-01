@@ -10,15 +10,24 @@ struct DescriptorPoolParams
 class VulkanDescriptorPool
 {
 public:
-	VulkanDescriptorPool();
-	~VulkanDescriptorPool();
+	inline VulkanDescriptorPool(VkDevice device, const DescriptorPoolParams& params)
+		: m_Device(device)
+		, m_Pool(VK_NULL_HANDLE)
+	{
+		Init(params);
+	}
+	
+	inline ~VulkanDescriptorPool()
+	{
+		vkDestroyDescriptorPool(m_Device, m_Pool, nullptr);
+	}
 	
 	inline void Init(const DescriptorPoolParams& params)
 	{
 		constexpr uint32_t numPoolSizes = 1;
 		VkDescriptorPoolSize poolSizes[numPoolSizes];
-		poolSize.type 				= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSize.descriptorCount 	= params.NumUniformBuffers;
+		poolSizes[0].type 				= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[0].descriptorCount 	= params.NumUniformBuffers;
 		
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType 				= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -26,12 +35,13 @@ public:
 		poolInfo.pPoolSizes 		= poolSizes;
 		poolInfo.maxSets 			= params.MaxSets;
 		
-		if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+		if (vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &m_Pool) != VK_SUCCESS)
 		{
 			std::cout << "Failed to create descriptor pool" << std::endl;
 		}
 	}
 	
 private:
+	VkDevice m_Device;
 	VkDescriptorPool m_Pool;
 };

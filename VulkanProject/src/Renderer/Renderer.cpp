@@ -83,6 +83,12 @@ void Renderer::Init(VulkanContext* pContext)
 	camBuffParams.Usage 			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 	
 	m_pCameraBuffer = m_pContext->CreateBuffer(camBuffParams, m_pDeviceAllocator);
+	
+	// Create descriptorpool
+	DescriptorPoolParams poolParams;
+	poolParams.NumUniformBuffers 	= 1;
+	poolParams.MaxSets				= 1;
+	m_pDescriptorPool = m_pContext->CreateDescriptorPool(poolParams);
 }
 
 void Renderer::Tick(float dt)

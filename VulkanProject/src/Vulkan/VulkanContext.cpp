@@ -8,12 +8,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanExtensionFuncs.h"
 #include "VulkanDeviceAllocator.h"
-
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <set>
-#include <assert.h>
+#include "VulkanDescriptorPool.h"
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void*) 
@@ -141,6 +136,11 @@ VulkanCommandBuffer* VulkanContext::CreateCommandBuffer(const CommandBufferParam
 VulkanDeviceAllocator* VulkanContext::CreateDeviceAllocator()
 {
 	return new VulkanDeviceAllocator(m_Device, m_PhysicalDevice);
+}
+
+VulkanDescriptorPool* VulkanContext::CreateDescriptorPool(const DescriptorPoolParams &params)
+{
+	return new VulkanDescriptorPool(m_Device, params);
 }
 
 VulkanGraphicsPipelineState* VulkanContext::CreateGraphicsPipelineState(const GraphicsPipelineStateParams& params)
