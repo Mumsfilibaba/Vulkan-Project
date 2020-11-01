@@ -3,8 +3,6 @@
 
 #include "Renderer/Renderer.h"
 
-#include <GLFW/glfw3.h>
-
 class Application
 {
 public:

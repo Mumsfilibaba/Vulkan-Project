@@ -1,12 +1,6 @@
 #pragma once
 #include "Core.h"
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include <vulkan/vulkan.h>
-#include <vector>
-#include <string>
-
 #define FRAME_COUNT 3
 
 struct DeviceParams
@@ -36,6 +30,7 @@ struct CommandBufferParams;
 struct RenderPassParams;
 struct FramebufferParams;
 struct GraphicsPipelineStateParams;
+struct DescriptorPoolParams;
 
 class VulkanBuffer;
 class VulkanRenderPass;
@@ -44,6 +39,7 @@ class VulkanShaderModule;
 class VulkanCommandBuffer;
 class VulkanDeviceAllocator;
 class VulkanGraphicsPipelineState;
+class VulkanDescriptorPool;
 
 class VulkanContext
 {
@@ -58,12 +54,16 @@ private:
 	
 public:
     VulkanBuffer* CreateBuffer(const BufferParams& params, VulkanDeviceAllocator* pAllocator);
-    VulkanRenderPass* CreateRenderPass(const RenderPassParams& params);
-    VulkanFramebuffer* CreateFrameBuffer(const FramebufferParams& params);
-    VulkanShaderModule* CreateShaderModule(const ShaderModuleParams& params);
-    VulkanCommandBuffer* CreateCommandBuffer(const CommandBufferParams& params);
-    VulkanDeviceAllocator* CreateDeviceAllocator();
+	VulkanDeviceAllocator* CreateDeviceAllocator();
+	VulkanDescriptorPool* CreateDescriptorPool(const DescriptorPoolParams& params);
+	
+	VulkanFramebuffer* CreateFrameBuffer(const FramebufferParams& params);
+	VulkanRenderPass* CreateRenderPass(const RenderPassParams& params);
+
+	VulkanCommandBuffer* CreateCommandBuffer(const CommandBufferParams& params);
+	
     VulkanGraphicsPipelineState* CreateGraphicsPipelineState(const GraphicsPipelineStateParams& params);
+	VulkanShaderModule* CreateShaderModule(const ShaderModuleParams& params);
 
     void ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages);
 

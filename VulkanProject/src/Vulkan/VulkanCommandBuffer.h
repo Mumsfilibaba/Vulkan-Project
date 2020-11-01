@@ -92,6 +92,11 @@ public:
 
 		vkCmdBindIndexBuffer(m_CommandBuffer, pBuffer->GetBuffer(), offset, indexType);
 	}
+	
+	inline void UpdateBuffer(VulkanBuffer* pBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const void* pData)
+	{
+		vkCmdUpdateBuffer(m_CommandBuffer, pBuffer->GetBuffer(), dstOffset, dataSize, pData);
+	}
 
 	inline void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 	{

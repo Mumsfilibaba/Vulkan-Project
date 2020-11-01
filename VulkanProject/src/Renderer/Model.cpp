@@ -2,8 +2,6 @@
 
 #include <tiny_obj_loader.h>
 
-#include <unordered_map>
-
 Model::~Model()
 {
 	delete m_pVertexBuffer;
@@ -74,22 +72,20 @@ bool Model::LoadFromFile(const std::string& filepath, VulkanContext* pContext, V
 	BufferParams vertexBufferParams = {};
 	vertexBufferParams.SizeInBytes 		= vertices.size() * sizeof(Vertex);
 	vertexBufferParams.Usage 			= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	vertexBufferParams.MemoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	vertexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
 	m_pVertexBuffer = pContext->CreateBuffer(vertexBufferParams, pAllocator);
 
-	void* pCPUMem = nullptr;
-	m_pVertexBuffer->Map(&pCPUMem);
+	void* pCPUMem = m_pVertexBuffer->Map();
 	memcpy(pCPUMem, vertices.data(), vertexBufferParams.SizeInBytes);
 	m_pVertexBuffer->Unmap();
 
 	BufferParams indexBufferParams = {};
 	indexBufferParams.SizeInBytes 		= indices.size() * sizeof(uint16_t);
 	indexBufferParams.Usage 			= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-	indexBufferParams.MemoryProperties 	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	indexBufferParams.MemoryProperties 	= VK_CPU_BUFFER_USAGE;
 	m_pIndexBuffer = pContext->CreateBuffer(indexBufferParams, pAllocator);
 
-	pCPUMem = nullptr;
-	m_pIndexBuffer->Map(&pCPUMem);
+	pCPUMem = m_pIndexBuffer->Map();
 	memcpy(pCPUMem, indices.data(), indexBufferParams.SizeInBytes);
 	m_pIndexBuffer->Unmap();
 	

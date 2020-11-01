@@ -1,7 +1,5 @@
 #include "Application.h"
 
-#include <iostream>
-
 Application* Application::s_pInstance = nullptr;
 
 Application* Application::Create()

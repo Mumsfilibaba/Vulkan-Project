@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #include "Model.h"
+#include "Camera.h"
 
 #include "Vulkan/VulkanBuffer.h"
 #include "Vulkan/VulkanRenderPass.h"
@@ -26,7 +27,7 @@ void Renderer::Init(VulkanContext* pContext)
 	// Set context
 	m_pContext = pContext;
 	
-	//PipelineState, RenderPass and Shaders
+	// PipelineState, RenderPass and Shaders
 	VulkanShaderModule* pVertex   = VulkanShaderModule::CreateFromFile(m_pContext, "main", "res/shaders/vertex.spv");
 	VulkanShaderModule* pFragment = VulkanShaderModule::CreateFromFile(m_pContext, "main", "res/shaders/fragment.spv");
 
@@ -53,10 +54,10 @@ void Renderer::Init(VulkanContext* pContext)
 	delete pVertex;
 	delete pFragment;
    
-	//Framebuffers
+	// Framebuffers
 	CreateFramebuffers();
 
-	//Commandbuffers
+	// Commandbuffers
 	CommandBufferParams commandBufferParams = {};
 	commandBufferParams.Level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	commandBufferParams.QueueType   = ECommandQueueType::COMMAND_QUEUE_TYPE_GRAPHICS;
@@ -69,39 +70,61 @@ void Renderer::Init(VulkanContext* pContext)
 		m_CommandBuffers[i] = pCommandBuffer;
 	}
 
-	//Allocator for GPU mem
+	// Allocator for GPU mem
 	m_pDeviceAllocator = m_pContext->CreateDeviceAllocator();
 
 	m_pModel = new Model();
 	m_pModel->LoadFromFile("res/models/viking_room.obj", m_pContext, m_pDeviceAllocator);
+	
+	// Camera
+	BufferParams camBuffParams;
+	camBuffParams.SizeInBytes 		= sizeof(CameraBuffer);
+	camBuffParams.MemoryProperties 	= VK_GPU_BUFFER_USAGE;
+	camBuffParams.Usage 			= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	
+	m_pCameraBuffer = m_pContext->CreateBuffer(camBuffParams, m_pDeviceAllocator);
 }
 
 void Renderer::Tick(float dt)
 {
+	// Update
+	m_Camera.Update();
+	
+	// Draw
 	uint32_t frameIndex = m_pContext->GetCurrentBackBufferIndex();
 	m_pCurrentCommandBuffer = m_CommandBuffers[frameIndex];
 
+	// Begin Commandbuffer
 	m_pCurrentCommandBuffer->Reset();
 	m_pCurrentCommandBuffer->Begin();
 
+	// Update camera
+	CameraBuffer camBuff;
+	camBuff.Projection = m_Camera.GetProjectionMatrix();
+	camBuff.View = m_Camera.GetViewMatrix();
+	m_pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(CameraBuffer), &camBuff);
+	
+	// Begin renderpass
 	VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 	m_pCurrentCommandBuffer->BeginRenderPass(m_pRenderPass, m_Framebuffers[frameIndex], &clearColor, 1);
 	
+	// Set viewport
 	VkExtent2D extent = m_pContext->GetFramebufferExtent();
 	VkViewport viewport = { 0.0f, 0.0f, float(extent.width), float(extent.height), 0.0f, 1.0f };
 	m_pCurrentCommandBuffer->SetViewport(viewport);
-	
 	VkRect2D scissor = { { 0, 0}, extent };
 	m_pCurrentCommandBuffer->SetScissorRect(scissor);
 	
+	// Bind pipeline
 	m_pCurrentCommandBuffer->BindGraphicsPipelineState(m_PipelineState);
+
+	// Draw
 	m_pCurrentCommandBuffer->BindVertexBuffer(m_pModel->GetVertexBuffer(), 0, 0);
 	m_pCurrentCommandBuffer->BindIndexBuffer(m_pModel->GetIndexBuffer(), 0, VK_INDEX_TYPE_UINT16);
-
 	m_pCurrentCommandBuffer->DrawIndexInstanced(m_pModel->GetIndexCount(), 1, 0, 0, 0);
 	
+	// End renderpass
 	m_pCurrentCommandBuffer->EndRenderPass();
-
 	m_pCurrentCommandBuffer->End();
 
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };

@@ -3,6 +3,7 @@
 #include "Camera.h"
 
 #include "Vulkan/VulkanContext.h"
+#include "Vulkan/VulkanDescriptorPool.h"
 
 class Renderer
 {
@@ -28,9 +29,12 @@ private:
 	VulkanGraphicsPipelineState* m_PipelineState;
 	VulkanCommandBuffer* m_pCurrentCommandBuffer;
 	VulkanDeviceAllocator* m_pDeviceAllocator;
+	VulkanDescriptorPool* m_pDescriptorPool;
 	
 	std::vector<VulkanFramebuffer*> m_Framebuffers;
 	std::vector<VulkanCommandBuffer*> m_CommandBuffers;
+	
+	VulkanBuffer* m_pCameraBuffer;
 	
 	Model* m_pModel;
 	Camera m_Camera;
