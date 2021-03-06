@@ -420,6 +420,8 @@ bool VulkanContext::CreateInstance(const DeviceParams& params)
 		return false;
 	}
 
+	
+	
     //Get instance functions
     VkExt::vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT");
     if (!VkExt::vkSetDebugUtilsObjectNameEXT)
