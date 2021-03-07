@@ -26,6 +26,11 @@ public:
 		return *s_pInstance;
 	}
 	
+	inline static GLFWwindow* GetWindow()
+	{
+		return s_pInstance->m_pWindow;
+	}
+	
 private:
     Application();
     ~Application();
@@ -43,6 +48,8 @@ private:
     uint32_t m_Width;
     uint32_t m_Height;
     bool m_bIsRunning;
+	
+	std::chrono::time_point<std::chrono::system_clock> m_LastTime;
 
     static Application* s_pInstance;
 };

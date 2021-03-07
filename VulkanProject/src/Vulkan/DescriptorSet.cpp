@@ -49,6 +49,31 @@ void DescriptorSet::BindStorageImage(VkImageView imageView, uint32_t binding)
 	vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
 }
 
+void DescriptorSet::BindUniformBuffer(VkBuffer buffer, uint32_t binding)
+{
+	assert(m_DescriptorSet != VK_NULL_HANDLE);
+	assert(buffer != VK_NULL_HANDLE);
+	
+	VkDescriptorBufferInfo bufferInfo = {};
+	bufferInfo.buffer = buffer;
+	bufferInfo.offset = 0;
+	bufferInfo.range  = VK_WHOLE_SIZE;
+	
+	VkWriteDescriptorSet descriptorWrite = {};
+	descriptorWrite.sType 			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrite.pNext			 = nullptr;
+	descriptorWrite.dstSet 			 = m_DescriptorSet;
+	descriptorWrite.dstBinding		 = binding;
+	descriptorWrite.dstArrayElement  = 0;
+	descriptorWrite.descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptorWrite.descriptorCount  = 1;
+	descriptorWrite.pBufferInfo 	 = &bufferInfo;
+	descriptorWrite.pImageInfo 		 = nullptr;
+	descriptorWrite.pTexelBufferView = nullptr;
+	
+	vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+}
+
 // Allocates from pDescriptorPool and uses the layout from pPipeline
 DescriptorSet* DescriptorSet::Create(VulkanContext* pContext, DescriptorPool* pDescriptorPool, BasePipeline* pPipeline)
 {

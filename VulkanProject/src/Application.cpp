@@ -1,6 +1,8 @@
 #include "Application.h"
 #include "RayTracer.h"
 
+#include <chrono>
+
 Application* Application::s_pInstance = nullptr;
 
 Application* Application::Create()
@@ -55,6 +57,8 @@ void Application::Init()
     //Show window and start loop
     glfwShowWindow(m_pWindow);
     m_bIsRunning = true;
+	
+	m_LastTime = std::chrono::system_clock::now();
 }
 
 void Application::CreateWindow()
@@ -66,7 +70,7 @@ void Application::CreateWindow()
     });
 
     //Setup window
-    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_TRUE);
+    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_FALSE);
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
@@ -108,10 +112,14 @@ void Application::OnWindowClose()
 
 void Application::Run()
 {
+	auto currentTime = std::chrono::system_clock::now();
     glfwPollEvents();
 
-	m_pRenderer->Tick(0.0f);
+	std::chrono::duration<double> elapsed_seconds = currentTime - m_LastTime;
+	m_pRenderer->Tick(elapsed_seconds.count());
     m_pContext->Present();
+	
+	m_LastTime = currentTime;
 }
 
 void Application::Release()

@@ -93,7 +93,8 @@ void Renderer::Init(VulkanContext* pContext)
 void Renderer::Tick(float dt)
 {
 	// Update
-	m_Camera.Update();
+	VkExtent2D extent = m_pContext->GetFramebufferExtent();
+	m_Camera.Update(90.0f, extent.width, extent.height, 0.1f, 100.0f);
 	
 	// Draw
 	uint32_t frameIndex = m_pContext->GetCurrentBackBufferIndex();
@@ -114,7 +115,6 @@ void Renderer::Tick(float dt)
 	m_pCurrentCommandBuffer->BeginRenderPass(m_pRenderPass, m_Framebuffers[frameIndex], &clearColor, 1);
 	
 	// Set viewport
-	VkExtent2D extent = m_pContext->GetFramebufferExtent();
 	VkViewport viewport = { 0.0f, 0.0f, float(extent.width), float(extent.height), 0.0f, 1.0f };
 	m_pCurrentCommandBuffer->SetViewport(viewport);
 	VkRect2D scissor = { { 0, 0}, extent };

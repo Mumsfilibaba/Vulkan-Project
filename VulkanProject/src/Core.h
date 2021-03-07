@@ -15,7 +15,9 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/hash.hpp>
+#include <glm/gtc/constants.hpp>
 
 // Vulkan
 #include <vulkan/vulkan.h>

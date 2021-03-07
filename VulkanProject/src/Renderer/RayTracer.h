@@ -4,6 +4,14 @@
 
 #include "Camera.h"
 
+struct RandomBuffer
+{
+	uint32_t FrameIndex;
+	uint32_t Padding0;
+	uint32_t Padding1;
+	uint32_t Padding2;
+};
+
 class RayTracer : public IRenderer
 {
 public:
@@ -33,6 +41,7 @@ private:
 	std::vector<class CommandBuffer*> m_CommandBuffers;
 	
 	class Buffer* m_pCameraBuffer;
+	class Buffer* m_pRandomBuffer;
 	
 	Camera m_Camera;
 };

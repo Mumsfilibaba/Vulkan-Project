@@ -8,6 +8,7 @@ public:
 	~DescriptorSet();
 	
 	void BindStorageImage(VkImageView imageView, uint32_t binding);
+	void BindUniformBuffer(VkBuffer buffer, uint32_t binding);
 	
 	inline VkDescriptorSet GetDescriptorSet() const
 	{

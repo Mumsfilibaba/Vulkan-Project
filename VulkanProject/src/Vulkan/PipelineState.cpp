@@ -203,18 +203,30 @@ ComputePipeline* ComputePipeline::Create(VulkanContext* pContext, const ComputeP
 {
 	ComputePipeline* newPipeline = new ComputePipeline(pContext->GetDevice());
 
-	VkDescriptorSetLayoutBinding imageLayoutBinding = {};
-	imageLayoutBinding.binding 		      = 0;
-	imageLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	imageLayoutBinding.descriptorCount    = 1;
-	imageLayoutBinding.stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-	imageLayoutBinding.pImmutableSamplers = nullptr;
+	VkDescriptorSetLayoutBinding bindings[3];
+	bindings[0].binding 		   = 0;
+	bindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	bindings[0].descriptorCount    = 1;
+	bindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+	bindings[0].pImmutableSamplers = nullptr;
+	
+	bindings[1].binding 		   = 1;
+	bindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	bindings[1].descriptorCount    = 1;
+	bindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+	bindings[1].pImmutableSamplers = nullptr;
+	
+	bindings[2].binding 		   = 2;
+	bindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	bindings[2].descriptorCount    = 1;
+	bindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+	bindings[2].pImmutableSamplers = nullptr;
 	
 	VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo = {};
 	descriptorLayoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	descriptorLayoutInfo.flags        = 0;
-	descriptorLayoutInfo.bindingCount = 1;
-	descriptorLayoutInfo.pBindings    = &imageLayoutBinding;
+	descriptorLayoutInfo.bindingCount = 3;
+	descriptorLayoutInfo.pBindings    = bindings;
 	
 	if (vkCreateDescriptorSetLayout(newPipeline->m_Device, &descriptorLayoutInfo, nullptr, &newPipeline->m_DescriptorSetLayout) != VK_SUCCESS)
 	{
