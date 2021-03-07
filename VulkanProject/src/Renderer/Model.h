@@ -1,5 +1,5 @@
 #pragma once
-#include "Vulkan/VulkanBuffer.h"
+#include "Vulkan/Buffer.h"
 #include "Vulkan/VulkanContext.h"
 #include "Vulkan/VulkanDeviceAllocator.h"
 
@@ -66,12 +66,12 @@ public:
 	
 	bool LoadFromFile(const std::string& filepath, VulkanContext* pContext, VulkanDeviceAllocator* pAllocator);
 	
-	inline VulkanBuffer* GetVertexBuffer() const
+	inline Buffer* GetVertexBuffer() const
 	{
 		return m_pVertexBuffer;
 	}
 	
-	inline VulkanBuffer* GetIndexBuffer() const
+	inline Buffer* GetIndexBuffer() const
 	{
 		return m_pIndexBuffer;
 	}
@@ -87,8 +87,8 @@ public:
 	}
 	
 private:
-	VulkanBuffer* m_pVertexBuffer = nullptr;
-	VulkanBuffer* m_pIndexBuffer = nullptr;
+	Buffer* m_pVertexBuffer = nullptr;
+	Buffer* m_pIndexBuffer = nullptr;
 	uint32_t m_VertexCount = 0;
 	uint32_t m_IndexCount = 0;
 };

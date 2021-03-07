@@ -12,10 +12,10 @@ struct BufferParams
 	VkDeviceSize SizeInBytes = 0;
 };
 
-class VulkanBuffer
+class Buffer
 {
 public:
-	inline VulkanBuffer(VkDevice device, VkPhysicalDevice physicalDevice, const BufferParams& params, VulkanDeviceAllocator* pAllocator)
+	inline Buffer(VkDevice device, VkPhysicalDevice physicalDevice, VulkanDeviceAllocator* pAllocator)
 		: m_Device(device)
 		, m_PhysicalDevice(physicalDevice)
 		, m_pAllocator(pAllocator)
@@ -24,10 +24,9 @@ public:
 		, m_SizeInBytes(0)
 		, m_Allocation()
 	{
-		Init(params);
 	}
 
-	inline ~VulkanBuffer()
+	inline ~Buffer()
 	{
 		if (m_Buffer != VK_NULL_HANDLE)
 		{
@@ -82,8 +81,7 @@ public:
 		return m_Buffer;
 	}
 	
-private:
-	void Init(const BufferParams& params);
+	static Buffer* Create(class VulkanContext* pContext, const BufferParams& params, VulkanDeviceAllocator* pAllocator);
 	
 private:
 	VulkanDeviceAllocator* m_pAllocator;

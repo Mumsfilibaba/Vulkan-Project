@@ -14,19 +14,18 @@ struct RenderPassParams
 	uint32_t ColorAttachmentCount = 0;
 };
 
-class VulkanRenderPass
+class RenderPass
 {
 public:
-	VulkanRenderPass(VkDevice device, const RenderPassParams& params);
-	~VulkanRenderPass();
+	RenderPass(VkDevice device);
+	~RenderPass();
 
 	inline VkRenderPass GetRenderPass() const
 	{
 		return m_RenderPass;
 	}
 	
-private:
-	void Init(const RenderPassParams& params);
+	static RenderPass* Create(class VulkanContext* pContext, const RenderPassParams& params);
 	
 private:
 	VkDevice m_Device;

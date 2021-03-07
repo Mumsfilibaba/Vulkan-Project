@@ -1,5 +1,6 @@
 #pragma once
 #include "Core.h"
+#include "CommandBuffer.h"
 
 #define FRAME_COUNT 3
 
@@ -24,48 +25,21 @@ struct QueueFamilyIndices
     }
 };
 
-struct BufferParams;
-struct ShaderModuleParams;
-struct CommandBufferParams;
-struct RenderPassParams;
-struct FramebufferParams;
-struct GraphicsPipelineStateParams;
-struct DescriptorPoolParams;
-
-class VulkanBuffer;
-class VulkanRenderPass;
-class VulkanFramebuffer;
-class VulkanShaderModule;
-class VulkanCommandBuffer;
-class VulkanDeviceAllocator;
-class VulkanGraphicsPipelineState;
-class VulkanDescriptorPool;
-
 class VulkanContext
 {
 private:
     struct FrameData
     {
-        VkImage BackBuffer          = VK_NULL_HANDLE;
+        VkImage     BackBuffer      = VK_NULL_HANDLE;
         VkImageView BackBufferView  = VK_NULL_HANDLE;
         VkSemaphore ImageSemaphore  = VK_NULL_HANDLE;
         VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
     };
 	
 public:
-    VulkanBuffer* CreateBuffer(const BufferParams& params, VulkanDeviceAllocator* pAllocator);
-	VulkanDeviceAllocator* CreateDeviceAllocator();
-	VulkanDescriptorPool* CreateDescriptorPool(const DescriptorPoolParams& params);
+	uint32_t GetQueueFamilyIndex(ECommandQueueType Type);
 	
-	VulkanFramebuffer* CreateFrameBuffer(const FramebufferParams& params);
-	VulkanRenderPass* CreateRenderPass(const RenderPassParams& params);
-
-	VulkanCommandBuffer* CreateCommandBuffer(const CommandBufferParams& params);
-	
-    VulkanGraphicsPipelineState* CreateGraphicsPipelineState(const GraphicsPipelineStateParams& params);
-	VulkanShaderModule* CreateShaderModule(const ShaderModuleParams& params);
-
-    void ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages);
+    void ExecuteGraphics(CommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages);
 
     void ResizeBuffers(uint32_t width, uint32_t height);
     void WaitForIdle();
@@ -97,12 +71,22 @@ public:
 		return m_CurrentBufferIndex;
 	}
 	
-    inline uint32_t GetImageCount() const
+    inline uint32_t GetNumBackBuffers() const
 	{
 		return m_FrameCount;
 	}
+	
+	inline VkDevice GetDevice() const
+	{
+		return m_Device;
+	}
+	
+	inline VkPhysicalDevice GetPhysicalDevice() const
+	{
+		return m_PhysicalDevice;
+	}
 
-    static VulkanContext* Create(const DeviceParams& props);
+    static VulkanContext* Create(const DeviceParams& params);
 	
 private:
     VulkanContext();

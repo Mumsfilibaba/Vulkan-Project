@@ -1,15 +1,15 @@
-#include "VulkanRenderPass.h"
+#include "RenderPass.h"
+#include "VulkanContext.h"
 
 #include <vector>
 
-VulkanRenderPass::VulkanRenderPass(VkDevice device, const RenderPassParams& params)
+RenderPass::RenderPass(VkDevice device)
     : m_Device(device),
     m_RenderPass(VK_NULL_HANDLE)
 {
-    Init(params);
 }
 
-VulkanRenderPass::~VulkanRenderPass()
+RenderPass::~RenderPass()
 {
     if (m_RenderPass)
     {
@@ -20,8 +20,10 @@ VulkanRenderPass::~VulkanRenderPass()
     }
 }
 
-void VulkanRenderPass::Init(const RenderPassParams& params)
+RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &params)
 {
+	RenderPass* newRenderPass = new RenderPass(pContext->GetDevice());
+	
     std::vector<VkAttachmentDescription> attachmentsInfos;
     std::vector<VkAttachmentReference> colorAttachmentRefInfos;
 
@@ -78,13 +80,16 @@ void VulkanRenderPass::Init(const RenderPassParams& params)
     renderPassInfo.subpassCount     = 1;
     renderPassInfo.pSubpasses       = &subpass;
 
-    VkResult result = vkCreateRenderPass(m_Device, &renderPassInfo, nullptr, &m_RenderPass);
+    VkResult result = vkCreateRenderPass(newRenderPass->m_Device, &renderPassInfo, nullptr, &newRenderPass->m_RenderPass);
     if (result != VK_SUCCESS) 
     {
         std::cout << "vkCreateRenderPass failed" << std::endl;
+		return nullptr;
     }
     else
     {
         std::cout << "Created RenderPass" << std::endl;
     }
+	
+	return newRenderPass;
 }

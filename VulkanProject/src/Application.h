@@ -1,7 +1,7 @@
 #pragma once
 #include "Vulkan/VulkanContext.h"
 
-#include "Renderer/Renderer.h"
+#include "Renderer/IRenderer.h"
 
 class Application
 {
@@ -37,7 +37,7 @@ private:
 	
 private:
     GLFWwindow* m_pWindow;
-	Renderer* m_pRenderer;
+	IRenderer* m_pRenderer;
     VulkanContext* m_pContext;
 	
     uint32_t m_Width;

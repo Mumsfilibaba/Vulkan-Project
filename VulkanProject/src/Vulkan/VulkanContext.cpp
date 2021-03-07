@@ -1,14 +1,12 @@
 #include "VulkanContext.h"
 #include "VulkanHelper.h"
-#include "VulkanBuffer.h"
-#include "VulkanRenderPass.h"
-#include "VulkanFramebuffer.h"
-#include "VulkanShaderModule.h"
-#include "VulkanPipelineState.h"
-#include "VulkanCommandBuffer.h"
+#include "Buffer.h"
+#include "RenderPass.h"
+#include "Framebuffer.h"
+#include "CommandBuffer.h"
 #include "VulkanExtensionFuncs.h"
 #include "VulkanDeviceAllocator.h"
-#include "VulkanDescriptorPool.h"
+#include "DescriptorPool.h"
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void*) 
@@ -27,29 +25,29 @@ VulkanContext* VulkanContext::Create(const DeviceParams& params)
 }
 
 VulkanContext::VulkanContext()
-    : m_Instance(VK_NULL_HANDLE),
-	m_DebugMessenger(VK_NULL_HANDLE),
-	m_PhysicalDevice(VK_NULL_HANDLE),
-	m_Device(VK_NULL_HANDLE),
-	m_GraphicsQueue(VK_NULL_HANDLE),
-	m_ComputeQueue(VK_NULL_HANDLE),
-	m_TransferQueue(VK_NULL_HANDLE),
-	m_Surface(VK_NULL_HANDLE),
-	m_SwapChain(VK_NULL_HANDLE),
-	m_SwapChainFormat(),
-	m_Extent(),
-	m_PresentMode(),
-	m_EnabledDeviceFeatures(),
-	m_DeviceProperties(),
-	m_DeviceFeatures(),
-	m_DeviceMemoryProperties(),
-	m_QueueFamilyIndices(),
-    m_FrameData(),
-    m_FrameCount(0),
-    m_SemaphoreIndex(0),
-    m_CurrentBufferIndex(0),
-	m_bValidationEnabled(false),
-	m_bRayTracingEnabled(false)
+    : m_Instance(VK_NULL_HANDLE)
+	, m_DebugMessenger(VK_NULL_HANDLE)
+	, m_PhysicalDevice(VK_NULL_HANDLE)
+	, m_Device(VK_NULL_HANDLE)
+	, m_GraphicsQueue(VK_NULL_HANDLE)
+	, m_ComputeQueue(VK_NULL_HANDLE)
+	, m_TransferQueue(VK_NULL_HANDLE)
+	, m_Surface(VK_NULL_HANDLE)
+	, m_SwapChain(VK_NULL_HANDLE)
+	, m_SwapChainFormat()
+	, m_Extent()
+	, m_PresentMode()
+	, m_EnabledDeviceFeatures()
+	, m_DeviceProperties()
+	, m_DeviceFeatures()
+	, m_DeviceMemoryProperties()
+	, m_QueueFamilyIndices()
+    , m_FrameData()
+    , m_FrameCount(0)
+    , m_SemaphoreIndex(0)
+    , m_CurrentBufferIndex(0)
+	, m_bValidationEnabled(false)
+	, m_bRayTracingEnabled(false)
 {
 }
 
@@ -100,55 +98,18 @@ VulkanContext::~VulkanContext()
 	}
 }
 
-VulkanBuffer* VulkanContext::CreateBuffer(const BufferParams& params, VulkanDeviceAllocator* pAllocator)
+uint32_t VulkanContext::GetQueueFamilyIndex(ECommandQueueType Type)
 {
-	return new VulkanBuffer(m_Device, m_PhysicalDevice, params, pAllocator);
+	switch (Type)
+	{
+		case ECommandQueueType::Graphics: return m_QueueFamilyIndices.Graphics;
+		case ECommandQueueType::Compute:  return m_QueueFamilyIndices.Compute;
+		case ECommandQueueType::Transfer: return m_QueueFamilyIndices.Transfer;
+		default: return (uint32_t)-1;
+	}
 }
 
-VulkanRenderPass* VulkanContext::CreateRenderPass(const RenderPassParams& params)
-{
-	return new VulkanRenderPass(m_Device, params);
-}
-
-VulkanFramebuffer* VulkanContext::CreateFrameBuffer(const FramebufferParams& params)
-{
-	return new VulkanFramebuffer(m_Device, params);
-}
-
-VulkanShaderModule* VulkanContext::CreateShaderModule(const ShaderModuleParams& params)
-{
-	return new VulkanShaderModule(m_Device, params);
-}
-
-VulkanCommandBuffer* VulkanContext::CreateCommandBuffer(const CommandBufferParams& params)
-{
-	uint32_t queueFamilyIndex = 0;
-	if (params.QueueType == ECommandQueueType::COMMAND_QUEUE_TYPE_GRAPHICS)
-		queueFamilyIndex = m_QueueFamilyIndices.Graphics;
-	else if (params.QueueType == ECommandQueueType::COMMAND_QUEUE_TYPE_COMPUTE)
-		queueFamilyIndex = m_QueueFamilyIndices.Compute;
-	else if (params.QueueType == ECommandQueueType::COMMAND_QUEUE_TYPE_TRANSFER)
-		queueFamilyIndex = m_QueueFamilyIndices.Transfer;
-
-	return new VulkanCommandBuffer(m_Device, queueFamilyIndex, params);
-}
-
-VulkanDeviceAllocator* VulkanContext::CreateDeviceAllocator()
-{
-	return new VulkanDeviceAllocator(m_Device, m_PhysicalDevice);
-}
-
-VulkanDescriptorPool* VulkanContext::CreateDescriptorPool(const DescriptorPoolParams &params)
-{
-	return new VulkanDescriptorPool(m_Device, params);
-}
-
-VulkanGraphicsPipelineState* VulkanContext::CreateGraphicsPipelineState(const GraphicsPipelineStateParams& params)
-{
-	return new VulkanGraphicsPipelineState(m_Device, params);
-}
-
-void VulkanContext::ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages)
+void VulkanContext::ExecuteGraphics(CommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages)
 {
 	//std::cout << "ExecuteGraphics" << std::endl;
 
@@ -158,9 +119,9 @@ void VulkanContext::ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipel
 
 	VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].ImageSemaphore };
 
-	submitInfo.waitSemaphoreCount	= 1;
-	submitInfo.pWaitSemaphores		= waitSemaphores;
-	submitInfo.pWaitDstStageMask	= pWaitStages;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores	  = waitSemaphores;
+	submitInfo.pWaitDstStageMask  = pWaitStages;
 
 	//Calling execute with nullptr commandbuffer results in waiting for the current semaphore
 	//This seems to be the only way of handling this
@@ -170,20 +131,20 @@ void VulkanContext::ExecuteGraphics(VulkanCommandBuffer* pCommandBuffer, VkPipel
 		fence = pCommandBuffer->GetFence();
 
 		VkCommandBuffer commandBuffers[] = { pCommandBuffer->GetCommandBuffer() };
-		submitInfo.pCommandBuffers = commandBuffers;
+		submitInfo.pCommandBuffers    = commandBuffers;
 		submitInfo.commandBufferCount = 1;
 
 		VkSemaphore signalSemaphores[] = { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
 		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
+		submitInfo.pSignalSemaphores    = signalSemaphores;
 	}
 	else
 	{
-		submitInfo.pCommandBuffers = nullptr;
+		submitInfo.pCommandBuffers    = nullptr;
 		submitInfo.commandBufferCount = 0;
 
 		submitInfo.signalSemaphoreCount = 0;
-		submitInfo.pSignalSemaphores = nullptr;
+		submitInfo.pSignalSemaphores    = nullptr;
 	}
 
 	VkResult result = vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, fence);
@@ -419,8 +380,6 @@ bool VulkanContext::CreateInstance(const DeviceParams& params)
 		std::cout << "vkCreateInstance failed" << std::endl;
 		return false;
 	}
-
-	
 	
     //Get instance functions
     VkExt::vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT");
@@ -650,8 +609,14 @@ bool VulkanContext::CreateSwapChain(uint32_t width, uint32_t height)
 
 		for (const auto& availableFormat : formats)
 		{
-			if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			if (availableFormat.format == VK_FORMAT_R16G16B16A16_SFLOAT && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			{
 				m_SwapChainFormat = availableFormat;
+			}
+			else if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			{
+				m_SwapChainFormat = availableFormat;
+			}
 		}
 	}
 	else
@@ -697,7 +662,7 @@ bool VulkanContext::CreateSwapChain(uint32_t width, uint32_t height)
 	createInfo.imageColorSpace	= m_SwapChainFormat.colorSpace;
 	createInfo.imageExtent		= m_Extent;
 	createInfo.imageArrayLayers = 1;
-	createInfo.imageUsage		= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	createInfo.imageUsage		= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 	createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	createInfo.preTransform		= capabilities.currentTransform;
 	createInfo.compositeAlpha	= VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -926,9 +891,9 @@ QueueFamilyIndices VulkanContext::GetQueueFamilyIndices(VkPhysicalDevice physica
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
 	QueueFamilyIndices indices = {};
-	indices.Compute		= GetQueueFamilyIndex(VK_QUEUE_COMPUTE_BIT, queueFamilies);
-	indices.Transfer	= GetQueueFamilyIndex(VK_QUEUE_TRANSFER_BIT, queueFamilies);
-	indices.Graphics	= GetQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, queueFamilies);
+	indices.Compute		= ::GetQueueFamilyIndex(VK_QUEUE_COMPUTE_BIT, queueFamilies);
+	indices.Transfer	= ::GetQueueFamilyIndex(VK_QUEUE_TRANSFER_BIT, queueFamilies);
+	indices.Graphics	= ::GetQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, queueFamilies);
 
 	//Find a presentation queue
 	for (uint32_t i = 0; i < queueFamilyCount; i++)

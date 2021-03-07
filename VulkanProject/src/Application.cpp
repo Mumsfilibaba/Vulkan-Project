@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "RayTracer.h"
 
 Application* Application::s_pInstance = nullptr;
 
@@ -48,7 +49,7 @@ void Application::Init()
         return;
     }
     
-	m_pRenderer = new Renderer();
+	m_pRenderer = new RayTracer();
 	m_pRenderer->Init(m_pContext);
 	
     //Show window and start loop

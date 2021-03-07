@@ -1,14 +1,14 @@
-#include "VulkanFramebuffer.h"
-#include "VulkanRenderPass.h"
+#include "Framebuffer.h"
+#include "RenderPass.h"
+#include "VulkanContext.h"
 
-VulkanFramebuffer::VulkanFramebuffer(VkDevice device, const FramebufferParams& params)
+Framebuffer::Framebuffer(VkDevice device)
 	: m_Device(device),
 	m_Framebuffer(VK_NULL_HANDLE)
 {
-	Init(params);
 }
 
-VulkanFramebuffer::~VulkanFramebuffer()
+Framebuffer::~Framebuffer()
 {
 	if (m_Framebuffer != VK_NULL_HANDLE)
 	{
@@ -19,8 +19,10 @@ VulkanFramebuffer::~VulkanFramebuffer()
 	}
 }
 
-void VulkanFramebuffer::Init(const FramebufferParams& params)
+Framebuffer* Framebuffer::Create(VulkanContext* pContext, const FramebufferParams& params)
 {
+	Framebuffer* newFrameBuffer = new Framebuffer(pContext->GetDevice());
+	
     assert(params.pRenderPass != nullptr);
 
     VkFramebufferCreateInfo framebufferInfo = {};
@@ -34,16 +36,19 @@ void VulkanFramebuffer::Init(const FramebufferParams& params)
     framebufferInfo.height          = params.Height;
     framebufferInfo.layers          = 1;
 
-    VkResult result = vkCreateFramebuffer(m_Device, &framebufferInfo, nullptr, &m_Framebuffer);
+	VkResult result = vkCreateFramebuffer(newFrameBuffer->m_Device, &framebufferInfo, nullptr, &newFrameBuffer->m_Framebuffer);
     if (result != VK_SUCCESS) 
     {
         std::cout << "vkCreateFramebuffer failed" << std::endl;
+		return nullptr;
     }
     else
     {
         std::cout << "Created framebuffer" << std::endl;
 
-        m_Width  = params.Width;
-        m_Height = params.Height;
+		newFrameBuffer->m_Width  = params.Width;
+		newFrameBuffer->m_Height = params.Height;
     }
+	
+	return newFrameBuffer;
 }

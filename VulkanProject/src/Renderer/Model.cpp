@@ -73,7 +73,7 @@ bool Model::LoadFromFile(const std::string& filepath, VulkanContext* pContext, V
 	vertexBufferParams.SizeInBytes 		= vertices.size() * sizeof(Vertex);
 	vertexBufferParams.Usage 			= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 	vertexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-	m_pVertexBuffer = pContext->CreateBuffer(vertexBufferParams, pAllocator);
+	m_pVertexBuffer = Buffer::Create(pContext, vertexBufferParams, pAllocator);
 
 	void* pCPUMem = m_pVertexBuffer->Map();
 	memcpy(pCPUMem, vertices.data(), vertexBufferParams.SizeInBytes);
@@ -83,7 +83,7 @@ bool Model::LoadFromFile(const std::string& filepath, VulkanContext* pContext, V
 	indexBufferParams.SizeInBytes 		= indices.size() * sizeof(uint16_t);
 	indexBufferParams.Usage 			= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 	indexBufferParams.MemoryProperties 	= VK_CPU_BUFFER_USAGE;
-	m_pIndexBuffer = pContext->CreateBuffer(indexBufferParams, pAllocator);
+	m_pIndexBuffer = Buffer::Create(pContext, indexBufferParams, pAllocator);
 
 	pCPUMem = m_pIndexBuffer->Map();
 	memcpy(pCPUMem, indices.data(), indexBufferParams.SizeInBytes);

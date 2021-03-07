@@ -1,13 +1,14 @@
 #pragma once
-#include "Model.h"
-#include "Camera.h"
+#include "Core.h"
 #include "IRenderer.h"
 
-class Renderer : public IRenderer
+#include "Camera.h"
+
+class RayTracer : public IRenderer
 {
 public:
-	Renderer();
-	~Renderer() = default;
+	RayTracer();
+	~RayTracer() = default;
 	
 	virtual void Init(VulkanContext* pContext) override;
 	virtual void Release() override;
@@ -18,22 +19,20 @@ public:
 	virtual void OnWindowResize(uint32_t width, uint32_t height) override;
 	
 private:
-	void CreateFramebuffers();
-	void ReleaseFramebuffers();
+	void CreateDescriptorSets();
+	void ReleaseDescriptorSets();
 	
 private:
 	VulkanContext* m_pContext;
-	class RenderPass* m_pRenderPass;
-	class GraphicsPipeline* m_PipelineState;
+	class ComputePipeline* m_Pipeline;
 	class CommandBuffer* m_pCurrentCommandBuffer;
 	VulkanDeviceAllocator* m_pDeviceAllocator;
 	DescriptorPool* m_pDescriptorPool;
 	
-	std::vector<class Framebuffer*> m_Framebuffers;
+	std::vector<class DescriptorSet*> m_DescriptorSets;
 	std::vector<class CommandBuffer*> m_CommandBuffers;
 	
 	class Buffer* m_pCameraBuffer;
 	
-	Model* m_pModel;
 	Camera m_Camera;
 };

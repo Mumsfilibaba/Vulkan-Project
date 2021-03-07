@@ -105,7 +105,6 @@ workspace "Vulkan-Project"
 			"%{prj.name}/**.inl",
 			"%{prj.name}/**.c",
 			"%{prj.name}/**.cpp",
-			"%{prj.name}/**.hlsl",
 		}
 		
 		-- Windows

@@ -1,25 +1,26 @@
-#include "VulkanPipelineState.h"
-#include "VulkanShaderModule.h"
-#include "VulkanRenderPass.h"
+#include "PipelineState.h"
+#include "ShaderModule.h"
+#include "RenderPass.h"
+#include "VulkanContext.h"
 
 #include <vector>
 
-VulkanGraphicsPipelineState::VulkanGraphicsPipelineState(VkDevice device, const GraphicsPipelineStateParams& params)
-	: m_Device(device),
-	m_Pipeline(VK_NULL_HANDLE),
-	m_Layout(VK_NULL_HANDLE)
+BasePipeline::BasePipeline(VkDevice device)
+	: m_Device(device)
+	, m_Pipeline(VK_NULL_HANDLE)
+	, m_Layout(VK_NULL_HANDLE)
+	, m_DescriptorSetLayout(VK_NULL_HANDLE)
 {
-	Init(params);
 }
 
-VulkanGraphicsPipelineState::~VulkanGraphicsPipelineState()
+BasePipeline::~BasePipeline()
 {
 	if (m_Pipeline != VK_NULL_HANDLE)
 	{
 		vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
 		m_Pipeline = VK_NULL_HANDLE;
 
-        std::cout << "Destroyed Pipeline" << std::endl;
+		std::cout << "Destroyed Pipeline" << std::endl;
 	}
 
 	if (m_Layout != VK_NULL_HANDLE)
@@ -27,12 +28,30 @@ VulkanGraphicsPipelineState::~VulkanGraphicsPipelineState()
 		vkDestroyPipelineLayout(m_Device, m_Layout, nullptr);
 		m_Layout = VK_NULL_HANDLE;
 
-        std::cout << "Destroyed PipelineLayout" << std::endl;
+		std::cout << "Destroyed PipelineLayout" << std::endl;
 	}
+	
+	if (m_DescriptorSetLayout != VK_NULL_HANDLE)
+	{
+		vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
+		m_DescriptorSetLayout = nullptr;
+		
+		std::cout << "Destroyed PipelineLayout" << std::endl;
+	}
+	
+	m_Device = VK_NULL_HANDLE;
 }
 
-void VulkanGraphicsPipelineState::Init(const GraphicsPipelineStateParams& params)
+
+GraphicsPipeline::GraphicsPipeline(VkDevice device)
+	: BasePipeline(device)
 {
+}
+
+GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const GraphicsPipelineStateParams& params)
+{
+	GraphicsPipeline* newPipeline = new GraphicsPipeline(pContext->GetDevice());
+	
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
     VkPipelineShaderStageCreateInfo shaderStageInfo = {};
@@ -114,11 +133,11 @@ void VulkanGraphicsPipelineState::Init(const GraphicsPipelineStateParams& params
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
     {
-        VkResult result = vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_Layout);
+        VkResult result = vkCreatePipelineLayout(newPipeline->m_Device, &pipelineLayoutInfo, nullptr, &newPipeline->m_Layout);
         if (result != VK_SUCCESS) 
         {
             std::cout << "vkCreatePipelineLayout failed" << std::endl;
-            return;
+            return nullptr;
         }
         else
         {
@@ -156,18 +175,103 @@ void VulkanGraphicsPipelineState::Init(const GraphicsPipelineStateParams& params
     assert(params.pRenderPass != nullptr);
 
     pipelineInfo.renderPass = params.pRenderPass->GetRenderPass();
-    pipelineInfo.layout     = m_Layout;
+    pipelineInfo.layout     = newPipeline->m_Layout;
     pipelineInfo.subpass    = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex  = -1;
 
-    VkResult result = vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline);
+    VkResult result = vkCreateGraphicsPipelines(newPipeline->m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline->m_Pipeline);
     if (result != VK_SUCCESS) 
     {
         std::cout << "vkCreateGraphicsPipelines failed" << std::endl;
+		return nullptr;
     }
     else
     {
         std::cout << "Created Graphics-Pipeline" << std::endl;
     }
+	
+	return newPipeline;
+}
+
+ComputePipeline::ComputePipeline(VkDevice device)
+	: BasePipeline(device)
+{
+}
+
+ComputePipeline* ComputePipeline::Create(VulkanContext* pContext, const ComputePipelineStateParams& params)
+{
+	ComputePipeline* newPipeline = new ComputePipeline(pContext->GetDevice());
+
+	VkDescriptorSetLayoutBinding imageLayoutBinding = {};
+	imageLayoutBinding.binding 		      = 0;
+	imageLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	imageLayoutBinding.descriptorCount    = 1;
+	imageLayoutBinding.stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+	imageLayoutBinding.pImmutableSamplers = nullptr;
+	
+	VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo = {};
+	descriptorLayoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	descriptorLayoutInfo.flags        = 0;
+	descriptorLayoutInfo.bindingCount = 1;
+	descriptorLayoutInfo.pBindings    = &imageLayoutBinding;
+	
+	if (vkCreateDescriptorSetLayout(newPipeline->m_Device, &descriptorLayoutInfo, nullptr, &newPipeline->m_DescriptorSetLayout) != VK_SUCCESS)
+	{
+		std::cout << "vkCreatePipelineLayout failed" << std::endl;
+		return nullptr;
+	}
+	
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+	pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount         = 1;
+	pipelineLayoutInfo.pSetLayouts 		      = &newPipeline->m_DescriptorSetLayout;
+	pipelineLayoutInfo.pushConstantRangeCount = 0;
+	pipelineLayoutInfo.pPushConstantRanges    = nullptr;
+	{
+		VkResult result = vkCreatePipelineLayout(newPipeline->m_Device, &pipelineLayoutInfo, nullptr, &newPipeline->m_Layout);
+		if (result != VK_SUCCESS)
+		{
+			std::cout << "vkCreatePipelineLayout failed" << std::endl;
+			return nullptr;
+		}
+		else
+		{
+			std::cout << "Created PipelineLayout" << std::endl;
+		}
+	}
+
+	VkPipelineShaderStageCreateInfo shaderStageInfo = {};
+	shaderStageInfo.sType   = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shaderStageInfo.pNext   = nullptr;
+	shaderStageInfo.flags   = 0;
+	shaderStageInfo.pSpecializationInfo = nullptr;
+	
+	assert(params.pShader);
+
+	shaderStageInfo.stage   = VK_SHADER_STAGE_COMPUTE_BIT;
+	shaderStageInfo.module  = params.pShader->GetModule();
+	shaderStageInfo.pName   = params.pShader->GetEntryPoint();
+	
+	VkComputePipelineCreateInfo pipelineInfo = {};
+	pipelineInfo.sType      	    = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+	pipelineInfo.basePipelineIndex  = -1;
+	pipelineInfo.flags 				= 0;
+	pipelineInfo.pNext 				= nullptr;
+	pipelineInfo.layout 			= newPipeline->m_Layout;
+	pipelineInfo.stage				= shaderStageInfo;
+
+	VkResult result = vkCreateComputePipelines(newPipeline->m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline->m_Pipeline);
+	if (result != VK_SUCCESS)
+	{
+		std::cout << "vkCreateComputePipelines failed" << std::endl;
+		return nullptr;
+	}
+	else
+	{
+		std::cout << "Created Compute-Pipeline" << std::endl;
+	}
+	
+	return newPipeline;
 }
