@@ -1,4 +1,8 @@
 #pragma once
+#ifdef COMPILER_VISUAL_STUDIO
+    #pragma warning(disable : 4201)
+#endif
+
 #include <iostream>
 #include <cassert>
 #include <cstdint>
@@ -8,6 +12,7 @@
 #include <string>
 #include <algorithm>
 #include <set>
+#include <chrono>
 
 // GLM stuff
 #define GLM_FORCE_RADIANS

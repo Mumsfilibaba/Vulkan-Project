@@ -3,7 +3,7 @@
 
 #include "VulkanExtensionFuncs.h"
 
-static void SetDebugName(VkDevice device, const std::string& name, uint64_t vulkanHandle, VkObjectType type)
+inline void SetDebugName(VkDevice device, const std::string& name, uint64_t vulkanHandle, VkObjectType type)
 {
     if (VkExt::vkSetDebugUtilsObjectNameEXT)
     {
@@ -22,7 +22,7 @@ static void SetDebugName(VkDevice device, const std::string& name, uint64_t vulk
     }
 }
 
-static uint32_t FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
+inline uint32_t FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);

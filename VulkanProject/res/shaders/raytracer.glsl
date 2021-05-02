@@ -27,7 +27,7 @@ layout(binding = 2) uniform RandomBufferObject
 } uRandom;
 
 #define MAX_DEPTH   4
-#define NUM_SAMPLES 256
+#define NUM_SAMPLES 128
 
 struct Ray
 {
@@ -96,7 +96,7 @@ const Plane GPlanes[NUM_PLANES] =
 const Material GMaterials[NUM_MATERIALS] =
 {
     { MAT_LAMBERTIAN, vec3(1.0f, 0.1f, 0.1f), 0.0f, 0.0f },
-    { MAT_LAMBERTIAN, vec3(0.1f, 0.1f, 1.0f), 0.0f, 0.0f },
+    { MAT_METAL,      vec3(0.1f, 0.1f, 1.0f), 0.3f, 0.0f },
     { MAT_METAL,      vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f },
     { MAT_LAMBERTIAN, vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.0f },
     { MAT_LAMBERTIAN, vec3(0.1f, 1.0f, 0.1f), 1.0f, 0.0f },

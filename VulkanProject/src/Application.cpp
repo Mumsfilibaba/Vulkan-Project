@@ -1,7 +1,5 @@
 #include "Application.h"
-#include "RayTracer.h"
-
-#include <chrono>
+#include "Renderer/RayTracer.h"
 
 Application* Application::s_pInstance = nullptr;
 
