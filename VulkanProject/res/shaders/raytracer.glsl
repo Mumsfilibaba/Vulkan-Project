@@ -102,7 +102,7 @@ const Material GMaterials[NUM_MATERIALS] =
     { MAT_LAMBERTIAN, vec3(0.01f, 1.0f,  0.01f), 1.0f, 0.0f }, // 4
     { MAT_LAMBERTIAN, vec3(1.0f,  0.01f, 0.01f), 1.0f, 0.0f }, // 5
     { MAT_LAMBERTIAN, vec3(1.0f,  1.0f,  1.0f),  1.0f, 0.0f }, // 6
-    { MAT_LAMBERTIAN,   vec3(1.0f,  1.0f,  1.0f),  0.0f, 0.0f }, // 7
+    { MAT_EMISSIVE,   vec3(1.0f,  1.0f,  1.0f),  0.0f, 0.0f }, // 7
     { MAT_DIELECTRIC, vec3(1.0f,  1.0f,  1.0f),  0.0f, 1.5f }, // 8
 };
 
