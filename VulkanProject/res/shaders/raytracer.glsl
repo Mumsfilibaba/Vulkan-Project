@@ -27,7 +27,7 @@ layout(binding = 2) uniform RandomBufferObject
 } uRandom;
 
 #define MAX_DEPTH   4
-#define NUM_SAMPLES 128
+#define NUM_SAMPLES 32
 
 struct Ray
 {
@@ -95,15 +95,15 @@ const Plane GPlanes[NUM_PLANES] =
 #define NUM_MATERIALS 9
 const Material GMaterials[NUM_MATERIALS] =
 {
-    { MAT_LAMBERTIAN, vec3(1.0f, 0.1f, 0.1f), 0.0f, 0.0f },
-    { MAT_METAL,      vec3(0.1f, 0.1f, 1.0f), 0.3f, 0.0f },
-    { MAT_METAL,      vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f },
-    { MAT_LAMBERTIAN, vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.0f },
-    { MAT_LAMBERTIAN, vec3(0.1f, 1.0f, 0.1f), 1.0f, 0.0f },
-    { MAT_LAMBERTIAN, vec3(1.0f, 0.1f, 0.1f), 1.0f, 0.0f },
-    { MAT_LAMBERTIAN, vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.0f },
-    { MAT_EMISSIVE,   vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.0f },
-    { MAT_DIELECTRIC, vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.0f },
+    { MAT_LAMBERTIAN, vec3(1.0f,  0.1f,  0.1f),  0.0f, 0.0f }, // 0
+    { MAT_METAL,      vec3(1.0f,  1.0f,  1.0f),  0.3f, 0.0f }, // 1
+    { MAT_METAL,      vec3(1.0f,  1.0f,  1.0f),  0.0f, 0.0f }, // 2
+    { MAT_LAMBERTIAN, vec3(1.0f,  1.0f,  1.0f),  1.0f, 0.0f }, // 3
+    { MAT_LAMBERTIAN, vec3(0.01f, 1.0f,  0.01f), 1.0f, 0.0f }, // 4
+    { MAT_LAMBERTIAN, vec3(1.0f,  0.01f, 0.01f), 1.0f, 0.0f }, // 5
+    { MAT_LAMBERTIAN, vec3(1.0f,  1.0f,  1.0f),  1.0f, 0.0f }, // 6
+    { MAT_LAMBERTIAN,   vec3(1.0f,  1.0f,  1.0f),  0.0f, 0.0f }, // 7
+    { MAT_DIELECTRIC, vec3(1.0f,  1.0f,  1.0f),  0.0f, 1.5f }, // 8
 };
 
 vec3 HemisphereSampleUniform(float u, float v) 
@@ -152,22 +152,31 @@ void HitSphere(in Sphere s, in Ray r, inout RayPayLoad PayLoad)
     }
 }
 
-void HitPlane(in Plane p, in Ray r, inout RayPayLoad PayLoad)
+void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
 {
-    float DdotN = dot(r.Direction, p.Normal);
+    float DdotN = dot(Ray.Direction, Plane.Normal);
     if (abs(DdotN) > 0.0001f)
     {
-        vec3 Center = p.Normal * p.Distance;
-        vec3 Diff   = Center - r.Origin;
+        vec3 Center = Plane.Normal * Plane.Distance;
+        vec3 Diff   = Center - Ray.Origin;
 
-        float t = dot(Diff, p.Normal) / DdotN;
+        float t = dot(Diff, Plane.Normal) / DdotN;
         if (t > 0)
         {
             if (t < PayLoad.T)
             {
-                PayLoad.T      = t;
-                PayLoad.Normal = normalize(p.Normal);
-                PayLoad.MaterialIndex = p.MaterialIndex;
+                PayLoad.MaterialIndex = Plane.MaterialIndex;
+                PayLoad.FrontFace = true;
+                PayLoad.T = t;
+
+                if (DdotN > 0.0f)
+                {
+                    PayLoad.Normal = -normalize(Plane.Normal);
+                }
+                else
+                {
+                    PayLoad.Normal = normalize(Plane.Normal);
+                }
             }
         }
     }
@@ -198,7 +207,7 @@ bool TraceRay(in Ray r, inout RayPayLoad PayLoad)
     }
 }
 
-void ShadeLambertian(in Material Material, in Ray Ray, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
+void ShadeLambertian(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
 {
     vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
     Halton.x = fract(Halton.x + NextRandom(Seed));
@@ -214,7 +223,7 @@ void ShadeLambertian(in Material Material, in Ray Ray, in vec3 N, out vec3 Color
     Color = Material.Albedo;
 }
 
-void ShadeMetal(in Material Material, in Ray Ray, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
+void ShadeMetal(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
 {
     vec3 Reflection = reflect(Ray.Direction, N);
     
@@ -240,7 +249,7 @@ void ShadeMetal(in Material Material, in Ray Ray, in vec3 N, out vec3 Color, out
     Color = Material.Albedo;
 }
 
-void ShadeEmissive(in Material Material, in Ray Ray, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
+void ShadeEmissive(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
 {
     vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
     Halton.x = fract(Halton.x + NextRandom(Seed));
@@ -256,20 +265,13 @@ void ShadeEmissive(in Material Material, in Ray Ray, in vec3 N, out vec3 Color, 
     Color = 10.0f * Material.Albedo + Material.Albedo;
 }
 
-void ShadeDielectric(in Material Material, in Ray Ray, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
+void ShadeDielectric(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
 {
-    vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
-    Halton.x = fract(Halton.x + NextRandom(Seed));
-    Halton.y = fract(Halton.y + NextRandom(Seed));
+    float RefractionRatio = PayLoad.FrontFace ? 1.0f / Material.IndexOfRefraction : Material.IndexOfRefraction;
+    vec3 Refracted = refract(Ray.Direction, N, RefractionRatio);
 
-    vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
-    if (dot(Rnd, N) <= 0.0f)
-    {
-        Rnd = -Rnd;
-    }
-
-    Direction = normalize(Rnd);
-    Color = Material.Albedo;
+    Direction = normalize(Refracted);
+    Color = vec3(1.0f);
 }
 
 void main()
@@ -323,25 +325,26 @@ void main()
                 Material Material = GMaterials[PayLoad.MaterialIndex];
                 vec3 N = normalize(PayLoad.Normal);
 
-                vec3 Position  = Ray.Origin + Ray.Direction * PayLoad.T;
-                vec3 NewOrigin = Position + (N * 0.00001f);
-                vec3 NewDirection = normalize(reflect(Ray.Direction, N));
+                vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
+                vec3 NewOrigin = Position + (N * 0.000001f);
+                vec3 NewDirection = vec3(0.0f);
 
                 if (Material.Type == MAT_LAMBERTIAN)
                 {
-                    ShadeLambertian(Material, Ray, N, HitColor, NewDirection, RandomSeed);
+                    ShadeLambertian(Material, Ray, PayLoad, N, HitColor, NewDirection, RandomSeed);
                 }
                 else if (Material.Type == MAT_METAL)
                 {
-                    ShadeMetal(Material, Ray, N, HitColor, NewDirection, RandomSeed);
+                    ShadeMetal(Material, Ray, PayLoad, N, HitColor, NewDirection, RandomSeed);
                 }
                 else if (Material.Type == MAT_EMISSIVE)
                 {
-                    ShadeEmissive(Material, Ray, N, HitColor, NewDirection, RandomSeed);
+                    ShadeEmissive(Material, Ray, PayLoad, N, HitColor, NewDirection, RandomSeed);
                 }
                 else if (Material.Type == MAT_DIELECTRIC)
                 {
-                    ShadeDielectric(Material, Ray, N, HitColor, NewDirection, RandomSeed);
+                    ShadeDielectric(Material, Ray, PayLoad, N, HitColor, NewDirection, RandomSeed);
+                    NewOrigin = Position;
                 }
 
                 Ray.Origin    = NewOrigin;
