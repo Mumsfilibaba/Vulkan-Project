@@ -75,44 +75,48 @@ void RayTracer::Init(VulkanContext* pContext)
 
 void RayTracer::Tick(float dt)
 {
+	constexpr float CameraSpeed = 1.5f;
+	
 	glm::vec3 translation(0.0f);
 	if (glfwGetKey(Application::GetWindow(), GLFW_KEY_W) == GLFW_PRESS)
 	{
-		translation.z = 3.0f * dt;
+		translation.z = CameraSpeed * dt;
 	}
 	else if (glfwGetKey(Application::GetWindow(), GLFW_KEY_S) == GLFW_PRESS)
 	{
-		translation.z = -3.0f * dt;
+		translation.z = -CameraSpeed * dt;
 	}
 	
 	if (glfwGetKey(Application::GetWindow(), GLFW_KEY_A) == GLFW_PRESS)
 	{
-		translation.x = 3.0f * dt;
+		translation.x = CameraSpeed * dt;
 	}
 	else if (glfwGetKey(Application::GetWindow(), GLFW_KEY_D) == GLFW_PRESS)
 	{
-		translation.x = -3.0f * dt;
+		translation.x = -CameraSpeed * dt;
 	}
 	
 	m_Camera.Move(translation);
 
+	constexpr float CameraRotationSpeed = glm::pi<float>() / 2;
+	
 	glm::vec3 rotation(0.0f);
 	if (glfwGetKey(Application::GetWindow(), GLFW_KEY_LEFT) == GLFW_PRESS)
 	{
-		rotation.y = -glm::pi<float>() * dt;
+		rotation.y = -CameraRotationSpeed * dt;
 	}
 	else if (glfwGetKey(Application::GetWindow(), GLFW_KEY_RIGHT) == GLFW_PRESS)
 	{
-		rotation.y = glm::pi<float>() * dt;
+		rotation.y = CameraRotationSpeed * dt;
 	}
 	
 	if (glfwGetKey(Application::GetWindow(), GLFW_KEY_UP) == GLFW_PRESS)
 	{
-		rotation.x = -glm::pi<float>() * dt;
+		rotation.x = -CameraRotationSpeed * dt;
 	}
 	else if (glfwGetKey(Application::GetWindow(), GLFW_KEY_DOWN) == GLFW_PRESS)
 	{
-		rotation.x = glm::pi<float>() * dt;
+		rotation.x = CameraRotationSpeed * dt;
 	}
 	
 	m_Camera.Rotate(rotation);
@@ -120,8 +124,6 @@ void RayTracer::Tick(float dt)
 	// Update
 	VkExtent2D extent = m_pContext->GetFramebufferExtent();
 	m_Camera.Update(90.0f, extent.width, extent.height, 0.1f, 100.0f);
-	
-	std::cout << "Dt: " << std::to_string(dt * 1000.0f) << " ms"<< std::endl;
 	
 	// Draw
 	uint32_t frameIndex = m_pContext->GetCurrentBackBufferIndex();
@@ -158,7 +160,8 @@ void RayTracer::Tick(float dt)
 	m_pCurrentCommandBuffer->BindComputeDescriptorSet(m_Pipeline, m_DescriptorSets[frameIndex]);
 	
 	// Dispatch
-	VkExtent2D dispatchSize = { Math::AlignUp(extent.width, 16) / 16, Math::AlignUp(extent.height, 16) / 16 };
+	const uint32_t Threads = 16;
+	VkExtent2D dispatchSize = { Math::AlignUp(extent.width, Threads) / Threads, Math::AlignUp(extent.height, Threads) / Threads };
 	m_pCurrentCommandBuffer->Dispatch(dispatchSize.width, dispatchSize.height, 1);
 	
 	m_pCurrentCommandBuffer->TransitionImage(m_pContext->GetSwapChainImage(frameIndex), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);

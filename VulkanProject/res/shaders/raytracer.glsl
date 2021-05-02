@@ -1,6 +1,12 @@
 #version 450
+#include "halton.glsl"
+#include "random.glsl"
+#include "math.glsl"
+#include "tonemap.glsl"
 
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+#define NUM_THREADS 16
+
+layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
 layout (binding = 0, rgba16f) uniform image2D Output;
 
@@ -21,7 +27,7 @@ layout(binding = 2) uniform RandomBufferObject
 } uRandom;
 
 #define MAX_DEPTH   4
-#define NUM_SAMPLES 16
+#define NUM_SAMPLES 256
 
 struct Ray
 {
@@ -53,56 +59,52 @@ struct Plane
     int   MaterialIndex;
 };
 
-#define MAT_METAL     1
-#define MAT_DILECTRIC 2
-#define MAT_REFRACT   3
+#define MAT_METAL      1
+#define MAT_LAMBERTIAN 2
+#define MAT_EMISSIVE   3
+#define MAT_DIELECTRIC 4
 
 struct Material
 {
-    int   Type;
+    int Type;
+
     vec3  Albedo;
     float Roughness;
+
+    float IndexOfRefraction;
 };
 
 #define NUM_SPHERES 3
-const Sphere gSpheres[NUM_SPHERES] =
+const Sphere GSpheres[NUM_SPHERES] =
 {
-    { vec3( 1.0f, 0.5f, 2.0f), 0.5f, 0 }, 
+    { vec3( 1.0f, 0.5f, 2.0f), 0.5f, 8 }, 
     { vec3( 0.0f, 0.5f, 1.0f), 0.5f, 1 }, 
     { vec3(-1.0f, 0.5f, 2.0f), 0.5f, 2 }, 
 };
 
-#define NUM_PLANES 1
-const Plane gPlanes[NUM_PLANES] = 
+#define NUM_PLANES 5
+const Plane GPlanes[NUM_PLANES] =
 {
-    { vec3(0.0f, 1.0f, 0.0), 0.0f, 3 }
+    { vec3(0.0f, 1.0f, 0.0),  0.0f, 3 },
+    { vec3(1.0f, 0.0f, 0.0),  2.0f, 4 },
+    { vec3(1.0f, 0.0f, 0.0), -2.0f, 5 },
+    { vec3(0.0f, 0.0f, 1.0),  3.0f, 6 },
+    { vec3(0.0f, 1.0f, 0.0),  3.0f, 7 },
 };
 
-#define NUM_MATERIALS 4
-const Material gMaterials[NUM_MATERIALS] = 
+#define NUM_MATERIALS 9
+const Material GMaterials[NUM_MATERIALS] =
 {
-    { MAT_DILECTRIC, vec3(1.0f, 0.2f, 0.2f), 0.0f },
-    { MAT_DILECTRIC, vec3(0.2f, 0.2f, 1.0f), 0.5f },
-    { MAT_METAL,     vec3(0.2f, 1.0f, 0.2f), 0.15f },
-    { MAT_METAL,     vec3(1.0f, 1.0f, 0.2f), 0.3f },
+    { MAT_LAMBERTIAN, vec3(1.0f, 0.1f, 0.1f), 0.0f, 0.0f },
+    { MAT_LAMBERTIAN, vec3(0.1f, 0.1f, 1.0f), 0.0f, 0.0f },
+    { MAT_METAL,      vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f },
+    { MAT_LAMBERTIAN, vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.0f },
+    { MAT_LAMBERTIAN, vec3(0.1f, 1.0f, 0.1f), 1.0f, 0.0f },
+    { MAT_LAMBERTIAN, vec3(1.0f, 0.1f, 0.1f), 1.0f, 0.0f },
+    { MAT_LAMBERTIAN, vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.0f },
+    { MAT_EMISSIVE,   vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.0f },
+    { MAT_DIELECTRIC, vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.0f },
 };
-
-float RadicalInverse(uint bits) 
-{
-    bits = (bits << 16u) | (bits >> 16u);
-    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-    return float(bits) * 2.3283064365386963e-10;
-}
-
-vec2 Hammersley(uint i, uint N)
-{
-    return vec2(float(i)/float(N), RadicalInverse(i));
-}
-
-const float PI = 3.14159265358979f;
 
 vec3 HemisphereSampleUniform(float u, float v) 
 {
@@ -110,13 +112,6 @@ vec3 HemisphereSampleUniform(float u, float v)
     float cosTheta = 1.0 - u;
     float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
     return normalize(vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta));
-}
-
-float Random(vec3 Seed, int i)
-{
-    vec4  Seed4 = vec4(Seed, i);
-    float Dot   = dot(Seed4, vec4(12.9898f, 78.233f, 45.164f, 94.673f));
-    return fract(sin(Dot) * 43758.5453f);
 }
 
 void HitSphere(in Sphere s, in Ray r, inout RayPayLoad PayLoad)
@@ -182,13 +177,13 @@ bool TraceRay(in Ray r, inout RayPayLoad PayLoad)
 {
     for (uint i = 0; i < NUM_SPHERES; i++)
     {
-        Sphere s = gSpheres[i];
+        Sphere s = GSpheres[i];
         HitSphere(s, r, PayLoad);
     }
 
     for (uint i = 0; i < NUM_PLANES; i++)
     {
-        Plane p = gPlanes[i];
+        Plane p = GPlanes[i];
         HitPlane(p, r, PayLoad);
     }
 
@@ -203,6 +198,80 @@ bool TraceRay(in Ray r, inout RayPayLoad PayLoad)
     }
 }
 
+void ShadeLambertian(in Material Material, in Ray Ray, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
+{
+    vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
+    Halton.x = fract(Halton.x + NextRandom(Seed));
+    Halton.y = fract(Halton.y + NextRandom(Seed));
+
+    vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
+    if (dot(Rnd, N) <= 0.0f)
+    {
+        Rnd = -Rnd;
+    }
+
+    Direction = normalize(Rnd);
+    Color = Material.Albedo;
+}
+
+void ShadeMetal(in Material Material, in Ray Ray, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
+{
+    vec3 Reflection = reflect(Ray.Direction, N);
+    
+    if (Material.Roughness > 0.0f)
+    {
+        vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
+        Halton.x = fract(Halton.x + NextRandom(Seed));
+        Halton.y = fract(Halton.y + NextRandom(Seed));
+
+        vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
+        if (dot(Rnd, N) <= 0.0)
+        {
+            Rnd = -Rnd;
+        }
+
+        Direction = normalize(Reflection + Rnd * Material.Roughness);
+    }
+    else
+    {
+        Direction = normalize(Reflection);
+    }
+
+    Color = Material.Albedo;
+}
+
+void ShadeEmissive(in Material Material, in Ray Ray, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
+{
+    vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
+    Halton.x = fract(Halton.x + NextRandom(Seed));
+    Halton.y = fract(Halton.y + NextRandom(Seed));
+
+    vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
+    if (dot(Rnd, N) <= 0.0f)
+    {
+        Rnd = -Rnd;
+    }
+
+    Direction = normalize(Rnd);
+    Color = 10.0f * Material.Albedo + Material.Albedo;
+}
+
+void ShadeDielectric(in Material Material, in Ray Ray, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
+{
+    vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
+    Halton.x = fract(Halton.x + NextRandom(Seed));
+    Halton.y = fract(Halton.y + NextRandom(Seed));
+
+    vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
+    if (dot(Rnd, N) <= 0.0f)
+    {
+        Rnd = -Rnd;
+    }
+
+    Direction = normalize(Rnd);
+    Color = Material.Albedo;
+}
+
 void main()
 {
     vec3 CameraPosition = uCamera.Position.xyz;
@@ -211,103 +280,87 @@ void main()
     CamUp = normalize(CamUp - dot(CamUp, CamForward) * CamForward);
     vec3 CamRight = normalize(cross(CamUp, CamForward));
 
-    ivec2 TexCoord  = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 Size      = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
-    vec2 FilmCorner = vec2(-1.0f, -1.0f);
-    vec2 FilmUV     = vec2(TexCoord) / vec2(Size.xy);
-    FilmUV.y = 1.0f - FilmUV.y;
-    FilmUV   = FilmUV * 2.0f;
+    const ivec2 Pixel = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 Size  = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
 
-    float AspectRatio = float(Size.x) / float(Size.y);
-    vec2  FilmCoord = FilmCorner + FilmUV;
-    FilmCoord.x = FilmCoord.x * AspectRatio;
-
+    float AspectRatio  = float(Size.x) / float(Size.y);
+    vec2  FilmCorner   = vec2(-1.0f, -1.0f);
     float FilmDistance = 1.0f;
-    vec3 FilmCenter = CameraPosition + (CamForward * FilmDistance);
-    vec3 FilmTarget = FilmCenter + (CamRight * FilmCoord.x) + (CamUp * FilmCoord.y);
+    vec3  FilmCenter   = CameraPosition + (CamForward * FilmDistance);
+
+    uint RandomSeed = InitRandom(uvec2(Pixel), Size.x, uRandom.FrameIndex);
 
     vec3 FinalColor = vec3(0.0f);
     for (uint Sample = 0; Sample < NUM_SAMPLES; Sample++)
     {
-        Ray r;
-        r.Origin    = CameraPosition;
-        r.Direction = normalize(FilmTarget - CameraPosition);
+        vec2 Jitter = Halton23(Sample);
+        Jitter = (Jitter * 2.0f) - vec2(1.0f);
 
-        vec3 Color = vec3(1.0f);
+        vec2 FilmUV = (vec2(Pixel) + Jitter) / vec2(Size.xy);
+        FilmUV.y = 1.0f - FilmUV.y;
+        FilmUV   = FilmUV * 2.0f;
+
+        vec2 FilmCoord = FilmCorner + FilmUV;
+        FilmCoord.x = FilmCoord.x * AspectRatio;
+
+        vec3 FilmTarget = FilmCenter + (CamRight * FilmCoord.x) + (CamUp * FilmCoord.y);
+
+        Ray Ray;
+        Ray.Origin    = CameraPosition;
+        Ray.Direction = normalize(FilmTarget - CameraPosition);
+
+        vec3 SampleColor = vec3(1.0f);
         for (uint i = 0; i < MAX_DEPTH; i++)
         {
             RayPayLoad PayLoad;
             PayLoad.MinT = 0.0f;
-            PayLoad.MaxT = 100000.0f;
+            PayLoad.MaxT = 1000.0f;
             PayLoad.T    = PayLoad.MaxT;
 
-            if (!TraceRay(r, PayLoad))
+            vec3 HitColor = vec3(0.0f);
+            if (TraceRay(Ray, PayLoad))
             {
-                Color = Color * vec3(0.5f, 0.7f, 1.0f);
-                break;
-            }
+                Material Material = GMaterials[PayLoad.MaterialIndex];
+                vec3 N = normalize(PayLoad.Normal);
 
-            Material Mat = gMaterials[PayLoad.MaterialIndex];
-            vec3 Albedo    = Mat.Albedo;
-            vec3 N         = normalize(PayLoad.Normal);
-            vec3 Position  = r.Origin + r.Direction * PayLoad.T;
-            vec3 NewOrigin = Position + (N * 0.00001f);
+                vec3 Position  = Ray.Origin + Ray.Direction * PayLoad.T;
+                vec3 NewOrigin = Position + (N * 0.00001f);
+                vec3 NewDirection = normalize(reflect(Ray.Direction, N));
 
-            if (Mat.Type == MAT_DILECTRIC)
-            {
-                vec2  Halton = Hammersley((uRandom.FrameIndex + Sample) % 16, 16);
-                float Rnd0 = Random(vec3(ivec3(TexCoord.xy, TexCoord.x)), int(uRandom.FrameIndex));
-                float Rnd1 = Random(vec3(ivec3(TexCoord.xy, TexCoord.y)), int(uRandom.FrameIndex));
-                Halton.x = fract(Halton.x + Rnd0);
-                Halton.y = fract(Halton.y + Rnd1);
-
-                vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
-                if (dot(Rnd, N) <= 0.0)
+                if (Material.Type == MAT_LAMBERTIAN)
                 {
-                    Rnd = -Rnd;
+                    ShadeLambertian(Material, Ray, N, HitColor, NewDirection, RandomSeed);
+                }
+                else if (Material.Type == MAT_METAL)
+                {
+                    ShadeMetal(Material, Ray, N, HitColor, NewDirection, RandomSeed);
+                }
+                else if (Material.Type == MAT_EMISSIVE)
+                {
+                    ShadeEmissive(Material, Ray, N, HitColor, NewDirection, RandomSeed);
+                }
+                else if (Material.Type == MAT_DIELECTRIC)
+                {
+                    ShadeDielectric(Material, Ray, N, HitColor, NewDirection, RandomSeed);
                 }
 
-                vec3 Target = Position + Rnd;
-                vec3 NewDir = normalize(Target - Position);
-
-                Color = Albedo * Color;
-
-                r.Origin    = NewOrigin;
-                r.Direction = NewDir;
-            }
-            else if (Mat.Type == MAT_METAL)
-            {
-                vec2  Halton = Hammersley((uRandom.FrameIndex + Sample) % 16, 16);
-                float Rnd0 = Random(vec3(ivec3(TexCoord.xy, TexCoord.x)), int(uRandom.FrameIndex));
-                float Rnd1 = Random(vec3(ivec3(TexCoord.xy, TexCoord.y)), int(uRandom.FrameIndex));
-                Halton.x = fract(Halton.x + Rnd0);
-                Halton.y = fract(Halton.y + Rnd1);
-
-                vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
-                if (dot(Rnd, N) <= 0.0)
-                {
-                    Rnd = -Rnd;
-                }
-
-                vec3 Reflection = normalize(reflect(r.Direction, N));
-                Reflection = normalize(Reflection + Rnd * Mat.Roughness);
-
-                Color = Color * Albedo;
-                
-                r.Origin    = NewOrigin;
-                r.Direction = Reflection;
+                Ray.Origin    = NewOrigin;
+                Ray.Direction = NewDirection;
             }
             else
             {
-                Color = Color * vec3(0.0f);
-                break;
+                HitColor = vec3(0.5f, 0.7f, 1.0f);
+                i = MAX_DEPTH;
             }
+
+            SampleColor = SampleColor * HitColor;
         }
 
-        FinalColor += Color;
+        FinalColor += SampleColor;
     }
 
-    FinalColor = FinalColor / NUM_SAMPLES;
+    FinalColor = FinalColor / vec3(NUM_SAMPLES);
+    FinalColor = ReinhardSimple(FinalColor, 1.0f);
     FinalColor = pow(FinalColor, vec3(1.0f / 2.2f));
-    imageStore(Output, TexCoord, vec4(FinalColor, 1.0f));
+    imageStore(Output, Pixel, vec4(FinalColor, 1.0f));
 }
