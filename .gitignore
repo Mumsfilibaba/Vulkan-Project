@@ -31,3 +31,4 @@ Dependencies/bin-int/*
 Dependencies/bin/*
 *.filters
 !**/res/models/*
+*.spv

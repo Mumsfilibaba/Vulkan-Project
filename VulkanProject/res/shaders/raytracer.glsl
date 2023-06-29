@@ -26,8 +26,8 @@ layout(binding = 2) uniform RandomBufferObject
     uint Padding2;
 } uRandom;
 
-#define MAX_DEPTH   4
-#define NUM_SAMPLES 32
+#define MAX_DEPTH   (16)
+#define NUM_SAMPLES (32)
 
 struct Ray
 {
@@ -77,33 +77,33 @@ struct Material
 #define NUM_SPHERES 3
 const Sphere GSpheres[NUM_SPHERES] =
 {
-    { vec3( 1.0f, 0.5f, 2.0f), 0.5f, 8 }, 
+    { vec3( 1.0f, 0.5f, 1.0f), 0.5f, 8 }, 
     { vec3( 0.0f, 0.5f, 1.0f), 0.5f, 1 }, 
-    { vec3(-1.0f, 0.5f, 2.0f), 0.5f, 2 }, 
+    { vec3(-1.0f, 0.5f, 1.0f), 0.5f, 2 }, 
 };
 
-#define NUM_PLANES 5
+#define NUM_PLANES 2
 const Plane GPlanes[NUM_PLANES] =
 {
     { vec3(0.0f, 1.0f, 0.0),  0.0f, 3 },
-    { vec3(1.0f, 0.0f, 0.0),  2.0f, 4 },
-    { vec3(1.0f, 0.0f, 0.0), -2.0f, 5 },
+    //{ vec3(1.0f, 0.0f, 0.0),  3.0f, 4 },
+    //{ vec3(1.0f, 0.0f, 0.0), -3.0f, 5 },
     { vec3(0.0f, 0.0f, 1.0),  3.0f, 6 },
-    { vec3(0.0f, 1.0f, 0.0),  3.0f, 7 },
+    //{ vec3(0.0f, 1.0f, 0.0),  5.0f, 7 },
 };
 
 #define NUM_MATERIALS 9
 const Material GMaterials[NUM_MATERIALS] =
 {
     { MAT_LAMBERTIAN, vec3(1.0f,  0.1f,  0.1f),  0.0f, 0.0f }, // 0
-    { MAT_METAL,      vec3(1.0f,  1.0f,  1.0f),  0.3f, 0.0f }, // 1
+    { MAT_METAL,      vec3(1.0f,  1.0f,  1.0f),  1.0f, 0.0f }, // 1
     { MAT_METAL,      vec3(1.0f,  1.0f,  1.0f),  0.0f, 0.0f }, // 2
-    { MAT_LAMBERTIAN, vec3(1.0f,  1.0f,  1.0f),  1.0f, 0.0f }, // 3
+    { MAT_LAMBERTIAN, vec3(0.01f, 0.01f, 1.0f),  1.0f, 0.0f }, // 3
     { MAT_LAMBERTIAN, vec3(0.01f, 1.0f,  0.01f), 1.0f, 0.0f }, // 4
     { MAT_LAMBERTIAN, vec3(1.0f,  0.01f, 0.01f), 1.0f, 0.0f }, // 5
     { MAT_LAMBERTIAN, vec3(1.0f,  1.0f,  1.0f),  1.0f, 0.0f }, // 6
-    { MAT_EMISSIVE,   vec3(1.0f,  1.0f,  1.0f),  0.0f, 0.0f }, // 7
-    { MAT_DIELECTRIC, vec3(1.0f,  1.0f,  1.0f),  0.0f, 1.5f }, // 8
+    { MAT_EMISSIVE,   vec3(10.0f, 10.0f, 10.0f), 0.0f, 0.0f }, // 7
+    { MAT_LAMBERTIAN, vec3(1.0f,  1.0f,  1.0f),  0.0f, 1.5f }, // 8
 };
 
 vec3 HemisphereSampleUniform(float u, float v) 
@@ -114,12 +114,12 @@ vec3 HemisphereSampleUniform(float u, float v)
     return normalize(vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta));
 }
 
-void HitSphere(in Sphere s, in Ray r, inout RayPayLoad PayLoad)
+void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
 {
-    vec3 Distance = r.Origin - s.Position;
-    float a = dot(r.Direction, r.Direction);
-    float b = dot(r.Direction, Distance);
-    float c = dot(Distance, Distance) - (s.Radius * s.Radius);
+    vec3 Distance = Ray.Origin - Sphere.Position;
+    float a = dot(Ray.Direction, Ray.Direction);
+    float b = dot(Ray.Direction, Distance);
+    float c = dot(Distance, Distance) - (Sphere.Radius * Sphere.Radius);
 
     float Disc = (b * b) - (a * c);
     if (Disc >= 0.0f)
@@ -133,11 +133,11 @@ void HitSphere(in Sphere s, in Ray r, inout RayPayLoad PayLoad)
             {
                 PayLoad.T = t;
 
-                vec3 Position = r.Origin + r.Direction * PayLoad.T;
-                PayLoad.MaterialIndex = s.MaterialIndex;
+                vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
+                PayLoad.MaterialIndex = Sphere.MaterialIndex;
 
-                vec3 OutsideNormal = normalize((Position - s.Position) / s.Radius);
-                if (dot(r.Direction, OutsideNormal) > 0.0f)
+                vec3 OutsideNormal = normalize((Position - Sphere.Position) / Sphere.Radius);
+                if (dot(Ray.Direction, OutsideNormal) > 0.0f)
                 {
                     PayLoad.Normal    = -OutsideNormal;
                     PayLoad.FrontFace = false;
@@ -182,18 +182,18 @@ void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
     }
 }
 
-bool TraceRay(in Ray r, inout RayPayLoad PayLoad)
+bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
 {
     for (uint i = 0; i < NUM_SPHERES; i++)
     {
-        Sphere s = GSpheres[i];
-        HitSphere(s, r, PayLoad);
+        Sphere Sphere = GSpheres[i];
+        HitSphere(Sphere, Ray, PayLoad);
     }
 
     for (uint i = 0; i < NUM_PLANES; i++)
     {
-        Plane p = GPlanes[i];
-        HitPlane(p, r, PayLoad);
+        Plane Plane = GPlanes[i];
+        HitPlane(Plane, Ray, PayLoad);
     }
 
     if (PayLoad.T < PayLoad.MaxT)
@@ -262,13 +262,25 @@ void ShadeEmissive(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in v
     }
 
     Direction = normalize(Rnd);
-    Color = 10.0f * Material.Albedo + Material.Albedo;
+    Color = Material.Albedo;
 }
 
 void ShadeDielectric(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
 {
     float RefractionRatio = PayLoad.FrontFace ? 1.0f / Material.IndexOfRefraction : Material.IndexOfRefraction;
-    vec3 Refracted = refract(Ray.Direction, N, RefractionRatio);
+
+    float CosTheta = min(dot(-Ray.Direction, N), 1.0f);
+    float SinTheta = sqrt(1.0f - CosTheta*CosTheta);
+
+    vec3 Refracted;
+    if (RefractionRatio * SinTheta > 1.0f)
+    {
+        Refracted = reflect(normalize(Ray.Direction), -normalize(N));
+    }
+    else
+    {
+        Refracted = refract(normalize(Ray.Direction), normalize(N), RefractionRatio);
+    }
 
     Direction = normalize(Refracted);
     Color = vec3(1.0f);
@@ -326,7 +338,7 @@ void main()
                 vec3 N = normalize(PayLoad.Normal);
 
                 vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
-                vec3 NewOrigin = Position + (N * 0.000001f);
+                vec3 NewOrigin = Position + (N * 0.0001f);
                 vec3 NewDirection = vec3(0.0f);
 
                 if (Material.Type == MAT_LAMBERTIAN)
@@ -363,7 +375,7 @@ void main()
     }
 
     FinalColor = FinalColor / vec3(NUM_SAMPLES);
-    FinalColor = ReinhardSimple(FinalColor, 1.0f);
+    FinalColor = AcesFitted(FinalColor);
     FinalColor = pow(FinalColor, vec3(1.0f / 2.2f));
     imageStore(Output, Pixel, vec4(FinalColor, 1.0f));
 }
