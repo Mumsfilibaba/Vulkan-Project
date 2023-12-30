@@ -37,10 +37,10 @@ void Application::Init()
 
     //Init vulkan
     DeviceParams params = {};
-    params.pWindow = m_pWindow;
+    params.pWindow           = m_pWindow;
     params.bEnableRayTracing = true;
     params.bEnableValidation = true;
-    params.bVerbose = false;
+    params.bVerbose          = false;
 
     m_pContext = VulkanContext::Create(params);
     if (!m_pContext)
@@ -49,14 +49,14 @@ void Application::Init()
         return;
     }
     
-	m_pRenderer = new RayTracer();
-	m_pRenderer->Init(m_pContext);
-	
+    m_pRenderer = new RayTracer();
+    m_pRenderer->Init(m_pContext);
+    
     //Show window and start loop
     glfwShowWindow(m_pWindow);
     m_bIsRunning = true;
-	
-	m_LastTime = std::chrono::system_clock::now();
+    
+    m_LastTime = std::chrono::system_clock::now();
 }
 
 void Application::CreateWindow()
@@ -78,9 +78,9 @@ void Application::CreateWindow()
     {
         //Setup callbacks
         glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow*)
-		    {
+            {
                 Application::Get().OnWindowClose();
-		    });
+            });
 
         glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow*, int32_t width, int32_t height)
             {
@@ -100,7 +100,7 @@ void Application::OnWindowResize(uint32_t width, uint32_t height)
     m_Height = height;
         
     m_pContext->ResizeBuffers(m_Width, m_Height);
-	m_pRenderer->OnWindowResize(m_Width, m_Height);
+    m_pRenderer->OnWindowResize(m_Width, m_Height);
 }
 
 void Application::OnWindowClose()
@@ -108,23 +108,23 @@ void Application::OnWindowClose()
     m_bIsRunning = false;
 }
 
-void Application::Run()
+void Application::Tick()
 {
-	auto currentTime = std::chrono::system_clock::now();
+    auto currentTime = std::chrono::system_clock::now();
     glfwPollEvents();
 
-	std::chrono::duration<double> elapsed_seconds = currentTime - m_LastTime;
-	m_pRenderer->Tick(elapsed_seconds.count());
+    std::chrono::duration<double> elapsed_seconds = currentTime - m_LastTime;
+    m_pRenderer->Tick(elapsed_seconds.count());
     m_pContext->Present();
-	
-	m_LastTime = currentTime;
+    
+    m_LastTime = currentTime;
 }
 
 void Application::Release()
 {
     m_pContext->WaitForIdle();
 
-	m_pRenderer->Release();
+    m_pRenderer->Release();
     m_pContext->Destroy();
 
     glfwDestroyWindow(m_pWindow);

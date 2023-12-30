@@ -46,35 +46,35 @@ ShaderModule* ShaderModule::CreateFromFile(VulkanContext* pContext, const char* 
         file.seekg(0);
         file.read(buffer.data(), fileSize);
         file.close();
-		
-		ShaderModule* newShader = new ShaderModule(pContext->GetDevice());
-		assert(pEntryPoint);
+        
+        ShaderModule* newShader = new ShaderModule(pContext->GetDevice());
+        assert(pEntryPoint);
 
-		VkShaderModuleCreateInfo createInfo = {};
-		createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		createInfo.pNext    = nullptr;
-		createInfo.flags    = 0;
-		createInfo.codeSize = uint32_t(buffer.size());
-		createInfo.pCode    = reinterpret_cast<const uint32_t*>(buffer.data());
+        VkShaderModuleCreateInfo createInfo = {};
+        createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        createInfo.pNext    = nullptr;
+        createInfo.flags    = 0;
+        createInfo.codeSize = uint32_t(buffer.size());
+        createInfo.pCode    = reinterpret_cast<const uint32_t*>(buffer.data());
 
-		VkResult result = vkCreateShaderModule(newShader->m_Device, &createInfo, nullptr, &newShader->m_Module);
-		if (result != VK_SUCCESS)
-		{
-			std::cout << "vkCreateShaderModule failed" << std::endl;
-			return nullptr;
-		}
-		else
-		{
-			size_t len = strlen(pEntryPoint);
-			newShader->m_pEntryPoint = new char[len + 1];
+        VkResult result = vkCreateShaderModule(newShader->m_Device, &createInfo, nullptr, &newShader->m_Module);
+        if (result != VK_SUCCESS)
+        {
+            std::cout << "vkCreateShaderModule failed" << std::endl;
+            return nullptr;
+        }
+        else
+        {
+            size_t len = strlen(pEntryPoint);
+            newShader->m_pEntryPoint = new char[len + 1];
 
-			strcpy(newShader->m_pEntryPoint, pEntryPoint);
+            strcpy(newShader->m_pEntryPoint, pEntryPoint);
 
-			std::cout << "Created ShaderModule" << std::endl;
-		}
-		
-		std::cout << "Loaded Shader '" << filepath << "'" << std::endl;
-		return newShader;
+            std::cout << "Created ShaderModule" << std::endl;
+        }
+        
+        std::cout << "Loaded Shader '" << filepath << "'" << std::endl;
+        return newShader;
     }
     else
     {

@@ -4,7 +4,7 @@
 #include "math.glsl"
 #include "tonemap.glsl"
 
-#define NUM_THREADS 16
+#define NUM_THREADS (16)
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
@@ -26,8 +26,8 @@ layout(binding = 2) uniform RandomBufferObject
     uint Padding2;
 } uRandom;
 
-#define MAX_DEPTH   (16)
-#define NUM_SAMPLES (32)
+#define MAX_DEPTH   (1)
+#define NUM_SAMPLES (1)
 
 struct Ray
 {
@@ -59,10 +59,10 @@ struct Plane
     int   MaterialIndex;
 };
 
-#define MAT_METAL      1
-#define MAT_LAMBERTIAN 2
-#define MAT_EMISSIVE   3
-#define MAT_DIELECTRIC 4
+#define MAT_METAL      (1)
+#define MAT_LAMBERTIAN (2)
+#define MAT_EMISSIVE   (3)
+#define MAT_DIELECTRIC (4)
 
 struct Material
 {
@@ -92,7 +92,7 @@ const Plane GPlanes[NUM_PLANES] =
     //{ vec3(0.0f, 1.0f, 0.0),  5.0f, 7 },
 };
 
-#define NUM_MATERIALS 9
+/* #define NUM_MATERIALS 9
 const Material GMaterials[NUM_MATERIALS] =
 {
     { MAT_LAMBERTIAN, vec3(1.0f,  0.1f,  0.1f),  0.0f, 0.0f }, // 0
@@ -104,7 +104,7 @@ const Material GMaterials[NUM_MATERIALS] =
     { MAT_LAMBERTIAN, vec3(1.0f,  1.0f,  1.0f),  1.0f, 0.0f }, // 6
     { MAT_EMISSIVE,   vec3(10.0f, 10.0f, 10.0f), 0.0f, 0.0f }, // 7
     { MAT_LAMBERTIAN, vec3(1.0f,  1.0f,  1.0f),  0.0f, 1.5f }, // 8
-};
+}; */
 
 vec3 HemisphereSampleUniform(float u, float v) 
 {
@@ -190,15 +190,15 @@ bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
         HitSphere(Sphere, Ray, PayLoad);
     }
 
-    for (uint i = 0; i < NUM_PLANES; i++)
+    /*for (uint i = 0; i < NUM_PLANES; i++)
     {
         Plane Plane = GPlanes[i];
         HitPlane(Plane, Ray, PayLoad);
-    }
+    }*/
 
     if (PayLoad.T < PayLoad.MaxT)
     {
-        PayLoad.MaterialIndex = min(PayLoad.MaterialIndex, NUM_MATERIALS - 1);
+        // PayLoad.MaterialIndex = min(PayLoad.MaterialIndex, NUM_MATERIALS - 1);
         return true;
     }
     else
@@ -207,7 +207,7 @@ bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
     }
 }
 
-void ShadeLambertian(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
+/*void ShadeLambertian(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
 {
     vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
     Halton.x = fract(Halton.x + NextRandom(Seed));
@@ -284,7 +284,7 @@ void ShadeDielectric(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in
 
     Direction = normalize(Refracted);
     Color = vec3(1.0f);
-}
+}*/
 
 void main()
 {
@@ -334,11 +334,11 @@ void main()
             vec3 HitColor = vec3(0.0f);
             if (TraceRay(Ray, PayLoad))
             {
-                Material Material = GMaterials[PayLoad.MaterialIndex];
+                /*Material Material = GMaterials[PayLoad.MaterialIndex];
                 vec3 N = normalize(PayLoad.Normal);
 
-                vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
-                vec3 NewOrigin = Position + (N * 0.0001f);
+                vec3 Position     = Ray.Origin + Ray.Direction * PayLoad.T;
+                vec3 NewOrigin    = Position + (N * 0.0001f);
                 vec3 NewDirection = vec3(0.0f);
 
                 if (Material.Type == MAT_LAMBERTIAN)
@@ -360,11 +360,13 @@ void main()
                 }
 
                 Ray.Origin    = NewOrigin;
-                Ray.Direction = NewDirection;
+                Ray.Direction = NewDirection;*/
+
+                HitColor = vec3(1.0f, 0.0f, 0.0f);
             }
             else
             {
-                HitColor = vec3(0.5f, 0.7f, 1.0f);
+                HitColor = vec3(0.0f, 0.0f, 0.0f);
                 i = MAX_DEPTH;
             }
 
@@ -375,7 +377,7 @@ void main()
     }
 
     FinalColor = FinalColor / vec3(NUM_SAMPLES);
-    FinalColor = AcesFitted(FinalColor);
-    FinalColor = pow(FinalColor, vec3(1.0f / 2.2f));
+    // FinalColor = AcesFitted(FinalColor);
+    // FinalColor = pow(FinalColor, vec3(1.0f / 2.2f));
     imageStore(Output, Pixel, vec4(FinalColor, 1.0f));
 }

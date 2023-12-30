@@ -64,7 +64,7 @@ workspace "Vulkan-Project"
 		project "tinyobj"
 			kind "StaticLib"
 			language "C++"
-			cppdialect "C++17"
+			cppdialect "C++20"
 			systemversion "latest"
 			staticruntime "on"
 			location "Dependencies/projectfiles/tinyobj"
@@ -103,7 +103,7 @@ workspace "Vulkan-Project"
 	-- Project
 	project "VulkanProject"
 		language "C++"
-		cppdialect "C++17"
+		cppdialect "C++20"
 		systemversion "latest"
 		location "VulkanProject"
 		staticruntime "on"
@@ -154,7 +154,6 @@ workspace "Vulkan-Project"
 			links
 			{
 				"vulkan.1",
-				"vulkan.1.1.121",
 				"Cocoa.framework",
 				"OpenGL.framework",
 				"IOKit.framework",
@@ -201,4 +200,21 @@ workspace "Vulkan-Project"
 			"GLFW",
 			"tinyobj"
 		}
+
+		-- TODO: If the app actually needs to get signed, this needs to be revisited
+		filter { "action:xcode4" }
+			xcodebuildsettings 
+			{
+				["PRODUCT_BUNDLE_IDENTIFIER"] = "PathTracer",
+				["CODE_SIGN_STYLE"]           = "Automatic",
+				["ARCHS"]                     = "x86_64",               -- Specify the architecture(s) e.g., "x86_64" for Intel
+				["ONLY_ACTIVE_ARCH"]          = "YES",                  -- We only want to build the current architecture
+				["ENABLE_HARDENED_RUNTIME"]   = "NO",                   -- Hardened runtime is required for notarization
+				["GENERATE_INFOPLIST_FILE"]   = "YES",                  -- Generate the .plist file for now
+				-- ["CODE_SIGN_IDENTITY"]        = "Apple Development", -- Sets 'Signing Certificate' to 'Development'. Defaults to 'Sign to Run Locally'. Not doing this will crash your app if you upgrade the project when prompted by Xcode.
+				
+				-- Tell the executable where to find the frameworks. Path is relative to executable location inside .app bundle
+				["LD_RUNPATH_SEARCH_PATHS"]   = "/usr/local/lib/ $(INSTALL_PATH) @executable_path/../Frameworks",
+			}
+		filter {}
 	project "*"

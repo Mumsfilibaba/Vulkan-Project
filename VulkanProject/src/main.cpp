@@ -8,7 +8,7 @@ int main()
     pApp->Init();
 
     while (pApp->IsRunning())
-        pApp->Run();
+        pApp->Tick();
     
     pApp->Release();
     return 0;

@@ -27,7 +27,6 @@ struct QueueFamilyIndices
 
 class VulkanContext
 {
-private:
     struct FrameData
     {
         VkImage     BackBuffer      = VK_NULL_HANDLE;
@@ -35,10 +34,12 @@ private:
         VkSemaphore ImageSemaphore  = VK_NULL_HANDLE;
         VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
     };
-	
+    
 public:
-	uint32_t GetQueueFamilyIndex(ECommandQueueType Type);
-	
+    static VulkanContext* Create(const DeviceParams& params);
+
+    uint32_t GetQueueFamilyIndex(ECommandQueueType Type);
+    
     void ExecuteGraphics(CommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages);
 
     void ResizeBuffers(uint32_t width, uint32_t height);
@@ -46,48 +47,47 @@ public:
     void Present();
     void Destroy();
     
-	inline VkImage GetSwapChainImage(uint32_t index) const
-	{
-		return m_FrameData[index].BackBuffer;
-	}
-	
-	inline VkImageView GetSwapChainImageView(uint32_t index) const
-	{
-		return m_FrameData[index].BackBufferView;
-	}
-	
-	inline VkFormat GetSwapChainFormat() const
-	{
-		return m_SwapChainFormat.format;
-	}
-	
-	inline VkExtent2D GetFramebufferExtent() const
-	{
-		return m_Extent;
-	}
-	
-	inline uint32_t GetCurrentBackBufferIndex() const
-	{
-		return m_CurrentBufferIndex;
-	}
-	
-    inline uint32_t GetNumBackBuffers() const
-	{
-		return m_FrameCount;
-	}
-	
-	inline VkDevice GetDevice() const
-	{
-		return m_Device;
-	}
-	
-	inline VkPhysicalDevice GetPhysicalDevice() const
-	{
-		return m_PhysicalDevice;
-	}
+    VkImage GetSwapChainImage(uint32_t index) const
+    {
+        return m_FrameData[index].BackBuffer;
+    }
+    
+    VkImageView GetSwapChainImageView(uint32_t index) const
+    {
+        return m_FrameData[index].BackBufferView;
+    }
+    
+    VkFormat GetSwapChainFormat() const
+    {
+        return m_SwapChainFormat.format;
+    }
+    
+    VkExtent2D GetFramebufferExtent() const
+    {
+        return m_Extent;
+    }
+    
+    uint32_t GetCurrentBackBufferIndex() const
+    {
+        return m_CurrentBufferIndex;
+    }
+    
+    uint32_t GetNumBackBuffers() const
+    {
+        return m_FrameCount;
+    }
+    
+    VkDevice GetDevice() const
+    {
+        return m_Device;
+    }
+    
+    VkPhysicalDevice GetPhysicalDevice() const
+    {
+        return m_PhysicalDevice;
+    }
 
-    static VulkanContext* Create(const DeviceParams& params);
-	
+    
 private:
     VulkanContext();
     ~VulkanContext();
@@ -110,31 +110,31 @@ private:
 
     QueueFamilyIndices GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
     std::vector<const char*> GetRequiredDeviceExtensions();
-	
-private:
-    VkInstance m_Instance;
-    VkDebugUtilsMessengerEXT m_DebugMessenger;
-    VkPhysicalDevice m_PhysicalDevice;
-    VkDevice m_Device;
-    VkQueue m_GraphicsQueue;
-    VkQueue m_ComputeQueue;
-    VkQueue m_TransferQueue;
-    VkQueue m_PresentationQueue;
-    VkSurfaceKHR m_Surface;
-    VkSwapchainKHR m_SwapChain;
-    VkSurfaceFormatKHR m_SwapChainFormat;
-    VkExtent2D m_Extent;
-    VkPresentModeKHR m_PresentMode;
-
-    VkImage m_DepthStencilBuffer;
-    std::vector<FrameData> m_FrameData;
-    uint32_t m_FrameCount;
-    mutable uint32_t m_SemaphoreIndex;
-    mutable uint32_t m_CurrentBufferIndex;
     
-    VkPhysicalDeviceFeatures m_EnabledDeviceFeatures;
-    VkPhysicalDeviceProperties m_DeviceProperties;
-    VkPhysicalDeviceFeatures m_DeviceFeatures;
+private:
+    VkInstance               m_Instance;
+    VkDebugUtilsMessengerEXT m_DebugMessenger;
+    VkPhysicalDevice         m_PhysicalDevice;
+    VkDevice                 m_Device;
+    VkQueue                  m_GraphicsQueue;
+    VkQueue                  m_ComputeQueue;
+    VkQueue                  m_TransferQueue;
+    VkQueue                  m_PresentationQueue;
+    VkSurfaceKHR             m_Surface;
+    VkSwapchainKHR           m_SwapChain;
+    VkSurfaceFormatKHR       m_SwapChainFormat;
+    VkExtent2D               m_Extent;
+    VkPresentModeKHR         m_PresentMode;
+
+    VkImage                m_DepthStencilBuffer;
+    std::vector<FrameData> m_FrameData;
+    uint32_t               m_FrameCount;
+    mutable uint32_t       m_SemaphoreIndex;
+    mutable uint32_t       m_CurrentBufferIndex;
+    
+    VkPhysicalDeviceFeatures         m_EnabledDeviceFeatures;
+    VkPhysicalDeviceProperties       m_DeviceProperties;
+    VkPhysicalDeviceFeatures         m_DeviceFeatures;
     VkPhysicalDeviceMemoryProperties m_DeviceMemoryProperties;
         
     QueueFamilyIndices m_QueueFamilyIndices;
