@@ -290,7 +290,7 @@ void main()
 {
     vec3 CameraPosition = uCamera.Position.xyz;
     vec3 CamForward     = normalize(uCamera.Forward.xyz);
-    vec3 CamUp          = vec3(0.0f, 1.0f, 0.0f);
+    vec3 CamUp          = vec3(0.0, 1.0, 0.0);
     CamUp = normalize(CamUp - dot(CamUp, CamForward) * CamForward);
     vec3 CamRight = normalize(cross(CamUp, CamForward));
 
@@ -298,8 +298,8 @@ void main()
     const ivec2 Size  = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
 
     float AspectRatio  = float(Size.x) / float(Size.y);
-    vec2  FilmCorner   = vec2(-1.0f, -1.0f);
-    float FilmDistance = 1.0f;
+    vec2  FilmCorner   = vec2(-1.0, -1.0);
+    float FilmDistance = 1.0;
     vec3  FilmCenter   = CameraPosition + (CamForward * FilmDistance);
 
     uint RandomSeed = InitRandom(uvec2(Pixel), Size.x, uRandom.FrameIndex);
@@ -308,11 +308,11 @@ void main()
     for (uint Sample = 0; Sample < NUM_SAMPLES; Sample++)
     {
         vec2 Jitter = Halton23(Sample);
-        Jitter = (Jitter * 2.0f) - vec2(1.0f);
+        Jitter = (Jitter * 2.0) - vec2(1.0);
 
         vec2 FilmUV = (vec2(Pixel) + Jitter) / vec2(Size.xy);
-        FilmUV.y = 1.0f - FilmUV.y;
-        FilmUV   = FilmUV * 2.0f;
+        FilmUV.y = 1.0 - FilmUV.y;
+        FilmUV   = FilmUV * 2.0;
 
         vec2 FilmCoord = FilmCorner + FilmUV;
         FilmCoord.x = FilmCoord.x * AspectRatio;
@@ -323,7 +323,7 @@ void main()
         Ray.Origin    = CameraPosition;
         Ray.Direction = normalize(FilmTarget - CameraPosition);
 
-        vec3 SampleColor = vec3(1.0f);
+        vec3 SampleColor = vec3(1.0);
         for (uint i = 0; i < MAX_DEPTH; i++)
         {
             RayPayLoad PayLoad;
@@ -334,8 +334,9 @@ void main()
             vec3 HitColor = vec3(0.0f);
             if (TraceRay(Ray, PayLoad))
             {
-                /*Material Material = GMaterials[PayLoad.MaterialIndex];
                 vec3 N = normalize(PayLoad.Normal);
+
+                /*Material Material = GMaterials[PayLoad.MaterialIndex];
 
                 vec3 Position     = Ray.Origin + Ray.Direction * PayLoad.T;
                 vec3 NewOrigin    = Position + (N * 0.0001f);
@@ -362,11 +363,11 @@ void main()
                 Ray.Origin    = NewOrigin;
                 Ray.Direction = NewDirection;*/
 
-                HitColor = vec3(1.0f, 0.0f, 0.0f);
+                HitColor = clamp((N + 1.0) * 0.5, 0.0, 1.0);
             }
             else
             {
-                HitColor = vec3(0.0f, 0.0f, 0.0f);
+                HitColor = vec3(0.0, 0.0, 0.0);
                 i = MAX_DEPTH;
             }
 
@@ -378,6 +379,6 @@ void main()
 
     FinalColor = FinalColor / vec3(NUM_SAMPLES);
     // FinalColor = AcesFitted(FinalColor);
-    // FinalColor = pow(FinalColor, vec3(1.0f / 2.2f));
-    imageStore(Output, Pixel, vec4(FinalColor, 1.0f));
+    // FinalColor = pow(FinalColor, vec3(1.0 / 2.2));
+    imageStore(Output, Pixel, vec4(FinalColor, 1.0));
 }

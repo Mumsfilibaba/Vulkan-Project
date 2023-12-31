@@ -1,5 +1,5 @@
 workspace "Vulkan-Project"
-	architecture "x64"
+	architecture "x86_64"
 	startproject "VulkanProject"
 	warnings "Extra"
 	
@@ -58,16 +58,143 @@ workspace "Vulkan-Project"
 
 	-- Dependencies
 	group "Dependencies"
-		include "Dependencies/GLFW"
+		project "GLFW"
+			kind("StaticLib")
+			warnings("Off")
+			intrinsics("On")
+			editandcontinue("Off")
+			language("C++")
+			cppdialect("C++20")
+			systemversion("latest")
+			architecture("x86_64")
+			exceptionhandling("Off")
+			rtti("Off")
+			floatingpoint("Fast")
+			vectorextensions("SSE2")
+			characterset("Ascii")
+			flags(
+			{ 
+				"MultiProcessorCompile",
+				"NoIncrementalLink",
+			})
+
+			location "Projectfiles/Dependencies/GLFW"
+			
+			-- Targets
+			targetdir ("Build/bin/Dependencies/GLFW/" .. outputdir)
+			objdir ("Build/bin-int/Dependencies/GLFW/" .. outputdir)
+
+			-- All platforms
+			files
+			{
+				"Dependencies/GLFW/include/GLFW/glfw3.h",
+				"Dependencies/GLFW/include/GLFW/glfw3native.h",
+				"Dependencies/GLFW/src/internal.h", 
+				"Dependencies/GLFW/src/platform.h",
+				"Dependencies/GLFW/src/mappings.h",
+				"Dependencies/GLFW/src/context.c",
+				"Dependencies/GLFW/src/init.c",
+				"Dependencies/GLFW/src/input.c",
+				"Dependencies/GLFW/src/monitor.c",
+				"Dependencies/GLFW/src/platform.c",
+				"Dependencies/GLFW/src/vulkan.c",
+				"Dependencies/GLFW/src/window.c",
+				"Dependencies/GLFW/src/egl_context.c",
+				"Dependencies/GLFW/src/osmesa_context.c",
+				"Dependencies/GLFW/src/null_platform.h",
+				"Dependencies/GLFW/src/null_joystick.h",
+				"Dependencies/GLFW/src/null_init.c",
+				"Dependencies/GLFW/src/null_monitor.c",
+				"Dependencies/GLFW/src/null_window.c",
+				"Dependencies/GLFW/src/null_joystick.c"
+			}
+			
+			-- macOS
+			filter "system:macosx"
+				systemversion "latest"
+				staticruntime "On"
+
+				files
+				{
+					"Dependencies/GLFW/src/cocoa_time.h",
+					"Dependencies/GLFW/src/cocoa_time.c",
+					"Dependencies/GLFW/src/posix_thread.h",
+                    "Dependencies/GLFW/src/posix_module.c",
+					"Dependencies/GLFW/src/posix_thread.c",
+					"Dependencies/GLFW/src/cocoa_platform.h",
+					"Dependencies/GLFW/src/cocoa_joystick.h",
+					"Dependencies/GLFW/src/cocoa_init.m",
+					"Dependencies/GLFW/src/cocoa_joystick.m",
+					"Dependencies/GLFW/src/cocoa_monitor.m",
+					"Dependencies/GLFW/src/cocoa_window.m",
+					"Dependencies/GLFW/src/nsgl_context.m",
+				}
+
+				defines
+				{
+					"_GLFW_COCOA"
+				}
+
+			-- WIN32
+			filter "system:windows"
+				systemversion "latest"
+				staticruntime "On"
+				
+				files
+				{
+					"Dependencies/GLFW/src/win32_time.h",
+					"Dependencies/GLFW/src/win32_thread.h",
+					"Dependencies/GLFW/src/win32_module.c",
+					"Dependencies/GLFW/src/win32_time.c",
+					"Dependencies/GLFW/src/win32_thread.c",
+					"Dependencies/GLFW/src/win32_platform.h",
+					"Dependencies/GLFW/src/win32_joystick.h",
+					"Dependencies/GLFW/src/win32_init.c",
+                    "Dependencies/GLFW/src/win32_joystick.c",
+					"Dependencies/GLFW/src/win32_monitor.c",
+					"Dependencies/GLFW/src/win32_window.c",
+                    "Dependencies/GLFW/src/wgl_context.c"
+				}
+
+				defines 
+				{ 
+					"_GLFW_WIN32",
+					"_CRT_SECURE_NO_WARNINGS"
+				}
+
+			-- Debug
+			filter "configurations:Debug"
+				runtime "Debug"
+				symbols "on"
+
+			-- Release
+			filter "configurations:Release"
+				runtime "Release"
+				optimize "on"
+			filter {}
 
 		-- tinyobj Project
 		project "tinyobj"
-			kind "StaticLib"
-			language "C++"
-			cppdialect "C++20"
-			systemversion "latest"
-			staticruntime "on"
-			location "Dependencies/projectfiles/tinyobj"
+			kind("StaticLib")
+			warnings("Off")
+			intrinsics("On")
+			editandcontinue("Off")
+			language("C++")
+			cppdialect("C++20")
+			systemversion("latest")
+			architecture("x86_64")
+			exceptionhandling("Off")
+			rtti("Off")
+			floatingpoint("Fast")
+			vectorextensions("SSE2")
+			characterset("Ascii")
+			flags(
+			{ 
+				"MultiProcessorCompile",
+				"NoIncrementalLink",
+			})
+
+			location "Projectfiles/Dependencies/tinyobj"
 			
 			filter "configurations:Debug"
 				runtime "Debug"
@@ -89,8 +216,8 @@ workspace "Vulkan-Project"
 			filter{}
 			
 			-- Targets
-			targetdir ("Dependencies/bin/tinyobj/" .. outputdir)
-			objdir ("Dependencies/bin-int/tinyobj/" .. outputdir)
+			targetdir ("../Build/bin/Dependencies/tinyobj/" .. outputdir)
+			objdir ("../Build/bin-int/Dependencies/tinyobj/" .. outputdir)
 					
 			-- Files
 			files 
@@ -102,12 +229,27 @@ workspace "Vulkan-Project"
 	
 	-- Project
 	project "VulkanProject"
-		language "C++"
-		cppdialect "C++20"
-		systemversion "latest"
-		location "VulkanProject"
+		kind("ConsoleApp")
 		staticruntime "on"
-		kind "ConsoleApp"
+		warnings("Off")
+		intrinsics("On")
+		editandcontinue("Off")
+		language("C++")
+		cppdialect("C++20")
+		systemversion("latest")
+		architecture("x86_64")
+		exceptionhandling("Off")
+		rtti("Off")
+		floatingpoint("Fast")
+		vectorextensions("SSE2")
+		characterset("Ascii")
+		flags(
+		{ 
+			"MultiProcessorCompile",
+			"NoIncrementalLink",
+		})
+		
+		location "VulkanProject"
 
 		-- Targets
 		builddir = "Build/bin/" .. outputdir .. "/%{prj.name}"

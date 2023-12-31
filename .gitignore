@@ -32,3 +32,4 @@ Dependencies/bin/*
 *.filters
 !**/res/models/*
 *.spv
+*.a
