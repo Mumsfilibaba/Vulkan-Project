@@ -1,7 +1,6 @@
 #include "Renderer.h"
 #include "Model.h"
 #include "Camera.h"
-
 #include "Vulkan/Buffer.h"
 #include "Vulkan/RenderPass.h"
 #include "Vulkan/Framebuffer.h"
@@ -36,19 +35,19 @@ void Renderer::Init(VulkanContext* pContext)
 
     RenderPassParams renderPassParams = {};
     renderPassParams.ColorAttachmentCount = 1;
-    renderPassParams.pColorAttachments = attachments;
+    renderPassParams.pColorAttachments    = attachments;
     m_pRenderPass = RenderPass::Create(m_pContext, renderPassParams);
 
     VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
 
     GraphicsPipelineStateParams pipelineParams = {};
-    pipelineParams.pBindingDescriptions     = &bindingDescription;
-    pipelineParams.BindingDescriptionCount     = 1;
-    pipelineParams.pAttributeDescriptions         = Vertex::GetAttributeDescriptions();
-    pipelineParams.AttributeDescriptionCount     = 3;
-    pipelineParams.pVertex         = pVertex;
-    pipelineParams.pFragment     = pFragment;
-    pipelineParams.pRenderPass     = m_pRenderPass;
+    pipelineParams.pBindingDescriptions      = &bindingDescription;
+    pipelineParams.BindingDescriptionCount   = 1;
+    pipelineParams.pAttributeDescriptions    = Vertex::GetAttributeDescriptions();
+    pipelineParams.AttributeDescriptionCount = 3;
+    pipelineParams.pVertex                   = pVertex;
+    pipelineParams.pFragment                 = pFragment;
+    pipelineParams.pRenderPass               = m_pRenderPass;
     m_PipelineState = GraphicsPipeline::Create(m_pContext, pipelineParams);
 
     delete pVertex;
@@ -59,8 +58,8 @@ void Renderer::Init(VulkanContext* pContext)
 
     // Commandbuffers
     CommandBufferParams commandBufferParams = {};
-    commandBufferParams.Level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferParams.QueueType   = ECommandQueueType::Graphics;
+    commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    commandBufferParams.QueueType = ECommandQueueType::Graphics;
 
     uint32_t imageCount = m_pContext->GetNumBackBuffers();
     m_CommandBuffers.resize(imageCount);
@@ -78,19 +77,19 @@ void Renderer::Init(VulkanContext* pContext)
     
     // Camera
     BufferParams camBuffParams;
-    camBuffParams.SizeInBytes         = sizeof(CameraBuffer);
-    camBuffParams.MemoryProperties     = VK_GPU_BUFFER_USAGE;
-    camBuffParams.Usage             = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    camBuffParams.SizeInBytes      = sizeof(CameraBuffer);
+    camBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    camBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     m_pCameraBuffer = Buffer::Create(m_pContext, camBuffParams, m_pDeviceAllocator);
     
     // Create descriptorpool
     DescriptorPoolParams poolParams;
-    poolParams.NumUniformBuffers     = 1;
-    poolParams.MaxSets                = 1;
+    poolParams.NumUniformBuffers = 1;
+    poolParams.MaxSets           = 1;
     m_pDescriptorPool = DescriptorPool::Create(m_pContext, poolParams);
 }
 
-void Renderer::Tick(float dt)
+void Renderer::Tick(float deltaTime)
 {
     // Update
     VkExtent2D extent = m_pContext->GetFramebufferExtent();
@@ -107,7 +106,7 @@ void Renderer::Tick(float dt)
     // Update camera
     CameraBuffer camBuff;
     camBuff.Projection = m_Camera.GetProjectionMatrix();
-    camBuff.View = m_Camera.GetViewMatrix();
+    camBuff.View       = m_Camera.GetViewMatrix();
     m_pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(CameraBuffer), &camBuff);
     
     // Begin renderpass
@@ -144,6 +143,7 @@ void Renderer::Release()
     {
         delete commandBuffer;
     }
+    
     m_CommandBuffers.clear();
 
     ReleaseFramebuffers();

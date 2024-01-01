@@ -82,14 +82,14 @@ DescriptorSet* DescriptorSet::Create(VulkanContext* pContext, DescriptorPool* pD
     
     DescriptorSet* newSet = new DescriptorSet(pContext->GetDevice(), pDescriptorPool);
     
-    VkDescriptorSetAllocateInfo allocateInfo = {};
-    allocateInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocateInfo.descriptorSetCount = 1;
-    allocateInfo.pNext              = nullptr;
+    VkDescriptorSetAllocateInfo allocateInfo;
+    ZERO_STRUCT(&allocateInfo);
     
     VkDescriptorSetLayout descriptorLayout = pPipeline->GetDescriptorSetLayout();
-    allocateInfo.pSetLayouts    = &descriptorLayout;
-    allocateInfo.descriptorPool = pDescriptorPool->GetPool();
+    allocateInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocateInfo.descriptorSetCount = 1;
+    allocateInfo.pSetLayouts        = &descriptorLayout;
+    allocateInfo.descriptorPool     = pDescriptorPool->GetPool();
     
     VkResult result = vkAllocateDescriptorSets(newSet->m_Device, &allocateInfo, &newSet->m_DescriptorSet);
     if (result != VK_SUCCESS)

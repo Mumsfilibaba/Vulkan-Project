@@ -87,6 +87,10 @@ public:
         return m_PhysicalDevice;
     }
 
+    float GetTimestampPeriod() const
+    {
+        return m_DeviceProperties.limits.timestampPeriod;
+    }
     
 private:
     VulkanContext();
@@ -132,11 +136,12 @@ private:
     mutable uint32_t       m_SemaphoreIndex;
     mutable uint32_t       m_CurrentBufferIndex;
     
-    VkPhysicalDeviceFeatures         m_EnabledDeviceFeatures;
-    VkPhysicalDeviceProperties       m_DeviceProperties;
-    VkPhysicalDeviceFeatures         m_DeviceFeatures;
-    VkPhysicalDeviceMemoryProperties m_DeviceMemoryProperties;
-        
+    VkPhysicalDeviceFeatures2              m_EnabledDeviceFeatures;
+    VkPhysicalDeviceProperties             m_DeviceProperties;
+    VkPhysicalDeviceFeatures2              m_DeviceFeatures;
+    VkPhysicalDeviceHostQueryResetFeatures m_HostQueryFeatures;
+    VkPhysicalDeviceMemoryProperties       m_DeviceMemoryProperties;
+          
     QueueFamilyIndices m_QueueFamilyIndices;
     
     bool m_bValidationEnabled;

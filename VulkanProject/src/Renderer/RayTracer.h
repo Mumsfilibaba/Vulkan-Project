@@ -22,7 +22,7 @@ public:
     virtual void Release() override;
     
     // dt is in seconds
-    virtual void Tick(float dt) override;
+    virtual void Tick(float deltaTime) override;
     
     virtual void OnWindowResize(uint32_t width, uint32_t height) override;
     
@@ -30,18 +30,17 @@ private:
     void CreateDescriptorSets();
     void ReleaseDescriptorSets();
     
-private:
     VulkanContext*         m_pContext;
     class ComputePipeline* m_Pipeline;
-    class CommandBuffer*   m_pCurrentCommandBuffer;
     VulkanDeviceAllocator* m_pDeviceAllocator;
     DescriptorPool*        m_pDescriptorPool;
     
     std::vector<class DescriptorSet*> m_DescriptorSets;
     std::vector<class CommandBuffer*> m_CommandBuffers;
+    std::vector<class Query*>         m_TimestampQueries;
+    
+    Camera        m_Camera;
     
     class Buffer* m_pCameraBuffer;
     class Buffer* m_pRandomBuffer;
-    
-    Camera m_Camera;
 };

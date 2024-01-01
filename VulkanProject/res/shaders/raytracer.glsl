@@ -77,18 +77,18 @@ struct Material
 #define NUM_SPHERES 3
 const Sphere GSpheres[NUM_SPHERES] =
 {
-    { vec3( 1.0f, 0.5f, 1.0f), 0.5f, 8 }, 
-    { vec3( 0.0f, 0.5f, 1.0f), 0.5f, 1 }, 
-    { vec3(-1.0f, 0.5f, 1.0f), 0.5f, 2 }, 
+    { vec3( 1.0f, 0.5f, 1.0f), 0.45f, 8 }, 
+    { vec3( 0.0f, 0.5f, 1.0f), 0.45f, 1 }, 
+    { vec3(-1.0f, 0.5f, 1.0f), 0.45f, 2 }, 
 };
 
-#define NUM_PLANES 2
+#define NUM_PLANES 1
 const Plane GPlanes[NUM_PLANES] =
 {
     { vec3(0.0f, 1.0f, 0.0),  0.0f, 3 },
     //{ vec3(1.0f, 0.0f, 0.0),  3.0f, 4 },
     //{ vec3(1.0f, 0.0f, 0.0), -3.0f, 5 },
-    { vec3(0.0f, 0.0f, 1.0),  3.0f, 6 },
+    //{ vec3(0.0f, 0.0f, 1.0),  3.0f, 6 },
     //{ vec3(0.0f, 1.0f, 0.0),  5.0f, 7 },
 };
 
@@ -137,7 +137,7 @@ void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
                 PayLoad.MaterialIndex = Sphere.MaterialIndex;
 
                 vec3 OutsideNormal = normalize((Position - Sphere.Position) / Sphere.Radius);
-                if (dot(Ray.Direction, OutsideNormal) > 0.0f)
+                if (dot(Ray.Direction, OutsideNormal) >= 0.0)
                 {
                     PayLoad.Normal    = -OutsideNormal;
                     PayLoad.FrontFace = false;
@@ -155,7 +155,7 @@ void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
 void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
 {
     float DdotN = dot(Ray.Direction, Plane.Normal);
-    if (abs(DdotN) > 0.0001f)
+    if (abs(DdotN) > 0.0001)
     {
         vec3 Center = Plane.Normal * Plane.Distance;
         vec3 Diff   = Center - Ray.Origin;
@@ -190,11 +190,11 @@ bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
         HitSphere(Sphere, Ray, PayLoad);
     }
 
-    /*for (uint i = 0; i < NUM_PLANES; i++)
+    for (uint i = 0; i < NUM_PLANES; i++)
     {
         Plane Plane = GPlanes[i];
         HitPlane(Plane, Ray, PayLoad);
-    }*/
+    }
 
     if (PayLoad.T < PayLoad.MaxT)
     {
@@ -327,11 +327,11 @@ void main()
         for (uint i = 0; i < MAX_DEPTH; i++)
         {
             RayPayLoad PayLoad;
-            PayLoad.MinT = 0.0f;
-            PayLoad.MaxT = 1000.0f;
+            PayLoad.MinT = 0.0;
+            PayLoad.MaxT = 1000.0;
             PayLoad.T    = PayLoad.MaxT;
 
-            vec3 HitColor = vec3(0.0f);
+            vec3 HitColor = vec3(0.0);
             if (TraceRay(Ray, PayLoad))
             {
                 vec3 N = normalize(PayLoad.Normal);
@@ -379,6 +379,6 @@ void main()
 
     FinalColor = FinalColor / vec3(NUM_SAMPLES);
     // FinalColor = AcesFitted(FinalColor);
-    // FinalColor = pow(FinalColor, vec3(1.0 / 2.2));
+    FinalColor = pow(FinalColor, vec3(1.0 / 2.2));
     imageStore(Output, Pixel, vec4(FinalColor, 1.0));
 }

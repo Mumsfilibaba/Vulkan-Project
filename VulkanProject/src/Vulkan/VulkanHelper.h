@@ -6,12 +6,13 @@ inline void SetDebugName(VkDevice device, const std::string& name, uint64_t vulk
 {
     if (VkExt::vkSetDebugUtilsObjectNameEXT)
     {
-        VkDebugUtilsObjectNameInfoEXT info = {};
-        info.sType          = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-        info.pNext          = nullptr;
-        info.objectType     = type;
-        info.pObjectName    = name.c_str();
-        info.objectHandle   = vulkanHandle;
+        VkDebugUtilsObjectNameInfoEXT info;
+        ZERO_STRUCT(&info);
+        
+        info.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        info.objectType   = type;
+        info.pObjectName  = name.c_str();
+        info.objectHandle = vulkanHandle;
 
         VkResult result = VkExt::vkSetDebugUtilsObjectNameEXT(device, &info);
         if (result != VK_SUCCESS)

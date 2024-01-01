@@ -1,11 +1,10 @@
 #include "RenderPass.h"
 #include "VulkanContext.h"
-
 #include <vector>
 
 RenderPass::RenderPass(VkDevice device)
-    : m_Device(device),
-    m_RenderPass(VK_NULL_HANDLE)
+    : m_Device(device)
+    , m_RenderPass(VK_NULL_HANDLE)
 {
 }
 
@@ -27,7 +26,9 @@ RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &
     std::vector<VkAttachmentDescription> attachmentsInfos;
     std::vector<VkAttachmentReference> colorAttachmentRefInfos;
 
-    VkAttachmentDescription colorAttachment = {};
+    VkAttachmentDescription colorAttachment;
+    ZERO_STRUCT(&colorAttachment);
+    
     colorAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_STORE;
@@ -48,8 +49,9 @@ RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &
         colorAttachmentRefInfos.push_back(colorAttachmentRef);
     }
 
-    VkSubpassDescription subpass = {};
-    subpass.flags                   = 0;
+    VkSubpassDescription subpass;
+    ZERO_STRUCT(&colorAttachment);
+    
     subpass.inputAttachmentCount    = 0;
     subpass.pInputAttachments       = nullptr;
     subpass.pDepthStencilAttachment = nullptr;
@@ -60,7 +62,9 @@ RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &
     subpass.pPreserveAttachments    = nullptr;
     subpass.pResolveAttachments     = nullptr;
 
-    VkSubpassDependency dependency = {};
+    VkSubpassDependency dependency;
+    ZERO_STRUCT(&dependency);
+    
     dependency.dependencyFlags  = 0;
     dependency.srcSubpass       = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass       = 0;
@@ -69,16 +73,16 @@ RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &
     dependency.dstStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dependency.dstAccessMask    = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-    VkRenderPassCreateInfo renderPassInfo = {};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.flags = 0;
-    renderPassInfo.pNext = nullptr;
-    renderPassInfo.dependencyCount  = 1;
-    renderPassInfo.pDependencies    = &dependency;
-    renderPassInfo.attachmentCount  = 1;
-    renderPassInfo.pAttachments     = &colorAttachment;
-    renderPassInfo.subpassCount     = 1;
-    renderPassInfo.pSubpasses       = &subpass;
+    VkRenderPassCreateInfo renderPassInfo;
+    ZERO_STRUCT(&renderPassInfo);
+    
+    renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies   = &dependency;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments    = &colorAttachment;
+    renderPassInfo.subpassCount    = 1;
+    renderPassInfo.pSubpasses      = &subpass;
 
     VkResult result = vkCreateRenderPass(newRenderPass->m_Device, &renderPassInfo, nullptr, &newRenderPass->m_RenderPass);
     if (result != VK_SUCCESS) 

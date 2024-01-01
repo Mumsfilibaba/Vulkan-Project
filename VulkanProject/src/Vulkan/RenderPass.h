@@ -1,6 +1,5 @@
 #pragma once
 #include "Core.h"
-
 #include <vulkan/vulkan.h>
 
 struct RenderPassAttachment
@@ -10,24 +9,24 @@ struct RenderPassAttachment
 
 struct RenderPassParams
 {
-    RenderPassAttachment* pColorAttachments = nullptr;
-    uint32_t ColorAttachmentCount = 0;
+    RenderPassAttachment* pColorAttachments    = nullptr;
+    uint32_t              ColorAttachmentCount = 0;
 };
 
 class RenderPass
 {
 public:
+    static RenderPass* Create(class VulkanContext* pContext, const RenderPassParams& params);
+    
     RenderPass(VkDevice device);
     ~RenderPass();
 
-    inline VkRenderPass GetRenderPass() const
+    VkRenderPass GetRenderPass() const
     {
         return m_RenderPass;
     }
     
-    static RenderPass* Create(class VulkanContext* pContext, const RenderPassParams& params);
-    
 private:
-    VkDevice m_Device;
+    VkDevice     m_Device;
     VkRenderPass m_RenderPass;
 };

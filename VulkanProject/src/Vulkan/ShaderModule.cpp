@@ -1,13 +1,12 @@
 #include "ShaderModule.h"
 #include "VulkanContext.h"
-
 #include <fstream>
 #include <iostream>
 
 ShaderModule::ShaderModule(VkDevice device)
-    : m_Device(device),
-    m_Module(VK_NULL_HANDLE),
-    m_pEntryPoint(nullptr)
+    : m_Device(device)
+    , m_Module(VK_NULL_HANDLE)
+    , m_pEntryPoint(nullptr)
 {
 }
 
@@ -50,10 +49,10 @@ ShaderModule* ShaderModule::CreateFromFile(VulkanContext* pContext, const char* 
         ShaderModule* newShader = new ShaderModule(pContext->GetDevice());
         assert(pEntryPoint);
 
-        VkShaderModuleCreateInfo createInfo = {};
+        VkShaderModuleCreateInfo createInfo;
+        ZERO_STRUCT(&createInfo);
+        
         createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        createInfo.pNext    = nullptr;
-        createInfo.flags    = 0;
         createInfo.codeSize = uint32_t(buffer.size());
         createInfo.pCode    = reinterpret_cast<const uint32_t*>(buffer.data());
 

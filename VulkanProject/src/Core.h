@@ -30,3 +30,7 @@
 // GLFW
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+// Helper Defines
+#define ZERO_MEMORY(dst, size) memset(dst, 0, size)
+#define ZERO_STRUCT(dst)       memset(dst, 0, sizeof(std::remove_pointer_t<decltype(dst)>))

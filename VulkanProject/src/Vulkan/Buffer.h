@@ -8,66 +8,21 @@
 struct BufferParams
 {
     VkMemoryPropertyFlags MemoryProperties = 0;
-    uint32_t Usage = 0;
-    VkDeviceSize SizeInBytes = 0;
+    uint32_t              Usage            = 0;
+    VkDeviceSize          SizeInBytes      = 0;
 };
 
 class Buffer
 {
 public:
-    inline Buffer(VkDevice device, VkPhysicalDevice physicalDevice, VulkanDeviceAllocator* pAllocator)
-        : m_Device(device)
-        , m_PhysicalDevice(physicalDevice)
-        , m_pAllocator(pAllocator)
-        , m_Buffer(VK_NULL_HANDLE)
-        , m_DeviceMemory(VK_NULL_HANDLE)
-        , m_SizeInBytes(0)
-        , m_Allocation()
-    {
-    }
+    static Buffer* Create(class VulkanContext* pContext, const BufferParams& params, VulkanDeviceAllocator* pAllocator);
 
-    inline ~Buffer()
-    {
-        if (m_Buffer != VK_NULL_HANDLE)
-        {
-            vkDestroyBuffer(m_Device, m_Buffer, nullptr);
-            m_Buffer = VK_NULL_HANDLE;
-        }
-
-        if (m_pAllocator)
-        {
-            m_pAllocator->Deallocate(m_Allocation);
-        }
-        else
-        {
-            if (m_DeviceMemory != VK_NULL_HANDLE)
-            {
-                vkFreeMemory(m_Device, m_DeviceMemory, nullptr);
-                m_DeviceMemory = VK_NULL_HANDLE;
-            }
-        }
-    }
+    Buffer(VkDevice device, VkPhysicalDevice physicalDevice, VulkanDeviceAllocator* pAllocator);
+    ~Buffer();
     
-    inline void* Map()
-    {
-        void* pResult = nullptr;
-        if (m_pAllocator)
-        {
-            pResult = (void*)m_Allocation.pHostMemory;
-        }
-        else
-        {
-            VkResult result = vkMapMemory(m_Device, m_DeviceMemory, 0, m_SizeInBytes, 0, &pResult);
-            if (result != VK_SUCCESS)
-            {
-                std::cout << "vkMapMemory failed. Error: " << result << std::endl;
-            }
-        }
-        
-        return pResult;
-    }
+    void* Map();
 
-    inline void Unmap()
+    void Unmap()
     {
         if (!m_pAllocator)
         {
@@ -76,19 +31,18 @@ public:
     }
 
     
-    inline VkBuffer GetBuffer() const
+    VkBuffer GetBuffer() const
     {
         return m_Buffer;
     }
     
-    static Buffer* Create(class VulkanContext* pContext, const BufferParams& params, VulkanDeviceAllocator* pAllocator);
     
 private:
     VulkanDeviceAllocator* m_pAllocator;
-    VkDevice m_Device;
-    VkPhysicalDevice m_PhysicalDevice;
-    VkBuffer m_Buffer;
-    VkDeviceMemory m_DeviceMemory;
-    VkDeviceSize m_SizeInBytes;
-    VkDeviceAllocation m_Allocation;
+    VkDevice               m_Device;
+    VkPhysicalDevice       m_PhysicalDevice;
+    VkBuffer               m_Buffer;
+    VkDeviceMemory         m_DeviceMemory;
+    VkDeviceSize           m_SizeInBytes;
+    VkDeviceAllocation     m_Allocation;
 };

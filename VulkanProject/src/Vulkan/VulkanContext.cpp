@@ -113,9 +113,10 @@ void VulkanContext::ExecuteGraphics(CommandBuffer* pCommandBuffer, VkPipelineSta
 {
     //std::cout << "ExecuteGraphics" << std::endl;
 
-    VkSubmitInfo submitInfo = {};
+    VkSubmitInfo submitInfo;
+    ZERO_STRUCT(&submitInfo);
+    
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.pNext = nullptr;
 
     VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].ImageSemaphore };
 
@@ -180,17 +181,18 @@ void VulkanContext::Present()
 
     VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
 
-    VkPresentInfoKHR info = {};
-    info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    info.pNext              = nullptr;
-    info.waitSemaphoreCount = 1;
-    info.pWaitSemaphores    = waitSemaphores;
-    info.swapchainCount     = 1;
-    info.pSwapchains        = &m_SwapChain;
-    info.pImageIndices      = &m_CurrentBufferIndex;
-    info.pResults           = nullptr;
+    VkPresentInfoKHR presentInfo;
+    ZERO_STRUCT(&presentInfo);
+    
+    presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores    = waitSemaphores;
+    presentInfo.swapchainCount     = 1;
+    presentInfo.pSwapchains        = &m_SwapChain;
+    presentInfo.pImageIndices      = &m_CurrentBufferIndex;
+    presentInfo.pResults           = nullptr;
 
-    VkResult result = vkQueuePresentKHR(m_PresentationQueue, &info);
+    VkResult result = vkQueuePresentKHR(m_PresentationQueue, &presentInfo);
     if (result == VK_SUCCESS)
     {
         //Aquire next image
@@ -297,14 +299,15 @@ bool VulkanContext::Init(const DeviceParams& params)
 
 bool VulkanContext::CreateInstance(const DeviceParams& params)
 {
-    VkApplicationInfo appInfo = {};
-    appInfo.sType               = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pNext               = nullptr;
-    appInfo.pApplicationName    = "PathTracer";
-    appInfo.applicationVersion  = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName         = "PathTracer";
-    appInfo.engineVersion       = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion          = VK_API_VERSION_1_2;
+    VkApplicationInfo appInfo;
+    ZERO_STRUCT(&appInfo);
+    
+    appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pApplicationName   = "PathTracer";
+    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.pEngineName        = "PathTracer";
+    appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.apiVersion         = VK_API_VERSION_1_2;
 
     // Enable GLFW extensions
     std::vector<const char*> instanceExtensions;
@@ -326,7 +329,9 @@ bool VulkanContext::CreateInstance(const DeviceParams& params)
     }
 
     //Setup instance
-    VkInstanceCreateInfo instanceCreateInfo = {};
+    VkInstanceCreateInfo instanceCreateInfo;
+    ZERO_STRUCT(&instanceCreateInfo);
+    
     instanceCreateInfo.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.flags            = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
@@ -379,7 +384,9 @@ bool VulkanContext::CreateInstance(const DeviceParams& params)
     instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.data();
 
     //Setup validation layer
-    VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo = {};
+    VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo;
+    ZERO_STRUCT(&debugMessengerCreateInfo);
+    
     if (m_bValidationEnabled)
     {
         const char* validationLayerName = "VK_LAYER_KHRONOS_validation";
@@ -483,6 +490,15 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
     std::cout << ", Compute="      << m_QueueFamilyIndices.Compute;
     std::cout << ", Transfer="     << m_QueueFamilyIndices.Transfer << std::endl;
 
+    if (m_DeviceProperties.limits.timestampComputeAndGraphics)
+    {
+        std::cout << "    Timestamps Supported" << std::endl;
+    }
+    else
+    {
+        std::cout << "    Timestamps NOT Supported" << std::endl;
+    }
+
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     const float defaultQueuePriority = 0.0f;
 
@@ -546,14 +562,19 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
         m_bRayTracingEnabled = true;
     }
 
-    // TODO: Enable wanted features here
+    // Enable wanted features here
+    ZERO_STRUCT(&m_EnabledDeviceFeatures);
+    m_EnabledDeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    m_EnabledDeviceFeatures.pNext = &m_HostQueryFeatures;
 
     // Create the logical device
-    VkDeviceCreateInfo deviceCreateInfo = {};
+    VkDeviceCreateInfo deviceCreateInfo;
+    ZERO_STRUCT(&deviceCreateInfo);
+    
     deviceCreateInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceCreateInfo.pNext                = &m_EnabledDeviceFeatures;
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     deviceCreateInfo.pQueueCreateInfos    = queueCreateInfos.data();
-    deviceCreateInfo.pEnabledFeatures     = &m_EnabledDeviceFeatures;
 
     // Verify extensions
     if (deviceExtensions.size() > 0)
@@ -611,16 +632,16 @@ void VulkanContext::InitFrameData(uint32_t numFrames)
 
 bool VulkanContext::CreateSemaphores()
 {
-    //Setup semaphore structure
+    // Setup semaphore structure
     VkSemaphoreCreateInfo semaphoreInfo = {};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     semaphoreInfo.pNext = nullptr;
     semaphoreInfo.flags = 0;
 
-    //Create semaphores
+    // Create semaphores
     for (uint32_t i = 0; i < m_FrameCount; i++)
     {
-        VkSemaphore imageSemaphore = VK_NULL_HANDLE;
+        VkSemaphore imageSemaphore  = VK_NULL_HANDLE;
         VkSemaphore renderSemaphore = VK_NULL_HANDLE;
 
         if (vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &imageSemaphore) != VK_SUCCESS ||
@@ -644,7 +665,7 @@ bool VulkanContext::CreateSemaphores()
 
 bool VulkanContext::CreateSwapChain(uint32_t width, uint32_t height)
 {
-    //Get capabilities and formats that are supported
+    // Get capabilities and formats that are supported
     VkSurfaceCapabilitiesKHR capabilities = {};
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_PhysicalDevice, m_Surface, &capabilities);
     if (capabilities.currentExtent.width != UINT32_MAX && capabilities.currentExtent.height != UINT32_MAX)
@@ -694,7 +715,7 @@ bool VulkanContext::CreateSwapChain(uint32_t width, uint32_t height)
         presentModes.resize(presentModeCount);
         vkGetPhysicalDeviceSurfacePresentModesKHR(m_PhysicalDevice, m_Surface, &presentModeCount, presentModes.data());
 
-        //Choose mailbox if available otherwise fifo
+        // Choose mailbox if available otherwise fifo
         m_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
         for (const VkPresentModeKHR& availablePresentMode : presentModes)
         {
@@ -716,9 +737,10 @@ bool VulkanContext::CreateSwapChain(uint32_t width, uint32_t height)
         imageCount = capabilities.maxImageCount;
     }
 
-    VkSwapchainCreateInfoKHR createInfo = {};
+    VkSwapchainCreateInfoKHR createInfo;
+    ZERO_STRUCT(&createInfo);
+    
     createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.pNext            = nullptr;
     createInfo.surface          = m_Surface;
     createInfo.minImageCount    = imageCount;
     createInfo.imageFormat      = m_SwapChainFormat.format;
@@ -751,9 +773,10 @@ bool VulkanContext::CreateSwapChain(uint32_t width, uint32_t height)
     std::vector<VkImage> images(realImageCount);
     vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &realImageCount, images.data());
 
-    VkImageViewCreateInfo imageViewCreateInfo = {};
+    VkImageViewCreateInfo imageViewCreateInfo;
+    ZERO_STRUCT(&imageViewCreateInfo);
+    
     imageViewCreateInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    imageViewCreateInfo.pNext                           = nullptr;
     imageViewCreateInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
     imageViewCreateInfo.format                          = m_SwapChainFormat.format;
     imageViewCreateInfo.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -812,18 +835,17 @@ void VulkanContext::RecreateSwapChain()
 
 void VulkanContext::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 {
+    ZERO_STRUCT(&createInfo);
+    
     createInfo.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.flags           = 0;
-    createInfo.pNext           = nullptr;
     createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     createInfo.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     createInfo.pfnUserCallback = VulkanDebugCallback;
-    createInfo.pUserData       = nullptr;
 }
 
 bool VulkanContext::QueryPhysicalDevice(const DeviceParams& params)
 {
-    //Enumerate devices
+    // Enumerate devices
     uint32_t gpuCount = 0;
     VkResult result = vkEnumeratePhysicalDevices(m_Instance, &gpuCount, nullptr);
 
@@ -835,10 +857,10 @@ bool VulkanContext::QueryPhysicalDevice(const DeviceParams& params)
         return false;
     }
 
-    //Start with the first one in case we do not find any suitable
+    // Start with the first one in case we do not find any suitable
     m_PhysicalDevice = physicalDevices[0];
 
-    //GPU selection
+    // GPU selection
     std::cout << "Available GPUs" << std::endl;
     for (VkPhysicalDevice physicalDevice : physicalDevices)
     {
@@ -850,14 +872,14 @@ bool VulkanContext::QueryPhysicalDevice(const DeviceParams& params)
         VkPhysicalDeviceFeatures physicalDeviceFeatures;
         vkGetPhysicalDeviceFeatures(physicalDevice, &physicalDeviceFeatures);
 
-        //Check for adapter features
+        // Check for adapter features
         if (!physicalDeviceFeatures.samplerAnisotropy)
         {
             std::cout << "Anisotropic filtering is not supported by adapter" << std::endl;
             continue;
         }
 
-        //Find indices for queuefamilies
+        // Find indices for queuefamilies
         QueueFamilyIndices indices = GetQueueFamilyIndices(physicalDevice);
         if (!indices.IsValid())
         {
@@ -865,7 +887,7 @@ bool VulkanContext::QueryPhysicalDevice(const DeviceParams& params)
             return false;
         }
 
-        //Check if required extension for device is supported
+        // Check if required extension for device is supported
         std::vector<const char*> deviceExtensions = GetRequiredDeviceExtensions();
 
         uint32_t deviceExtensionCount;
@@ -903,23 +925,31 @@ bool VulkanContext::QueryPhysicalDevice(const DeviceParams& params)
 
         if (extensionsFound)
         {
-            //If we came this far we have found a suitable adapter
+            // If we came this far we have found a suitable adapter
             m_PhysicalDevice = physicalDevice;
             break;
         }
         else
         {
-            std::cout << "Some extensions were not supported on '" <<physicalDeviceProperties.deviceName << "'" << std::endl;
+            std::cout << "Some extensions were not supported on '" << physicalDeviceProperties.deviceName << "'" << std::endl;
         }
     }
+    
+    
+    ZERO_STRUCT(&m_HostQueryFeatures);
+    m_HostQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES;
+    
+    ZERO_STRUCT(&m_DeviceFeatures);
+    m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    m_DeviceFeatures.pNext = &m_HostQueryFeatures;
 
     vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_DeviceProperties);
-    vkGetPhysicalDeviceFeatures(m_PhysicalDevice, &m_DeviceFeatures);
-    vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &m_DeviceMemoryProperties);    
+    vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &m_DeviceFeatures);
+    vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &m_DeviceMemoryProperties);
     return true;
 }
 
-//Helper function
+// Helper function
 static uint32_t GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const std::vector<VkQueueFamilyProperties>& queueFamilies)
 {
     if (queueFlags & VK_QUEUE_COMPUTE_BIT)
@@ -968,7 +998,7 @@ QueueFamilyIndices VulkanContext::GetQueueFamilyIndices(VkPhysicalDevice physica
     indices.Transfer = ::GetQueueFamilyIndex(VK_QUEUE_TRANSFER_BIT, queueFamilies);
     indices.Graphics = ::GetQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, queueFamilies);
 
-    //Find a presentation queue
+    // Find a presentation queue
     for (uint32_t i = 0; i < queueFamilyCount; i++)
     {
         VkBool32 presentSupport = false;
@@ -992,7 +1022,7 @@ std::vector<const char*> VulkanContext::GetRequiredDeviceExtensions()
 
 void VulkanContext::ReleaseSwapChainResources()
 {
-    //Release backbuffers
+    // Release backbuffers
     for (FrameData& frame : m_FrameData)
     {
         frame.BackBuffer = VK_NULL_HANDLE;
@@ -1003,7 +1033,7 @@ void VulkanContext::ReleaseSwapChainResources()
         }
     }
 
-    //Destroy swapchain
+    // Destroy swapchain
     if (m_SwapChain != VK_NULL_HANDLE)
     {
         vkDestroySwapchainKHR(m_Device, m_SwapChain, nullptr);

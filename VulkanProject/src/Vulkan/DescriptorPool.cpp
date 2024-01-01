@@ -8,19 +8,20 @@ DescriptorPool* DescriptorPool::Create(VulkanContext* pContext, const Descriptor
     DescriptorPool* newDescriptorPool = new DescriptorPool(pContext->GetDevice());
     
     VkDescriptorPoolSize poolSizes[numPoolSizes];
-    poolSizes[0].type                 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount     = params.NumUniformBuffers;
+    poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount = params.NumUniformBuffers;
     
-    poolSizes[1].type                 = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    poolSizes[1].descriptorCount     = params.NumStorageImages;
+    poolSizes[1].type            = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    poolSizes[1].descriptorCount = params.NumStorageImages;
     
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType            = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.flags           = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    poolInfo.pNext            = nullptr;
+    VkDescriptorPoolCreateInfo poolInfo;
+    ZERO_STRUCT(&poolInfo);
+    
+    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     poolInfo.poolSizeCount = numPoolSizes;
     poolInfo.pPoolSizes    = poolSizes;
-    poolInfo.maxSets        = params.MaxSets;
+    poolInfo.maxSets       = params.MaxSets;
     
     if (vkCreateDescriptorPool(newDescriptorPool->m_Device, &poolInfo, nullptr, &newDescriptorPool->m_Pool) != VK_SUCCESS)
     {

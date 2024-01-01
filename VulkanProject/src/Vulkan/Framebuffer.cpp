@@ -3,8 +3,8 @@
 #include "VulkanContext.h"
 
 Framebuffer::Framebuffer(VkDevice device)
-    : m_Device(device),
-    m_Framebuffer(VK_NULL_HANDLE)
+    : m_Device(device)
+    , m_Framebuffer(VK_NULL_HANDLE)
 {
 }
 
@@ -25,10 +25,10 @@ Framebuffer* Framebuffer::Create(VulkanContext* pContext, const FramebufferParam
     
     assert(params.pRenderPass != nullptr);
 
-    VkFramebufferCreateInfo framebufferInfo = {};
+    VkFramebufferCreateInfo framebufferInfo;
+    ZERO_STRUCT(&framebufferInfo);
+    
     framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.flags           = 0;
-    framebufferInfo.pNext           = nullptr;
     framebufferInfo.renderPass      = params.pRenderPass->GetRenderPass();
     framebufferInfo.attachmentCount = params.AttachMentCount;
     framebufferInfo.pAttachments    = params.pAttachMents;
