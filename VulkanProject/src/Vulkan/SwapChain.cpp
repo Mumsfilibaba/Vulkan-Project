@@ -37,9 +37,14 @@ SwapChain::SwapChain(VulkanContext* pContext, GLFWwindow* pWindow)
     : m_pContext(pContext)
     , m_pWindow(pWindow)
     , m_Surface(VK_NULL_HANDLE)
+    , m_SwapChain(VK_NULL_HANDLE)
     , m_Extent{ 0, 0 }
+    , m_SwapChainFormat{ VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }
+    , m_PresentMode(VK_PRESENT_MODE_IMMEDIATE_KHR)
     , m_ImageCount(NUM_BACK_BUFFERS)
     , m_FrameData()
+    , m_SemaphoreIndex(0)
+    , m_CurrentBufferIndex(0)
 {
     m_FrameData.resize(m_ImageCount);
 }
@@ -276,8 +281,6 @@ bool SwapChain::CreateSemaphores()
 
 VkResult SwapChain::AquireNextImage()
 {
-    // std::cout << "AquireNextImage" << std::endl;
-
     VkSemaphore signalSemaphore = m_FrameData[m_SemaphoreIndex].ImageSemaphore;
     return vkAcquireNextImageKHR(m_pContext->GetDevice(), m_SwapChain, UINT64_MAX, signalSemaphore, VK_NULL_HANDLE, &m_CurrentBufferIndex);
 }

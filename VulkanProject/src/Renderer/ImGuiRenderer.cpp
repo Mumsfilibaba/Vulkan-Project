@@ -152,9 +152,9 @@ namespace ImGuiRenderer
             pWindow = nullptr;
         }
         
-        GLFWwindow*                       pWindow;
-        SwapChain*                        pSwapChain;
-        RenderPass*                       pRenderPass;
+        GLFWwindow*                       pWindow;
+        SwapChain*                        pSwapChain;
+        RenderPass*                       pRenderPass;
         std::vector<Framebuffer*>         FrameBuffers;
         std::vector<ImGuiFrameRenderData> FrameData;
         VkClearValue                      ClearValues;
@@ -671,7 +671,7 @@ namespace ImGuiRenderer
         glfwSetWindowPos(pViewportData->pWindow, (int)pViewport->Pos.x, (int)pViewport->Pos.y);
 
     #ifdef PLATFORM_WINDOWS
-        pViewport->PlatformHandleRaw = glfwGetWin32Window(pViewportData->Window);
+        pViewport->PlatformHandleRaw = glfwGetWin32Window(pViewportData->pWindow);
     #elif PLATFORM_MAC
         pViewport->PlatformHandleRaw = glfwGetCocoaWindow(pViewportData->pWindow);
     #endif
@@ -897,7 +897,7 @@ namespace ImGuiRenderer
         ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
         pMainViewport->PlatformHandle = (void*)pBackend->Window;
     #ifdef PLATFORM_WINDOWS
-        mainViewport->PlatformHandleRaw = glfwGetWin32Window(pBackend->Window);
+        pMainViewport->PlatformHandleRaw = glfwGetWin32Window(pBackend->Window);
     #elif PLATFORM_MAC
         pMainViewport->PlatformHandleRaw = glfwGetCocoaWindow(pBackend->Window);
     #endif

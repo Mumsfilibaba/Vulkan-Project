@@ -1,5 +1,26 @@
 @echo off
-C:/VulkanSDK/1.2.148.1/Bin/glslc.exe -fshader-stage=vertex   res/shaders/vertex.glsl    -o res/shaders/vertex.spv
-C:/VulkanSDK/1.2.148.1/Bin/glslc.exe -fshader-stage=fragment res/shaders/fragment.glsl  -o res/shaders/fragment.spv
-C:/VulkanSDK/1.2.148.1/Bin/glslc.exe -fshader-stage=compute  res/shaders/raytracer.glsl -o res/shaders/raytracer.spv
+
+:: Set the working directory to the location of the script
+cd %~dp0
+
+:: Check if VK_SDK_PATH is set
+if not defined VK_SDK_PATH (
+    :: If VK_SDK_PATH is not set, check if VULKAN_SDK is set
+    if not defined VULKAN_SDK (
+        echo Error: Vulkan SDK environment variable not set.
+        pause
+        exit /b 1
+    ) else (
+        set VULKAN_SDK_PATH=%VULKAN_SDK%
+    )
+) else (
+    set VULKAN_SDK_PATH=%VK_SDK_PATH%
+)
+
+:: Build paths to glslc.exe and shader files using environment variables
+set GLSLC_PATH=%VULKAN_SDK_PATH%\Bin\glslc.exe
+
+%GLSLC_PATH% -fshader-stage=vertex   res/shaders/vertex.glsl    -o res/shaders/vertex.spv
+%GLSLC_PATH% -fshader-stage=fragment res/shaders/fragment.glsl  -o res/shaders/fragment.spv
+%GLSLC_PATH% -fshader-stage=compute  res/shaders/raytracer.glsl -o res/shaders/raytracer.spv
 pause

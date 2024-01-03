@@ -22,18 +22,18 @@ Buffer* Buffer::Create(VulkanContext* pContext, const BufferParams& params, Vulk
     }
     else
     {
-        pBuffer->m_Size = params.Size;
         std::cout << "Created Buffer\n";
     }
 
-    VkMemoryRequirements memRequirements = {};
-    vkGetBufferMemoryRequirements(pContext->GetDevice(), pBuffer->m_Buffer, &memRequirements);
+    VkMemoryRequirements memoryRequirements = {};
+    vkGetBufferMemoryRequirements(pContext->GetDevice(), pBuffer->m_Buffer, &memoryRequirements);
     
     if (pAllocator)
     {
-        if (pAllocator->Allocate(pBuffer->m_Allocation, memRequirements, params.MemoryProperties))
+        if (pAllocator->Allocate(pBuffer->m_Allocation, memoryRequirements, params.MemoryProperties))
         {
             vkBindBufferMemory(pContext->GetDevice(), pBuffer->m_Buffer, pBuffer->m_Allocation.DeviceMemory, pBuffer->m_Allocation.DeviceMemoryOffset);
+            pBuffer->m_Size = params.Size;
         }
         else
         {
@@ -46,8 +46,8 @@ Buffer* Buffer::Create(VulkanContext* pContext, const BufferParams& params, Vulk
         ZERO_STRUCT(&allocInfo);
         
         allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize  = memRequirements.size;
-        allocInfo.memoryTypeIndex = FindMemoryType(pContext->GetPhysicalDevice(), memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        allocInfo.allocationSize  = memoryRequirements.size;
+        allocInfo.memoryTypeIndex = FindMemoryType(pContext->GetPhysicalDevice(), memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
         result = vkAllocateMemory(pContext->GetDevice(), &allocInfo, nullptr, &pBuffer->m_DeviceMemory);
         if (result != VK_SUCCESS)
@@ -57,7 +57,9 @@ Buffer* Buffer::Create(VulkanContext* pContext, const BufferParams& params, Vulk
         else
         {
             vkBindBufferMemory(pContext->GetDevice(), pBuffer->m_Buffer, pBuffer->m_DeviceMemory, 0);
-            std::cout << "Allocated " << memRequirements.size << " bytes\n";
+            pBuffer->m_Size = memoryRequirements.size;
+
+            std::cout << "Allocated " << memoryRequirements.size << " bytes\n";
         }
     }
     
@@ -144,12 +146,15 @@ void Buffer::FlushMappedMemoryRange()
 {
     if (!m_pAllocator)
     {
-        VkMappedMemoryRange range[1] = {};
-        range[0].sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        range[0].memory = m_DeviceMemory;
-        range[0].size   = VK_WHOLE_SIZE;
-        
-        VkResult result = vkFlushMappedMemoryRanges(m_pContext->GetDevice(), 1, range);
+        VkMappedMemoryRange range = {};
+        ZERO_STRUCT(&range);
+
+        range.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        range.memory = m_DeviceMemory;
+        range.offset = 0;
+        range.size   = m_Size;
+
+        VkResult result = vkFlushMappedMemoryRanges(m_pContext->GetDevice(), 1, &range);
         if (result != VK_SUCCESS)
         {
             std::cout << "vkFlushMappedMemoryRanges failed. Error: " << result << "\n";

@@ -23,8 +23,13 @@ RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &
 
     for (uint32_t i = 0; i < params.ColorAttachmentCount; i++)
     {
+        colorAttachment.loadOp = params.pColorAttachments[i].LoadOp;
+        if (colorAttachment.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD)
+        {
+            colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        }
+
         colorAttachment.format  = params.pColorAttachments[i].Format;
-        colorAttachment.loadOp  = params.pColorAttachments[i].LoadOp;
         colorAttachment.storeOp = params.pColorAttachments[i].StoreOp;
         attachmentsInfos.push_back(colorAttachment);
         
@@ -48,13 +53,13 @@ RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &
     VkSubpassDependency dependency;
     ZERO_STRUCT(&dependency);
     
-    dependency.dependencyFlags  = 0;
-    dependency.srcSubpass       = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass       = 0;
-    dependency.srcStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask    = 0;
-    dependency.dstStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask    = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dependencyFlags = 0;
+    dependency.srcSubpass      = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass      = 0;
+    dependency.srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask   = 0;
+    dependency.dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
     VkRenderPassCreateInfo renderPassInfo;
     ZERO_STRUCT(&renderPassInfo);

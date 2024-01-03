@@ -91,10 +91,10 @@ private:
     VkDevice                 m_Device;
     
     // Queues
-    VkQueue m_GraphicsQueue;
-    VkQueue m_ComputeQueue;
-    VkQueue m_TransferQueue;
-    VkQueue m_PresentationQueue;
+    VkQueue m_GraphicsQueue;
+    VkQueue m_ComputeQueue;
+    VkQueue m_TransferQueue;
+    VkQueue m_PresentationQueue;
     
     // Main SwapChain
     SwapChain* m_pSwapChain;

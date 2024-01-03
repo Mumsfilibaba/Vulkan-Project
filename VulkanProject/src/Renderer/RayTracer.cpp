@@ -14,6 +14,8 @@
 #include "Vulkan/PipelineLayout.h"
 #include "Vulkan/SwapChain.h"
 
+#include <windows.h>
+
 RayTracer::RayTracer()
     : m_pContext(nullptr)
     , m_Pipeline(nullptr)
@@ -75,7 +77,7 @@ void RayTracer::Init(VulkanContext* pContext)
 
     delete pComputeShader;
    
-    // Create descriptorpool
+    // Create DescriptorPool
     DescriptorPoolParams poolParams;
     poolParams.NumUniformBuffers = 6;
     poolParams.NumStorageImages  = 3;
@@ -85,7 +87,7 @@ void RayTracer::Init(VulkanContext* pContext)
 
     // Camera
     BufferParams camBuffParams;
-    camBuffParams.Size       = sizeof(CameraBuffer);
+    camBuffParams.Size             = sizeof(CameraBuffer);
     camBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     camBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -94,7 +96,7 @@ void RayTracer::Init(VulkanContext* pContext)
 
     // Random
     BufferParams randBuffParams;
-    randBuffParams.Size      = sizeof(RandomBuffer);
+    randBuffParams.Size             = sizeof(RandomBuffer);
     randBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     randBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 

@@ -1,3 +1,34 @@
+function IsPlatformMac()
+	return os.target() == "macosx"
+end
+
+function FindVulkanIncludePath()
+    -- Vulkan is installed to the local folder on mac (Latest installed version) so we can just return this global path
+    if IsPlatformMac() then
+        return '/usr/local'
+    end
+
+	printf("Platform is not macOS, checking environment variables for Vulkan SDK")
+
+    local VulkanEnvironmentVars = 
+    {
+        'VK_SDK_PATH',
+        'VULKAN_SDK'
+    }
+
+    for _, EnvironmentVar in ipairs(VulkanEnvironmentVars) do
+        local Path = os.getenv(EnvironmentVar)
+        if Path ~= nil then
+            return Path
+        end
+    end
+
+    return ''
+end
+
+local vulkanPath = FindVulkanIncludePath() 
+printf("VulkanPath=%s", vulkanPath)
+
 workspace "Vulkan-Project"
 	architecture "x86_64"
 	startproject "VulkanProject"
@@ -77,6 +108,7 @@ workspace "Vulkan-Project"
 			floatingpoint("Fast")
 			vectorextensions("SSE2")
 			characterset("Ascii")
+			staticruntime("on")
 			flags(
 			{ 
 				"MultiProcessorCompile",
@@ -193,6 +225,7 @@ workspace "Vulkan-Project"
 			floatingpoint("Fast")
 			vectorextensions("SSE2")
 			characterset("Ascii")
+			staticruntime("on")
 			flags(
 			{ 
 				"MultiProcessorCompile",
@@ -221,8 +254,8 @@ workspace "Vulkan-Project"
 			filter{}
 			
 			-- Targets
-			targetdir ("../Build/bin/Dependencies/tinyobj/" .. outputdir)
-			objdir ("../Build/bin-int/Dependencies/tinyobj/" .. outputdir)
+			targetdir ("Build/bin/Dependencies/tinyobj/" .. outputdir)
+			objdir ("Build/bin-int/Dependencies/tinyobj/" .. outputdir)
 					
 			-- Files
 			files 
@@ -246,6 +279,7 @@ workspace "Vulkan-Project"
 			floatingpoint("Fast")
 			vectorextensions("SSE2")
 			characterset("Ascii")
+			staticruntime("on")
 			flags(
 			{ 
 				"MultiProcessorCompile",
@@ -255,8 +289,8 @@ workspace "Vulkan-Project"
 			location "Projectfiles/Dependencies/ImGui"
 			
 			-- Targets
-			targetdir ("../Build/bin/Dependencies/ImGui/" .. outputdir)
-			objdir("../Build/bin-int/Dependencies/ImGui/" .. outputdir)
+			targetdir ("Build/bin/Dependencies/ImGui/" .. outputdir)
+			objdir("Build/bin-int/Dependencies/ImGui/" .. outputdir)
 
 			-- Files
 			files
@@ -298,7 +332,6 @@ workspace "Vulkan-Project"
 	-- Project
 	project "VulkanProject"
 		kind("ConsoleApp")
-		staticruntime "on"
 		warnings("Off")
 		intrinsics("On")
 		editandcontinue("Off")
@@ -311,13 +344,14 @@ workspace "Vulkan-Project"
 		floatingpoint("Fast")
 		vectorextensions("SSE2")
 		characterset("Ascii")
+		staticruntime("on")
 		flags(
 		{ 
 			"MultiProcessorCompile",
 			"NoIncrementalLink",
 		})
 		
-		location "VulkanProject"
+		location "Projectfiles/VulkanProject"
 
 		-- Targets
 		builddir = "Build/bin/" .. outputdir .. "/%{prj.name}"
@@ -338,6 +372,15 @@ workspace "Vulkan-Project"
 			compileas("Objective-C++")
 		filter {}
 		
+		local shaderScriptPath   = os.getcwd() .. "/VulkanProject/compile_shaders"
+		printf("shaderScriptPath=%s", shaderScriptPath)
+		
+		local resourceFolderPath = os.getcwd() .. "/VulkanProject/res"
+		printf("resourceFolderPath=%s", resourceFolderPath)
+
+		local finalResourceFolderPath = os.getcwd() .. "/" .. builddir .. "/res/"
+		printf("finalResourceFolderPath=%s", finalResourceFolderPath)
+
 		-- Windows
 		filter "system:windows"
 			links
@@ -346,21 +389,25 @@ workspace "Vulkan-Project"
 			}
 			libdirs
 			{
-				"C:/VulkanSDK/1.2.148.1/Lib",
+				vulkanPath .. "\\Lib",
 			}
 			sysincludedirs
 			{
-				"C:/VulkanSDK/1.2.148.1/Include",
+				vulkanPath .. "\\Include",
 			}
 			
 			prebuildcommands
 			{ 
-				"compile_shaders" 
+				shaderScriptPath .. ".bat" 
 			}
 
+			-- TODO: We copy the files twice, do something better
 			postbuildcommands 
 			{ 
-				"{COPY} res " .. builddir
+				"{MKDIR} " .. finalResourceFolderPath, 
+				"{COPYDIR} " .. resourceFolderPath .. " " .. finalResourceFolderPath,
+				"{MKDIR} " .. "res/", 
+				"{COPYDIR} " .. resourceFolderPath .. " res/", 
 			}
 
 		-- macOS
@@ -384,7 +431,7 @@ workspace "Vulkan-Project"
 
 			prebuildcommands 
 			{ 
-				"./compile_shaders.command" 
+				shaderScriptPath .. ".command" 
 			}
 		
 		-- Visual Studio
