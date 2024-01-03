@@ -3,3 +3,7 @@
 /ProjectFiles
 *.sln
 *.spv
+*.DS_Store
+/.vscode
+/Vulkan-Project.xcworkspace
+**/VulkanProject.xcodeproj/**
