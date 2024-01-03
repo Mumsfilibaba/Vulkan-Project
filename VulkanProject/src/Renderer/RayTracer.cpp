@@ -21,6 +21,9 @@ RayTracer::RayTracer()
     , m_Pipeline(nullptr)
     , m_pDeviceAllocator(nullptr)
     , m_CommandBuffers()
+    , m_pSceneTexture(nullptr)
+    , m_pSceneTextureView(nullptr)
+    , m_pSceneTextureDescriptorSet(nullptr)
 {
 }
 
@@ -358,7 +361,7 @@ void RayTracer::CreateOrResizeSceneTexture(uint32_t width, uint32_t height)
 {
     if (m_pSceneTexture)
     {
-        if (m_pSceneTexture->GetWidth() == width && m_pSceneTexture->GetHeight() == height)
+        if ((m_pSceneTexture->GetWidth() == width && m_pSceneTexture->GetHeight() == height) || width == 0 || height == 0)
         {
             return;
         }
@@ -377,7 +380,7 @@ void RayTracer::CreateOrResizeSceneTexture(uint32_t width, uint32_t height)
     textureParams.ImageType = VK_IMAGE_TYPE_2D;
     textureParams.Width     = m_ViewportWidth  = width;
     textureParams.Height    = m_ViewportHeight = height;
-    textureParams.Usage     = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    textureParams.Usage     = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
     
     m_pSceneTexture = Texture::Create(m_pContext, textureParams);
     assert(m_pSceneTexture != nullptr);

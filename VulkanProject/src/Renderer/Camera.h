@@ -39,7 +39,7 @@ public:
     
     void Update(float fovDegrees, float width, float height, float near, float far)
     {
-        m_View          = glm::lookAtLH(m_Position, m_Position + m_Forward, m_Up);
+        m_View       = glm::lookAtLH(m_Position, m_Position + m_Forward, m_Up);
         m_Projection = glm::perspectiveFovLH(glm::radians(fovDegrees), width, height, near, far);
     }
 

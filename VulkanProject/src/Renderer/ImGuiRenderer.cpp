@@ -69,9 +69,12 @@ namespace ImGuiRenderer
             , pShaderModuleVert(nullptr)
             , pShaderModuleFrag(nullptr)
             , pFontSampler(nullptr)
+            , pImageSampler(nullptr)
             , pFontTexture(nullptr)
             , pFontTextureView(nullptr)
             , pFontDescriptorSet(nullptr)
+            , LastViewportWidth(0)
+            , LastViewportHeight(0)
         {
         }
         
@@ -110,6 +113,10 @@ namespace ImGuiRenderer
         Texture*             pFontTexture;
         TextureView*         pFontTextureView;
         DescriptorSet*       pFontDescriptorSet;
+
+        // MainWindow data
+        uint32_t LastViewportWidth;
+        uint32_t LastViewportHeight;
     };
     
     struct ImGuiFrameRenderData
@@ -139,7 +146,6 @@ namespace ImGuiRenderer
             : pWindow(nullptr)
             , pSwapChain(nullptr)
             , pRenderPass(nullptr)
-            , bClearEnable(false)
             , bWindowOwned(false)
             , IgnoreWindowPosEventFrame(0)
             , IgnoreWindowSizeEventFrame(0)
@@ -151,6 +157,43 @@ namespace ImGuiRenderer
             pWindow = nullptr;
         }
         
+        void WaitUntilIdle()
+        {
+            for (ImGuiFrameRenderData& renderData : FrameData)
+            {
+                if (renderData.pCommandBuffer && renderData.pCommandBuffer->IsFinishedOnGPU())
+                {
+                    renderData.pCommandBuffer->WaitForAndResetFences();
+                }
+            }
+        }
+
+        bool ValidateFrameBuffers() const
+        {
+            if (!pSwapChain)
+            {
+                return false;
+            }
+
+            if (FrameBuffers.empty())
+            {
+                return false;
+            }
+
+            for (Framebuffer* pFrameBuffer : FrameBuffers)
+            {
+                VkExtent2D frameBufferExtent = pFrameBuffer->GetExtent();
+                VkExtent2D swapChainExtent   = pSwapChain->GetExtent();
+                
+                if (frameBufferExtent.width != swapChainExtent.width || frameBufferExtent.height != swapChainExtent.height)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         GLFWwindow*                       pWindow;
         SwapChain*                        pSwapChain;
         RenderPass*                       pRenderPass;
@@ -158,7 +201,6 @@ namespace ImGuiRenderer
         std::vector<ImGuiFrameRenderData> FrameData;
         VkClearValue                      ClearValues;
         
-        bool bClearEnable;
         bool bWindowOwned;
         int  IgnoreWindowSizeEventFrame;
         int  IgnoreWindowPosEventFrame;
@@ -527,7 +569,7 @@ namespace ImGuiRenderer
         {
             if (ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData)
             {
-                bool bIgnoreEvent = (ImGui::GetFrameCount() <= pViewportData->IgnoreWindowPosEventFrame + 1);
+                bool bIgnoreEvent = ImGui::GetFrameCount() <= (pViewportData->IgnoreWindowPosEventFrame + 1);
                 if (bIgnoreEvent)
                 {
                     return;
@@ -544,7 +586,7 @@ namespace ImGuiRenderer
         {
             if (ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData)
             {
-                bool bIgnoreEvent = (ImGui::GetFrameCount() <= pViewportData->IgnoreWindowSizeEventFrame + 1);
+                bool bIgnoreEvent = ImGui::GetFrameCount() <= (pViewportData->IgnoreWindowSizeEventFrame + 1);
                 if (bIgnoreEvent)
                 {
                     return;
@@ -624,7 +666,7 @@ namespace ImGuiRenderer
             const GLFWvidmode* videoMode = glfwGetVideoMode(glfwMonitors[n]);
             if (videoMode == nullptr)
             {
-                continue; // Failed to get Video mode (e.g. Emscripten does not support this function)
+                continue;
             }
             
             ImGuiPlatformMonitor monitor;
@@ -1282,20 +1324,20 @@ namespace ImGuiRenderer
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData))
         {
-            // We have the same structure for platform and rendererdata
+            // We have the same structure for platform and renderer- data
             pViewport->RendererUserData = pViewportData;
             
             // Create SwapChain
             pViewportData->pSwapChain = SwapChain::Create(pRendererBackend->pContext, pViewportData->pWindow);
             
             // Create RenderPass for this Viewport
-            RenderPassAttachment attachments[1] = {};
-            attachments[0].Format = pViewportData->pSwapChain->GetFormat();
-            attachments[0].LoadOp = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
+            RenderPassAttachment attachment = {};
+            attachment.Format = pViewportData->pSwapChain->GetFormat();
+            attachment.LoadOp = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
             
             RenderPassParams renderPassParams = {};
             renderPassParams.ColorAttachmentCount = 1;
-            renderPassParams.pColorAttachments    = attachments;
+            renderPassParams.pColorAttachments    = &attachment;
             
             pViewportData->pRenderPass = RenderPass::Create(pRendererBackend->pContext, renderPassParams);
             assert(pViewportData->pRenderPass != nullptr);
@@ -1314,13 +1356,7 @@ namespace ImGuiRenderer
         if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->RendererUserData))
         {
             // Ensure that we are finished with this viewport on the GPU
-            for (ImGuiFrameRenderData& renderData : pViewportData->FrameData)
-            {
-                if (renderData.pCommandBuffer && renderData.pCommandBuffer->IsFinishedOnGPU())
-                {
-                    renderData.pCommandBuffer->WaitForAndResetFences();
-                }
-            }
+            pViewportData->WaitUntilIdle();
             
             if (pViewportData->bWindowOwned)
             {
@@ -1339,17 +1375,17 @@ namespace ImGuiRenderer
     {
         if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->RendererUserData))
         {
-            // Destroy the old framebuffers
+            // Destroy the old FrameBuffers
             ImGuiDestroyFramebuffers(pViewportData);
-                        
+
             // Resize the swapchain
-            ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
             if (pViewportData->pSwapChain)
             {
                 pViewportData->pSwapChain->Resize(size.x, size.y);
             }
-            
-            // Create new framebuffers
+
+            // Create new FrameBuffers
+            ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
             ImGuiCreateFramebuffers(pRendererBackend->pContext, pViewportData);
         }
     }
@@ -1588,8 +1624,16 @@ namespace ImGuiRenderer
         {
             return;
         }
-        
+
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
+        if (!pViewportData->ValidateFrameBuffers())
+        {
+            pViewportData->WaitUntilIdle();
+
+            ImGuiDestroyFramebuffers(pViewportData);
+            ImGuiCreateFramebuffers(pRendererBackend->pContext, pViewportData);
+        }
+
         SwapChain* pSwapChain = pViewportData->pSwapChain;
         const uint32_t frameIndex = pSwapChain->GetCurrentBackBufferIndex();
         
