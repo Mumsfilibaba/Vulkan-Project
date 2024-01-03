@@ -4,16 +4,24 @@
 
 class RenderPass;
 class ShaderModule;
+class PipelineLayout;
 
 struct GraphicsPipelineStateParams
 {
     VkVertexInputAttributeDescription* pAttributeDescriptions    = nullptr;
-    uint32_t                           AttributeDescriptionCount = 0;
+    uint32_t                           attributeDescriptionCount = 0;
     VkVertexInputBindingDescription*   pBindingDescriptions      = nullptr;
-    uint32_t                           BindingDescriptionCount   = 0;
-    RenderPass*   pRenderPass = nullptr;
-    ShaderModule* pVertex     = nullptr;
-    ShaderModule* pFragment   = nullptr;
+    uint32_t                           bindingDescriptionCount   = 0;
+
+    VkCullModeFlagBits cullMode  = VK_CULL_MODE_BACK_BIT;
+    VkFrontFace        frontFace = VK_FRONT_FACE_CLOCKWISE;
+    
+    bool bBlendEnable = false;
+    
+    RenderPass*     pRenderPass     = nullptr;
+    PipelineLayout* pPipelineLayout = nullptr;
+    ShaderModule*   pVertexShader   = nullptr;
+    ShaderModule*   pFragmentShader = nullptr;
 };
 
 class BasePipeline
@@ -27,21 +35,9 @@ public:
         return m_Pipeline;
     }
     
-    VkPipelineLayout GetPiplineLayout() const
-    {
-        return m_Layout;
-    }
-    
-    VkDescriptorSetLayout GetDescriptorSetLayout() const
-    {
-        return m_DescriptorSetLayout;
-    }
-    
 protected:
-    VkDevice              m_Device;
-    VkPipeline            m_Pipeline;
-    VkPipelineLayout      m_Layout;
-    VkDescriptorSetLayout m_DescriptorSetLayout;
+    VkDevice   m_Device;
+    VkPipeline m_Pipeline;
 };
 
 class GraphicsPipeline : public BasePipeline
@@ -55,7 +51,8 @@ public:
 
 struct ComputePipelineStateParams
 {
-    ShaderModule* pShader = nullptr;
+    ShaderModule*   pShader         = nullptr;
+    PipelineLayout* pPipelineLayout = nullptr;
 };
 
 class ComputePipeline : public BasePipeline

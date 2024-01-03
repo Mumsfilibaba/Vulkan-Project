@@ -4,14 +4,14 @@
 class DescriptorSet
 {
 public:
-
     // Allocates from pDescriptorPool and uses the layout from pPipeline
-    static DescriptorSet* Create(class VulkanContext* pContext, class DescriptorPool* pDescriptorPool, class BasePipeline* pPipeline);
+    static DescriptorSet* Create(class VulkanContext* pContext, class DescriptorPool* pDescriptorPool, class DescriptorSetLayout* pDescriptorSetLayout);
 
     DescriptorSet(VkDevice device, class DescriptorPool* pool);
     ~DescriptorSet();
     
     void BindStorageImage(VkImageView imageView, uint32_t binding);
+    void BindCombinedImageSampler(VkImageView imageView, VkSampler sampler, uint32_t binding);
     void BindUniformBuffer(VkBuffer buffer, uint32_t binding);
     
     VkDescriptorSet GetDescriptorSet() const

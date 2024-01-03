@@ -1,12 +1,15 @@
 #include "Application.h"
 #include "Renderer/RayTracer.h"
+#include "Renderer/ImGuiRenderer.h"
 
-Application* Application::s_pInstance = nullptr;
+extern bool GIsRunning = false;
+
+Application* Application::AppInstance = nullptr;
 
 Application* Application::Create()
 {
-    s_pInstance = new Application();
-    return s_pInstance;
+    AppInstance = new Application();
+    return AppInstance;
 }
 
 Application::Application()
@@ -14,7 +17,6 @@ Application::Application()
     , m_pContext(nullptr)
     , m_Width(1440)
     , m_Height(900)
-    , m_bIsRunning(false)
 {
 }
 
@@ -22,21 +24,35 @@ Application::~Application()
 {
 }
 
-void Application::Init()
+bool Application::Init()
 {
-    //Open window
-    if (glfwInit())
+    // Setup error handling
+    glfwSetErrorCallback([](int32_t, const char* pErrorMessage)
     {
-        CreateWindow();
-    }
-    else
+        std::cerr << pErrorMessage << '\n';
+    });
+    
+    // Init window library
+    if (!glfwInit())
     {
-        std::cout << "Failed to init GLFW" << std::endl;
-        return;
+        std::cout << "Failed to init GLFW\n";
+        return false;
     }
 
-    //Init vulkan
-    DeviceParams params = {};
+    m_pWindow = CreateWindow();
+    if (!m_pWindow)
+    {
+        return false;
+    }
+
+    if (!glfwVulkanSupported())
+    {
+        std::cout << "GLFW: Vulkan Not Supported\n";
+        return 1;
+    }
+    
+    // Init vulkan
+    DeviceParams params;
     params.pWindow           = m_pWindow;
     params.bEnableRayTracing = true;
     params.bEnableValidation = true;
@@ -45,55 +61,54 @@ void Application::Init()
     m_pContext = VulkanContext::Create(params);
     if (!m_pContext)
     {
-        std::cout << "Failed to init Vulkan" << std::endl;
-        return;
+        std::cout << "Failed to init Vulkan\n";
+        return false;
     }
     
     m_pRenderer = new RayTracer();
     m_pRenderer->Init(m_pContext);
     
-    //Show window and start loop
+    // Show window
     glfwShowWindow(m_pWindow);
-    m_bIsRunning = true;
+    
+    // Initialize ImGui
+    ImGuiRenderer::InitializeImgui(m_pWindow, m_pContext);
     
     m_LastTime = std::chrono::system_clock::now();
+    return true;
 }
 
-void Application::CreateWindow()
+GLFWwindow* Application::CreateWindow()
 {
-    //Setup error
-    glfwSetErrorCallback([](int32_t, const char* pErrorMessage)
-    {
-        std::cerr << pErrorMessage << std::endl;
-    });
-
-    //Setup window
-    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_FALSE);
+    // Setup window
+    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_TRUE);
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    //Create window
-    m_pWindow = glfwCreateWindow(m_Width, m_Height, "Vulkan Project", nullptr, nullptr);
-    if (m_pWindow)
+    // Create window
+    GLFWwindow* pWindow = glfwCreateWindow(m_Width, m_Height, "Vulkan Project", nullptr, nullptr);
+    if (pWindow)
     {
-        //Setup callbacks
-        glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow*)
-            {
-                Application::Get().OnWindowClose();
-            });
+        // Setup callbacks
+        glfwSetWindowCloseCallback(pWindow, [](GLFWwindow* pWindow)
+        {
+            AppInstance->OnWindowClose(pWindow);
+        });
 
-        glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow*, int32_t width, int32_t height)
-            {
-                Application::Get().OnWindowResize(width, height);
-            });
+        glfwSetWindowSizeCallback(pWindow, [](GLFWwindow* pWindow, int32_t width, int32_t height)
+        {
+            AppInstance->OnWindowResize(pWindow, width, height);
+        });
     }
+    
+    return pWindow;
 }
 
-void Application::OnWindowResize(uint32_t width, uint32_t height)
+void Application::OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height)
 {
-    //Perform flush on commandbuffer
+    // Perform flush on commandbuffer
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    m_pContext->ExecuteGraphics(nullptr, waitStages);
+    m_pContext->ExecuteGraphics(nullptr, m_pContext->GetSwapChain(), waitStages);
     m_pContext->WaitForIdle();
     
     m_Width  = width;
@@ -103,18 +118,36 @@ void Application::OnWindowResize(uint32_t width, uint32_t height)
     m_pRenderer->OnWindowResize(m_Width, m_Height);
 }
 
-void Application::OnWindowClose()
+void Application::OnWindowClose(GLFWwindow* pWindow)
 {
-    m_bIsRunning = false;
+    if (pWindow == m_pWindow)
+    {
+        GIsRunning = false;
+    }
 }
 
 void Application::Tick()
 {
     auto currentTime = std::chrono::system_clock::now();
+    
+    // Update events
     glfwPollEvents();
 
-    std::chrono::duration<double> elapsed_seconds = currentTime - m_LastTime;
-    m_pRenderer->Tick(elapsed_seconds.count());
+    std::chrono::duration<double> elapsedSeconds = currentTime - m_LastTime;
+    
+    // Update GUI
+    ImGuiRenderer::TickImGui();
+    
+    static bool bShowDemoWindow = true;
+    ImGui::ShowDemoWindow(&bShowDemoWindow);
+    
+    // Render
+    m_pRenderer->Tick(elapsedSeconds.count());
+    
+    // Render ImGui
+    ImGuiRenderer::RenderImGui();
+    
+    // Update screen
     m_pContext->Present();
     
     m_LastTime = currentTime;
@@ -124,11 +157,12 @@ void Application::Release()
 {
     m_pContext->WaitForIdle();
 
+    ImGuiRenderer::ReleaseImGui();
+    
     m_pRenderer->Release();
     m_pContext->Destroy();
 
     glfwDestroyWindow(m_pWindow);
     glfwTerminate();
-
     delete this;
 }

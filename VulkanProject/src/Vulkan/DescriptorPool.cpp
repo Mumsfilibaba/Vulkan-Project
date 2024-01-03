@@ -3,31 +3,67 @@
 
 DescriptorPool* DescriptorPool::Create(VulkanContext* pContext, const DescriptorPoolParams& params)
 {
-    constexpr uint32_t numPoolSizes = 2;
+    constexpr uint32_t numPoolSizes = 3;
     
-    DescriptorPool* newDescriptorPool = new DescriptorPool(pContext->GetDevice());
+    DescriptorPool* pDescriptorPool = new DescriptorPool(pContext->GetDevice());
     
+    uint32_t numPools = 0;
     VkDescriptorPoolSize poolSizes[numPoolSizes];
-    poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount = params.NumUniformBuffers;
+    if (params.NumUniformBuffers > 0)
+    {
+        poolSizes[numPools].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSizes[numPools].descriptorCount = params.NumUniformBuffers;
+        numPools++;
+    }
     
-    poolSizes[1].type            = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    poolSizes[1].descriptorCount = params.NumStorageImages;
+    if (params.NumStorageImages > 0)
+    {
+        poolSizes[numPools].type            = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        poolSizes[numPools].descriptorCount = params.NumStorageImages;
+        numPools++;
+    }
+    
+    if (params.NumCombinedImageSamplers > 0)
+    {
+        poolSizes[numPools].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[numPools].descriptorCount = params.NumCombinedImageSamplers;
+        numPools++;
+    }
     
     VkDescriptorPoolCreateInfo poolInfo;
     ZERO_STRUCT(&poolInfo);
     
     poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    poolInfo.poolSizeCount = numPoolSizes;
+    poolInfo.poolSizeCount = numPools;
     poolInfo.pPoolSizes    = poolSizes;
     poolInfo.maxSets       = params.MaxSets;
     
-    if (vkCreateDescriptorPool(newDescriptorPool->m_Device, &poolInfo, nullptr, &newDescriptorPool->m_Pool) != VK_SUCCESS)
+    if (vkCreateDescriptorPool(pDescriptorPool->m_Device, &poolInfo, nullptr, &pDescriptorPool->m_Pool) != VK_SUCCESS)
     {
-        std::cout << "Failed to create descriptor pool" << std::endl;
+        std::cout << "vkCreateDescriptorPool failed\n";
         return nullptr;
     }
-    
-    return newDescriptorPool;
+    else
+    {
+        std::cout << "Created DescriptorPool\n";
+        return pDescriptorPool;
+    }
+}
+
+DescriptorPool::DescriptorPool(VkDevice device)
+    : m_Device(device)
+    , m_Pool(VK_NULL_HANDLE)
+{
+}
+
+DescriptorPool::~DescriptorPool()
+{
+    if (m_Pool != VK_NULL_HANDLE)
+    {
+        vkDestroyDescriptorPool(m_Device, m_Pool, nullptr);
+        m_Pool = VK_NULL_HANDLE;
+    }
+
+    m_Device = VK_NULL_HANDLE;
 }

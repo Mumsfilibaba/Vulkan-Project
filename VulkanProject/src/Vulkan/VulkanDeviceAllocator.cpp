@@ -23,7 +23,6 @@ VkMemoryPage::VkMemoryPage(VkDevice device, VkPhysicalDevice phyicalDevice, uint
     Init();
 }
 
-
 VkMemoryPage::~VkMemoryPage()
 {
     if (m_DeviceMemory != VK_NULL_HANDLE)

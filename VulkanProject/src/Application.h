@@ -1,39 +1,47 @@
 #pragma once
 #include "Vulkan/VulkanContext.h"
-
 #include "Renderer/IRenderer.h"
+
+extern bool GIsRunning;
+
+inline bool IsApplicationRunning()
+{
+    return GIsRunning;
+}
+
+inline void StartApplicationLoop()
+{
+    GIsRunning = true;
+}
 
 class Application
 {
 public:
     static Application* Create();
     
-    inline static Application& Get()
+    static Application& Get()
     {
-        return *s_pInstance;
+        return *AppInstance;
     }
     
-    inline static GLFWwindow* GetWindow()
+    static GLFWwindow* GetWindow()
     {
-        return s_pInstance->m_pWindow;
+        return AppInstance->m_pWindow;
     }
 
     Application();
     ~Application();
 
-    void Init();
+    bool Init();
+    
     void Tick();
+    
     void Release();
     
-    void CreateWindow();
+    GLFWwindow* CreateWindow();
     
-    void OnWindowResize(uint32_t width, uint32_t height);
-    void OnWindowClose();
-
-    bool IsRunning()
-    {
-        return m_bIsRunning;
-    }
+    void OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height);
+    void OnWindowClose(GLFWwindow* pWindow);
 
     VulkanContext* GetVulkanContext() const
     {
@@ -48,9 +56,7 @@ private:
     uint32_t m_Width;
     uint32_t m_Height;
     
-    bool m_bIsRunning;
-    
     std::chrono::time_point<std::chrono::system_clock> m_LastTime;
 
-    static Application* s_pInstance;
+    static Application* AppInstance;
 };

@@ -2,13 +2,12 @@
 #include "ShaderModule.h"
 #include "RenderPass.h"
 #include "VulkanContext.h"
+#include "PipelineLayout.h"
 #include <vector>
 
 BasePipeline::BasePipeline(VkDevice device)
     : m_Device(device)
     , m_Pipeline(VK_NULL_HANDLE)
-    , m_Layout(VK_NULL_HANDLE)
-    , m_DescriptorSetLayout(VK_NULL_HANDLE)
 {
 }
 
@@ -18,38 +17,17 @@ BasePipeline::~BasePipeline()
     {
         vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
         m_Pipeline = VK_NULL_HANDLE;
-
-        std::cout << "Destroyed Pipeline" << std::endl;
-    }
-
-    if (m_Layout != VK_NULL_HANDLE)
-    {
-        vkDestroyPipelineLayout(m_Device, m_Layout, nullptr);
-        m_Layout = VK_NULL_HANDLE;
-
-        std::cout << "Destroyed PipelineLayout" << std::endl;
-    }
-    
-    if (m_DescriptorSetLayout != VK_NULL_HANDLE)
-    {
-        vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
-        m_DescriptorSetLayout = nullptr;
-        
-        std::cout << "Destroyed PipelineLayout" << std::endl;
     }
     
     m_Device = VK_NULL_HANDLE;
 }
 
-
-GraphicsPipeline::GraphicsPipeline(VkDevice device)
-    : BasePipeline(device)
-{
-}
-
 GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const GraphicsPipelineStateParams& params)
 {
-    GraphicsPipeline* newPipeline = new GraphicsPipeline(pContext->GetDevice());
+    GraphicsPipeline* pPipeline = new GraphicsPipeline(pContext->GetDevice());
+    assert(params.pVertexShader != nullptr);
+    assert(params.pRenderPass != nullptr);
+    assert(params.pPipelineLayout != nullptr);
     
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
@@ -57,19 +35,19 @@ GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const Graphi
     ZERO_STRUCT(&shaderStageInfo);
     
     shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    if (params.pVertex)
+    if (params.pVertexShader)
     {
         shaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
-        shaderStageInfo.module = params.pVertex->GetModule();
-        shaderStageInfo.pName  = params.pVertex->GetEntryPoint();
+        shaderStageInfo.module = params.pVertexShader->GetModule();
+        shaderStageInfo.pName  = params.pVertexShader->GetEntryPoint();
         shaderStages.push_back(shaderStageInfo);
     }
 
-    if (params.pFragment)
+    if (params.pFragmentShader)
     {
         shaderStageInfo.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
-        shaderStageInfo.module = params.pFragment->GetModule();
-        shaderStageInfo.pName  = params.pFragment->GetEntryPoint();
+        shaderStageInfo.module = params.pFragmentShader->GetModule();
+        shaderStageInfo.pName  = params.pFragmentShader->GetEntryPoint();
         shaderStages.push_back(shaderStageInfo);
     }
 
@@ -77,9 +55,9 @@ GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const Graphi
     ZERO_STRUCT(&vertexInputInfo);
     
     vertexInputInfo.sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount   = params.BindingDescriptionCount;
+    vertexInputInfo.vertexBindingDescriptionCount   = params.bindingDescriptionCount;
     vertexInputInfo.pVertexBindingDescriptions      = params.pBindingDescriptions;
-    vertexInputInfo.vertexAttributeDescriptionCount = params.AttributeDescriptionCount;
+    vertexInputInfo.vertexAttributeDescriptionCount = params.attributeDescriptionCount;
     vertexInputInfo.pVertexAttributeDescriptions    = params.pAttributeDescriptions;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly;
@@ -104,8 +82,8 @@ GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const Graphi
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth               = 1.0f;
-    rasterizer.cullMode                = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace               = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.cullMode                = params.cullMode;
+    rasterizer.frontFace               = params.frontFace;
     rasterizer.depthBiasEnable         = VK_FALSE;
 
     VkPipelineMultisampleStateCreateInfo multisampling;
@@ -118,8 +96,22 @@ GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const Graphi
     VkPipelineColorBlendAttachmentState colorBlendAttachment;
     ZERO_STRUCT(&colorBlendAttachment);
     
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable    = VK_FALSE;
+    if (!params.bBlendEnable)
+    {
+        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.blendEnable    = VK_FALSE;
+    }
+    else
+    {
+        colorBlendAttachment.blendEnable         = VK_TRUE;
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
+        colorBlendAttachment.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    }
 
     VkPipelineColorBlendStateCreateInfo colorBlending;
     ZERO_STRUCT(&colorBlending);
@@ -129,24 +121,6 @@ GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const Graphi
     colorBlending.logicOp         = VK_LOGIC_OP_COPY;
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments    = &colorBlendAttachment;
-
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo;
-    ZERO_STRUCT(&pipelineLayoutInfo);
-    
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
-    {
-        VkResult result = vkCreatePipelineLayout(newPipeline->m_Device, &pipelineLayoutInfo, nullptr, &newPipeline->m_Layout);
-        if (result != VK_SUCCESS) 
-        {
-            std::cout << "vkCreatePipelineLayout failed" << std::endl;
-            return nullptr;
-        }
-        else
-        {
-            std::cout << "Created PipelineLayout" << std::endl;
-        }
-    }
 
     VkDynamicState dynamicStates[] =
     {
@@ -178,12 +152,12 @@ GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const Graphi
     pipelineInfo.pColorBlendState    = &colorBlending;
     pipelineInfo.pDynamicState       = &dynamicState;
     pipelineInfo.renderPass          = params.pRenderPass->GetRenderPass();
-    pipelineInfo.layout              = newPipeline->m_Layout;
+    pipelineInfo.layout              = params.pPipelineLayout->GetPipelineLayout();
     pipelineInfo.subpass             = 0;
     pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex   = -1;
 
-    VkResult result = vkCreateGraphicsPipelines(newPipeline->m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline->m_Pipeline);
+    VkResult result = vkCreateGraphicsPipelines(pPipeline->m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pPipeline->m_Pipeline);
     if (result != VK_SUCCESS) 
     {
         std::cout << "vkCreateGraphicsPipelines failed" << std::endl;
@@ -194,75 +168,23 @@ GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const Graphi
         std::cout << "Created Graphics-Pipeline" << std::endl;
     }
     
-    return newPipeline;
+    return pPipeline;
 }
 
-ComputePipeline::ComputePipeline(VkDevice device)
+GraphicsPipeline::GraphicsPipeline(VkDevice device)
     : BasePipeline(device)
 {
 }
 
+
 ComputePipeline* ComputePipeline::Create(VulkanContext* pContext, const ComputePipelineStateParams& params)
 {
     ComputePipeline* newPipeline = new ComputePipeline(pContext->GetDevice());
-
-    VkDescriptorSetLayoutBinding bindings[3];
-    bindings[0].binding            = 0;
-    bindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    bindings[0].descriptorCount    = 1;
-    bindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    bindings[0].pImmutableSamplers = nullptr;
-    
-    bindings[1].binding            = 1;
-    bindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    bindings[1].descriptorCount    = 1;
-    bindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    bindings[1].pImmutableSamplers = nullptr;
-    
-    bindings[2].binding            = 2;
-    bindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    bindings[2].descriptorCount    = 1;
-    bindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    bindings[2].pImmutableSamplers = nullptr;
-    
-    VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo;
-    ZERO_STRUCT(&descriptorLayoutInfo);
-    
-    descriptorLayoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptorLayoutInfo.bindingCount = 3;
-    descriptorLayoutInfo.pBindings    = bindings;
-    
-    if (vkCreateDescriptorSetLayout(newPipeline->m_Device, &descriptorLayoutInfo, nullptr, &newPipeline->m_DescriptorSetLayout) != VK_SUCCESS)
-    {
-        std::cout << "vkCreatePipelineLayout failed" << std::endl;
-        return nullptr;
-    }
-    
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo;
-    ZERO_STRUCT(&pipelineLayoutInfo);
-    
-    pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount         = 1;
-    pipelineLayoutInfo.pSetLayouts            = &newPipeline->m_DescriptorSetLayout;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges    = nullptr;
-    {
-        VkResult result = vkCreatePipelineLayout(newPipeline->m_Device, &pipelineLayoutInfo, nullptr, &newPipeline->m_Layout);
-        if (result != VK_SUCCESS)
-        {
-            std::cout << "vkCreatePipelineLayout failed" << std::endl;
-            return nullptr;
-        }
-        else
-        {
-            std::cout << "Created PipelineLayout" << std::endl;
-        }
-    }
-
-    assert(params.pShader);
+    assert(params.pShader != nullptr);
+    assert(params.pPipelineLayout != nullptr);
 
     VkPipelineShaderStageCreateInfo shaderStageInfo;
-    ZERO_STRUCT(&pipelineLayoutInfo);
+    ZERO_STRUCT(&shaderStageInfo);
     
     shaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shaderStageInfo.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -274,7 +196,7 @@ ComputePipeline* ComputePipeline::Create(VulkanContext* pContext, const ComputeP
     
     pipelineInfo.sType             = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     pipelineInfo.basePipelineIndex = -1;
-    pipelineInfo.layout            = newPipeline->m_Layout;
+    pipelineInfo.layout            = params.pPipelineLayout->GetPipelineLayout();
     pipelineInfo.stage             = shaderStageInfo;
 
     VkResult result = vkCreateComputePipelines(newPipeline->m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline->m_Pipeline);
@@ -289,4 +211,9 @@ ComputePipeline* ComputePipeline::Create(VulkanContext* pContext, const ComputeP
     }
     
     return newPipeline;
+}
+
+ComputePipeline::ComputePipeline(VkDevice device)
+    : BasePipeline(device)
+{
 }

@@ -3,16 +3,16 @@
 
 Query* Query::Create(class VulkanContext* pContext, const QueryParams& params)
 {
-    Query* newQuery = new Query(pContext->GetDevice());
+    Query* pQuery = new Query(pContext->GetDevice());
     
     VkQueryPoolCreateInfo createInfo;
     ZERO_STRUCT(&createInfo);
     
     createInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-    createInfo.queryType  = newQuery->m_QueryType  = params.queryType;
-    createInfo.queryCount = newQuery->m_NumQueries = params.queryCount;
+    createInfo.queryType  = pQuery->m_QueryType  = params.queryType;
+    createInfo.queryCount = pQuery->m_NumQueries = params.queryCount;
     
-    VkResult result = vkCreateQueryPool(pContext->GetDevice(), &createInfo, nullptr, &newQuery->m_QueryPool);
+    VkResult result = vkCreateQueryPool(pContext->GetDevice(), &createInfo, nullptr, &pQuery->m_QueryPool);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateQueryPool failed. Error: " << result << std::endl;
@@ -23,7 +23,7 @@ Query* Query::Create(class VulkanContext* pContext, const QueryParams& params)
         std::cout << "Created query" << std::endl;
     }
     
-    return newQuery;
+    return pQuery;
 }
     
 Query::Query(VkDevice device)
@@ -39,6 +39,8 @@ Query::~Query()
         vkDestroyQueryPool(m_Device, m_QueryPool, nullptr);
         m_QueryPool = VK_NULL_HANDLE;
     }
+
+    m_Device = VK_NULL_HANDLE;
 }
 
 void Query::Reset(uint32_t firstQuery, uint32_t queryCount)

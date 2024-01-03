@@ -4,7 +4,9 @@
 
 struct RenderPassAttachment
 {
-    VkFormat Format = VK_FORMAT_UNDEFINED;
+    VkFormat            Format  = VK_FORMAT_UNDEFINED;
+    VkAttachmentLoadOp  LoadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    VkAttachmentStoreOp StoreOp = VK_ATTACHMENT_STORE_OP_STORE;
 };
 
 struct RenderPassParams

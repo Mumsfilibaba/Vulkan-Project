@@ -52,7 +52,12 @@ workspace "Vulkan-Project"
     filter "system:windows"
         defines
         {
-            "PLATFORM_WINDOWS",
+            "PLATFORM_WINDOWS=(1)",
+        }
+	filter "system:macosx"
+        defines
+        {
+            "PLATFORM_MAC=(1)",
         }
     filter {}
 
@@ -225,6 +230,69 @@ workspace "Vulkan-Project"
 				"Dependencies/tinyobj/tiny_obj_loader.h",
 				"Dependencies/tinyobj/tiny_obj_loader.cc",
 			}
+
+		-- ImGui Project
+		project "ImGui"
+			kind("StaticLib")
+			warnings("Off")
+			intrinsics("On")
+			editandcontinue("Off")
+			language("C++")
+			cppdialect("C++20")
+			systemversion("latest")
+			architecture("x86_64")
+			exceptionhandling("Off")
+			rtti("Off")
+			floatingpoint("Fast")
+			vectorextensions("SSE2")
+			characterset("Ascii")
+			flags(
+			{ 
+				"MultiProcessorCompile",
+				"NoIncrementalLink",
+			})
+
+			location "Projectfiles/Dependencies/ImGui"
+			
+			-- Targets
+			targetdir ("../Build/bin/Dependencies/ImGui/" .. outputdir)
+			objdir("../Build/bin-int/Dependencies/ImGui/" .. outputdir)
+
+			-- Files
+			files
+			{
+				"Dependencies/imgui/imconfig.h",
+				"Dependencies/imgui/imgui.h",
+				"Dependencies/imgui/imgui.cpp",
+				"Dependencies/imgui/imgui_demo.cpp",
+				"Dependencies/imgui/imgui_draw.cpp",
+				"Dependencies/imgui/imgui_internal.h",
+				"Dependencies/imgui/imgui_tables.cpp",
+				"Dependencies/imgui/imgui_widgets.cpp",
+				"Dependencies/imgui/imstb_rectpack.h",
+				"Dependencies/imgui/imstb_textedit.h",
+				"Dependencies/imgui/imstb_truetype.h",
+			}
+
+			-- Configurations
+			filter "configurations:Debug"
+				runtime "Debug"
+			filter {}
+			
+			filter "configurations:Release"
+				runtime "Release"
+			filter {}
+
+			filter "configurations:Debug or Release"
+				symbols "on"
+				optimize "Full"
+			filter{}
+			
+			filter "configurations:Production"
+				symbols "off"
+				runtime "Release"
+				optimize "Full"
+			filter{}
 	group ""
 	
 	-- Project
@@ -265,6 +333,10 @@ workspace "Vulkan-Project"
 			"%{prj.name}/**.c",
 			"%{prj.name}/**.cpp",
 		}
+
+		filter { "system:macosx", "files:**.cpp" }
+			compileas("Objective-C++")
+		filter {}
 		
 		-- Windows
 		filter "system:windows"
@@ -330,6 +402,7 @@ workspace "Vulkan-Project"
 		}
 		sysincludedirs
 		{
+			"Dependencies/",
 			"Dependencies/stb",
 			"Dependencies/GLFW/include",
 			"Dependencies/glm",
@@ -340,7 +413,8 @@ workspace "Vulkan-Project"
 		links 
 		{ 
 			"GLFW",
-			"tinyobj"
+			"tinyobj",
+			"ImGui",
 		}
 
 		-- TODO: If the app actually needs to get signed, this needs to be revisited

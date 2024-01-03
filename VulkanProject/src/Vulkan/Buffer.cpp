@@ -4,40 +4,40 @@
 
 Buffer* Buffer::Create(VulkanContext* pContext, const BufferParams& params, VulkanDeviceAllocator* pAllocator)
 {
-    Buffer* newBuffer = new Buffer(pContext->GetDevice(), pContext->GetPhysicalDevice(), pAllocator);
+    Buffer* pBuffer = new Buffer(pContext, pAllocator);
     
     VkBufferCreateInfo bufferInfo;
     ZERO_STRUCT(&bufferInfo);
     
     bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size        = params.SizeInBytes;
+    bufferInfo.size        = params.Size;
     bufferInfo.usage       = params.Usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult result = vkCreateBuffer(newBuffer->m_Device, &bufferInfo, nullptr, &newBuffer->m_Buffer);
+    VkResult result = vkCreateBuffer(pContext->GetDevice(), &bufferInfo, nullptr, &pBuffer->m_Buffer);
     if (result != VK_SUCCESS)
     {
-        std::cout << "vkCreateBuffer failed. Error: " << result << std::endl;
+        std::cout << "vkCreateBuffer failed. Error: " << result << "\n";
         return nullptr;
     }
     else
     {
-        newBuffer->m_SizeInBytes = params.SizeInBytes;
-        std::cout << "Created Buffer" << std::endl;
+        pBuffer->m_Size = params.Size;
+        std::cout << "Created Buffer\n";
     }
 
     VkMemoryRequirements memRequirements = {};
-    vkGetBufferMemoryRequirements(newBuffer->m_Device, newBuffer->m_Buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(pContext->GetDevice(), pBuffer->m_Buffer, &memRequirements);
     
     if (pAllocator)
     {
-        if (pAllocator->Allocate(newBuffer->m_Allocation, memRequirements, params.MemoryProperties))
+        if (pAllocator->Allocate(pBuffer->m_Allocation, memRequirements, params.MemoryProperties))
         {
-            vkBindBufferMemory(newBuffer->m_Device, newBuffer->m_Buffer, newBuffer->m_Allocation.DeviceMemory, newBuffer->m_Allocation.DeviceMemoryOffset);
+            vkBindBufferMemory(pContext->GetDevice(), pBuffer->m_Buffer, pBuffer->m_Allocation.DeviceMemory, pBuffer->m_Allocation.DeviceMemoryOffset);
         }
         else
         {
-            std::cout << "VulkanDeviceAllocator::Allocate failed" << std::endl;
+            std::cout << "VulkanDeviceAllocator::Allocate failed\n";
         }
     }
     else
@@ -47,30 +47,51 @@ Buffer* Buffer::Create(VulkanContext* pContext, const BufferParams& params, Vulk
         
         allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize  = memRequirements.size;
-        allocInfo.memoryTypeIndex = FindMemoryType(newBuffer->m_PhysicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        allocInfo.memoryTypeIndex = FindMemoryType(pContext->GetPhysicalDevice(), memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-        result = vkAllocateMemory(newBuffer->m_Device, &allocInfo, nullptr, &newBuffer->m_DeviceMemory);
+        result = vkAllocateMemory(pContext->GetDevice(), &allocInfo, nullptr, &pBuffer->m_DeviceMemory);
         if (result != VK_SUCCESS)
         {
-            std::cout << "vkAllocateMemory failed. Error: " << result << std::endl;
+            std::cout << "vkAllocateMemory failed. Error: " << result << "\n";
         }
         else
         {
-            vkBindBufferMemory(newBuffer->m_Device, newBuffer->m_Buffer, newBuffer->m_DeviceMemory, 0);
-            std::cout << "Allocated " << memRequirements.size << " bytes" << std::endl;
+            vkBindBufferMemory(pContext->GetDevice(), pBuffer->m_Buffer, pBuffer->m_DeviceMemory, 0);
+            std::cout << "Allocated " << memRequirements.size << " bytes\n";
         }
     }
     
-    return newBuffer;
+    return pBuffer;
 }
 
-Buffer::Buffer(VkDevice device, VkPhysicalDevice physicalDevice, VulkanDeviceAllocator* pAllocator)
-	: m_Device(device)
-	, m_PhysicalDevice(physicalDevice)
+Buffer* Buffer::CreateWithData(VulkanContext* pContext, const BufferParams& params, VulkanDeviceAllocator* pAllocator, const void* pSource)
+{
+    assert(params.MemoryProperties == VK_CPU_BUFFER_USAGE);
+    
+    Buffer* pBuffer = Buffer::Create(pContext, params, pAllocator);
+    if (!pBuffer)
+    {
+        return nullptr;
+    }
+    
+    if (pSource)
+    {
+        void* pData = pBuffer->Map();
+        memcpy(pData, pSource, params.Size);
+    
+        pBuffer->FlushMappedMemoryRange();
+		pBuffer->Unmap();
+    }
+    
+    return pBuffer;
+}
+
+Buffer::Buffer(VulkanContext* pContext, VulkanDeviceAllocator* pAllocator)
+	: m_pContext(pContext)
 	, m_pAllocator(pAllocator)
 	, m_Buffer(VK_NULL_HANDLE)
 	, m_DeviceMemory(VK_NULL_HANDLE)
-	, m_SizeInBytes(0)
+	, m_Size(0)
 	, m_Allocation()
 {
 }
@@ -79,7 +100,7 @@ Buffer::~Buffer()
 {
 	if (m_Buffer != VK_NULL_HANDLE)
 	{
-		vkDestroyBuffer(m_Device, m_Buffer, nullptr);
+		vkDestroyBuffer(m_pContext->GetDevice(), m_Buffer, nullptr);
 		m_Buffer = VK_NULL_HANDLE;
 	}
 
@@ -91,10 +112,12 @@ Buffer::~Buffer()
 	{
 		if (m_DeviceMemory != VK_NULL_HANDLE)
 		{
-			vkFreeMemory(m_Device, m_DeviceMemory, nullptr);
+			vkFreeMemory(m_pContext->GetDevice(), m_DeviceMemory, nullptr);
 			m_DeviceMemory = VK_NULL_HANDLE;
 		}
 	}
+    
+    m_pContext = nullptr;
 }
 
 void* Buffer::Map()
@@ -106,12 +129,39 @@ void* Buffer::Map()
 	}
 	else
 	{
-		VkResult result = vkMapMemory(m_Device, m_DeviceMemory, 0, m_SizeInBytes, 0, &pResult);
+		VkResult result = vkMapMemory(m_pContext->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
 		if (result != VK_SUCCESS)
 		{
-			std::cout << "vkMapMemory failed. Error: " << result << std::endl;
+			std::cout << "vkMapMemory failed. Error: " << result << "\n";
+            assert(false);
 		}
 	}
 	
 	return pResult;
+}
+
+void Buffer::FlushMappedMemoryRange()
+{
+    if (!m_pAllocator)
+    {
+        VkMappedMemoryRange range[1] = {};
+        range[0].sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        range[0].memory = m_DeviceMemory;
+        range[0].size   = VK_WHOLE_SIZE;
+        
+        VkResult result = vkFlushMappedMemoryRanges(m_pContext->GetDevice(), 1, range);
+        if (result != VK_SUCCESS)
+        {
+            std::cout << "vkFlushMappedMemoryRanges failed. Error: " << result << "\n";
+            assert(false);
+        }
+    }
+}
+
+void Buffer::Unmap()
+{
+    if (!m_pAllocator)
+    {
+        vkUnmapMemory(m_pContext->GetDevice(), m_DeviceMemory);
+    }
 }

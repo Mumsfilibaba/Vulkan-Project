@@ -7,7 +7,7 @@
 
 CommandBuffer* CommandBuffer::Create(VulkanContext* pContext, const CommandBufferParams& params)
 {
-    CommandBuffer* newCommandBuffer = new CommandBuffer(pContext->GetDevice());
+    CommandBuffer* pCommandBuffer = new CommandBuffer(pContext->GetDevice());
     
     VkCommandPoolCreateInfo poolInfo;
     ZERO_STRUCT(&poolInfo);
@@ -15,7 +15,7 @@ CommandBuffer* CommandBuffer::Create(VulkanContext* pContext, const CommandBuffe
     poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.queueFamilyIndex = pContext->GetQueueFamilyIndex(params.QueueType);
 
-    VkResult result = vkCreateCommandPool(newCommandBuffer->m_Device, &poolInfo, nullptr, &newCommandBuffer->m_CommandPool);
+    VkResult result = vkCreateCommandPool(pCommandBuffer->m_Device, &poolInfo, nullptr, &pCommandBuffer->m_CommandPool);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateCommandPool failed. Error: " << result << std::endl;
@@ -30,11 +30,11 @@ CommandBuffer* CommandBuffer::Create(VulkanContext* pContext, const CommandBuffe
     ZERO_STRUCT(&allocInfo);
     
     allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool        = newCommandBuffer->m_CommandPool;
+    allocInfo.commandPool        = pCommandBuffer->m_CommandPool;
     allocInfo.level              = params.Level;
     allocInfo.commandBufferCount = 1;
 
-    result = vkAllocateCommandBuffers(newCommandBuffer->m_Device, &allocInfo, &newCommandBuffer->m_CommandBuffer);
+    result = vkAllocateCommandBuffers(pCommandBuffer->m_Device, &allocInfo, &pCommandBuffer->m_CommandBuffer);
     if (result != VK_SUCCESS) 
     {
         std::cout << "vkAllocateCommandBuffers failed. Error: " << result << std::endl;
@@ -51,7 +51,7 @@ CommandBuffer* CommandBuffer::Create(VulkanContext* pContext, const CommandBuffe
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    result = vkCreateFence(newCommandBuffer->m_Device, &fenceInfo, nullptr, &newCommandBuffer->m_Fence);
+    result = vkCreateFence(pCommandBuffer->m_Device, &fenceInfo, nullptr, &pCommandBuffer->m_Fence);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateFence failed. Error: " << result << std::endl;
@@ -62,7 +62,7 @@ CommandBuffer* CommandBuffer::Create(VulkanContext* pContext, const CommandBuffe
         std::cout << "Created Fence for commandbuffer" << std::endl;
     }
     
-    return newCommandBuffer;
+    return pCommandBuffer;
 }
 
 CommandBuffer::CommandBuffer(VkDevice device)
@@ -86,9 +86,9 @@ CommandBuffer::~CommandBuffer()
     {
         vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
         m_CommandPool = VK_NULL_HANDLE;
-
-        std::cout << "Destroyed CommandPool" << std::endl;
     }
+
+    m_Device = VK_NULL_HANDLE;
 }
 
 void CommandBuffer::TransitionImage(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -126,9 +126,26 @@ void CommandBuffer::TransitionImage(VkImage image, VkImageLayout oldLayout, VkIm
         sourceStage      = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     }
+    else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        sourceStage      = VK_PIPELINE_STAGE_HOST_BIT;
+        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        sourceStage      = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
     else
     {
         std::cout << "unsupported layout transition!" << std::endl;
+        assert(false);
         return;
     }
 

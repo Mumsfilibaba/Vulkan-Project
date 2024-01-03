@@ -1,6 +1,7 @@
 #include "RayTracer.h"
 #include "Application.h"
 #include "MathHelper.h"
+#include "ImGuiRenderer.h"
 #include "Vulkan/Buffer.h"
 #include "Vulkan/Framebuffer.h"
 #include "Vulkan/ShaderModule.h"
@@ -9,6 +10,9 @@
 #include "Vulkan/VulkanDeviceAllocator.h"
 #include "Vulkan/DescriptorSet.h"
 #include "Vulkan/Query.h"
+#include "Vulkan/DescriptorSetLayout.h"
+#include "Vulkan/PipelineLayout.h"
+#include "Vulkan/SwapChain.h"
 
 RayTracer::RayTracer()
     : m_pContext(nullptr)
@@ -22,14 +26,54 @@ void RayTracer::Init(VulkanContext* pContext)
 {
     // Set context
     m_pContext = pContext;
+
+    // Create descriptorsetlayout
+    constexpr uint32_t numBindings = 3;
+    VkDescriptorSetLayoutBinding bindings[numBindings];
+    bindings[0].binding            = 0;
+    bindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    bindings[0].descriptorCount    = 1;
+    bindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[0].pImmutableSamplers = nullptr;
     
-    ShaderModule* pCompute = ShaderModule::CreateFromFile(m_pContext, "main", "res/shaders/raytracer.spv");
+    bindings[1].binding            = 1;
+    bindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[1].descriptorCount    = 1;
+    bindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[1].pImmutableSamplers = nullptr;
+    
+    bindings[2].binding            = 2;
+    bindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[2].descriptorCount    = 1;
+    bindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[2].pImmutableSamplers = nullptr;
+
+    DescriptorSetLayoutParams descriptorSetLayoutParams;
+    descriptorSetLayoutParams.pBindings   = bindings;
+    descriptorSetLayoutParams.numBindings = numBindings;
+
+    m_pDescriptorSetLayout = DescriptorSetLayout::Create(m_pContext, descriptorSetLayoutParams);
+    assert(m_pDescriptorSetLayout != nullptr);
+
+    // Create PipelineLayout
+    PipelineLayoutParams pipelineLayoutParams;
+    pipelineLayoutParams.ppLayouts  = &m_pDescriptorSetLayout;
+    pipelineLayoutParams.numLayouts = 1;
+
+    m_pPipelineLayout = PipelineLayout::Create(m_pContext, pipelineLayoutParams);
+    assert(m_pPipelineLayout != nullptr);
+
+    // Create shader and pipeline
+    ShaderModule* pComputeShader = ShaderModule::CreateFromFile(m_pContext, "main", "res/shaders/raytracer.spv");
 
     ComputePipelineStateParams pipelineParams = {};
-    pipelineParams.pShader = pCompute;
+    pipelineParams.pShader         = pComputeShader;
+    pipelineParams.pPipelineLayout = m_pPipelineLayout;
+    
     m_Pipeline = ComputePipeline::Create(m_pContext, pipelineParams);
+    assert(m_Pipeline != nullptr);
 
-    delete pCompute;
+    delete pComputeShader;
    
     // Create descriptorpool
     DescriptorPoolParams poolParams;
@@ -37,20 +81,25 @@ void RayTracer::Init(VulkanContext* pContext)
     poolParams.NumStorageImages  = 3;
     poolParams.MaxSets           = 3;
     m_pDescriptorPool = DescriptorPool::Create(m_pContext, poolParams);
+    assert(m_pDescriptorPool != nullptr);
 
     // Camera
     BufferParams camBuffParams;
-    camBuffParams.SizeInBytes       = sizeof(CameraBuffer);
+    camBuffParams.Size       = sizeof(CameraBuffer);
     camBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     camBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
     m_pCameraBuffer = Buffer::Create(m_pContext, camBuffParams, m_pDeviceAllocator);
-    
+    assert(m_pCameraBuffer != nullptr);
+
     // Random
     BufferParams randBuffParams;
-    randBuffParams.SizeInBytes      = sizeof(RandomBuffer);
+    randBuffParams.Size      = sizeof(RandomBuffer);
     randBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     randBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
     m_pRandomBuffer = Buffer::Create(m_pContext, randBuffParams, m_pDeviceAllocator);
+    assert(m_pRandomBuffer != nullptr);
 
     // DescriptorSets
     CreateDescriptorSets();
@@ -60,7 +109,7 @@ void RayTracer::Init(VulkanContext* pContext)
     commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferParams.QueueType = ECommandQueueType::Graphics;
 
-    uint32_t imageCount = m_pContext->GetNumBackBuffers();
+    uint32_t imageCount = m_pContext->GetSwapChain()->GetNumBackBuffers();
     m_CommandBuffers.resize(imageCount);
     for (size_t i = 0; i < m_CommandBuffers.size(); i++)
     {
@@ -135,11 +184,11 @@ void RayTracer::Tick(float deltaTime)
     m_Camera.Rotate(rotation);
     
     // Update
-    VkExtent2D extent = m_pContext->GetFramebufferExtent();
+    VkExtent2D extent = m_pContext->GetSwapChain()->GetExtent();
     m_Camera.Update(90.0f, extent.width, extent.height, 0.1f, 100.0f);
     
     // Draw
-    uint32_t frameIndex = m_pContext->GetCurrentBackBufferIndex();
+    uint32_t frameIndex = m_pContext->GetSwapChain()->GetCurrentBackBufferIndex();
     Query*         pCurrentTimestampQuery = m_TimestampQueries[frameIndex];
     CommandBuffer* pCurrentCommandBuffer  = m_CommandBuffers[frameIndex];
     
@@ -161,7 +210,7 @@ void RayTracer::Tick(float deltaTime)
     pCurrentCommandBuffer->Begin();
     pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0);
     
-    pCurrentCommandBuffer->TransitionImage(m_pContext->GetSwapChainImage(frameIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    pCurrentCommandBuffer->TransitionImage(m_pContext->GetSwapChain()->GetImage(frameIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     // Update camera
     CameraBuffer camBuff;
@@ -186,20 +235,19 @@ void RayTracer::Tick(float deltaTime)
     
     // Bind pipeline and descriptorSet
     pCurrentCommandBuffer->BindComputePipelineState(m_Pipeline);
-    pCurrentCommandBuffer->BindComputeDescriptorSet(m_Pipeline, m_DescriptorSets[frameIndex]);
+    pCurrentCommandBuffer->BindComputeDescriptorSet(m_pPipelineLayout, m_DescriptorSets[frameIndex]);
     
     // Dispatch
     const uint32_t Threads = 16;
     VkExtent2D dispatchSize = { Math::AlignUp(extent.width, Threads) / Threads, Math::AlignUp(extent.height, Threads) / Threads };
     pCurrentCommandBuffer->Dispatch(dispatchSize.width, dispatchSize.height, 1);
     
-    pCurrentCommandBuffer->TransitionImage(m_pContext->GetSwapChainImage(frameIndex), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    pCurrentCommandBuffer->TransitionImage(m_pContext->GetSwapChain()->GetImage(frameIndex), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     
     pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 1);
     pCurrentCommandBuffer->End();
 
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
-    m_pContext->ExecuteGraphics(pCurrentCommandBuffer, waitStages);
+    m_pContext->ExecuteGraphics(pCurrentCommandBuffer, nullptr, nullptr);
 }
 
 void RayTracer::Release()
@@ -225,6 +273,8 @@ void RayTracer::Release()
 
     delete m_pDescriptorPool;
     delete m_Pipeline;
+    delete m_pPipelineLayout;
+    delete m_pDescriptorSetLayout;
     delete m_pDeviceAllocator;
 }
 
@@ -239,15 +289,15 @@ void RayTracer::OnWindowResize(uint32_t width, uint32_t height)
 
 void RayTracer::CreateDescriptorSets()
 {
-    uint32_t numBackBuffers = m_pContext->GetNumBackBuffers();
+    uint32_t numBackBuffers = m_pContext->GetSwapChain()->GetNumBackBuffers();
     m_DescriptorSets.resize(numBackBuffers);
     
     for (uint32_t i = 0; i < numBackBuffers; i++)
     {
-        m_DescriptorSets[i] = DescriptorSet::Create(m_pContext, m_pDescriptorPool, m_Pipeline);
+        m_DescriptorSets[i] = DescriptorSet::Create(m_pContext, m_pDescriptorPool, m_pDescriptorSetLayout);
         assert(m_DescriptorSets[i] != nullptr);
         
-        m_DescriptorSets[i]->BindStorageImage(m_pContext->GetSwapChainImageView(i), 0);
+        m_DescriptorSets[i]->BindStorageImage(m_pContext->GetSwapChain()->GetImageView(i), 0);
         m_DescriptorSets[i]->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 1);
         m_DescriptorSets[i]->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 2);
     }

@@ -70,23 +70,23 @@ bool Model::LoadFromFile(const std::string& filepath, VulkanContext* pContext, V
     assert(indices.size() < UINT16_MAX);
     
     BufferParams vertexBufferParams = {};
-    vertexBufferParams.SizeInBytes         = vertices.size() * sizeof(Vertex);
+    vertexBufferParams.Size         = vertices.size() * sizeof(Vertex);
     vertexBufferParams.Usage             = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     vertexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     m_pVertexBuffer = Buffer::Create(pContext, vertexBufferParams, pAllocator);
 
     void* pCPUMem = m_pVertexBuffer->Map();
-    memcpy(pCPUMem, vertices.data(), vertexBufferParams.SizeInBytes);
+    memcpy(pCPUMem, vertices.data(), vertexBufferParams.Size);
     m_pVertexBuffer->Unmap();
 
     BufferParams indexBufferParams = {};
-    indexBufferParams.SizeInBytes         = indices.size() * sizeof(uint16_t);
+    indexBufferParams.Size         = indices.size() * sizeof(uint16_t);
     indexBufferParams.Usage             = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     indexBufferParams.MemoryProperties     = VK_CPU_BUFFER_USAGE;
     m_pIndexBuffer = Buffer::Create(pContext, indexBufferParams, pAllocator);
 
     pCPUMem = m_pIndexBuffer->Map();
-    memcpy(pCPUMem, indices.data(), indexBufferParams.SizeInBytes);
+    memcpy(pCPUMem, indices.data(), indexBufferParams.Size);
     m_pIndexBuffer->Unmap();
     
     m_VertexCount = vertices.size();

@@ -8,6 +8,7 @@
 #include "Vulkan/PipelineState.h"
 #include "Vulkan/CommandBuffer.h"
 #include "Vulkan/VulkanDeviceAllocator.h"
+#include "Vulkan/SwapChain.h"
 
 Renderer::Renderer()
     : m_pContext(nullptr)
@@ -31,7 +32,7 @@ void Renderer::Init(VulkanContext* pContext)
     ShaderModule* pFragment = ShaderModule::CreateFromFile(m_pContext, "main", "res/shaders/fragment.spv");
 
     RenderPassAttachment attachments[1];
-    attachments[0].Format = m_pContext->GetSwapChainFormat();
+    attachments[0].Format = m_pContext->GetSwapChain()->GetFormat();
 
     RenderPassParams renderPassParams = {};
     renderPassParams.ColorAttachmentCount = 1;
@@ -42,11 +43,11 @@ void Renderer::Init(VulkanContext* pContext)
 
     GraphicsPipelineStateParams pipelineParams = {};
     pipelineParams.pBindingDescriptions      = &bindingDescription;
-    pipelineParams.BindingDescriptionCount   = 1;
+    pipelineParams.bindingDescriptionCount   = 1;
     pipelineParams.pAttributeDescriptions    = Vertex::GetAttributeDescriptions();
-    pipelineParams.AttributeDescriptionCount = 3;
-    pipelineParams.pVertex                   = pVertex;
-    pipelineParams.pFragment                 = pFragment;
+    pipelineParams.attributeDescriptionCount = 3;
+    pipelineParams.pVertexShader             = pVertex;
+    pipelineParams.pFragmentShader           = pFragment;
     pipelineParams.pRenderPass               = m_pRenderPass;
     m_PipelineState = GraphicsPipeline::Create(m_pContext, pipelineParams);
 
@@ -61,7 +62,7 @@ void Renderer::Init(VulkanContext* pContext)
     commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferParams.QueueType = ECommandQueueType::Graphics;
 
-    uint32_t imageCount = m_pContext->GetNumBackBuffers();
+    uint32_t imageCount = m_pContext->GetSwapChain()->GetNumBackBuffers();
     m_CommandBuffers.resize(imageCount);
     for (size_t i = 0; i < m_CommandBuffers.size(); i++)
     {
@@ -77,7 +78,7 @@ void Renderer::Init(VulkanContext* pContext)
     
     // Camera
     BufferParams camBuffParams;
-    camBuffParams.SizeInBytes      = sizeof(CameraBuffer);
+    camBuffParams.Size      = sizeof(CameraBuffer);
     camBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     camBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     m_pCameraBuffer = Buffer::Create(m_pContext, camBuffParams, m_pDeviceAllocator);
@@ -92,11 +93,11 @@ void Renderer::Init(VulkanContext* pContext)
 void Renderer::Tick(float deltaTime)
 {
     // Update
-    VkExtent2D extent = m_pContext->GetFramebufferExtent();
+    VkExtent2D extent = m_pContext->GetSwapChain()->GetExtent();
     m_Camera.Update(90.0f, extent.width, extent.height, 0.1f, 100.0f);
     
     // Draw
-    uint32_t frameIndex = m_pContext->GetCurrentBackBufferIndex();
+    uint32_t frameIndex = m_pContext->GetSwapChain()->GetCurrentBackBufferIndex();
     m_pCurrentCommandBuffer = m_CommandBuffers[frameIndex];
 
     // Begin Commandbuffer
@@ -132,7 +133,7 @@ void Renderer::Tick(float deltaTime)
     m_pCurrentCommandBuffer->End();
 
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    m_pContext->ExecuteGraphics(m_pCurrentCommandBuffer, waitStages);
+    m_pContext->ExecuteGraphics(m_pCurrentCommandBuffer, m_pContext->GetSwapChain(), waitStages);
 }
 
 void Renderer::Release()
@@ -162,10 +163,10 @@ void Renderer::OnWindowResize(uint32_t width, uint32_t height)
 
 void Renderer::CreateFramebuffers()
 {
-    uint32_t imageCount = m_pContext->GetNumBackBuffers();
+    uint32_t imageCount = m_pContext->GetSwapChain()->GetNumBackBuffers();
     m_Framebuffers.resize(imageCount);
 
-    VkExtent2D extent = m_pContext->GetFramebufferExtent();
+    VkExtent2D extent = m_pContext->GetSwapChain()->GetExtent();
     
     FramebufferParams framebufferParams = {};
     framebufferParams.AttachMentCount   = 1;
@@ -175,7 +176,7 @@ void Renderer::CreateFramebuffers()
 
     for (size_t i = 0; i < m_Framebuffers.size(); i++)
     {
-        VkImageView imageView = m_pContext->GetSwapChainImageView(uint32_t(i));
+        VkImageView imageView = m_pContext->GetSwapChain()->GetImageView(uint32_t(i));
         framebufferParams.pAttachMents = &imageView;
         m_Framebuffers[i] = Framebuffer::Create(m_pContext, framebufferParams);
     }

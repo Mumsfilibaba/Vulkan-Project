@@ -6,6 +6,7 @@
 #include "PipelineState.h"
 #include "DescriptorSet.h"
 #include "Query.h"
+#include "PipelineLayout.h"
 #include <vulkan/vulkan.h>
 
 enum class ECommandQueueType
@@ -44,7 +45,7 @@ public:
         }
     }
 
-    void BeginRenderPass(RenderPass* pRenderPass, Framebuffer* pFramebuffer, VkClearValue* pClearValues, uint32_t clearValuesCount)
+    void BeginRenderPass(RenderPass* pRenderPass, Framebuffer* pFramebuffer, const VkClearValue* pClearValues, uint32_t clearValuesCount)
     {
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -84,16 +85,16 @@ public:
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineState->GetPipeline());
     }
     
-    void BindGraphicsDescriptorSet(GraphicsPipeline* pPipeline, DescriptorSet* pDescriptorSet)
+    void BindGraphicsDescriptorSet(PipelineLayout* pPipelineLayout, DescriptorSet* pDescriptorSet)
     {
         VkDescriptorSet descriptorSet = pDescriptorSet->GetDescriptorSet();
-        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipeline->GetPiplineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineLayout->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
     }
     
-    void BindComputeDescriptorSet(ComputePipeline* pPipeline, DescriptorSet* pDescriptorSet)
+    void BindComputeDescriptorSet(PipelineLayout* pPipelineLayout, DescriptorSet* pDescriptorSet)
     {
         VkDescriptorSet descriptorSet = pDescriptorSet->GetDescriptorSet();
-        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipeline->GetPiplineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineLayout->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
     }
 
     void BindVertexBuffer(Buffer* pBuffer, VkDeviceSize offset, uint32_t slot)
@@ -111,11 +112,21 @@ public:
         vkCmdBindIndexBuffer(m_CommandBuffer, pBuffer->GetBuffer(), offset, indexType);
     }
     
+    void PushConstants(PipelineLayout* pPipelineLayout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pData)
+    {
+        vkCmdPushConstants(m_CommandBuffer, pPipelineLayout->GetPipelineLayout(), stageFlags, offset, size, pData);
+    }
+    
     void TransitionImage(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
     
     void UpdateBuffer(Buffer* pBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const void* pData)
     {
         vkCmdUpdateBuffer(m_CommandBuffer, pBuffer->GetBuffer(), dstOffset, dataSize, pData);
+    }
+    
+    void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions)
+    {
+        vkCmdCopyBufferToImage(m_CommandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
     }
 
     void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)

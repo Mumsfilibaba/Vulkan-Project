@@ -7,14 +7,16 @@
 #include "VulkanExtensionFuncs.h"
 #include "VulkanDeviceAllocator.h"
 #include "DescriptorPool.h"
+#include "SwapChain.h"
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void*) 
 {
     if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        std::cout << "Validation layer: " << pCallbackData->pMessage << std::endl;
+        std::cout << "Validation layer: " << pCallbackData->pMessage << "\n";
     }
+    
     return VK_FALSE;
 }
 
@@ -32,20 +34,12 @@ VulkanContext::VulkanContext()
     , m_GraphicsQueue(VK_NULL_HANDLE)
     , m_ComputeQueue(VK_NULL_HANDLE)
     , m_TransferQueue(VK_NULL_HANDLE)
-    , m_Surface(VK_NULL_HANDLE)
-    , m_SwapChain(VK_NULL_HANDLE)
-    , m_SwapChainFormat()
-    , m_Extent()
-    , m_PresentMode()
+    , m_pSwapChain(nullptr)
     , m_EnabledDeviceFeatures()
     , m_DeviceProperties()
     , m_DeviceFeatures()
     , m_DeviceMemoryProperties()
     , m_QueueFamilyIndices()
-    , m_FrameData()
-    , m_FrameCount(0)
-    , m_SemaphoreIndex(0)
-    , m_CurrentBufferIndex(0)
     , m_bValidationEnabled(false)
     , m_bRayTracingEnabled(false)
 {
@@ -53,33 +47,12 @@ VulkanContext::VulkanContext()
 
 VulkanContext::~VulkanContext()
 {
-    for (FrameData& frame : m_FrameData)
-    {
-        if (frame.ImageSemaphore != VK_NULL_HANDLE)
-        {
-            vkDestroySemaphore(m_Device, frame.ImageSemaphore, nullptr);
-            frame.ImageSemaphore = VK_NULL_HANDLE;
-        }
-        
-        if (frame.RenderSemaphore != VK_NULL_HANDLE)
-        {
-            vkDestroySemaphore(m_Device, frame.RenderSemaphore, nullptr);
-            frame.RenderSemaphore = VK_NULL_HANDLE;
-        }
-    }
+    SAFE_DELETE(m_pSwapChain);
     
-    ReleaseSwapChainResources();
-
     if (m_Device)
     {
         vkDestroyDevice(m_Device, nullptr);
         m_Device = VK_NULL_HANDLE;
-    }
-
-    if (m_Surface != VK_NULL_HANDLE)
-    {
-        vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
-        m_Surface = VK_NULL_HANDLE;
     }
 
     if (m_bValidationEnabled)
@@ -109,43 +82,56 @@ uint32_t VulkanContext::GetQueueFamilyIndex(ECommandQueueType Type)
     }
 }
 
-void VulkanContext::ExecuteGraphics(CommandBuffer* pCommandBuffer, VkPipelineStageFlags* pWaitStages)
+void VulkanContext::ExecuteGraphics(CommandBuffer* pCommandBuffer, SwapChain* pSwapChain, VkPipelineStageFlags* pWaitStages)
 {
-    //std::cout << "ExecuteGraphics" << std::endl;
-
     VkSubmitInfo submitInfo;
     ZERO_STRUCT(&submitInfo);
     
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].ImageSemaphore };
+    VkSemaphore waitSemaphores[1]   = {};
+    VkSemaphore signalSemaphores[1] = {};
+    if (pSwapChain && pWaitStages)
+    {
+        signalSemaphores[0] = pSwapChain->GetRenderSemaphore();
+        
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores    = signalSemaphores;
 
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores   = waitSemaphores;
-    submitInfo.pWaitDstStageMask = pWaitStages;
+        if (pWaitStages)
+        {
+            waitSemaphores[0] = pSwapChain->GetImageSemaphore();
+            
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores    = waitSemaphores;
+            submitInfo.pWaitDstStageMask  = pWaitStages;
+        }
+    }
+    else
+    {
+        submitInfo.waitSemaphoreCount   = 0;
+        submitInfo.pWaitSemaphores      = nullptr;
+        submitInfo.pWaitDstStageMask    = nullptr;
+        submitInfo.signalSemaphoreCount = 0;
+        submitInfo.pSignalSemaphores    = nullptr;
+    }
 
     // Calling execute with nullptr commandbuffer results in waiting for the current semaphore
     // This seems to be the only way of handling this
     VkFence fence = VK_NULL_HANDLE;
+    VkCommandBuffer commandBuffers[1] = {};
     if (pCommandBuffer)
     {
         fence = pCommandBuffer->GetFence();
 
-        VkCommandBuffer commandBuffers[] = { pCommandBuffer->GetCommandBuffer() };
+        commandBuffers[0] = pCommandBuffer->GetCommandBuffer();
         submitInfo.pCommandBuffers    = commandBuffers;
         submitInfo.commandBufferCount = 1;
-
-        VkSemaphore signalSemaphores[]  = { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores    = signalSemaphores;
     }
     else
     {
         submitInfo.pCommandBuffers    = nullptr;
         submitInfo.commandBufferCount = 0;
-
-        submitInfo.signalSemaphoreCount = 0;
-        submitInfo.pSignalSemaphores    = nullptr;
     }
 
     VkResult result = vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, fence);
@@ -157,17 +143,7 @@ void VulkanContext::ExecuteGraphics(CommandBuffer* pCommandBuffer, VkPipelineSta
 
 void VulkanContext::ResizeBuffers(uint32_t width, uint32_t height)
 {
-    if (m_Extent.width == width && m_Extent.height == height)
-    {
-        return;
-    }
-
-    std::cout << "Resize" << std::endl;
-
-    ReleaseSwapChainResources();
-    CreateSwapChain(width, height);
-
-    std::cout << "Resized Buffers: w=" << m_Extent.width << ", h=" << m_Extent.height << std::endl;
+    m_pSwapChain->Resize(width, height);
 }
 
 void VulkanContext::WaitForIdle()
@@ -177,42 +153,7 @@ void VulkanContext::WaitForIdle()
 
 void VulkanContext::Present()
 {
-    // std::cout << "Present" << std::endl;
-
-    VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
-
-    VkPresentInfoKHR presentInfo;
-    ZERO_STRUCT(&presentInfo);
-    
-    presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores    = waitSemaphores;
-    presentInfo.swapchainCount     = 1;
-    presentInfo.pSwapchains        = &m_SwapChain;
-    presentInfo.pImageIndices      = &m_CurrentBufferIndex;
-    presentInfo.pResults           = nullptr;
-
-    VkResult result = vkQueuePresentKHR(m_PresentationQueue, &presentInfo);
-    if (result == VK_SUCCESS)
-    {
-        //Aquire next image
-        m_SemaphoreIndex = (m_SemaphoreIndex + 1) % m_FrameCount;
-        result = AquireNextImage();
-    }
-
-    //if presentation and aquire image failed
-    if (result != VK_SUCCESS)
-    {
-        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
-        {
-            RecreateSwapChain();
-            std::cout << "Suboptimal or Out Of Date SwapChain. Result: " << result << std::endl;
-        }
-        else
-        {
-            std::cout << "Present Failed. Error: " << result << std::endl;
-        }
-    }
+    m_pSwapChain->Present();
 }
 
 void VulkanContext::Destroy()
@@ -244,15 +185,6 @@ bool VulkanContext::Init(const DeviceParams& params)
         }
     }
 
-    if (CreateSurface(params.pWindow))
-    {
-        std::cout << "Created Surface" << std::endl;
-    }
-    else
-    {
-        return false;
-    }
-
     if (QueryPhysicalDevice(params))
     {
         std::cout << "Queried physical device: " << m_DeviceProperties.deviceName << std::endl;
@@ -271,25 +203,8 @@ bool VulkanContext::Init(const DeviceParams& params)
         return false;
     }
 
-    InitFrameData(FRAME_COUNT);
-    if (CreateSemaphores())
-    {
-        std::cout << "Created Semphores and Fences" << std::endl;
-    }
-    else
-    {
-        return false;
-    }
-
-    int32_t width  = 0;
-    int32_t height = 0;
-    glfwGetWindowSize(params.pWindow, &width, &height);
-    
-    if (CreateSwapChain(uint32_t(width), uint32_t(height)))
-    {
-        std::cout << "Created swapchain" << std::endl;
-    }
-    else
+    m_pSwapChain = SwapChain::Create(this, params.pWindow);
+    if (!m_pSwapChain)
     {
         return false;
     }
@@ -468,18 +383,6 @@ bool VulkanContext::CreateDebugMessenger()
     return false;
 }
 
-bool VulkanContext::CreateSurface(GLFWwindow* pWindow)
-{
-    VkResult result = glfwCreateWindowSurface(m_Instance, pWindow, nullptr, &m_Surface);
-    if (result != VK_SUCCESS)
-    {
-        std::cout << "Failed to create a surface. Error: " << result << std::endl;
-        return false;
-    }
-
-    return true;
-}
-
 bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
 {
     m_QueueFamilyIndices = GetQueueFamilyIndices(m_PhysicalDevice);
@@ -622,215 +525,6 @@ bool VulkanContext::CreateDeviceAndQueues(const DeviceParams& params)
     {
         return false;
     }
-}
-
-void VulkanContext::InitFrameData(uint32_t numFrames)
-{
-    m_FrameCount = numFrames;
-    m_FrameData.resize(m_FrameCount);
-}
-
-bool VulkanContext::CreateSemaphores()
-{
-    // Setup semaphore structure
-    VkSemaphoreCreateInfo semaphoreInfo = {};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    semaphoreInfo.pNext = nullptr;
-    semaphoreInfo.flags = 0;
-
-    // Create semaphores
-    for (uint32_t i = 0; i < m_FrameCount; i++)
-    {
-        VkSemaphore imageSemaphore  = VK_NULL_HANDLE;
-        VkSemaphore renderSemaphore = VK_NULL_HANDLE;
-
-        if (vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &imageSemaphore) != VK_SUCCESS ||
-            vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &renderSemaphore) != VK_SUCCESS)
-        {
-            std::cout << "vkCreateSemaphore failed" << std::endl;
-            return false;
-        }
-        else
-        {
-            SetDebugName(m_Device, "ImageSemaphore[" + std::to_string(i) + "]", (uint64_t)imageSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
-            SetDebugName(m_Device, "RenderSemaphore[" + std::to_string(i) + "]", (uint64_t)renderSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
-        }
-
-        m_FrameData[i].ImageSemaphore = imageSemaphore;
-        m_FrameData[i].RenderSemaphore = renderSemaphore;
-    }
-
-    return true;
-}
-
-bool VulkanContext::CreateSwapChain(uint32_t width, uint32_t height)
-{
-    // Get capabilities and formats that are supported
-    VkSurfaceCapabilitiesKHR capabilities = {};
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_PhysicalDevice, m_Surface, &capabilities);
-    if (capabilities.currentExtent.width != UINT32_MAX && capabilities.currentExtent.height != UINT32_MAX)
-    {
-        m_Extent = capabilities.currentExtent;
-    }
-    else
-    {
-        VkExtent2D actualExtent = { width, height };
-        actualExtent.width  = std::max(capabilities.minImageExtent.width,  std::min(capabilities.maxImageExtent.width,  actualExtent.width));
-        actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height,    actualExtent.height));
-        
-        m_Extent = actualExtent;
-    }
-
-    std::vector<VkSurfaceFormatKHR> formats;
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &formatCount, nullptr);
-    if (formatCount > 0)
-    {
-        formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &formatCount, formats.data());
-
-        for (const auto& availableFormat : formats)
-        {
-            if (availableFormat.format == VK_FORMAT_R16G16B16A16_SFLOAT && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-            {
-                m_SwapChainFormat = availableFormat;
-            }
-            else if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-            {
-                m_SwapChainFormat = availableFormat;
-            }
-        }
-    }
-    else
-    {
-        std::cout << "No available formats for SwapChain" << std::endl;
-        return false;
-    }
-
-    std::vector<VkPresentModeKHR> presentModes;
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(m_PhysicalDevice, m_Surface, &presentModeCount, nullptr);
-    if (presentModeCount > 0)
-    {
-        presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(m_PhysicalDevice, m_Surface, &presentModeCount, presentModes.data());
-
-        // Choose mailbox if available otherwise fifo
-        m_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
-        for (const VkPresentModeKHR& availablePresentMode : presentModes)
-        {
-            if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-            {
-                m_PresentMode = availablePresentMode;
-            }
-        }
-    }
-    else
-    {
-        std::cout << "No available presentModes for SwapChain" << std::endl;
-        return false;
-    }
-
-    uint32_t imageCount = FRAME_COUNT;
-    if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)
-    {
-        imageCount = capabilities.maxImageCount;
-    }
-
-    VkSwapchainCreateInfoKHR createInfo;
-    ZERO_STRUCT(&createInfo);
-    
-    createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface          = m_Surface;
-    createInfo.minImageCount    = imageCount;
-    createInfo.imageFormat      = m_SwapChainFormat.format;
-    createInfo.imageColorSpace  = m_SwapChainFormat.colorSpace;
-    createInfo.imageExtent      = m_Extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    createInfo.preTransform     = capabilities.currentTransform;
-    createInfo.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode      = m_PresentMode;
-    createInfo.clipped          = VK_TRUE;
-    createInfo.oldSwapchain     = VK_NULL_HANDLE;
-
-    VkResult result = vkCreateSwapchainKHR(m_Device, &createInfo, nullptr, &m_SwapChain);
-    if (result != VK_SUCCESS)
-    {
-        std::cout << "vkCreateSwapchainKHR failed. Error: " << result << std::endl;
-        return false;
-    }
-
-    //Get the images and create imageviews
-    uint32_t realImageCount = 0;
-    vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &realImageCount, nullptr);
-    if (realImageCount < m_FrameCount)
-    {
-        std::cout << "WARNING: Less images than requested in swapchain" << std::endl;
-    }
-
-    std::vector<VkImage> images(realImageCount);
-    vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &realImageCount, images.data());
-
-    VkImageViewCreateInfo imageViewCreateInfo;
-    ZERO_STRUCT(&imageViewCreateInfo);
-    
-    imageViewCreateInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    imageViewCreateInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-    imageViewCreateInfo.format                          = m_SwapChainFormat.format;
-    imageViewCreateInfo.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-    imageViewCreateInfo.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-    imageViewCreateInfo.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-    imageViewCreateInfo.components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-    imageViewCreateInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-    imageViewCreateInfo.subresourceRange.baseMipLevel   = 0;
-    imageViewCreateInfo.subresourceRange.levelCount     = 1;
-    imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-    imageViewCreateInfo.subresourceRange.layerCount     = 1;
-
-    for (uint32_t i = 0; i < m_FrameCount; i++)
-    {
-        VkImageView imageView = VK_NULL_HANDLE;
-        imageViewCreateInfo.image = images[i];
-
-        result = vkCreateImageView(m_Device, &imageViewCreateInfo, nullptr, &imageView);
-        if (result != VK_SUCCESS)
-        {
-            std::cout << "vkCreateImageView failed. Error: " << result << std::endl;
-        }
-        else
-        {
-            std::cout << "Created ImageView" << std::endl;
-        }
-
-        m_FrameData[i].BackBuffer = images[i];
-        m_FrameData[i].BackBufferView = imageView;
-    }
-
-    result = AquireNextImage();
-    if (result != VK_SUCCESS)
-    {
-        std::cout << "AquireNextImage failed. Error: " << result << std::endl;
-    }
-
-    return true;
-}
-
-VkResult VulkanContext::AquireNextImage()
-{
-    // std::cout << "AquireNextImage" << std::endl;
-
-    VkSemaphore signalSemaphore = m_FrameData[m_SemaphoreIndex].ImageSemaphore;
-    return vkAcquireNextImageKHR(m_Device, m_SwapChain, UINT64_MAX, signalSemaphore, VK_NULL_HANDLE, &m_CurrentBufferIndex);
-}
-
-void VulkanContext::RecreateSwapChain()
-{
-    vkDeviceWaitIdle(m_Device);
-
-    ReleaseSwapChainResources();
-    CreateSwapChain(0, 0);
 }
 
 void VulkanContext::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
@@ -997,19 +691,9 @@ QueueFamilyIndices VulkanContext::GetQueueFamilyIndices(VkPhysicalDevice physica
     indices.Compute  = ::GetQueueFamilyIndex(VK_QUEUE_COMPUTE_BIT, queueFamilies);
     indices.Transfer = ::GetQueueFamilyIndex(VK_QUEUE_TRANSFER_BIT, queueFamilies);
     indices.Graphics = ::GetQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, queueFamilies);
-
-    // Find a presentation queue
-    for (uint32_t i = 0; i < queueFamilyCount; i++)
-    {
-        VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, m_Surface, &presentSupport);
-        if (presentSupport)
-        {
-            indices.Presentation = i;
-            break;
-        }
-    }
-
+    
+    // TODO: Do not just assume that graphics support presentation, check this
+    indices.Presentation = indices.Graphics;
     return indices;
 }
 
@@ -1018,25 +702,4 @@ std::vector<const char*> VulkanContext::GetRequiredDeviceExtensions()
     std::vector<const char*> deviceExtensions;
     deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     return deviceExtensions;
-}
-
-void VulkanContext::ReleaseSwapChainResources()
-{
-    // Release backbuffers
-    for (FrameData& frame : m_FrameData)
-    {
-        frame.BackBuffer = VK_NULL_HANDLE;
-        if (frame.BackBufferView != VK_NULL_HANDLE)
-        {
-            vkDestroyImageView(m_Device, frame.BackBufferView, nullptr);
-            frame.BackBufferView = VK_NULL_HANDLE;
-        }
-    }
-
-    // Destroy swapchain
-    if (m_SwapChain != VK_NULL_HANDLE)
-    {
-        vkDestroySwapchainKHR(m_Device, m_SwapChain, nullptr);
-        m_SwapChain = VK_NULL_HANDLE;
-    }
 }

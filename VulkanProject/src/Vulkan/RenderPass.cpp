@@ -2,47 +2,30 @@
 #include "VulkanContext.h"
 #include <vector>
 
-RenderPass::RenderPass(VkDevice device)
-    : m_Device(device)
-    , m_RenderPass(VK_NULL_HANDLE)
-{
-}
-
-RenderPass::~RenderPass()
-{
-    if (m_RenderPass)
-    {
-        vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
-        m_RenderPass = VK_NULL_HANDLE;
-
-        std::cout << "Destroyed RenderPass" << std::endl;
-    }
-}
-
 RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &params)
 {
-    RenderPass* newRenderPass = new RenderPass(pContext->GetDevice());
+    RenderPass* pRenderPass = new RenderPass(pContext->GetDevice());
     
+    std::vector<VkAttachmentReference>   colorAttachmentRefInfos;
     std::vector<VkAttachmentDescription> attachmentsInfos;
-    std::vector<VkAttachmentReference> colorAttachmentRefInfos;
 
     VkAttachmentDescription colorAttachment;
     ZERO_STRUCT(&colorAttachment);
     
-    colorAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     
     VkAttachmentReference colorAttachmentRef = {};
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     for (uint32_t i = 0; i < params.ColorAttachmentCount; i++)
     {
-        colorAttachment.format = params.pColorAttachments[i].Format;
+        colorAttachment.format  = params.pColorAttachments[i].Format;
+        colorAttachment.loadOp  = params.pColorAttachments[i].LoadOp;
+        colorAttachment.storeOp = params.pColorAttachments[i].StoreOp;
         attachmentsInfos.push_back(colorAttachment);
         
         colorAttachmentRef.attachment = i;
@@ -50,7 +33,7 @@ RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &
     }
 
     VkSubpassDescription subpass;
-    ZERO_STRUCT(&colorAttachment);
+    ZERO_STRUCT(&subpass);
     
     subpass.inputAttachmentCount    = 0;
     subpass.pInputAttachments       = nullptr;
@@ -84,7 +67,7 @@ RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &
     renderPassInfo.subpassCount    = 1;
     renderPassInfo.pSubpasses      = &subpass;
 
-    VkResult result = vkCreateRenderPass(newRenderPass->m_Device, &renderPassInfo, nullptr, &newRenderPass->m_RenderPass);
+    VkResult result = vkCreateRenderPass(pRenderPass->m_Device, &renderPassInfo, nullptr, &pRenderPass->m_RenderPass);
     if (result != VK_SUCCESS) 
     {
         std::cout << "vkCreateRenderPass failed" << std::endl;
@@ -93,7 +76,23 @@ RenderPass* RenderPass::Create(VulkanContext* pContext, const RenderPassParams &
     else
     {
         std::cout << "Created RenderPass" << std::endl;
+        return pRenderPass;
     }
-    
-    return newRenderPass;
+}
+
+RenderPass::RenderPass(VkDevice device)
+    : m_Device(device)
+    , m_RenderPass(VK_NULL_HANDLE)
+{
+}
+
+RenderPass::~RenderPass()
+{
+    if (m_RenderPass)
+    {
+        vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
+        m_RenderPass = VK_NULL_HANDLE;
+    }
+
+    m_Device = VK_NULL_HANDLE;
 }
