@@ -15,6 +15,8 @@ public:
     
     virtual void Tick(float deltaTime) override;
     
+    virtual void OnRenderUI() {}
+    
     virtual void OnWindowResize(uint32_t width, uint32_t height) override;
     
 private:

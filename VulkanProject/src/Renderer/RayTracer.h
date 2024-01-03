@@ -23,11 +23,14 @@ public:
     
     virtual void Tick(float deltaTime) override;
     
+    virtual void OnRenderUI() override;
+    
     virtual void OnWindowResize(uint32_t width, uint32_t height) override;
     
 private:
-    void CreateDescriptorSets();
-    void ReleaseDescriptorSets();
+    void CreateOrResizeSceneTexture(uint32_t width, uint32_t height);
+    void CreateDescriptorSet();
+    void ReleaseDescriptorSet();
     
     VulkanContext*             m_pContext;
     class ComputePipeline*     m_Pipeline;
@@ -35,13 +38,20 @@ private:
     class DescriptorSetLayout* m_pDescriptorSetLayout;
     VulkanDeviceAllocator*     m_pDeviceAllocator;
     DescriptorPool*            m_pDescriptorPool;
-    
-    std::vector<class DescriptorSet*> m_DescriptorSets;
+    class DescriptorSet*       m_pDescriptorSet;
+
     std::vector<class CommandBuffer*> m_CommandBuffers;
     std::vector<class Query*>         m_TimestampQueries;
     
-    Camera        m_Camera;
-    
     class Buffer* m_pCameraBuffer;
     class Buffer* m_pRandomBuffer;
+        
+    class Texture*       m_pSceneTexture;
+    class TextureView*   m_pSceneTextureView;
+    class DescriptorSet* m_pSceneTextureDescriptorSet;
+
+    Camera   m_Camera;
+    float    m_LastGPUTime;
+    uint32_t m_ViewportWidth;
+    uint32_t m_ViewportHeight;
 };

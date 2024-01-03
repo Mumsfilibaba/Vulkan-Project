@@ -55,7 +55,6 @@ namespace ImGuiRenderer
         GLFWkeyfun         PrevUserCallbackKey;
         GLFWcharfun        PrevUserCallbackChar;
         GLFWmonitorfun     PrevUserCallbackMonitor;
-        
     };
     
     struct ImGuiRendererBackendData
@@ -80,18 +79,19 @@ namespace ImGuiRenderer
         {
             pContext = nullptr;
             
-            SAFE_DELETE(pRenderPass);
+            SAFE_DELETE(pFontDescriptorSet);
+            SAFE_DELETE(pFontSampler);
+            SAFE_DELETE(pImageSampler);
+            SAFE_DELETE(pFontTextureView);
+            SAFE_DELETE(pFontTexture);
+
             SAFE_DELETE(pDescriptorPool);
             SAFE_DELETE(pDescriptorSetLayout);
-            SAFE_DELETE(pPipelineLayout);
             SAFE_DELETE(pPipeline);
+            SAFE_DELETE(pPipelineLayout);
+            SAFE_DELETE(pRenderPass);
             SAFE_DELETE(pShaderModuleVert);
             SAFE_DELETE(pShaderModuleFrag);
-            
-            SAFE_DELETE(pFontSampler);
-            SAFE_DELETE(pFontTexture);
-            SAFE_DELETE(pFontTextureView);
-            SAFE_DELETE(pFontDescriptorSet);
         }
         
         // Global objects
@@ -106,11 +106,10 @@ namespace ImGuiRenderer
         
         // Font data
         Sampler*             pFontSampler;
+        Sampler*             pImageSampler;
         Texture*             pFontTexture;
         TextureView*         pFontTextureView;
         DescriptorSet*       pFontDescriptorSet;
-        
-        VkImageView          FontView;
     };
     
     struct ImGuiFrameRenderData
@@ -1138,6 +1137,23 @@ namespace ImGuiRenderer
             assert(pRendererBackend->pFontSampler != nullptr);
         }
         
+        if (!pRendererBackend->pImageSampler)
+        {
+            SamplerParams samplerParams = {};
+            samplerParams.magFilter     = VK_FILTER_NEAREST;
+            samplerParams.minFilter     = VK_FILTER_NEAREST;
+            samplerParams.mipmapMode    = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            samplerParams.addressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerParams.addressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerParams.addressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerParams.minLod        = 0;
+            samplerParams.maxLod        = 1000;
+            samplerParams.maxAnisotropy = 1.0f;
+            
+            pRendererBackend->pImageSampler = Sampler::Create(pRendererBackend->pContext, samplerParams);
+            assert(pRendererBackend->pImageSampler != nullptr);
+        }
+        
         if (!pRendererBackend->pDescriptorSetLayout)
         {
             VkDescriptorSetLayoutBinding binding[1] = {};
@@ -1297,6 +1313,15 @@ namespace ImGuiRenderer
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->RendererUserData))
         {
+            // Ensure that we are finished with this viewport on the GPU
+            for (ImGuiFrameRenderData& renderData : pViewportData->FrameData)
+            {
+                if (renderData.pCommandBuffer && renderData.pCommandBuffer->IsFinishedOnGPU())
+                {
+                    renderData.pCommandBuffer->WaitForAndResetFences();
+                }
+            }
+            
             if (pViewportData->bWindowOwned)
             {
                 SAFE_DELETE(pViewportData->pSwapChain);
@@ -1525,7 +1550,7 @@ namespace ImGuiRenderer
 
                     // Retrieve descriptorset
                     DescriptorSet* pDescriptorSet = (DescriptorSet*)pDrawCmd->TextureId;
-                    if (sizeof(ImTextureID) < sizeof(ImU64))
+                    if constexpr (sizeof(ImTextureID) < sizeof(ImU64))
                     {
                         // We don't support texture switches if ImTextureID hasn't been redefined to be 64-bit. Do a flaky check that other textures haven't been used.
                         assert(pDrawCmd->TextureId == (ImTextureID)pRendererbackend->pFontDescriptorSet);
@@ -1952,5 +1977,22 @@ namespace ImGuiRenderer
         
         // Destroy the context last
         ImGui::DestroyContext();
+    }
+    
+    DescriptorSet* AllocateTextureID(TextureView* pTextureView)
+    {
+        assert(pTextureView != nullptr);
+        
+        ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
+        assert(pRendererBackend != nullptr);
+        
+        DescriptorSet* pDescriptorSet = DescriptorSet::Create(pRendererBackend->pContext, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
+        if (!pDescriptorSet)
+        {
+            return nullptr;
+        }
+        
+        pDescriptorSet->BindCombinedImageSampler(pTextureView->GetImageView(), pRendererBackend->pImageSampler->GetSampler(), 0);
+        return pDescriptorSet;
     }
 }

@@ -157,13 +157,24 @@ public:
             std::cout << "vkEndCommandBuffer failed. Error: " << result << std::endl;
         }
     }
+    
+    bool IsFinishedOnGPU() const
+    {
+        VkResult result = vkGetFenceStatus(m_Device, m_Fence);
+        return result == VK_NOT_READY;
+    }
+    
+    void WaitForAndResetFences()
+    {
+        vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, UINT64_MAX);
+        vkResetFences(m_Device, 1, &m_Fence);
+    }
 
     void Reset(VkCommandPoolResetFlags flags = 0)
     {
         // Wait for GPU to finish with this commandbuffer and then reset it
-        vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, UINT64_MAX);
-        vkResetFences(m_Device, 1, &m_Fence);
-
+        WaitForAndResetFences();
+        
         // Avoid using the VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT since we can reuse the memory
         vkResetCommandPool(m_Device, m_CommandPool, flags);
     }

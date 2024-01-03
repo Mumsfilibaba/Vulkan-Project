@@ -3,6 +3,8 @@
 #include <ImGui/ImGui.h>
 
 class VulkanContext;
+class DescriptorSet;
+class TextureView;
 
 namespace ImGuiRenderer
 {
@@ -13,4 +15,6 @@ namespace ImGuiRenderer
     void RenderImGui();
     
     void ReleaseImGui();
+    
+    DescriptorSet* AllocateTextureID(TextureView* pTextureView);
 }

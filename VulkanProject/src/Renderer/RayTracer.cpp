@@ -13,8 +13,8 @@
 #include "Vulkan/DescriptorSetLayout.h"
 #include "Vulkan/PipelineLayout.h"
 #include "Vulkan/SwapChain.h"
-
-#include <windows.h>
+#include "Vulkan/Texture.h"
+#include "Vulkan/TextureView.h"
 
 RayTracer::RayTracer()
     : m_pContext(nullptr)
@@ -102,9 +102,11 @@ void RayTracer::Init(VulkanContext* pContext)
 
     m_pRandomBuffer = Buffer::Create(m_pContext, randBuffParams, m_pDeviceAllocator);
     assert(m_pRandomBuffer != nullptr);
-
-    // DescriptorSets
-    CreateDescriptorSets();
+  
+    // Create the scene texture
+    m_ViewportWidth  = 0;
+    m_ViewportHeight = 0;
+    CreateOrResizeSceneTexture(1280, 720);
 
     // Commandbuffers
     CommandBufferParams commandBufferParams = {};
@@ -140,6 +142,9 @@ void RayTracer::Init(VulkanContext* pContext)
 void RayTracer::Tick(float deltaTime)
 {
     constexpr float CameraSpeed = 1.5f;
+    
+    // Update scene image
+    CreateOrResizeSceneTexture(m_ViewportWidth, m_ViewportHeight);
     
     glm::vec3 translation(0.0f);
     if (glfwGetKey(Application::GetWindow(), GLFW_KEY_W) == GLFW_PRESS)
@@ -186,8 +191,7 @@ void RayTracer::Tick(float deltaTime)
     m_Camera.Rotate(rotation);
     
     // Update
-    VkExtent2D extent = m_pContext->GetSwapChain()->GetExtent();
-    m_Camera.Update(90.0f, extent.width, extent.height, 0.1f, 100.0f);
+    m_Camera.Update(90.0f, m_pSceneTexture->GetWidth(), m_pSceneTexture->GetHeight(), 0.1f, 100.0f);
     
     // Draw
     uint32_t frameIndex = m_pContext->GetSwapChain()->GetCurrentBackBufferIndex();
@@ -207,12 +211,12 @@ void RayTracer::Tick(float deltaTime)
     const double timestampPeriod = double(m_pContext->GetTimestampPeriod());
     const double gpuTiming       = (double(timestamps[1]) - double(timestamps[0])) * timestampPeriod;
     const double gpuTimingMS     = gpuTiming / 1000000.0;
-    std::cout << "GPU Time: " << gpuTimingMS << "ms" << std::endl;
+    m_LastGPUTime = static_cast<float>(gpuTimingMS);
     
     pCurrentCommandBuffer->Begin();
     pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0);
     
-    pCurrentCommandBuffer->TransitionImage(m_pContext->GetSwapChain()->GetImage(frameIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    pCurrentCommandBuffer->TransitionImage(m_pSceneTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 
     // Update camera
     CameraBuffer camBuff;
@@ -237,14 +241,14 @@ void RayTracer::Tick(float deltaTime)
     
     // Bind pipeline and descriptorSet
     pCurrentCommandBuffer->BindComputePipelineState(m_Pipeline);
-    pCurrentCommandBuffer->BindComputeDescriptorSet(m_pPipelineLayout, m_DescriptorSets[frameIndex]);
+    pCurrentCommandBuffer->BindComputeDescriptorSet(m_pPipelineLayout, m_pDescriptorSet);
     
     // Dispatch
     const uint32_t Threads = 16;
-    VkExtent2D dispatchSize = { Math::AlignUp(extent.width, Threads) / Threads, Math::AlignUp(extent.height, Threads) / Threads };
+    VkExtent2D dispatchSize = { Math::AlignUp(m_pSceneTexture->GetWidth(), Threads) / Threads, Math::AlignUp(m_pSceneTexture->GetHeight(), Threads) / Threads };
     pCurrentCommandBuffer->Dispatch(dispatchSize.width, dispatchSize.height, 1);
     
-    pCurrentCommandBuffer->TransitionImage(m_pContext->GetSwapChain()->GetImage(frameIndex), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    pCurrentCommandBuffer->TransitionImage(m_pSceneTexture->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     
     pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 1);
     pCurrentCommandBuffer->End();
@@ -252,65 +256,157 @@ void RayTracer::Tick(float deltaTime)
     m_pContext->ExecuteGraphics(pCurrentCommandBuffer, nullptr, nullptr);
 }
 
+void RayTracer::OnRenderUI()
+{
+    static ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_None;
+    
+    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDocking;
+
+    const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(pMainViewport->WorkPos);
+    ImGui::SetNextWindowSize(pMainViewport->WorkSize);
+    ImGui::SetNextWindowViewport(pMainViewport->ID);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    windowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+    windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+    // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
+    // and handle the pass-thru hole, so we ask Begin() to not render a background.
+    if (dockspaceFlags & ImGuiDockNodeFlags_PassthruCentralNode)
+    {
+        windowFlags |= ImGuiWindowFlags_NoBackground;
+    }
+
+    // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
+    // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
+    // all active windows docked into it will lose their parent and become undocked.
+    // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
+    // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
+    
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin("DockSpace Demo", nullptr, windowFlags);
+    ImGui::PopStyleVar();
+
+    ImGui::PopStyleVar(2);
+
+    // Submit the DockSpace
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+    {
+        ImGuiID dockspaceID = ImGui::GetID("PathTracerDockspace");
+        ImGui::DockSpace(dockspaceID, ImVec2(0.0f, 0.0f), dockspaceFlags);
+    }
+
+    ImGui::End();
+    
+    ImGui::Begin("Scene");
+    ImGui::Text("GPU Time %.4f", m_LastGPUTime);
+    
+    
+    ImGui::End();
+    
+    ImGui::Begin("Viewport");
+
+    m_ViewportWidth  = ImGui::GetContentRegionAvail().x;
+    m_ViewportHeight = ImGui::GetContentRegionAvail().y;
+
+    if (m_pSceneTexture)
+    {
+        ImGui::Image(m_pSceneTextureDescriptorSet, { (float)m_pSceneTexture->GetWidth(), (float)m_pSceneTexture->GetHeight() });
+    }
+    
+    ImGui::End();
+}
+
 void RayTracer::Release()
 {
     for (auto& commandBuffer : m_CommandBuffers)
     {
-        delete commandBuffer;
+        SAFE_DELETE(commandBuffer);
     }
     
     m_CommandBuffers.clear();
     
     for (auto& query : m_TimestampQueries)
     {
-        delete query;
+        SAFE_DELETE(query);
     }
     
     m_TimestampQueries.clear();
 
-    delete m_pCameraBuffer;
-    delete m_pRandomBuffer;
+    SAFE_DELETE(m_pCameraBuffer);
+    SAFE_DELETE(m_pRandomBuffer);
     
-    ReleaseDescriptorSets();
+    ReleaseDescriptorSet();
 
-    delete m_pDescriptorPool;
-    delete m_Pipeline;
-    delete m_pPipelineLayout;
-    delete m_pDescriptorSetLayout;
-    delete m_pDeviceAllocator;
+    SAFE_DELETE(m_pDescriptorPool);
+    SAFE_DELETE(m_Pipeline);
+    SAFE_DELETE(m_pPipelineLayout);
+    SAFE_DELETE(m_pDescriptorSetLayout);
+    SAFE_DELETE(m_pDeviceAllocator);
+    SAFE_DELETE(m_pSceneTexture);
+    SAFE_DELETE(m_pSceneTextureView);
+    SAFE_DELETE(m_pSceneTextureDescriptorSet);
 }
 
 void RayTracer::OnWindowResize(uint32_t width, uint32_t height)
 {
-    (void)width;
-    (void)height;
-    
-    ReleaseDescriptorSets();
-    CreateDescriptorSets();
 }
 
-void RayTracer::CreateDescriptorSets()
+void RayTracer::CreateOrResizeSceneTexture(uint32_t width, uint32_t height)
 {
-    uint32_t numBackBuffers = m_pContext->GetSwapChain()->GetNumBackBuffers();
-    m_DescriptorSets.resize(numBackBuffers);
-    
-    for (uint32_t i = 0; i < numBackBuffers; i++)
+    if (m_pSceneTexture)
     {
-        m_DescriptorSets[i] = DescriptorSet::Create(m_pContext, m_pDescriptorPool, m_pDescriptorSetLayout);
-        assert(m_DescriptorSets[i] != nullptr);
+        if (m_pSceneTexture->GetWidth() == width && m_pSceneTexture->GetHeight() == height)
+        {
+            return;
+        }
         
-        m_DescriptorSets[i]->BindStorageImage(m_pContext->GetSwapChain()->GetImageView(i), 0);
-        m_DescriptorSets[i]->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 1);
-        m_DescriptorSets[i]->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 2);
+        m_pContext->WaitForIdle();
+        
+        SAFE_DELETE(m_pSceneTexture);
+        SAFE_DELETE(m_pSceneTextureView);
+        SAFE_DELETE(m_pSceneTextureDescriptorSet);
+        ReleaseDescriptorSet();
     }
+    
+    // Create texture for the viewport
+    TextureParams textureParams = {};
+    textureParams.Format    = VK_FORMAT_R32G32B32A32_SFLOAT;
+    textureParams.ImageType = VK_IMAGE_TYPE_2D;
+    textureParams.Width     = m_ViewportWidth  = width;
+    textureParams.Height    = m_ViewportHeight = height;
+    textureParams.Usage     = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    
+    m_pSceneTexture = Texture::Create(m_pContext, textureParams);
+    assert(m_pSceneTexture != nullptr);
+    
+    TextureViewParams textureViewParams = {};
+    textureViewParams.pTexture = m_pSceneTexture;
+    
+    m_pSceneTextureView = TextureView::Create(m_pContext, textureViewParams);
+    assert(m_pSceneTextureView != nullptr);
+    
+    // UI DescriptorSet
+    m_pSceneTextureDescriptorSet = ImGuiRenderer::AllocateTextureID(m_pSceneTextureView);
+    assert(m_pSceneTextureDescriptorSet != nullptr);
+    
+    // Descriptor set for when tracing
+    CreateDescriptorSet();
 }
 
-void RayTracer::ReleaseDescriptorSets()
+void RayTracer::CreateDescriptorSet()
 {
-    for (auto& descriptorSet : m_DescriptorSets)
-    {
-        delete descriptorSet;
-    }
+    m_pDescriptorSet = DescriptorSet::Create(m_pContext, m_pDescriptorPool, m_pDescriptorSetLayout);
+    assert(m_pDescriptorSet != nullptr);
+        
+    m_pDescriptorSet->BindStorageImage(m_pSceneTextureView->GetImageView(), 0);
+    m_pDescriptorSet->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 1);
+    m_pDescriptorSet->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 2);
+}
 
-    m_DescriptorSets.clear();
+void RayTracer::ReleaseDescriptorSet()
+{
+    SAFE_DELETE(m_pDescriptorSet);
 }

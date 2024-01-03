@@ -65,15 +65,15 @@ bool Application::Init()
         return false;
     }
     
+    // Initialize ImGui
+    ImGuiRenderer::InitializeImgui(m_pWindow, m_pContext);
+
     m_pRenderer = new RayTracer();
     m_pRenderer->Init(m_pContext);
     
     // Show window
     glfwShowWindow(m_pWindow);
-    
-    // Initialize ImGui
-    ImGuiRenderer::InitializeImgui(m_pWindow, m_pContext);
-    
+        
     m_LastTime = std::chrono::system_clock::now();
     return true;
 }
@@ -138,11 +138,11 @@ void Application::Tick()
     // Update GUI
     ImGuiRenderer::TickImGui();
     
-    static bool bShowDemoWindow = true;
-    ImGui::ShowDemoWindow(&bShowDemoWindow);
-    
     // Render
     m_pRenderer->Tick(elapsedSeconds.count());
+    
+    // Render the renderers UI
+    m_pRenderer->OnRenderUI();
     
     // Render ImGui
     ImGuiRenderer::RenderImGui();
