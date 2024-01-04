@@ -571,12 +571,14 @@ void RayTracer::ReloadShader()
                 return false;
             }
 
-            SAFE_DELETE(pComputeShader);
-
             m_pDevice->WaitForIdle();
-            m_pPipeline.store(pComputePipeline);
+            pComputePipeline = m_pPipeline.exchange(pComputePipeline);
 
+            SAFE_DELETE(pComputeShader);
+            SAFE_DELETE(pComputePipeline);
+            
             bIsCompiling = false;
+            return true;
         });
     }
 }

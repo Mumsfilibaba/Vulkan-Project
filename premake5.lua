@@ -378,7 +378,7 @@ workspace "Vulkan-Project"
 		local resourceFolderPath = os.getcwd() .. "/VulkanProject/res"
 		printf("resourceFolderPath=%s", resourceFolderPath)
 
-		local finalResourceFolderPath = os.getcwd() .. "/" .. builddir .. "/res/"
+		local finalResourceFolderPath = os.getcwd() .. "/" .. builddir
 		printf("finalResourceFolderPath=%s", finalResourceFolderPath)
 
 		-- Windows
@@ -405,7 +405,7 @@ workspace "Vulkan-Project"
 			postbuildcommands 
 			{ 
 				"{MKDIR} " .. finalResourceFolderPath, 
-				"{COPYDIR} " .. resourceFolderPath .. " " .. finalResourceFolderPath,
+				"{COPYDIR} " .. resourceFolderPath .. " " .. finalResourceFolderPath .. "/res/",
 				"{MKDIR} " .. "res/", 
 				"{COPYDIR} " .. resourceFolderPath .. " res/", 
 			}
@@ -434,6 +434,15 @@ workspace "Vulkan-Project"
 				shaderScriptPath .. ".command" 
 			}
 		
+			-- TODO: We copy the files twice, do something better
+			postbuildcommands 
+			{ 
+				"{MKDIR} " .. finalResourceFolderPath, 
+				"{COPYDIR} " .. resourceFolderPath .. " " .. finalResourceFolderPath,
+				"{MKDIR} " .. "res/", 
+				"{COPYDIR} " .. resourceFolderPath .. " res/", 
+			}
+
 		-- Visual Studio
 		filter { "action:vs*" }
 			defines

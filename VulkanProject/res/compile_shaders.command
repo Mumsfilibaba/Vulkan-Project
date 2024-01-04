@@ -1,7 +1,5 @@
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd "${DIR}"
-cd ..
-./glslc -fshader-stage=vertex   VulkanProject/res/shaders/vertex.glsl    -o VulkanProject/res/shaders/vertex.spv
-./glslc -fshader-stage=fragment VulkanProject/res/shaders/fragment.glsl  -o VulkanProject/res/shaders/fragment.spv
-./glslc -fshader-stage=compute  VulkanProject/res/shaders/raytracer.glsl -o VulkanProject/res/shaders/raytracer.spv
-cp -R VulkanProject/res/ Build/bin/Debug-macosx-x86_64/VulkanProject/res/
+/usr/local/bin/glslc -fshader-stage=vertex   shaders/vertex.glsl    -o shaders/vertex.spv
+/usr/local/bin/glslc -fshader-stage=fragment shaders/fragment.glsl  -o shaders/fragment.spv
+/usr/local/bin/glslc -fshader-stage=compute  shaders/raytracer.glsl -o shaders/raytracer.spv
