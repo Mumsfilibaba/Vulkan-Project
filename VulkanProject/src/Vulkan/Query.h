@@ -11,7 +11,7 @@ struct QueryParams
 class Query
 {
 public:
-    static Query* Create(class VulkanContext* pContext, const QueryParams& params);
+    static Query* Create(class Device* pDevice, const QueryParams& params);
     
     Query(VkDevice device);
     ~Query();

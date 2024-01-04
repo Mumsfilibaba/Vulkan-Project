@@ -1,10 +1,10 @@
 #include "TextureView.h"
-#include "VulkanContext.h"
+#include "Device.h"
 #include "Texture.h"
 
-TextureView* TextureView::Create(VulkanContext* pContext, const TextureViewParams& params)
+TextureView* TextureView::Create(Device* pDevice, const TextureViewParams& params)
 {
-    TextureView* pTextureView = new TextureView(pContext->GetDevice());
+    TextureView* pTextureView = new TextureView(pDevice->GetDevice());
 
     VkImageViewCreateInfo textureViewCreateInfo = {};
     ZERO_STRUCT(&textureViewCreateInfo);
@@ -17,10 +17,10 @@ TextureView* TextureView::Create(VulkanContext* pContext, const TextureViewParam
     textureViewCreateInfo.subresourceRange.levelCount = 1;
     textureViewCreateInfo.subresourceRange.layerCount = 1;
 
-    VkResult result = vkCreateImageView(pContext->GetDevice(), &textureViewCreateInfo, nullptr, &pTextureView->m_ImageView);
+    VkResult result = vkCreateImageView(pDevice->GetDevice(), &textureViewCreateInfo, nullptr, &pTextureView->m_ImageView);
     if (result != VK_SUCCESS)
     {
-        std::cout << "vkCreateImageView failed";
+        std::cout << "vkCreateImageView failed\n";
         return nullptr;
     }
     else

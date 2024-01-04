@@ -1,11 +1,11 @@
 #pragma once
-#include "Vulkan/VulkanContext.h"
+#include "Vulkan/Device.h"
 #include "Vulkan/DescriptorPool.h"
 
 class IRenderer
 {
 public:
-    virtual void Init(VulkanContext* pContext) = 0;
+    virtual void Init(Device* pDevice, Swapchain* pSwapchain) = 0;
     
     virtual void Release() = 0;
     

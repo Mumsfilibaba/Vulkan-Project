@@ -2,7 +2,7 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class VulkanContext;
+class Device;
 
 struct TextureParams
 {
@@ -17,10 +17,10 @@ struct TextureParams
 class Texture
 {
 public:
-    static Texture* Create(VulkanContext* pContext, const TextureParams& params);
-    static Texture* CreateWithData(VulkanContext* pContext, const TextureParams& params, const void* pSource);
+    static Texture* Create(Device* pDevice, const TextureParams& params);
+    static Texture* CreateWithData(Device* pDevice, const TextureParams& params, const void* pSource);
 
-    Texture(VulkanContext* pContext);
+    Texture(Device* pDevice);
     ~Texture();
 
     VkImage GetImage() const
@@ -44,7 +44,7 @@ public:
     }
 
 private:
-    VulkanContext* m_pContext;
+    Device*        m_pDevice;
     VkImage        m_Image;
     VkDeviceMemory m_Memory;
     VkFormat       m_Format;

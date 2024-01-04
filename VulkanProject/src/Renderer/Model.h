@@ -1,7 +1,7 @@
 #pragma once
 #include "Vulkan/Buffer.h"
-#include "Vulkan/VulkanContext.h"
-#include "Vulkan/VulkanDeviceAllocator.h"
+#include "Vulkan/Device.h"
+#include "Vulkan/DeviceMemoryAllocator.h"
 
 struct Vertex
 {
@@ -64,7 +64,7 @@ public:
     Model() = default;
     ~Model();
     
-    bool LoadFromFile(const std::string& filepath, VulkanContext* pContext, VulkanDeviceAllocator* pAllocator);
+    bool LoadFromFile(const std::string& filepath, Device* pDevice, DeviceMemoryAllocator* pAllocator);
     
     inline Buffer* GetVertexBuffer() const
     {

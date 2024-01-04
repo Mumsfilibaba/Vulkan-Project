@@ -1,6 +1,7 @@
 #pragma once
-#include "Vulkan/VulkanContext.h"
 #include "Renderer/IRenderer.h"
+#include "Vulkan/Device.h"
+#include "Vulkan/Swapchain.h"
 
 extern bool GIsRunning;
 
@@ -38,20 +39,21 @@ public:
     
     void Release();
     
-    GLFWwindow* CreateWindow();
+    bool CreateWindow();
     
     void OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height);
     void OnWindowClose(GLFWwindow* pWindow);
 
-    VulkanContext* GetVulkanContext() const
+    Device* GetVulkanContext() const
     {
-        return m_pContext;
+        return m_pDevice;
     }
 
 private:
     GLFWwindow*    m_pWindow;
     IRenderer*     m_pRenderer;
-    VulkanContext* m_pContext;
+    Device* m_pDevice;
+    Swapchain*     m_pSwapchain;
     
     uint32_t m_Width;
     uint32_t m_Height;

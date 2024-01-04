@@ -1,9 +1,9 @@
 #include "Query.h"
-#include "VulkanContext.h"
+#include "Device.h"
 
-Query* Query::Create(class VulkanContext* pContext, const QueryParams& params)
+Query* Query::Create(class Device* pDevice, const QueryParams& params)
 {
-    Query* pQuery = new Query(pContext->GetDevice());
+    Query* pQuery = new Query(pDevice->GetDevice());
     
     VkQueryPoolCreateInfo createInfo;
     ZERO_STRUCT(&createInfo);
@@ -12,15 +12,15 @@ Query* Query::Create(class VulkanContext* pContext, const QueryParams& params)
     createInfo.queryType  = pQuery->m_QueryType  = params.queryType;
     createInfo.queryCount = pQuery->m_NumQueries = params.queryCount;
     
-    VkResult result = vkCreateQueryPool(pContext->GetDevice(), &createInfo, nullptr, &pQuery->m_QueryPool);
+    VkResult result = vkCreateQueryPool(pDevice->GetDevice(), &createInfo, nullptr, &pQuery->m_QueryPool);
     if (result != VK_SUCCESS)
     {
-        std::cout << "vkCreateQueryPool failed. Error: " << result << std::endl;
+        std::cout << "vkCreateQueryPool failed. Error: " << result << '\n';
         return nullptr;
     }
     else
     {
-        std::cout << "Created query" << std::endl;
+        std::cout << "Created query\n";
     }
     
     return pQuery;

@@ -7,11 +7,11 @@
 #include "Vulkan/ShaderModule.h"
 #include "Vulkan/PipelineState.h"
 #include "Vulkan/CommandBuffer.h"
-#include "Vulkan/VulkanDeviceAllocator.h"
-#include "Vulkan/SwapChain.h"
+#include "Vulkan/DeviceMemoryAllocator.h"
+#include "Vulkan/Swapchain.h"
 
 Renderer::Renderer()
-    : m_pContext(nullptr)
+    : m_pDevice(nullptr)
     , m_pRenderPass(nullptr)
     , m_PipelineState(nullptr)
     , m_pCurrentCommandBuffer(nullptr)
@@ -22,22 +22,23 @@ Renderer::Renderer()
 {
 }
 
-void Renderer::Init(VulkanContext* pContext)
+void Renderer::Init(Device* pDevice, Swapchain* pSwapchain)
 {
-    // Set context
-    m_pContext = pContext;
+    // Set device
+    m_pDevice    = pDevice;
+    m_pSwapchain = pSwapchain;
     
     // PipelineState, RenderPass and Shaders
-    ShaderModule* pVertex   = ShaderModule::CreateFromFile(m_pContext, "main", "res/shaders/vertex.spv");
-    ShaderModule* pFragment = ShaderModule::CreateFromFile(m_pContext, "main", "res/shaders/fragment.spv");
+    ShaderModule* pVertex   = ShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/vertex.spv");
+    ShaderModule* pFragment = ShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/fragment.spv");
 
     RenderPassAttachment attachments[1];
-    attachments[0].Format = m_pContext->GetSwapChain()->GetFormat();
+    attachments[0].Format = m_pSwapchain->GetFormat();
 
     RenderPassParams renderPassParams = {};
     renderPassParams.ColorAttachmentCount = 1;
     renderPassParams.pColorAttachments    = attachments;
-    m_pRenderPass = RenderPass::Create(m_pContext, renderPassParams);
+    m_pRenderPass = RenderPass::Create(m_pDevice, renderPassParams);
 
     VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
 
@@ -49,7 +50,7 @@ void Renderer::Init(VulkanContext* pContext)
     pipelineParams.pVertexShader             = pVertex;
     pipelineParams.pFragmentShader           = pFragment;
     pipelineParams.pRenderPass               = m_pRenderPass;
-    m_PipelineState = GraphicsPipeline::Create(m_pContext, pipelineParams);
+    m_PipelineState = GraphicsPipeline::Create(m_pDevice, pipelineParams);
 
     delete pVertex;
     delete pFragment;
@@ -57,50 +58,50 @@ void Renderer::Init(VulkanContext* pContext)
     // Framebuffers
     CreateFramebuffers();
 
-    // Commandbuffers
+    // CommandBuffers
     CommandBufferParams commandBufferParams = {};
     commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferParams.QueueType = ECommandQueueType::Graphics;
 
-    uint32_t imageCount = m_pContext->GetSwapChain()->GetNumBackBuffers();
+    uint32_t imageCount = m_pSwapchain->GetNumBackBuffers();
     m_CommandBuffers.resize(imageCount);
     for (size_t i = 0; i < m_CommandBuffers.size(); i++)
     {
-        CommandBuffer* pCommandBuffer = CommandBuffer::Create(m_pContext, commandBufferParams);
+        CommandBuffer* pCommandBuffer = CommandBuffer::Create(m_pDevice, commandBufferParams);
         m_CommandBuffers[i] = pCommandBuffer;
     }
 
     // Allocator for GPU mem
-    m_pDeviceAllocator = new VulkanDeviceAllocator(m_pContext->GetDevice(), m_pContext->GetPhysicalDevice());
+    m_pDeviceAllocator = new DeviceMemoryAllocator(m_pDevice->GetDevice(), m_pDevice->GetPhysicalDevice());
 
     m_pModel = new Model();
-    m_pModel->LoadFromFile("res/models/viking_room.obj", m_pContext, m_pDeviceAllocator);
+    m_pModel->LoadFromFile("res/models/viking_room.obj", m_pDevice, m_pDeviceAllocator);
     
     // Camera
     BufferParams camBuffParams;
     camBuffParams.Size      = sizeof(CameraBuffer);
     camBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     camBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    m_pCameraBuffer = Buffer::Create(m_pContext, camBuffParams, m_pDeviceAllocator);
+    m_pCameraBuffer = Buffer::Create(m_pDevice, camBuffParams, m_pDeviceAllocator);
     
     // Create descriptorpool
     DescriptorPoolParams poolParams;
     poolParams.NumUniformBuffers = 1;
     poolParams.MaxSets           = 1;
-    m_pDescriptorPool = DescriptorPool::Create(m_pContext, poolParams);
+    m_pDescriptorPool = DescriptorPool::Create(m_pDevice, poolParams);
 }
 
 void Renderer::Tick(float deltaTime)
 {
     // Update
-    VkExtent2D extent = m_pContext->GetSwapChain()->GetExtent();
+    VkExtent2D extent = m_pSwapchain->GetExtent();
     m_Camera.Update(90.0f, extent.width, extent.height, 0.1f, 100.0f);
     
     // Draw
-    uint32_t frameIndex = m_pContext->GetSwapChain()->GetCurrentBackBufferIndex();
+    uint32_t frameIndex = m_pSwapchain->GetCurrentBackBufferIndex();
     m_pCurrentCommandBuffer = m_CommandBuffers[frameIndex];
 
-    // Begin Commandbuffer
+    // Begin CommandBuffer
     m_pCurrentCommandBuffer->Reset();
     m_pCurrentCommandBuffer->Begin();
 
@@ -133,7 +134,7 @@ void Renderer::Tick(float deltaTime)
     m_pCurrentCommandBuffer->End();
 
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    m_pContext->ExecuteGraphics(m_pCurrentCommandBuffer, m_pContext->GetSwapChain(), waitStages);
+    m_pDevice->ExecuteGraphics(m_pCurrentCommandBuffer, m_pSwapchain, waitStages);
 }
 
 void Renderer::Release()
@@ -163,10 +164,10 @@ void Renderer::OnWindowResize(uint32_t width, uint32_t height)
 
 void Renderer::CreateFramebuffers()
 {
-    uint32_t imageCount = m_pContext->GetSwapChain()->GetNumBackBuffers();
+    uint32_t imageCount = m_pSwapchain->GetNumBackBuffers();
     m_Framebuffers.resize(imageCount);
 
-    VkExtent2D extent = m_pContext->GetSwapChain()->GetExtent();
+    VkExtent2D extent = m_pSwapchain->GetExtent();
     
     FramebufferParams framebufferParams = {};
     framebufferParams.AttachMentCount   = 1;
@@ -176,9 +177,9 @@ void Renderer::CreateFramebuffers()
 
     for (size_t i = 0; i < m_Framebuffers.size(); i++)
     {
-        VkImageView imageView = m_pContext->GetSwapChain()->GetImageView(uint32_t(i));
+        VkImageView imageView = m_pSwapchain->GetImageView(uint32_t(i));
         framebufferParams.pAttachMents = &imageView;
-        m_Framebuffers[i] = Framebuffer::Create(m_pContext, framebufferParams);
+        m_Framebuffers[i] = Framebuffer::Create(m_pDevice, framebufferParams);
     }
 }
 

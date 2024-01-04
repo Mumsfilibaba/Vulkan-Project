@@ -12,7 +12,7 @@ struct DescriptorPoolParams
 class DescriptorPool
 {
 public:
-    static DescriptorPool* Create(class VulkanContext* pContext, const DescriptorPoolParams& params);
+    static DescriptorPool* Create(class Device* pDevice, const DescriptorPoolParams& params);
 
     DescriptorPool(VkDevice device);
     ~DescriptorPool();

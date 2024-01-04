@@ -25,7 +25,7 @@ struct CommandBufferParams
 class CommandBuffer
 {
 public:
-    static CommandBuffer* Create(class VulkanContext* pContext, const CommandBufferParams& params);
+    static CommandBuffer* Create(class Device* pDevice, const CommandBufferParams& params);
 
     CommandBuffer(VkDevice device);
     ~CommandBuffer();

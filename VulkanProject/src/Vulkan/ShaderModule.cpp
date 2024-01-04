@@ -1,11 +1,11 @@
 #include "ShaderModule.h"
-#include "VulkanContext.h"
+#include "Device.h"
 #include <fstream>
 #include <iostream>
 
-ShaderModule* ShaderModule::Create(VulkanContext* pContext, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint)
+ShaderModule* ShaderModule::Create(Device* pDevice, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint)
 {
-    ShaderModule* pShader = new ShaderModule(pContext->GetDevice());
+    ShaderModule* pShader = new ShaderModule(pDevice->GetDevice());
     assert(pEntryPoint != nullptr);
     assert(pByteCode != nullptr);
     assert(byteCodeLength != 0);
@@ -17,10 +17,10 @@ ShaderModule* ShaderModule::Create(VulkanContext* pContext, const uint32_t* pByt
     createInfo.codeSize = byteCodeLength;
     createInfo.pCode    = pByteCode;
 
-    VkResult result = vkCreateShaderModule(pContext->GetDevice(), &createInfo, nullptr, &pShader->m_Module);
+    VkResult result = vkCreateShaderModule(pDevice->GetDevice(), &createInfo, nullptr, &pShader->m_Module);
     if (result != VK_SUCCESS)
     {
-        std::cout << "vkCreateShaderModule failed" << std::endl;
+        std::cout << "vkCreateShaderModule failed\n";
         return nullptr;
     }
     else
@@ -29,16 +29,16 @@ ShaderModule* ShaderModule::Create(VulkanContext* pContext, const uint32_t* pByt
         pShader->m_pEntryPoint = new char[len + 1];
         strcpy(pShader->m_pEntryPoint, pEntryPoint);
 
-        std::cout << "Created ShaderModule" << std::endl;
+        std::cout << "Created ShaderModule\n";
         return pShader;
     }
 }
 
-ShaderModule* ShaderModule::CreateFromFile(VulkanContext* pContext, const char* pEntryPoint, const char* pFilePath)
+ShaderModule* ShaderModule::CreateFromFile(Device* pDevice, const char* pEntryPoint, const char* pFilePath)
 {
     if (!pFilePath)
     {
-        std::cout << "Not a valid filename" << std::endl;
+        std::cout << "Not a valid filename\n";
         return nullptr;
     }
 
@@ -53,18 +53,18 @@ ShaderModule* ShaderModule::CreateFromFile(VulkanContext* pContext, const char* 
         file.read(buffer.data(), fileSize);
         file.close();
                 
-        ShaderModule* newShader = ShaderModule::Create(pContext, reinterpret_cast<const uint32_t*>(buffer.data()), buffer.size(), pEntryPoint);
+        ShaderModule* newShader = ShaderModule::Create(pDevice, reinterpret_cast<const uint32_t*>(buffer.data()), buffer.size(), pEntryPoint);
         if (!newShader)
         {
             return nullptr;
         }
         
-        std::cout << "Loaded Shader '" << filepath << "'" << std::endl;
+        std::cout << "Loaded Shader '" << filepath << "'\n";
         return newShader;
     }
     else
     {
-        std::cout << "Failed to open file '" << filepath << "'" << std::endl;
+        std::cout << "Failed to open file '" << filepath << "'\n";
         return nullptr;
     }
 }

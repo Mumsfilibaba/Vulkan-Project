@@ -1,10 +1,10 @@
 #include "Buffer.h"
-#include "VulkanHelper.h"
-#include "VulkanContext.h"
+#include "Helpers.h"
+#include "Device.h"
 
-Buffer* Buffer::Create(VulkanContext* pContext, const BufferParams& params, VulkanDeviceAllocator* pAllocator)
+Buffer* Buffer::Create(Device* pDevice, const BufferParams& params, DeviceMemoryAllocator* pAllocator)
 {
-    Buffer* pBuffer = new Buffer(pContext, pAllocator);
+    Buffer* pBuffer = new Buffer(pDevice, pAllocator);
     
     VkBufferCreateInfo bufferInfo;
     ZERO_STRUCT(&bufferInfo);
@@ -14,7 +14,7 @@ Buffer* Buffer::Create(VulkanContext* pContext, const BufferParams& params, Vulk
     bufferInfo.usage       = params.Usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult result = vkCreateBuffer(pContext->GetDevice(), &bufferInfo, nullptr, &pBuffer->m_Buffer);
+    VkResult result = vkCreateBuffer(pDevice->GetDevice(), &bufferInfo, nullptr, &pBuffer->m_Buffer);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateBuffer failed. Error: " << result << "\n";
@@ -26,13 +26,13 @@ Buffer* Buffer::Create(VulkanContext* pContext, const BufferParams& params, Vulk
     }
 
     VkMemoryRequirements memoryRequirements = {};
-    vkGetBufferMemoryRequirements(pContext->GetDevice(), pBuffer->m_Buffer, &memoryRequirements);
+    vkGetBufferMemoryRequirements(pDevice->GetDevice(), pBuffer->m_Buffer, &memoryRequirements);
     
     if (pAllocator)
     {
         if (pAllocator->Allocate(pBuffer->m_Allocation, memoryRequirements, params.MemoryProperties))
         {
-            vkBindBufferMemory(pContext->GetDevice(), pBuffer->m_Buffer, pBuffer->m_Allocation.DeviceMemory, pBuffer->m_Allocation.DeviceMemoryOffset);
+            vkBindBufferMemory(pDevice->GetDevice(), pBuffer->m_Buffer, pBuffer->m_Allocation.DeviceMemory, pBuffer->m_Allocation.DeviceMemoryOffset);
             pBuffer->m_Size = params.Size;
         }
         else
@@ -47,16 +47,16 @@ Buffer* Buffer::Create(VulkanContext* pContext, const BufferParams& params, Vulk
         
         allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize  = memoryRequirements.size;
-        allocInfo.memoryTypeIndex = FindMemoryType(pContext->GetPhysicalDevice(), memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        allocInfo.memoryTypeIndex = FindMemoryType(pDevice->GetPhysicalDevice(), memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-        result = vkAllocateMemory(pContext->GetDevice(), &allocInfo, nullptr, &pBuffer->m_DeviceMemory);
+        result = vkAllocateMemory(pDevice->GetDevice(), &allocInfo, nullptr, &pBuffer->m_DeviceMemory);
         if (result != VK_SUCCESS)
         {
             std::cout << "vkAllocateMemory failed. Error: " << result << "\n";
         }
         else
         {
-            vkBindBufferMemory(pContext->GetDevice(), pBuffer->m_Buffer, pBuffer->m_DeviceMemory, 0);
+            vkBindBufferMemory(pDevice->GetDevice(), pBuffer->m_Buffer, pBuffer->m_DeviceMemory, 0);
             pBuffer->m_Size = memoryRequirements.size;
 
             std::cout << "Allocated " << memoryRequirements.size << " bytes\n";
@@ -66,11 +66,11 @@ Buffer* Buffer::Create(VulkanContext* pContext, const BufferParams& params, Vulk
     return pBuffer;
 }
 
-Buffer* Buffer::CreateWithData(VulkanContext* pContext, const BufferParams& params, VulkanDeviceAllocator* pAllocator, const void* pSource)
+Buffer* Buffer::CreateWithData(Device* pDevice, const BufferParams& params, DeviceMemoryAllocator* pAllocator, const void* pSource)
 {
     assert(params.MemoryProperties == VK_CPU_BUFFER_USAGE);
     
-    Buffer* pBuffer = Buffer::Create(pContext, params, pAllocator);
+    Buffer* pBuffer = Buffer::Create(pDevice, params, pAllocator);
     if (!pBuffer)
     {
         return nullptr;
@@ -88,8 +88,8 @@ Buffer* Buffer::CreateWithData(VulkanContext* pContext, const BufferParams& para
     return pBuffer;
 }
 
-Buffer::Buffer(VulkanContext* pContext, VulkanDeviceAllocator* pAllocator)
-	: m_pContext(pContext)
+Buffer::Buffer(Device* pDevice, DeviceMemoryAllocator* pAllocator)
+	: m_pDevice(pDevice)
 	, m_pAllocator(pAllocator)
 	, m_Buffer(VK_NULL_HANDLE)
 	, m_DeviceMemory(VK_NULL_HANDLE)
@@ -102,7 +102,7 @@ Buffer::~Buffer()
 {
 	if (m_Buffer != VK_NULL_HANDLE)
 	{
-		vkDestroyBuffer(m_pContext->GetDevice(), m_Buffer, nullptr);
+		vkDestroyBuffer(m_pDevice->GetDevice(), m_Buffer, nullptr);
 		m_Buffer = VK_NULL_HANDLE;
 	}
 
@@ -114,12 +114,12 @@ Buffer::~Buffer()
 	{
 		if (m_DeviceMemory != VK_NULL_HANDLE)
 		{
-			vkFreeMemory(m_pContext->GetDevice(), m_DeviceMemory, nullptr);
+			vkFreeMemory(m_pDevice->GetDevice(), m_DeviceMemory, nullptr);
 			m_DeviceMemory = VK_NULL_HANDLE;
 		}
 	}
     
-    m_pContext = nullptr;
+    m_pDevice = nullptr;
 }
 
 void* Buffer::Map()
@@ -131,7 +131,7 @@ void* Buffer::Map()
 	}
 	else
 	{
-		VkResult result = vkMapMemory(m_pContext->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
+		VkResult result = vkMapMemory(m_pDevice->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
 		if (result != VK_SUCCESS)
 		{
 			std::cout << "vkMapMemory failed. Error: " << result << "\n";
@@ -154,7 +154,7 @@ void Buffer::FlushMappedMemoryRange()
         range.offset = 0;
         range.size   = m_Size;
 
-        VkResult result = vkFlushMappedMemoryRanges(m_pContext->GetDevice(), 1, &range);
+        VkResult result = vkFlushMappedMemoryRanges(m_pDevice->GetDevice(), 1, &range);
         if (result != VK_SUCCESS)
         {
             std::cout << "vkFlushMappedMemoryRanges failed. Error: " << result << "\n";
@@ -167,6 +167,6 @@ void Buffer::Unmap()
 {
     if (!m_pAllocator)
     {
-        vkUnmapMemory(m_pContext->GetDevice(), m_DeviceMemory);
+        vkUnmapMemory(m_pDevice->GetDevice(), m_DeviceMemory);
     }
 }

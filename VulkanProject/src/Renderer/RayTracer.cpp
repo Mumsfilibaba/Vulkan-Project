@@ -1,23 +1,23 @@
 #include "RayTracer.h"
 #include "Application.h"
 #include "MathHelper.h"
-#include "ImGuiRenderer.h"
+#include "GUI.h"
 #include "Vulkan/Buffer.h"
 #include "Vulkan/Framebuffer.h"
 #include "Vulkan/ShaderModule.h"
 #include "Vulkan/PipelineState.h"
 #include "Vulkan/CommandBuffer.h"
-#include "Vulkan/VulkanDeviceAllocator.h"
+#include "Vulkan/DeviceMemoryAllocator.h"
 #include "Vulkan/DescriptorSet.h"
 #include "Vulkan/Query.h"
 #include "Vulkan/DescriptorSetLayout.h"
 #include "Vulkan/PipelineLayout.h"
-#include "Vulkan/SwapChain.h"
+#include "Vulkan/Swapchain.h"
 #include "Vulkan/Texture.h"
 #include "Vulkan/TextureView.h"
 
 RayTracer::RayTracer()
-    : m_pContext(nullptr)
+    : m_pDevice(nullptr)
     , m_Pipeline(nullptr)
     , m_pDeviceAllocator(nullptr)
     , m_CommandBuffers()
@@ -27,12 +27,13 @@ RayTracer::RayTracer()
 {
 }
 
-void RayTracer::Init(VulkanContext* pContext)
+void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
 {
-    // Set context
-    m_pContext = pContext;
+    // Set device
+    m_pDevice    = pDevice;
+    m_pSwapchain = pSwapchain;
 
-    // Create descriptorsetlayout
+    // Create DescriptorSetLayout
     constexpr uint32_t numBindings = 3;
     VkDescriptorSetLayoutBinding bindings[numBindings];
     bindings[0].binding            = 0;
@@ -57,7 +58,7 @@ void RayTracer::Init(VulkanContext* pContext)
     descriptorSetLayoutParams.pBindings   = bindings;
     descriptorSetLayoutParams.numBindings = numBindings;
 
-    m_pDescriptorSetLayout = DescriptorSetLayout::Create(m_pContext, descriptorSetLayoutParams);
+    m_pDescriptorSetLayout = DescriptorSetLayout::Create(m_pDevice, descriptorSetLayoutParams);
     assert(m_pDescriptorSetLayout != nullptr);
 
     // Create PipelineLayout
@@ -65,17 +66,17 @@ void RayTracer::Init(VulkanContext* pContext)
     pipelineLayoutParams.ppLayouts  = &m_pDescriptorSetLayout;
     pipelineLayoutParams.numLayouts = 1;
 
-    m_pPipelineLayout = PipelineLayout::Create(m_pContext, pipelineLayoutParams);
+    m_pPipelineLayout = PipelineLayout::Create(m_pDevice, pipelineLayoutParams);
     assert(m_pPipelineLayout != nullptr);
 
     // Create shader and pipeline
-    ShaderModule* pComputeShader = ShaderModule::CreateFromFile(m_pContext, "main", "res/shaders/raytracer.spv");
+    ShaderModule* pComputeShader = ShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/raytracer.spv");
 
     ComputePipelineStateParams pipelineParams = {};
     pipelineParams.pShader         = pComputeShader;
     pipelineParams.pPipelineLayout = m_pPipelineLayout;
     
-    m_Pipeline = ComputePipeline::Create(m_pContext, pipelineParams);
+    m_Pipeline = ComputePipeline::Create(m_pDevice, pipelineParams);
     assert(m_Pipeline != nullptr);
 
     delete pComputeShader;
@@ -85,7 +86,7 @@ void RayTracer::Init(VulkanContext* pContext)
     poolParams.NumUniformBuffers = 6;
     poolParams.NumStorageImages  = 3;
     poolParams.MaxSets           = 3;
-    m_pDescriptorPool = DescriptorPool::Create(m_pContext, poolParams);
+    m_pDescriptorPool = DescriptorPool::Create(m_pDevice, poolParams);
     assert(m_pDescriptorPool != nullptr);
 
     // Camera
@@ -94,7 +95,7 @@ void RayTracer::Init(VulkanContext* pContext)
     camBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     camBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pCameraBuffer = Buffer::Create(m_pContext, camBuffParams, m_pDeviceAllocator);
+    m_pCameraBuffer = Buffer::Create(m_pDevice, camBuffParams, m_pDeviceAllocator);
     assert(m_pCameraBuffer != nullptr);
 
     // Random
@@ -103,7 +104,7 @@ void RayTracer::Init(VulkanContext* pContext)
     randBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     randBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pRandomBuffer = Buffer::Create(m_pContext, randBuffParams, m_pDeviceAllocator);
+    m_pRandomBuffer = Buffer::Create(m_pDevice, randBuffParams, m_pDeviceAllocator);
     assert(m_pRandomBuffer != nullptr);
   
     // Create the scene texture
@@ -111,16 +112,16 @@ void RayTracer::Init(VulkanContext* pContext)
     m_ViewportHeight = 0;
     CreateOrResizeSceneTexture(1280, 720);
 
-    // Commandbuffers
+    // CommandBuffers
     CommandBufferParams commandBufferParams = {};
     commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferParams.QueueType = ECommandQueueType::Graphics;
 
-    uint32_t imageCount = m_pContext->GetSwapChain()->GetNumBackBuffers();
+    uint32_t imageCount = m_pSwapchain->GetNumBackBuffers();
     m_CommandBuffers.resize(imageCount);
     for (size_t i = 0; i < m_CommandBuffers.size(); i++)
     {
-        CommandBuffer* pCommandBuffer = CommandBuffer::Create(m_pContext, commandBufferParams);
+        CommandBuffer* pCommandBuffer = CommandBuffer::Create(m_pDevice, commandBufferParams);
         m_CommandBuffers[i] = pCommandBuffer;
     }
 
@@ -132,14 +133,14 @@ void RayTracer::Init(VulkanContext* pContext)
     m_TimestampQueries.resize(imageCount);
     for (size_t i = 0; i < m_TimestampQueries.size(); i++)
     {
-        Query* pQuery = Query::Create(m_pContext, queryParams);
+        Query* pQuery = Query::Create(m_pDevice, queryParams);
         pQuery->Reset();
         
         m_TimestampQueries[i] = pQuery;
     }
     
     // Allocator for GPU mem
-    m_pDeviceAllocator = new VulkanDeviceAllocator(m_pContext->GetDevice(), m_pContext->GetPhysicalDevice());
+    m_pDeviceAllocator = new DeviceMemoryAllocator(m_pDevice->GetDevice(), m_pDevice->GetPhysicalDevice());
 }
 
 void RayTracer::Tick(float deltaTime)
@@ -197,11 +198,11 @@ void RayTracer::Tick(float deltaTime)
     m_Camera.Update(90.0f, m_pSceneTexture->GetWidth(), m_pSceneTexture->GetHeight(), 0.1f, 100.0f);
     
     // Draw
-    uint32_t frameIndex = m_pContext->GetSwapChain()->GetCurrentBackBufferIndex();
+    uint32_t frameIndex = m_pSwapchain->GetCurrentBackBufferIndex();
     Query*         pCurrentTimestampQuery = m_TimestampQueries[frameIndex];
     CommandBuffer* pCurrentCommandBuffer  = m_CommandBuffers[frameIndex];
     
-    // Begin Commandbuffer
+    // Begin CommandBuffer
     pCurrentCommandBuffer->Reset();
     
     constexpr uint32_t timestampCount = 2;
@@ -211,7 +212,7 @@ void RayTracer::Tick(float deltaTime)
     pCurrentTimestampQuery->GetData(0, 2, sizeof(uint64_t) * timestampCount, &timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
     pCurrentTimestampQuery->Reset();
     
-    const double timestampPeriod = double(m_pContext->GetTimestampPeriod());
+    const double timestampPeriod = double(m_pDevice->GetTimestampPeriod());
     const double gpuTiming       = (double(timestamps[1]) - double(timestamps[0])) * timestampPeriod;
     const double gpuTimingMS     = gpuTiming / 1000000.0;
     m_LastGPUTime = static_cast<float>(gpuTimingMS);
@@ -256,7 +257,7 @@ void RayTracer::Tick(float deltaTime)
     pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 1);
     pCurrentCommandBuffer->End();
 
-    m_pContext->ExecuteGraphics(pCurrentCommandBuffer, nullptr, nullptr);
+    m_pDevice->ExecuteGraphics(pCurrentCommandBuffer, nullptr, nullptr);
 }
 
 void RayTracer::OnRenderUI()
@@ -271,6 +272,7 @@ void RayTracer::OnRenderUI()
     ImGui::SetNextWindowViewport(pMainViewport->ID);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
     windowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
     windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
@@ -366,7 +368,7 @@ void RayTracer::CreateOrResizeSceneTexture(uint32_t width, uint32_t height)
             return;
         }
         
-        m_pContext->WaitForIdle();
+        m_pDevice->WaitForIdle();
         
         SAFE_DELETE(m_pSceneTexture);
         SAFE_DELETE(m_pSceneTextureView);
@@ -382,17 +384,17 @@ void RayTracer::CreateOrResizeSceneTexture(uint32_t width, uint32_t height)
     textureParams.Height    = m_ViewportHeight = height;
     textureParams.Usage     = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
     
-    m_pSceneTexture = Texture::Create(m_pContext, textureParams);
+    m_pSceneTexture = Texture::Create(m_pDevice, textureParams);
     assert(m_pSceneTexture != nullptr);
     
     TextureViewParams textureViewParams = {};
     textureViewParams.pTexture = m_pSceneTexture;
     
-    m_pSceneTextureView = TextureView::Create(m_pContext, textureViewParams);
+    m_pSceneTextureView = TextureView::Create(m_pDevice, textureViewParams);
     assert(m_pSceneTextureView != nullptr);
     
     // UI DescriptorSet
-    m_pSceneTextureDescriptorSet = ImGuiRenderer::AllocateTextureID(m_pSceneTextureView);
+    m_pSceneTextureDescriptorSet = GUI::AllocateTextureID(m_pSceneTextureView);
     assert(m_pSceneTextureDescriptorSet != nullptr);
     
     // Descriptor set for when tracing
@@ -401,7 +403,7 @@ void RayTracer::CreateOrResizeSceneTexture(uint32_t width, uint32_t height)
 
 void RayTracer::CreateDescriptorSet()
 {
-    m_pDescriptorSet = DescriptorSet::Create(m_pContext, m_pDescriptorPool, m_pDescriptorSetLayout);
+    m_pDescriptorSet = DescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pDescriptorSetLayout);
     assert(m_pDescriptorSet != nullptr);
         
     m_pDescriptorSet->BindStorageImage(m_pSceneTextureView->GetImageView(), 0);

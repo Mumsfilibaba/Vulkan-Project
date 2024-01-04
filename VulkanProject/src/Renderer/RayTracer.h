@@ -17,7 +17,7 @@ public:
     RayTracer();
     ~RayTracer() = default;
     
-    virtual void Init(VulkanContext* pContext) override;
+    virtual void Init(Device* pDevice, Swapchain* pSwapchain) override;
     
     virtual void Release() override;
     
@@ -32,11 +32,12 @@ private:
     void CreateDescriptorSet();
     void ReleaseDescriptorSet();
     
-    VulkanContext*             m_pContext;
+    Device*                    m_pDevice;
+    Swapchain*                 m_pSwapchain;
     class ComputePipeline*     m_Pipeline;
     class PipelineLayout*      m_pPipelineLayout;
     class DescriptorSetLayout* m_pDescriptorSetLayout;
-    VulkanDeviceAllocator*     m_pDeviceAllocator;
+    DeviceMemoryAllocator*     m_pDeviceAllocator;
     DescriptorPool*            m_pDescriptorPool;
     class DescriptorSet*       m_pDescriptorSet;
 

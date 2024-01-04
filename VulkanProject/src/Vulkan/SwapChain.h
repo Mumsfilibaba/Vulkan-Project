@@ -3,9 +3,9 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-class VulkanContext;
+class Device;
 
-class SwapChain
+class Swapchain
 {
     struct FrameData
     {
@@ -16,10 +16,10 @@ class SwapChain
     };
     
 public:
-    static SwapChain* Create(VulkanContext* pContext, GLFWwindow* pWindow);
+    static Swapchain* Create(Device* pDevice, GLFWwindow* pWindow);
     
-    SwapChain(VulkanContext* pContext, GLFWwindow* pWindow);
-    ~SwapChain();
+    Swapchain(Device* pDevice, GLFWwindow* pWindow);
+    ~Swapchain();
     
     void Resize(uint32_t width, uint32_t height);
     void Present();
@@ -46,7 +46,7 @@ public:
     
     VkFormat GetFormat() const
     {
-        return m_SwapChainFormat.format;
+        return m_SwapchainFormat.format;
     }
     
     VkExtent2D GetExtent() const
@@ -67,18 +67,18 @@ public:
 private:
     bool CreateSurface();
     bool CreateSemaphores();
-    bool CreateSwapChain();
+    bool CreateSwapchain();
    
-    void ReleaseSwapChainResources();
-    void RecreateSwapChain();
+    void ReleaseSwapchainResources();
+    void RecreateSwapchain();
     VkResult AquireNextImage();
 
-    VulkanContext*         m_pContext;
+    Device*         m_pDevice;
     GLFWwindow*            m_pWindow;
     VkSurfaceKHR           m_Surface;
-    VkSwapchainKHR         m_SwapChain;
+    VkSwapchainKHR         m_Swapchain;
     VkExtent2D             m_Extent;
-    VkSurfaceFormatKHR     m_SwapChainFormat;
+    VkSurfaceFormatKHR     m_SwapchainFormat;
     VkPresentModeKHR       m_PresentMode;
     uint32_t               m_ImageCount;
     std::vector<FrameData> m_FrameData;

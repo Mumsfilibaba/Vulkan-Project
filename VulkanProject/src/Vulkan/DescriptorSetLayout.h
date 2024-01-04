@@ -2,7 +2,7 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class VulkanContext;
+class Device;
 
 struct DescriptorSetLayoutParams
 {
@@ -13,7 +13,7 @@ struct DescriptorSetLayoutParams
 class DescriptorSetLayout
 {
 public:
-    static DescriptorSetLayout* Create(VulkanContext* pContext, const DescriptorSetLayoutParams& params);
+    static DescriptorSetLayout* Create(Device* pDevice, const DescriptorSetLayoutParams& params);
 
     DescriptorSetLayout(VkDevice device);
     ~DescriptorSetLayout();

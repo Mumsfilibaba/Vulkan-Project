@@ -1,9 +1,9 @@
 #include "DescriptorSetLayout.h"
-#include "VulkanContext.h"
+#include "Device.h"
 
-DescriptorSetLayout* DescriptorSetLayout::Create(VulkanContext* pContext, const DescriptorSetLayoutParams& params)
+DescriptorSetLayout* DescriptorSetLayout::Create(Device* pDevice, const DescriptorSetLayoutParams& params)
 {
-    DescriptorSetLayout* pDescriptorSetLayout = new DescriptorSetLayout(pContext->GetDevice());
+    DescriptorSetLayout* pDescriptorSetLayout = new DescriptorSetLayout(pDevice->GetDevice());
     
     VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo;
     ZERO_STRUCT(&descriptorLayoutInfo);
@@ -12,7 +12,7 @@ DescriptorSetLayout* DescriptorSetLayout::Create(VulkanContext* pContext, const 
     descriptorLayoutInfo.bindingCount = params.numBindings;
     descriptorLayoutInfo.pBindings    = params.pBindings;
 
-    VkResult result = vkCreateDescriptorSetLayout(pContext->GetDevice(), &descriptorLayoutInfo, nullptr, &pDescriptorSetLayout->m_DescriptorSetLayout);
+    VkResult result = vkCreateDescriptorSetLayout(pDevice->GetDevice(), &descriptorLayoutInfo, nullptr, &pDescriptorSetLayout->m_DescriptorSetLayout);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreatePipelineLayout failed\n";

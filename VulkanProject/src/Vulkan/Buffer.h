@@ -1,11 +1,11 @@
 #pragma once
 #include "Core.h"
-#include "VulkanDeviceAllocator.h"
+#include "DeviceMemoryAllocator.h"
 
 #define VK_CPU_BUFFER_USAGE (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
 #define VK_GPU_BUFFER_USAGE (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 
-class VulkanContext;
+class Device;
 
 struct BufferParams
 {
@@ -17,10 +17,10 @@ struct BufferParams
 class Buffer
 {
 public:
-    static Buffer* Create(VulkanContext* pContext, const BufferParams& params, VulkanDeviceAllocator* pAllocator);
-    static Buffer* CreateWithData(VulkanContext* pContext, const BufferParams& params, VulkanDeviceAllocator* pAllocator, const void* pSource);
+    static Buffer* Create(Device* pDevice, const BufferParams& params, DeviceMemoryAllocator* pAllocator);
+    static Buffer* CreateWithData(Device* pDevice, const BufferParams& params, DeviceMemoryAllocator* pAllocator, const void* pSource);
 
-    Buffer(VulkanContext* pContext, VulkanDeviceAllocator* pAllocator);
+    Buffer(Device* pDevice, DeviceMemoryAllocator* pAllocator);
     ~Buffer();
     
     void* Map();
@@ -38,10 +38,10 @@ public:
     }
     
 private:
-    VulkanDeviceAllocator* m_pAllocator;
-    VulkanContext*         m_pContext;
+    DeviceMemoryAllocator* m_pAllocator;
+    Device*         m_pDevice;
     VkBuffer               m_Buffer;
     VkDeviceMemory         m_DeviceMemory;
     VkDeviceSize           m_Size;
-    VkDeviceAllocation     m_Allocation;
+    DeviceAllocation     m_Allocation;
 };

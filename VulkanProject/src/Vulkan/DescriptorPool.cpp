@@ -1,11 +1,11 @@
 #include "DescriptorPool.h"
-#include "VulkanContext.h"
+#include "Device.h"
 
-DescriptorPool* DescriptorPool::Create(VulkanContext* pContext, const DescriptorPoolParams& params)
+DescriptorPool* DescriptorPool::Create(Device* pDevice, const DescriptorPoolParams& params)
 {
     constexpr uint32_t numPoolSizes = 3;
     
-    DescriptorPool* pDescriptorPool = new DescriptorPool(pContext->GetDevice());
+    DescriptorPool* pDescriptorPool = new DescriptorPool(pDevice->GetDevice());
     
     uint32_t numPools = 0;
     VkDescriptorPoolSize poolSizes[numPoolSizes];

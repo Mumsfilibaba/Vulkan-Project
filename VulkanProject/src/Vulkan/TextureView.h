@@ -2,7 +2,7 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class VulkanContext;
+class Device;
 class Texture;
 
 struct TextureViewParams
@@ -13,7 +13,7 @@ struct TextureViewParams
 class TextureView
 {
 public:
-    static TextureView* Create(VulkanContext* pContext, const TextureViewParams& params);
+    static TextureView* Create(Device* pDevice, const TextureViewParams& params);
 
     TextureView(VkDevice device);
     ~TextureView();

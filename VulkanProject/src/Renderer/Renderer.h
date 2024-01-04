@@ -9,7 +9,7 @@ public:
     Renderer();
     ~Renderer() = default;
     
-    virtual void Init(VulkanContext* pContext) override;
+    virtual void Init(Device* pDevice, Swapchain* pSwapchain) override;
     
     virtual void Release() override;
     
@@ -23,11 +23,12 @@ private:
     void CreateFramebuffers();
     void ReleaseFramebuffers();
 
-    VulkanContext*          m_pContext;
+    Device*                 m_pDevice;
+    Swapchain*              m_pSwapchain;
     class RenderPass*       m_pRenderPass;
     class GraphicsPipeline* m_PipelineState;
     class CommandBuffer*    m_pCurrentCommandBuffer;
-    VulkanDeviceAllocator*  m_pDeviceAllocator;
+    DeviceMemoryAllocator*  m_pDeviceAllocator;
     DescriptorPool*         m_pDescriptorPool;
     
     std::vector<class Framebuffer*>   m_Framebuffers;

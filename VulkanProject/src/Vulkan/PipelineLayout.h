@@ -2,7 +2,7 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class VulkanContext;
+class Device;
 class DescriptorSetLayout;
 
 struct PipelineLayoutParams
@@ -15,7 +15,7 @@ struct PipelineLayoutParams
 class PipelineLayout
 {
 public:
-    static PipelineLayout* Create(VulkanContext* pContext, const PipelineLayoutParams& params);
+    static PipelineLayout* Create(Device* pDevice, const PipelineLayoutParams& params);
 
     PipelineLayout(VkDevice device);
     ~PipelineLayout();

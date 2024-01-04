@@ -2,7 +2,7 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class VulkanContext;
+class Device;
 
 struct SamplerParams
 {
@@ -25,7 +25,7 @@ struct SamplerParams
 class Sampler
 {
 public:
-    static Sampler* Create(VulkanContext* pContext, const SamplerParams& params);
+    static Sampler* Create(Device* pDevice, const SamplerParams& params);
     
     Sampler(VkDevice device);
     ~Sampler();

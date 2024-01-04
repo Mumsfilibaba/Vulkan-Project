@@ -16,7 +16,7 @@ struct FramebufferParams
 class Framebuffer
 {
 public:
-    static Framebuffer* Create(class VulkanContext* pContext, const FramebufferParams& params);
+    static Framebuffer* Create(class Device* pDevice, const FramebufferParams& params);
     
     Framebuffer(VkDevice device);
     ~Framebuffer();

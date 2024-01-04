@@ -18,7 +18,7 @@ struct RenderPassParams
 class RenderPass
 {
 public:
-    static RenderPass* Create(class VulkanContext* pContext, const RenderPassParams& params);
+    static RenderPass* Create(class Device* pDevice, const RenderPassParams& params);
     
     RenderPass(VkDevice device);
     ~RenderPass();

@@ -1,29 +1,29 @@
 #include "CommandBuffer.h"
 #include "Buffer.h"
-#include "VulkanContext.h"
+#include "Device.h"
 #include "RenderPass.h"
 #include "Framebuffer.h"
 #include "PipelineState.h"
 
-CommandBuffer* CommandBuffer::Create(VulkanContext* pContext, const CommandBufferParams& params)
+CommandBuffer* CommandBuffer::Create(Device* pDevice, const CommandBufferParams& params)
 {
-    CommandBuffer* pCommandBuffer = new CommandBuffer(pContext->GetDevice());
+    CommandBuffer* pCommandBuffer = new CommandBuffer(pDevice->GetDevice());
     
     VkCommandPoolCreateInfo poolInfo;
     ZERO_STRUCT(&poolInfo);
     
     poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.queueFamilyIndex = pContext->GetQueueFamilyIndex(params.QueueType);
+    poolInfo.queueFamilyIndex = pDevice->GetQueueFamilyIndex(params.QueueType);
 
     VkResult result = vkCreateCommandPool(pCommandBuffer->m_Device, &poolInfo, nullptr, &pCommandBuffer->m_CommandPool);
     if (result != VK_SUCCESS)
     {
-        std::cout << "vkCreateCommandPool failed. Error: " << result << std::endl;
+        std::cout << "vkCreateCommandPool failed. Error: " << result << '\n';
         return nullptr;
     }
     else
     {
-        std::cout << "Created commandpool" << std::endl;
+        std::cout << "Created CommandPool\n";
     }
 
     VkCommandBufferAllocateInfo allocInfo = {};
@@ -37,12 +37,12 @@ CommandBuffer* CommandBuffer::Create(VulkanContext* pContext, const CommandBuffe
     result = vkAllocateCommandBuffers(pCommandBuffer->m_Device, &allocInfo, &pCommandBuffer->m_CommandBuffer);
     if (result != VK_SUCCESS) 
     {
-        std::cout << "vkAllocateCommandBuffers failed. Error: " << result << std::endl;
+        std::cout << "vkAllocateCommandBuffers failed. Error: " << result << '\n';
         return nullptr;
     }
     else
     {
-        std::cout << "Allocated CommandBuffer" << std::endl;
+        std::cout << "Allocated CommandBuffer\n";
     }
 
     VkFenceCreateInfo fenceInfo;
@@ -54,12 +54,12 @@ CommandBuffer* CommandBuffer::Create(VulkanContext* pContext, const CommandBuffe
     result = vkCreateFence(pCommandBuffer->m_Device, &fenceInfo, nullptr, &pCommandBuffer->m_Fence);
     if (result != VK_SUCCESS)
     {
-        std::cout << "vkCreateFence failed. Error: " << result << std::endl;
+        std::cout << "vkCreateFence failed. Error: " << result << '\n';
         return nullptr;
     }
     else
     {
-        std::cout << "Created Fence for commandbuffer" << std::endl;
+        std::cout << "Created Fence for CommandBuffer\n";
     }
     
     return pCommandBuffer;
@@ -161,7 +161,7 @@ void CommandBuffer::TransitionImage(VkImage image, VkImageLayout oldLayout, VkIm
     }
     else
     {
-        std::cout << "unsupported layout transition!" << std::endl;
+        std::cout << "Unsupported layout transition!\n";
         assert(false);
         return;
     }

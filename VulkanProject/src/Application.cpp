@@ -1,6 +1,6 @@
 #include "Application.h"
 #include "Renderer/RayTracer.h"
-#include "Renderer/ImGuiRenderer.h"
+#include "Renderer/GUI.h"
 
 extern bool GIsRunning = false;
 
@@ -14,7 +14,7 @@ Application* Application::Create()
 
 Application::Application()
     : m_pWindow(nullptr)
-    , m_pContext(nullptr)
+    , m_pDevice(nullptr)
     , m_Width(1440)
     , m_Height(900)
 {
@@ -39,8 +39,7 @@ bool Application::Init()
         return false;
     }
 
-    m_pWindow = CreateWindow();
-    if (!m_pWindow)
+    if (!CreateWindow())
     {
         return false;
     }
@@ -51,25 +50,28 @@ bool Application::Init()
         return 1;
     }
     
-    // Init vulkan
+    // Init Vulkan
     DeviceParams params;
     params.pWindow           = m_pWindow;
     params.bEnableRayTracing = true;
     params.bEnableValidation = true;
     params.bVerbose          = false;
 
-    m_pContext = VulkanContext::Create(params);
-    if (!m_pContext)
+    m_pDevice = Device::Create(params);
+    if (!m_pDevice)
     {
         std::cout << "Failed to init Vulkan\n";
         return false;
     }
     
+    // Create Swapchain
+    m_pSwapchain = Swapchain::Create(m_pDevice, m_pWindow);
+
     // Initialize ImGui
-    ImGuiRenderer::InitializeImgui(m_pWindow, m_pContext);
+    GUI::InitializeImgui(m_pWindow, m_pDevice, m_pSwapchain);
 
     m_pRenderer = new RayTracer();
-    m_pRenderer->Init(m_pContext);
+    m_pRenderer->Init(m_pDevice, m_pSwapchain);
     
     // Show window
     glfwShowWindow(m_pWindow);
@@ -78,7 +80,7 @@ bool Application::Init()
     return true;
 }
 
-GLFWwindow* Application::CreateWindow()
+bool Application::CreateWindow()
 {
     // Setup window
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_TRUE);
@@ -86,35 +88,45 @@ GLFWwindow* Application::CreateWindow()
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     // Create window
-    GLFWwindow* pWindow = glfwCreateWindow(m_Width, m_Height, "Vulkan Project", nullptr, nullptr);
-    if (pWindow)
+    m_pWindow = glfwCreateWindow(m_Width, m_Height, "Vulkan Project", nullptr, nullptr);
+    if (m_pWindow)
     {
         // Setup callbacks
-        glfwSetWindowCloseCallback(pWindow, [](GLFWwindow* pWindow)
+        glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow* pWindow)
         {
             AppInstance->OnWindowClose(pWindow);
         });
 
-        glfwSetWindowSizeCallback(pWindow, [](GLFWwindow* pWindow, int32_t width, int32_t height)
+        glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow* pWindow, int32_t width, int32_t height)
         {
             AppInstance->OnWindowResize(pWindow, width, height);
         });
+
+        return true;
     }
-    
-    return pWindow;
+    else
+    {
+        return false;
+    }
 }
 
 void Application::OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height)
 {
-    // Perform flush on commandbuffer
+    // Perform flush on CommandBuffer
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    m_pContext->ExecuteGraphics(nullptr, m_pContext->GetSwapChain(), waitStages);
-    m_pContext->WaitForIdle();
+    m_pDevice->ExecuteGraphics(nullptr, m_pSwapchain, waitStages);
+    m_pDevice->WaitForIdle();
     
     m_Width  = width;
     m_Height = height;
-        
-    m_pContext->ResizeBuffers(m_Width, m_Height);
+
+    // Resize the swapchain
+    m_pSwapchain->Resize(width, m_Height);
+
+    // Ensure that ImGui can create necessary resources for the main window
+    GUI::OnWindowResize(width, height);
+
+    // Let the renderer know about the resize
     m_pRenderer->OnWindowResize(m_Width, m_Height);
 }
 
@@ -136,7 +148,7 @@ void Application::Tick()
     std::chrono::duration<double> elapsedSeconds = currentTime - m_LastTime;
     
     // Update GUI
-    ImGuiRenderer::TickImGui();
+    GUI::TickImGui();
     
     // Render
     m_pRenderer->Tick(elapsedSeconds.count());
@@ -145,22 +157,25 @@ void Application::Tick()
     m_pRenderer->OnRenderUI();
     
     // Render ImGui
-    ImGuiRenderer::RenderImGui();
+    GUI::RenderImGui();
     
     // Update screen
-    m_pContext->Present();
+    m_pSwapchain->Present();
     
     m_LastTime = currentTime;
 }
 
 void Application::Release()
 {
-    m_pContext->WaitForIdle();
+    m_pDevice->WaitForIdle();
 
-    ImGuiRenderer::ReleaseImGui();
+    GUI::ReleaseImGui();
     
     m_pRenderer->Release();
-    m_pContext->Destroy();
+
+    SAFE_DELETE(m_pSwapchain);
+
+    m_pDevice->Destroy();
 
     glfwDestroyWindow(m_pWindow);
     glfwTerminate();

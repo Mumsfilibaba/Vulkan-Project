@@ -43,7 +43,7 @@ protected:
 class GraphicsPipeline : public BasePipeline
 {
 public:
-    static GraphicsPipeline* Create(class VulkanContext* pContext, const GraphicsPipelineStateParams& params);
+    static GraphicsPipeline* Create(class Device* pDevice, const GraphicsPipelineStateParams& params);
     
     GraphicsPipeline(VkDevice device);
     ~GraphicsPipeline() = default;
@@ -58,7 +58,7 @@ struct ComputePipelineStateParams
 class ComputePipeline : public BasePipeline
 {
 public:
-    static ComputePipeline* Create(class VulkanContext* pContext, const ComputePipelineStateParams& params);
+    static ComputePipeline* Create(class Device* pDevice, const ComputePipelineStateParams& params);
     
     ComputePipeline(VkDevice device);
     ~ComputePipeline() = default;

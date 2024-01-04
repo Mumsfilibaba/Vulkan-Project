@@ -5,7 +5,7 @@ class DescriptorSet
 {
 public:
     // Allocates from pDescriptorPool and uses the layout from pPipeline
-    static DescriptorSet* Create(class VulkanContext* pContext, class DescriptorPool* pDescriptorPool, class DescriptorSetLayout* pDescriptorSetLayout);
+    static DescriptorSet* Create(class Device* pDevice, class DescriptorPool* pDescriptorPool, class DescriptorSetLayout* pDescriptorSetLayout);
 
     DescriptorSet(VkDevice device, class DescriptorPool* pool);
     ~DescriptorSet();

@@ -1,7 +1,7 @@
 #include "PipelineState.h"
 #include "ShaderModule.h"
 #include "RenderPass.h"
-#include "VulkanContext.h"
+#include "Device.h"
 #include "PipelineLayout.h"
 #include <vector>
 
@@ -22,9 +22,9 @@ BasePipeline::~BasePipeline()
     m_Device = VK_NULL_HANDLE;
 }
 
-GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const GraphicsPipelineStateParams& params)
+GraphicsPipeline* GraphicsPipeline::Create(Device* pDevice, const GraphicsPipelineStateParams& params)
 {
-    GraphicsPipeline* pPipeline = new GraphicsPipeline(pContext->GetDevice());
+    GraphicsPipeline* pPipeline = new GraphicsPipeline(pDevice->GetDevice());
     assert(params.pVertexShader != nullptr);
     assert(params.pRenderPass != nullptr);
     assert(params.pPipelineLayout != nullptr);
@@ -160,12 +160,12 @@ GraphicsPipeline* GraphicsPipeline::Create(VulkanContext* pContext, const Graphi
     VkResult result = vkCreateGraphicsPipelines(pPipeline->m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pPipeline->m_Pipeline);
     if (result != VK_SUCCESS) 
     {
-        std::cout << "vkCreateGraphicsPipelines failed" << std::endl;
+        std::cout << "vkCreateGraphicsPipelines failed\n";
         return nullptr;
     }
     else
     {
-        std::cout << "Created Graphics-Pipeline" << std::endl;
+        std::cout << "Created Graphics-Pipeline\n";
     }
     
     return pPipeline;
@@ -177,9 +177,9 @@ GraphicsPipeline::GraphicsPipeline(VkDevice device)
 }
 
 
-ComputePipeline* ComputePipeline::Create(VulkanContext* pContext, const ComputePipelineStateParams& params)
+ComputePipeline* ComputePipeline::Create(Device* pDevice, const ComputePipelineStateParams& params)
 {
-    ComputePipeline* newPipeline = new ComputePipeline(pContext->GetDevice());
+    ComputePipeline* newPipeline = new ComputePipeline(pDevice->GetDevice());
     assert(params.pShader != nullptr);
     assert(params.pPipelineLayout != nullptr);
 
@@ -202,12 +202,12 @@ ComputePipeline* ComputePipeline::Create(VulkanContext* pContext, const ComputeP
     VkResult result = vkCreateComputePipelines(newPipeline->m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline->m_Pipeline);
     if (result != VK_SUCCESS)
     {
-        std::cout << "vkCreateComputePipelines failed" << std::endl;
+        std::cout << "vkCreateComputePipelines failed\n";
         return nullptr;
     }
     else
     {
-        std::cout << "Created Compute-Pipeline" << std::endl;
+        std::cout << "Created Compute-Pipeline\n";
     }
     
     return newPipeline;

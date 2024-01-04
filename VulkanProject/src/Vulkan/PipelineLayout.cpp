@@ -1,10 +1,10 @@
 #include "PipelineLayout.h"
-#include "VulkanContext.h"
+#include "Device.h"
 #include "DescriptorSetLayout.h"
 
-PipelineLayout* PipelineLayout::Create(VulkanContext* pContext, const PipelineLayoutParams& params)
+PipelineLayout* PipelineLayout::Create(Device* pDevice, const PipelineLayoutParams& params)
 {
-    PipelineLayout* pPipelineLayout = new PipelineLayout(pContext->GetDevice());
+    PipelineLayout* pPipelineLayout = new PipelineLayout(pDevice->GetDevice());
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
     descriptorSetLayouts.reserve(params.numLayouts);
@@ -37,15 +37,15 @@ PipelineLayout* PipelineLayout::Create(VulkanContext* pContext, const PipelineLa
         pipelineLayoutInfo.pPushConstantRanges    = nullptr;
     }
 
-    VkResult result = vkCreatePipelineLayout(pContext->GetDevice(), &pipelineLayoutInfo, nullptr, &pPipelineLayout->m_PipelineLayout);
+    VkResult result = vkCreatePipelineLayout(pDevice->GetDevice(), &pipelineLayoutInfo, nullptr, &pPipelineLayout->m_PipelineLayout);
     if (result != VK_SUCCESS)
     {
-        std::cout << "vkCreatePipelineLayout failed" << std::endl;
+        std::cout << "vkCreatePipelineLayout failed\n";
         return nullptr;
     }
     else
     {
-        std::cout << "Created PipelineLayout" << std::endl;
+        std::cout << "Created PipelineLayout\n";
         return pPipelineLayout;
     }
 }

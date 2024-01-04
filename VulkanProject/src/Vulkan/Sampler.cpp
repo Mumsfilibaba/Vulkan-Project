@@ -1,9 +1,9 @@
 #include "Sampler.h"
-#include "VulkanContext.h"
+#include "Device.h"
 
-Sampler* Sampler::Create(VulkanContext* pContext, const SamplerParams& params)
+Sampler* Sampler::Create(Device* pDevice, const SamplerParams& params)
 {
-    Sampler* pSampler = new Sampler(pContext->GetDevice());
+    Sampler* pSampler = new Sampler(pDevice->GetDevice());
     
     VkSamplerCreateInfo samplerCreateInfo;
     ZERO_STRUCT(&samplerCreateInfo);
@@ -25,7 +25,7 @@ Sampler* Sampler::Create(VulkanContext* pContext, const SamplerParams& params)
     samplerCreateInfo.borderColor             = params.borderColor;
     samplerCreateInfo.unnormalizedCoordinates = false;
 
-    VkResult result = vkCreateSampler(pContext->GetDevice(), &samplerCreateInfo, nullptr, &pSampler->m_Sampler);
+    VkResult result = vkCreateSampler(pDevice->GetDevice(), &samplerCreateInfo, nullptr, &pSampler->m_Sampler);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateSampler failed\n";

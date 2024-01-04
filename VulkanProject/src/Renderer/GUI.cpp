@@ -1,4 +1,4 @@
-#include "ImGuiRenderer.h"
+#include "GUI.h"
 #include "Vulkan/ShaderModule.h"
 #include "Vulkan/Sampler.h"
 #include "Vulkan/PipelineLayout.h"
@@ -7,8 +7,8 @@
 #include "Vulkan/ShaderModule.h"
 #include "Vulkan/PipelineState.h"
 #include "Vulkan/RenderPass.h"
-#include "Vulkan/VulkanContext.h"
-#include "Vulkan/SwapChain.h"
+#include "Vulkan/Device.h"
+#include "Vulkan/Swapchain.h"
 #include "Vulkan/Texture.h"
 #include "Vulkan/TextureView.h"
 #include "Vulkan/CommandBuffer.h"
@@ -21,7 +21,7 @@
 #endif
 #include <GLFW/glfw3native.h>
 
-namespace ImGuiRenderer
+namespace GUI
 {
     struct ImGuiBackendData
     {
@@ -60,7 +60,7 @@ namespace ImGuiRenderer
     struct ImGuiRendererBackendData
     {
         ImGuiRendererBackendData()
-            : pContext(nullptr)
+            : pDevice(nullptr)
             , pRenderPass(nullptr)
             , pDescriptorPool(nullptr)
             , pDescriptorSetLayout(nullptr)
@@ -80,7 +80,7 @@ namespace ImGuiRenderer
         
         ~ImGuiRendererBackendData()
         {
-            pContext = nullptr;
+            pDevice = nullptr;
             
             SAFE_DELETE(pFontDescriptorSet);
             SAFE_DELETE(pFontSampler);
@@ -98,7 +98,8 @@ namespace ImGuiRenderer
         }
         
         // Global objects
-        VulkanContext*       pContext;
+        Device*              pDevice;
+        Swapchain*           pSwapchain;
         RenderPass*          pRenderPass;
         DescriptorPool*      pDescriptorPool;
         DescriptorSetLayout* pDescriptorSetLayout;
@@ -108,11 +109,11 @@ namespace ImGuiRenderer
         ShaderModule*        pShaderModuleFrag;
         
         // Font data
-        Sampler*             pFontSampler;
-        Sampler*             pImageSampler;
-        Texture*             pFontTexture;
-        TextureView*         pFontTextureView;
-        DescriptorSet*       pFontDescriptorSet;
+        Sampler*       pFontSampler;
+        Sampler*       pImageSampler;
+        Texture*       pFontTexture;
+        TextureView*   pFontTextureView;
+        DescriptorSet* pFontDescriptorSet;
 
         // MainWindow data
         uint32_t LastViewportWidth;
@@ -144,7 +145,7 @@ namespace ImGuiRenderer
     {
         ImGuiViewportData()
             : pWindow(nullptr)
-            , pSwapChain(nullptr)
+            , pSwapchain(nullptr)
             , pRenderPass(nullptr)
             , bWindowOwned(false)
             , IgnoreWindowPosEventFrame(0)
@@ -168,22 +169,22 @@ namespace ImGuiRenderer
             }
         }
 
-        bool ValidateFrameBuffers() const
+        bool ValidateFramebuffers() const
         {
-            if (!pSwapChain)
+            if (!pSwapchain)
             {
                 return false;
             }
 
-            if (FrameBuffers.empty())
+            if (Framebuffers.empty())
             {
                 return false;
             }
 
-            for (Framebuffer* pFrameBuffer : FrameBuffers)
+            for (Framebuffer* pFramebuffer : Framebuffers)
             {
-                VkExtent2D frameBufferExtent = pFrameBuffer->GetExtent();
-                VkExtent2D swapChainExtent   = pSwapChain->GetExtent();
+                VkExtent2D frameBufferExtent = pFramebuffer->GetExtent();
+                VkExtent2D swapChainExtent   = pSwapchain->GetExtent();
                 
                 if (frameBufferExtent.width != swapChainExtent.width || frameBufferExtent.height != swapChainExtent.height)
                 {
@@ -195,9 +196,9 @@ namespace ImGuiRenderer
         }
 
         GLFWwindow*                       pWindow;
-        SwapChain*                        pSwapChain;
+        Swapchain*                        pSwapchain;
         RenderPass*                       pRenderPass;
-        std::vector<Framebuffer*>         FrameBuffers;
+        std::vector<Framebuffer*>         Framebuffers;
         std::vector<ImGuiFrameRenderData> FrameData;
         VkClearValue                      ClearValues;
         
@@ -216,6 +217,17 @@ namespace ImGuiRenderer
         return ImGui::GetCurrentContext() ? reinterpret_cast<ImGuiRendererBackendData*>(ImGui::GetIO().BackendRendererUserData) : nullptr;
     }
     
+    static ImGuiViewportData* ImGuiGetMainViewportData()
+    {
+        ImGuiViewport* pViewport = ImGui::GetMainViewport();
+        if (!pViewport)
+        {
+            return nullptr;
+        }
+
+        return pViewport->RendererUserData ? reinterpret_cast<ImGuiViewportData*>(pViewport->RendererUserData) : nullptr;
+    }
+
     static ImGuiKey ImGuiKeyToImGuiKey(int key)
     {
         switch (key)
@@ -966,7 +978,7 @@ namespace ImGuiRenderer
             textureParams.Width     = width;
             textureParams.Height    = height;
             
-            pRendererBackend->pFontTexture = Texture::CreateWithData(pRendererBackend->pContext, textureParams, pixels);
+            pRendererBackend->pFontTexture = Texture::CreateWithData(pRendererBackend->pDevice, textureParams, pixels);
             if (!pRendererBackend->pFontTexture)
             {
                 return false;
@@ -975,7 +987,7 @@ namespace ImGuiRenderer
             TextureViewParams textureViewParams = {};
             textureViewParams.pTexture = pRendererBackend->pFontTexture;
             
-            pRendererBackend->pFontTextureView = TextureView::Create(pRendererBackend->pContext, textureViewParams);
+            pRendererBackend->pFontTextureView = TextureView::Create(pRendererBackend->pDevice, textureViewParams);
             if (!pRendererBackend->pFontTextureView)
             {
                 return false;
@@ -1101,13 +1113,13 @@ namespace ImGuiRenderer
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         if (!pRendererBackend->pShaderModuleVert)
         {
-            pRendererBackend->pShaderModuleVert = ShaderModule::Create(pRendererBackend->pContext, __glsl_shader_vert_spv, sizeof(__glsl_shader_vert_spv), "main");
+            pRendererBackend->pShaderModuleVert = ShaderModule::Create(pRendererBackend->pDevice, __glsl_shader_vert_spv, sizeof(__glsl_shader_vert_spv), "main");
             assert(pRendererBackend->pShaderModuleVert != nullptr);
         }
         
         if (!pRendererBackend->pShaderModuleFrag)
         {
-            pRendererBackend->pShaderModuleFrag = ShaderModule::Create(pRendererBackend->pContext, __glsl_shader_frag_spv, sizeof(__glsl_shader_frag_spv), "main");
+            pRendererBackend->pShaderModuleFrag = ShaderModule::Create(pRendererBackend->pDevice, __glsl_shader_frag_spv, sizeof(__glsl_shader_frag_spv), "main");
             assert(pRendererBackend->pShaderModuleFrag != nullptr);
         }
     }
@@ -1153,7 +1165,7 @@ namespace ImGuiRenderer
             graphicsPipelineStateParams.frontFace    = VK_FRONT_FACE_COUNTER_CLOCKWISE;
             graphicsPipelineStateParams.bBlendEnable = true;
             
-            pRendererBackend->pPipeline = GraphicsPipeline::Create(pRendererBackend->pContext, graphicsPipelineStateParams);
+            pRendererBackend->pPipeline = GraphicsPipeline::Create(pRendererBackend->pDevice, graphicsPipelineStateParams);
             assert(pRendererBackend->pPipeline != nullptr);
         }
     }
@@ -1175,7 +1187,7 @@ namespace ImGuiRenderer
             samplerParams.maxLod        = 1000;
             samplerParams.maxAnisotropy = 1.0f;
             
-            pRendererBackend->pFontSampler = Sampler::Create(pRendererBackend->pContext, samplerParams);
+            pRendererBackend->pFontSampler = Sampler::Create(pRendererBackend->pDevice, samplerParams);
             assert(pRendererBackend->pFontSampler != nullptr);
         }
         
@@ -1192,7 +1204,7 @@ namespace ImGuiRenderer
             samplerParams.maxLod        = 1000;
             samplerParams.maxAnisotropy = 1.0f;
             
-            pRendererBackend->pImageSampler = Sampler::Create(pRendererBackend->pContext, samplerParams);
+            pRendererBackend->pImageSampler = Sampler::Create(pRendererBackend->pDevice, samplerParams);
             assert(pRendererBackend->pImageSampler != nullptr);
         }
         
@@ -1207,7 +1219,7 @@ namespace ImGuiRenderer
             descriptorSetLayoutParams.numBindings = 1;
             descriptorSetLayoutParams.pBindings   = binding;
             
-            pRendererBackend->pDescriptorSetLayout = DescriptorSetLayout::Create(pRendererBackend->pContext, descriptorSetLayoutParams);
+            pRendererBackend->pDescriptorSetLayout = DescriptorSetLayout::Create(pRendererBackend->pDevice, descriptorSetLayoutParams);
             assert(pRendererBackend->pDescriptorSetLayout != nullptr);
         }
         
@@ -1217,13 +1229,13 @@ namespace ImGuiRenderer
             descriptorPoolParams.MaxSets                  = 1024;
             descriptorPoolParams.NumCombinedImageSamplers = 1024;
             
-            pRendererBackend->pDescriptorPool = DescriptorPool::Create(pRendererBackend->pContext, descriptorPoolParams);
+            pRendererBackend->pDescriptorPool = DescriptorPool::Create(pRendererBackend->pDevice, descriptorPoolParams);
             assert(pRendererBackend->pDescriptorSetLayout != nullptr);
         }
         
         if (!pRendererBackend->pFontDescriptorSet)
         {
-            pRendererBackend->pFontDescriptorSet = DescriptorSet::Create(pRendererBackend->pContext, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
+            pRendererBackend->pFontDescriptorSet = DescriptorSet::Create(pRendererBackend->pDevice, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
             assert(pRendererBackend->pFontDescriptorSet != nullptr);
         }
         
@@ -1234,21 +1246,21 @@ namespace ImGuiRenderer
             pipelineLayoutParams.numLayouts       = 1;
             pipelineLayoutParams.numPushConstants = 4;
             
-            pRendererBackend->pPipelineLayout = PipelineLayout::Create(pRendererBackend->pContext, pipelineLayoutParams);
+            pRendererBackend->pPipelineLayout = PipelineLayout::Create(pRendererBackend->pDevice, pipelineLayoutParams);
             assert(pRendererBackend->pPipelineLayout != nullptr);
         }
         
         if (!pRendererBackend->pRenderPass)
         {
             RenderPassAttachment attachments[1] = {};
-            attachments[0].Format = pRendererBackend->pContext->GetSwapChain()->GetFormat();
+            attachments[0].Format = pRendererBackend->pSwapchain->GetFormat();
             attachments[0].LoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
             
             RenderPassParams renderPassParams = {};
             renderPassParams.ColorAttachmentCount = 1;
             renderPassParams.pColorAttachments    = attachments;
             
-            pRendererBackend->pRenderPass = RenderPass::Create(pRendererBackend->pContext, renderPassParams);
+            pRendererBackend->pRenderPass = RenderPass::Create(pRendererBackend->pDevice, renderPassParams);
             assert(pRendererBackend->pRenderPass != nullptr);
         }
         
@@ -1265,7 +1277,7 @@ namespace ImGuiRenderer
     
     static void ImGuiDestroyFramebuffers(ImGuiViewportData* pViewportData)
     {
-        for (auto& pFramebuffer : pViewportData->FrameBuffers)
+        for (auto& pFramebuffer : pViewportData->Framebuffers)
         {
             SAFE_DELETE(pFramebuffer);
         }
@@ -1276,44 +1288,44 @@ namespace ImGuiRenderer
         pViewportData->FrameData.clear();
     }
 
-    static void ImGuiCreateFramebuffers(VulkanContext* pContext, ImGuiViewportData* pViewportData)
+    static void ImGuiCreateFramebuffers(Device* pDevice, ImGuiViewportData* pViewportData)
     {
-        // SwapChain extent
-        VkExtent2D extent = pViewportData->pSwapChain->GetExtent();
+        // Swapchain extent
+        VkExtent2D extent = pViewportData->pSwapchain->GetExtent();
         
-        // Create FrameBuffers
+        // Create Framebuffers
         FramebufferParams framebufferParams = {};
         framebufferParams.pRenderPass     = pViewportData->pRenderPass;
         framebufferParams.AttachMentCount = 1;
         framebufferParams.Width           = extent.width;
         framebufferParams.Height          = extent.height;
         
-        uint32_t numBackbuffers = pViewportData->pSwapChain->GetNumBackBuffers();
-        pViewportData->FrameBuffers.resize(numBackbuffers);
+        uint32_t numBackbuffers = pViewportData->pSwapchain->GetNumBackBuffers();
+        pViewportData->Framebuffers.resize(numBackbuffers);
         
         for (uint32_t i = 0; i < numBackbuffers; i++)
         {
-            VkImageView imageView = pViewportData->pSwapChain->GetImageView(i);
+            VkImageView imageView = pViewportData->pSwapchain->GetImageView(i);
             framebufferParams.pAttachMents = &imageView;
             
-            Framebuffer* pFramebuffer = Framebuffer::Create(pContext, framebufferParams);
+            Framebuffer* pFramebuffer = Framebuffer::Create(pDevice, framebufferParams);
             assert(pFramebuffer != nullptr);
-            pViewportData->FrameBuffers[i] = pFramebuffer;
+            pViewportData->Framebuffers[i] = pFramebuffer;
         }
     }
     
-    static void ImGuiCreateWindowRenderBuffers(VulkanContext* pContext, ImGuiViewportData* pViewportData)
+    static void ImGuiCreateWindowRenderBuffers(Device* pDevice, ImGuiViewportData* pViewportData)
     {
         CommandBufferParams commandBufferParams = {};
         commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         commandBufferParams.QueueType = ECommandQueueType::Graphics;
         
-        uint32_t numBackbuffers = pViewportData->pSwapChain->GetNumBackBuffers();
+        uint32_t numBackbuffers = pViewportData->pSwapchain->GetNumBackBuffers();
         pViewportData->FrameData.resize(numBackbuffers);
         
         for (uint32_t i = 0; i < numBackbuffers; i++)
         {
-            CommandBuffer* pCommandBuffer = CommandBuffer::Create(pContext, commandBufferParams);
+            CommandBuffer* pCommandBuffer = CommandBuffer::Create(pDevice, commandBufferParams);
             assert(pCommandBuffer != nullptr);
             pViewportData->FrameData[i].pCommandBuffer = pCommandBuffer;
         }
@@ -1327,23 +1339,23 @@ namespace ImGuiRenderer
             // We have the same structure for platform and renderer- data
             pViewport->RendererUserData = pViewportData;
             
-            // Create SwapChain
-            pViewportData->pSwapChain = SwapChain::Create(pRendererBackend->pContext, pViewportData->pWindow);
+            // Create Swapchain
+            pViewportData->pSwapchain = Swapchain::Create(pRendererBackend->pDevice, pViewportData->pWindow);
             
             // Create RenderPass for this Viewport
             RenderPassAttachment attachment = {};
-            attachment.Format = pViewportData->pSwapChain->GetFormat();
+            attachment.Format = pViewportData->pSwapchain->GetFormat();
             attachment.LoadOp = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
             
             RenderPassParams renderPassParams = {};
             renderPassParams.ColorAttachmentCount = 1;
             renderPassParams.pColorAttachments    = &attachment;
             
-            pViewportData->pRenderPass = RenderPass::Create(pRendererBackend->pContext, renderPassParams);
+            pViewportData->pRenderPass = RenderPass::Create(pRendererBackend->pDevice, renderPassParams);
             assert(pViewportData->pRenderPass != nullptr);
             
-            ImGuiCreateFramebuffers(pRendererBackend->pContext, pViewportData);
-            ImGuiCreateWindowRenderBuffers(pRendererBackend->pContext, pViewportData);
+            ImGuiCreateFramebuffers(pRendererBackend->pDevice, pViewportData);
+            ImGuiCreateWindowRenderBuffers(pRendererBackend->pDevice, pViewportData);
             
             pViewportData->bWindowOwned = true;
         }
@@ -1360,7 +1372,7 @@ namespace ImGuiRenderer
             
             if (pViewportData->bWindowOwned)
             {
-                SAFE_DELETE(pViewportData->pSwapChain);
+                SAFE_DELETE(pViewportData->pSwapchain);
                 SAFE_DELETE(pViewportData->pRenderPass);
                 ImGuiDestroyFramebuffers(pViewportData);
             }
@@ -1375,18 +1387,18 @@ namespace ImGuiRenderer
     {
         if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->RendererUserData))
         {
-            // Destroy the old FrameBuffers
+            // Destroy the old Framebuffers
             ImGuiDestroyFramebuffers(pViewportData);
 
             // Resize the swapchain
-            if (pViewportData->pSwapChain)
+            if (pViewportData->pSwapchain)
             {
-                pViewportData->pSwapChain->Resize(size.x, size.y);
+                pViewportData->pSwapchain->Resize(size.x, size.y);
             }
 
-            // Create new FrameBuffers
+            // Create new Framebuffers
             ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
-            ImGuiCreateFramebuffers(pRendererBackend->pContext, pViewportData);
+            ImGuiCreateFramebuffers(pRendererBackend->pDevice, pViewportData);
         }
     }
     
@@ -1406,7 +1418,7 @@ namespace ImGuiRenderer
         bufferParams.Size             = size;
      
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
-        Buffer* pBuffer = Buffer::Create(pRendererBackend->pContext, bufferParams, nullptr);
+        Buffer* pBuffer = Buffer::Create(pRendererBackend->pDevice, bufferParams, nullptr);
         if (!pBuffer)
         {
             assert(false);
@@ -1476,7 +1488,7 @@ namespace ImGuiRenderer
         ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pDrawData->OwnerViewport->RendererUserData);
         assert(pViewportData != nullptr);
         
-        const uint32_t frameIndex = pViewportData->pSwapChain->GetCurrentBackBufferIndex();
+        const uint32_t frameIndex = pViewportData->pSwapchain->GetCurrentBackBufferIndex();
         ImGuiFrameRenderData& renderData = pViewportData->FrameData[frameIndex];
         if (pDrawData->TotalVtxCount > 0)
         {
@@ -1625,17 +1637,8 @@ namespace ImGuiRenderer
             return;
         }
 
-        ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
-        if (!pViewportData->ValidateFrameBuffers())
-        {
-            pViewportData->WaitUntilIdle();
-
-            ImGuiDestroyFramebuffers(pViewportData);
-            ImGuiCreateFramebuffers(pRendererBackend->pContext, pViewportData);
-        }
-
-        SwapChain* pSwapChain = pViewportData->pSwapChain;
-        const uint32_t frameIndex = pSwapChain->GetCurrentBackBufferIndex();
+        Swapchain* pSwapchain = pViewportData->pSwapchain;
+        const uint32_t frameIndex = pSwapchain->GetCurrentBackBufferIndex();
         
         ImGuiFrameRenderData& renderData = pViewportData->FrameData[frameIndex];
         renderData.pCommandBuffer->Reset();
@@ -1644,7 +1647,7 @@ namespace ImGuiRenderer
         const VkClearValue* pClearValues = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? nullptr : &pViewportData->ClearValues;
         uint32_t clearValueCount         = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? 0 : 1;
         
-        Framebuffer* pFramebuffer = pViewportData->FrameBuffers[frameIndex];
+        Framebuffer* pFramebuffer = pViewportData->Framebuffers[frameIndex];
         renderData.pCommandBuffer->BeginRenderPass(pViewportData->pRenderPass, pFramebuffer, pClearValues, clearValueCount);
         
         ImGuiRenderDrawData(pViewport->DrawData, renderData.pCommandBuffer);
@@ -1653,7 +1656,8 @@ namespace ImGuiRenderer
         renderData.pCommandBuffer->End();
         
         VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        pRendererBackend->pContext->ExecuteGraphics(renderData.pCommandBuffer, pSwapChain, &waitStage);
+        ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
+        pRendererBackend->pDevice->ExecuteGraphics(renderData.pCommandBuffer, pSwapchain, &waitStage);
     }
 
     static void ImGuiRendererSwapBuffers(ImGuiViewport* pViewport, void*)
@@ -1664,33 +1668,30 @@ namespace ImGuiRenderer
             return;
         }
         
-        SwapChain* pSwapChain = pViewportData->pSwapChain;
-        pSwapChain->Present();
+        Swapchain* pSwapchain = pViewportData->pSwapchain;
+        pSwapchain->Present();
     }
-    
+
     static void ImGuiInitRendererPlatformInterface()
     {
         ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-            assert(platformIO.Platform_CreateVkSurface != nullptr);
-        }
-        
         platformIO.Renderer_CreateWindow  = ImGuiRendererCreateWindow;
         platformIO.Renderer_DestroyWindow = ImGuiRendererDestroyWindow;
         platformIO.Renderer_SetWindowSize = ImGuiRendererSetWindowSize;
         platformIO.Renderer_RenderWindow  = ImGuiRendererRenderWindow;
         platformIO.Renderer_SwapBuffers   = ImGuiRendererSwapBuffers;
     }
-    
-    static void ImguiInitRendererBackend(GLFWwindow* pWindow, VulkanContext* pContext)
+
+    static void ImguiInitRendererBackend(GLFWwindow* pWindow, Device* pDevice, Swapchain* pSwapchain)
     {
         ImGuiIO& io = ImGui::GetIO();
         assert(io.BackendRendererUserData == nullptr);
         
         ImGuiRendererBackendData* pRendererBackend = new ImGuiRendererBackendData();
-        assert(pContext != nullptr);
-        pRendererBackend->pContext = pContext;
+        assert(pDevice != nullptr);
+
+        pRendererBackend->pDevice    = pDevice;
+        pRendererBackend->pSwapchain = pSwapchain;
 
         io.BackendRendererUserData = pRendererBackend;
         io.BackendRendererName     = "PathTracer";
@@ -1706,11 +1707,11 @@ namespace ImGuiRenderer
 
         if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pMainViewport->RendererUserData))
         {
-            pViewportData->pSwapChain  = pContext->GetSwapChain();
+            pViewportData->pSwapchain  = pRendererBackend->pSwapchain;
             pViewportData->pRenderPass = pRendererBackend->pRenderPass;
             
-            ImGuiCreateFramebuffers(pContext, pViewportData);
-            ImGuiCreateWindowRenderBuffers(pContext, pViewportData);
+            ImGuiCreateFramebuffers(pDevice, pViewportData);
+            ImGuiCreateWindowRenderBuffers(pDevice, pViewportData);
         }
         
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -1898,7 +1899,7 @@ namespace ImGuiRenderer
     /*///////////////////////////////////////////////////////////////////////////////////////////*/
     /* Public API */
     
-    void InitializeImgui(GLFWwindow* pWindow, VulkanContext* pContext)
+    void InitializeImgui(GLFWwindow* pWindow, Device* pDevice, Swapchain* pSwapchain)
     {
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
@@ -1918,12 +1919,12 @@ namespace ImGuiRenderer
         ImguiInitBackend(pWindow);
 
         // Renderer Backend
-        ImguiInitRendererBackend(pWindow, pContext);
+        ImguiInitRendererBackend(pWindow, pDevice, pSwapchain);
         
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();
 
-        // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+        // When Viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
         ImGuiStyle& style = ImGui::GetStyle();
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
@@ -2030,7 +2031,7 @@ namespace ImGuiRenderer
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         assert(pRendererBackend != nullptr);
         
-        DescriptorSet* pDescriptorSet = DescriptorSet::Create(pRendererBackend->pContext, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
+        DescriptorSet* pDescriptorSet = DescriptorSet::Create(pRendererBackend->pDevice, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
         if (!pDescriptorSet)
         {
             return nullptr;
@@ -2038,5 +2039,18 @@ namespace ImGuiRenderer
         
         pDescriptorSet->BindCombinedImageSampler(pTextureView->GetImageView(), pRendererBackend->pImageSampler->GetSampler(), 0);
         return pDescriptorSet;
+    }
+
+    void OnWindowResize(uint32_t width, uint32_t height)
+    {
+        ImGuiViewportData*        pViewportData    = ImGuiGetMainViewportData();
+        ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
+        if (!pViewportData->ValidateFramebuffers())
+        {
+            pViewportData->WaitUntilIdle();
+
+            ImGuiDestroyFramebuffers(pViewportData);
+            ImGuiCreateFramebuffers(pRendererBackend->pDevice, pViewportData);
+        }
     }
 }

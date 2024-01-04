@@ -2,7 +2,7 @@
 #include "Core.h"
 #include "CommandBuffer.h"
 
-class SwapChain;
+class Swapchain;
 
 struct DeviceParams
 {
@@ -25,23 +25,21 @@ struct QueueFamilyIndices
     }
 };
 
-class VulkanContext
+class Device
 {
 public:
-    static VulkanContext* Create(const DeviceParams& params);
+    static Device* Create(const DeviceParams& params);
 
-    VulkanContext();
-    ~VulkanContext();
-    
-    uint32_t GetQueueFamilyIndex(ECommandQueueType Type);
+    Device();
+    ~Device();
 
-    void ExecuteGraphics(CommandBuffer* pCommandBuffer, SwapChain* pSwapChain, VkPipelineStageFlags* pWaitStages);
+    void ExecuteGraphics(CommandBuffer* pCommandBuffer, Swapchain* pSwapchain, VkPipelineStageFlags* pWaitStages);
 
-    void ResizeBuffers(uint32_t width, uint32_t height);
     void WaitForIdle();
-    
-    void Present();
+
     void Destroy();
+
+    uint32_t GetQueueFamilyIndex(ECommandQueueType Type);
     
     VkDevice GetDevice() const
     {
@@ -61,11 +59,6 @@ public:
     VkQueue GetPresentQueue() const
     {
         return m_PresentationQueue;
-    }
-    
-    SwapChain* GetSwapChain() const
-    {
-        return m_pSwapChain;
     }
 
     float GetTimestampPeriod() const
@@ -95,10 +88,6 @@ private:
     VkQueue m_ComputeQueue;
     VkQueue m_TransferQueue;
     VkQueue m_PresentationQueue;
-    
-    // Main SwapChain
-    SwapChain* m_pSwapChain;
-    VkImage    m_DepthStencilBuffer;
     
     // Device Features
     VkPhysicalDeviceFeatures2              m_EnabledDeviceFeatures;

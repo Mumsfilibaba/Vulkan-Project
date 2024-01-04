@@ -9,7 +9,7 @@ Model::~Model()
 }
 
 
-bool Model::LoadFromFile(const std::string& filepath, VulkanContext* pContext, VulkanDeviceAllocator* pAllocator)
+bool Model::LoadFromFile(const std::string& filepath, Device* pDevice, DeviceMemoryAllocator* pAllocator)
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -73,7 +73,7 @@ bool Model::LoadFromFile(const std::string& filepath, VulkanContext* pContext, V
     vertexBufferParams.Size         = vertices.size() * sizeof(Vertex);
     vertexBufferParams.Usage             = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     vertexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    m_pVertexBuffer = Buffer::Create(pContext, vertexBufferParams, pAllocator);
+    m_pVertexBuffer = Buffer::Create(pDevice, vertexBufferParams, pAllocator);
 
     void* pCPUMem = m_pVertexBuffer->Map();
     memcpy(pCPUMem, vertices.data(), vertexBufferParams.Size);
@@ -83,7 +83,7 @@ bool Model::LoadFromFile(const std::string& filepath, VulkanContext* pContext, V
     indexBufferParams.Size         = indices.size() * sizeof(uint16_t);
     indexBufferParams.Usage             = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     indexBufferParams.MemoryProperties     = VK_CPU_BUFFER_USAGE;
-    m_pIndexBuffer = Buffer::Create(pContext, indexBufferParams, pAllocator);
+    m_pIndexBuffer = Buffer::Create(pDevice, indexBufferParams, pAllocator);
 
     pCPUMem = m_pIndexBuffer->Map();
     memcpy(pCPUMem, indices.data(), indexBufferParams.Size);

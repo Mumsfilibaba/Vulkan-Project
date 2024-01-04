@@ -1,18 +1,18 @@
 #include "DescriptorSet.h"
-#include "VulkanContext.h"
+#include "Device.h"
 #include "DescriptorPool.h"
 #include "PipelineState.h"
 #include "DescriptorSetLayout.h"
 #include <vulkan/vulkan.h>
 
 // Allocates from pDescriptorPool and uses the layout from pPipeline
-DescriptorSet* DescriptorSet::Create(VulkanContext* pContext, DescriptorPool* pDescriptorPool, DescriptorSetLayout* pDescriptorSetLayout)
+DescriptorSet* DescriptorSet::Create(Device* pDevice, DescriptorPool* pDescriptorPool, DescriptorSetLayout* pDescriptorSetLayout)
 {
-    assert(pContext != nullptr);
+    assert(pDevice != nullptr);
     assert(pDescriptorPool != nullptr);
     assert(pDescriptorSetLayout != nullptr);
     
-    DescriptorSet* pDescriptorSet = new DescriptorSet(pContext->GetDevice(), pDescriptorPool);
+    DescriptorSet* pDescriptorSet = new DescriptorSet(pDevice->GetDevice(), pDescriptorPool);
     
     VkDescriptorSetAllocateInfo allocateInfo;
     ZERO_STRUCT(&allocateInfo);
@@ -26,7 +26,7 @@ DescriptorSet* DescriptorSet::Create(VulkanContext* pContext, DescriptorPool* pD
     VkResult result = vkAllocateDescriptorSets(pDescriptorSet->m_Device, &allocateInfo, &pDescriptorSet->m_DescriptorSet);
     if (result != VK_SUCCESS)
     {
-        std::cout << "vkAllocateDescriptorSets failed" << std::endl;
+        std::cout << "vkAllocateDescriptorSets failed\n";
         return nullptr;
     }
     

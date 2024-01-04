@@ -1,12 +1,12 @@
 #include "Texture.h"
-#include "VulkanContext.h"
-#include "VulkanHelper.h"
+#include "Device.h"
+#include "Helpers.h"
 #include "CommandBuffer.h"
 #include "Buffer.h"
 
-Texture* Texture::Create(VulkanContext* pContext, const TextureParams& params)
+Texture* Texture::Create(Device* pDevice, const TextureParams& params)
 {
-    Texture* pTexture = new Texture(pContext);
+    Texture* pTexture = new Texture(pDevice);
     
     VkImageCreateInfo textureCreateInfo = {};
     ZERO_STRUCT(&textureCreateInfo);
@@ -25,7 +25,7 @@ Texture* Texture::Create(VulkanContext* pContext, const TextureParams& params)
     textureCreateInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
     textureCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     
-    VkResult result = vkCreateImage(pContext->GetDevice(), &textureCreateInfo, nullptr, &pTexture->m_Image);
+    VkResult result = vkCreateImage(pDevice->GetDevice(), &textureCreateInfo, nullptr, &pTexture->m_Image);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateImage failed\n";
@@ -33,16 +33,16 @@ Texture* Texture::Create(VulkanContext* pContext, const TextureParams& params)
     }
     
     VkMemoryRequirements memoryRequirements;
-    vkGetImageMemoryRequirements(pContext->GetDevice(), pTexture->m_Image, &memoryRequirements);
+    vkGetImageMemoryRequirements(pDevice->GetDevice(), pTexture->m_Image, &memoryRequirements);
     
     VkMemoryAllocateInfo memoryAllocteInfo = {};
     ZERO_STRUCT(&memoryAllocteInfo);
     
     memoryAllocteInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     memoryAllocteInfo.allocationSize  = memoryRequirements.size;
-    memoryAllocteInfo.memoryTypeIndex = FindMemoryType(pContext->GetPhysicalDevice(), memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    memoryAllocteInfo.memoryTypeIndex = FindMemoryType(pDevice->GetPhysicalDevice(), memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     
-    result = vkAllocateMemory(pContext->GetDevice(), &memoryAllocteInfo, nullptr, &pTexture->m_Memory);
+    result = vkAllocateMemory(pDevice->GetDevice(), &memoryAllocteInfo, nullptr, &pTexture->m_Memory);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkAllocateMemory failed\n";
@@ -53,7 +53,7 @@ Texture* Texture::Create(VulkanContext* pContext, const TextureParams& params)
         std::cout << "Allocated " << memoryRequirements.size << " bytes\n";
     }
 
-    result = vkBindImageMemory(pContext->GetDevice(), pTexture->m_Image, pTexture->m_Memory, 0);
+    result = vkBindImageMemory(pDevice->GetDevice(), pTexture->m_Image, pTexture->m_Memory, 0);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkAllocateMemory failed\n";
@@ -66,12 +66,12 @@ Texture* Texture::Create(VulkanContext* pContext, const TextureParams& params)
     }
 }
 
-Texture* Texture::CreateWithData(VulkanContext* pContext, const TextureParams& params, const void* pSource)
+Texture* Texture::CreateWithData(Device* pDevice, const TextureParams& params, const void* pSource)
 {
     TextureParams paramsCopy = params;
     paramsCopy.Usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     
-    Texture* pTexture = Texture::Create(pContext, paramsCopy);
+    Texture* pTexture = Texture::Create(pDevice, paramsCopy);
     if (!pTexture)
     {
         return nullptr;
@@ -85,7 +85,7 @@ Texture* Texture::CreateWithData(VulkanContext* pContext, const TextureParams& p
     bufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     bufferParams.Size      = uploadSize;
     
-    Buffer* pUploadBuffer = Buffer::CreateWithData(pContext, bufferParams, nullptr, pSource);
+    Buffer* pUploadBuffer = Buffer::CreateWithData(pDevice, bufferParams, nullptr, pSource);
     if (!pUploadBuffer)
     {
         SAFE_DELETE(pTexture);
@@ -96,7 +96,7 @@ Texture* Texture::CreateWithData(VulkanContext* pContext, const TextureParams& p
     commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferParams.QueueType = ECommandQueueType::Graphics;
     
-    CommandBuffer* pCommandBuffer = CommandBuffer::Create(pContext, commandBufferParams);
+    CommandBuffer* pCommandBuffer = CommandBuffer::Create(pDevice, commandBufferParams);
     if (!pCommandBuffer)
     {
         SAFE_DELETE(pUploadBuffer);
@@ -121,16 +121,16 @@ Texture* Texture::CreateWithData(VulkanContext* pContext, const TextureParams& p
     
     pCommandBuffer->End();
     
-    pContext->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
-    pContext->WaitForIdle();
+    pDevice->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
+    pDevice->WaitForIdle();
     
     SAFE_DELETE(pUploadBuffer);
     SAFE_DELETE(pCommandBuffer);
     return pTexture;
 }
 
-Texture::Texture(VulkanContext* pContext)
-    : m_pContext(pContext)
+Texture::Texture(Device* pDevice)
+    : m_pDevice(pDevice)
     , m_Image(VK_NULL_HANDLE)
     , m_Memory(VK_NULL_HANDLE)
     , m_Format(VK_FORMAT_UNDEFINED)
@@ -141,7 +141,7 @@ Texture::Texture(VulkanContext* pContext)
 
 Texture::~Texture()
 {
-    VkDevice device = m_pContext->GetDevice();
+    VkDevice device = m_pDevice->GetDevice();
 
     if (m_Image != VK_NULL_HANDLE)
     {

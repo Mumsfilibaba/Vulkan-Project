@@ -2,13 +2,13 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class VulkanContext;
+class Device;
 
 class ShaderModule
 {
 public:
-    static ShaderModule* Create(VulkanContext* pContext, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint);
-    static ShaderModule* CreateFromFile(VulkanContext* pContext, const char* pEntryPoint, const char* pFilePath);
+    static ShaderModule* Create(Device* pDevice, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint);
+    static ShaderModule* CreateFromFile(Device* pDevice, const char* pEntryPoint, const char* pFilePath);
     
     ShaderModule(VkDevice device);
     ~ShaderModule();
