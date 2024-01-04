@@ -1,10 +1,10 @@
 #pragma once
 #include "Core.h"
-#include "VulkanExtensionFuncs.h"
+#include "Extensions.h"
 
 inline void SetDebugName(VkDevice device, const std::string& name, uint64_t vulkanHandle, VkObjectType type)
 {
-    if (VkExt::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT info;
         ZERO_STRUCT(&info);
@@ -14,7 +14,7 @@ inline void SetDebugName(VkDevice device, const std::string& name, uint64_t vulk
         info.pObjectName  = name.c_str();
         info.objectHandle = vulkanHandle;
 
-        VkResult result = VkExt::vkSetDebugUtilsObjectNameEXT(device, &info);
+        VkResult result = Extensions::vkSetDebugUtilsObjectNameEXT(device, &info);
         if (result != VK_SUCCESS)
         {
             std::cout << "Failed to set name '" << info.pObjectName << "'.Error: " << result << std::endl;

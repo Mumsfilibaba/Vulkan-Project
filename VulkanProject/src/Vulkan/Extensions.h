@@ -1,8 +1,7 @@
 #pragma once
-
 #include <vulkan/vulkan.h>
 
-struct VkExt
+struct Extensions
 {
     static PFN_vkSetDebugUtilsObjectNameEXT    vkSetDebugUtilsObjectNameEXT;
     static PFN_vkCreateDebugUtilsMessengerEXT  vkCreateDebugUtilsMessengerEXT;
