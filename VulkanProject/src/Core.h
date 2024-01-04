@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <set>
 #include <chrono>
+#include <future>
+#include <atomic>
 
 // GLM stuff
 #define GLM_FORCE_RADIANS

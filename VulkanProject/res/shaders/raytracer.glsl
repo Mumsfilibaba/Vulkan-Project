@@ -33,6 +33,7 @@ layout(binding = 2) uniform RandomBufferObject
 
 layout(binding = 3) uniform SceneBufferObject 
 {
+    vec4 LightDir;
     uint NumSpheres;
     uint NumPlanes;
     uint NumMaterials;
@@ -205,7 +206,6 @@ bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
 
     if (PayLoad.T < PayLoad.MaxT)
     {
-        // PayLoad.MaterialIndex = min(PayLoad.MaterialIndex, NUM_MATERIALS - 1);
         return true;
     }
     else
@@ -343,10 +343,11 @@ void main()
             {
                 const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials);
                 Material Material = Materials[MaterialIndex];
-                vec3 N = normalize(PayLoad.Normal);
+                
+                vec3 N        = normalize(PayLoad.Normal);
+                vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
 
                 /*
-                vec3 Position     = Ray.Origin + Ray.Direction * PayLoad.T;
                 vec3 NewOrigin    = Position + (N * 0.0001f);
                 vec3 NewDirection = vec3(0.0f);
 
@@ -370,8 +371,27 @@ void main()
 
                 Ray.Origin    = NewOrigin;
                 Ray.Direction = NewDirection;*/
+                
+                // Cast a shadow ray
+                const vec3 LightDir = -normalize(uScene.LightDir.xyz);
+                Ray.Origin    = Position + (N * 0.01f);
+                Ray.Direction = LightDir;
 
-                HitColor = Material.Albedo.rgb;
+                PayLoad.MinT = 0.0;
+                PayLoad.MaxT = 1000.0;
+                PayLoad.T    = PayLoad.MaxT;
+
+                float LightIntensity;
+                if (TraceRay(Ray, PayLoad))
+                {
+                    LightIntensity = 0.0;
+                }
+                else
+                {
+                    LightIntensity = clamp(dot(LightDir, N), 0.0, 1.0);
+                }
+
+                HitColor = Material.Albedo.rgb * LightIntensity;
             }
             else
             {

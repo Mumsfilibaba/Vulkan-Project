@@ -1,5 +1,6 @@
 #include "RayTracer.h"
 #include "Application.h"
+#include "Input.h"
 #include "MathHelper.h"
 #include "GUI.h"
 #include "Vulkan/Buffer.h"
@@ -19,7 +20,7 @@
 
 RayTracer::RayTracer()
     : m_pDevice(nullptr)
-    , m_Pipeline(nullptr)
+    , m_pPipeline(nullptr)
     , m_pDeviceAllocator(nullptr)
     , m_CommandBuffers()
     , m_pSceneTexture(nullptr)
@@ -101,8 +102,8 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     pipelineParams.pShader         = pComputeShader;
     pipelineParams.pPipelineLayout = m_pPipelineLayout;
     
-    m_Pipeline = ComputePipeline::Create(m_pDevice, pipelineParams);
-    assert(m_Pipeline != nullptr);
+    m_pPipeline = ComputePipeline::Create(m_pDevice, pipelineParams);
+    assert(m_pPipeline != nullptr);
 
     delete pComputeShader;
    
@@ -233,20 +234,20 @@ void RayTracer::Tick(float deltaTime)
     CreateOrResizeSceneTexture(m_ViewportWidth, m_ViewportHeight);
     
     glm::vec3 translation(0.0f);
-    if (glfwGetKey(Application::GetWindow(), GLFW_KEY_W) == GLFW_PRESS)
+    if (Input::IsKeyDown(GLFW_KEY_W))
     {
         translation.z = CameraSpeed * deltaTime;
     }
-    else if (glfwGetKey(Application::GetWindow(), GLFW_KEY_S) == GLFW_PRESS)
+    else if (Input::IsKeyDown(GLFW_KEY_S))
     {
         translation.z = -CameraSpeed * deltaTime;
     }
     
-    if (glfwGetKey(Application::GetWindow(), GLFW_KEY_A) == GLFW_PRESS)
+    if (Input::IsKeyDown(GLFW_KEY_A))
     {
         translation.x = CameraSpeed * deltaTime;
     }
-    else if (glfwGetKey(Application::GetWindow(), GLFW_KEY_D) == GLFW_PRESS)
+    else if (Input::IsKeyDown(GLFW_KEY_D))
     {
         translation.x = -CameraSpeed * deltaTime;
     }
@@ -256,24 +257,29 @@ void RayTracer::Tick(float deltaTime)
     constexpr float CameraRotationSpeed = glm::pi<float>() / 2;
     
     glm::vec3 rotation(0.0f);
-    if (glfwGetKey(Application::GetWindow(), GLFW_KEY_LEFT) == GLFW_PRESS)
+    if (Input::IsKeyDown(GLFW_KEY_LEFT))
     {
         rotation.y = -CameraRotationSpeed * deltaTime;
     }
-    else if (glfwGetKey(Application::GetWindow(), GLFW_KEY_RIGHT) == GLFW_PRESS)
+    else if (Input::IsKeyDown(GLFW_KEY_RIGHT))
     {
         rotation.y = CameraRotationSpeed * deltaTime;
     }
     
-    if (glfwGetKey(Application::GetWindow(), GLFW_KEY_UP) == GLFW_PRESS)
+    if (Input::IsKeyDown(GLFW_KEY_UP))
     {
         rotation.x = -CameraRotationSpeed * deltaTime;
     }
-    else if (glfwGetKey(Application::GetWindow(), GLFW_KEY_DOWN) == GLFW_PRESS)
+    else if (Input::IsKeyDown(GLFW_KEY_DOWN))
     {
         rotation.x = CameraRotationSpeed * deltaTime;
     }
     
+    if (Input::IsKeyDown(GLFW_KEY_R))
+    {
+        ReloadShader();
+    }
+
     m_Camera.Rotate(rotation);
     
     // Update
@@ -327,6 +333,7 @@ void RayTracer::Tick(float deltaTime)
 
     // Update Scene
     SceneBuffer sceneBuffer = {};
+    sceneBuffer.LightDir     = glm::normalize(glm::vec4(0.0f, -1.0f, 0.0f, 0.0f));
     sceneBuffer.NumSpheres   = m_Spheres.size();
     sceneBuffer.NumPlanes    = m_Planes.size();
     sceneBuffer.NumMaterials = m_Materials.size();
@@ -337,7 +344,7 @@ void RayTracer::Tick(float deltaTime)
     pCurrentCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(Material) * m_Materials.size(), m_Materials.data());
 
     // Bind pipeline and descriptorSet
-    pCurrentCommandBuffer->BindComputePipelineState(m_Pipeline);
+    pCurrentCommandBuffer->BindComputePipelineState(m_pPipeline.load());
     pCurrentCommandBuffer->BindComputeDescriptorSet(m_pPipelineLayout, m_pDescriptorSet);
     
     // Dispatch
@@ -443,7 +450,7 @@ void RayTracer::Release()
     ReleaseDescriptorSet();
 
     SAFE_DELETE(m_pDescriptorPool);
-    SAFE_DELETE(m_Pipeline);
+    SAFE_DELETE(m_pPipeline);
     SAFE_DELETE(m_pPipelineLayout);
     SAFE_DELETE(m_pDescriptorSetLayout);
     SAFE_DELETE(m_pDeviceAllocator);
@@ -518,4 +525,60 @@ void RayTracer::CreateDescriptorSet()
 void RayTracer::ReleaseDescriptorSet()
 {
     SAFE_DELETE(m_pDescriptorSet);
+}
+
+#include <Windows.h>
+
+void RayTracer::ReloadShader()
+{
+    static bool bIsCompiling = false;
+
+    if (!bIsCompiling)
+    {
+        bIsCompiling = true;
+
+        std::async(std::launch::async, [this]()
+        {
+            // Compile the shaders
+         #if PLATFORM_WINDOWS
+            auto result = std::system("res\\compile_shaders.bat");
+         #elif PLATFORM_MAC
+            auto result = std::system("res/compile_shaders.command");
+         #endif
+            if (result != 0)
+            {
+                std::cout << "FAILED to Compile Shaders\n";
+                return false;
+            }
+
+            // Upload the new shaders
+            std::cout << "Compiled Shaders Successfully\n";
+
+            // Create shader and pipeline
+            ShaderModule* pComputeShader = ShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/raytracer.spv");
+            if (!pComputeShader)
+            {
+                std::cout << "FAILED to create ComputeShader\n";
+                return false;
+            }
+
+            ComputePipelineStateParams pipelineParams = {};
+            pipelineParams.pShader         = pComputeShader;
+            pipelineParams.pPipelineLayout = m_pPipelineLayout;
+
+            ComputePipeline* pComputePipeline  = ComputePipeline::Create(m_pDevice, pipelineParams);
+            if (!pComputePipeline)
+            {
+                std::cout << "FAILED to create ComputePipeline\n";
+                return false;
+            }
+
+            SAFE_DELETE(pComputeShader);
+
+            m_pDevice->WaitForIdle();
+            m_pPipeline.store(pComputePipeline);
+
+            bIsCompiling = false;
+        });
+    }
 }

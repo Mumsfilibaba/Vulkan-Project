@@ -372,7 +372,7 @@ workspace "Vulkan-Project"
 			compileas("Objective-C++")
 		filter {}
 		
-		local shaderScriptPath   = os.getcwd() .. "/VulkanProject/compile_shaders"
+		local shaderScriptPath   = os.getcwd() .. "/VulkanProject/res/compile_shaders"
 		printf("shaderScriptPath=%s", shaderScriptPath)
 		
 		local resourceFolderPath = os.getcwd() .. "/VulkanProject/res"

@@ -12,18 +12,18 @@ class Buffer;
 struct RandomBuffer
 {
     uint32_t FrameIndex = 0;
-    
-    uint32_t Padding0 = 0;
-    uint32_t Padding1 = 0;
-    uint32_t Padding2 = 0;
+    uint32_t Padding0   = 0;
+    uint32_t Padding1   = 0;
+    uint32_t Padding2   = 0;
 };
 
 struct SceneBuffer
 {
-    uint32_t NumSpheres   = 0;
-    uint32_t NumPlanes    = 0;
-    uint32_t NumMaterials = 0;
-    uint32_t Padding0     = 0;
+    glm::vec4 LightDir;
+    uint32_t  NumSpheres   = 0;
+    uint32_t  NumPlanes    = 0;
+    uint32_t  NumMaterials = 0;
+    uint32_t  Padding0     = 0;
 };
 
 struct Sphere
@@ -69,17 +69,20 @@ public:
     
 private:
     void CreateOrResizeSceneTexture(uint32_t width, uint32_t height);
+
     void CreateDescriptorSet();
     void ReleaseDescriptorSet();
-    
-    Device*                    m_pDevice;
-    Swapchain*                 m_pSwapchain;
-    class ComputePipeline*     m_Pipeline;
-    class PipelineLayout*      m_pPipelineLayout;
-    class DescriptorSetLayout* m_pDescriptorSetLayout;
-    DeviceMemoryAllocator*     m_pDeviceAllocator;
-    DescriptorPool*            m_pDescriptorPool;
-    class DescriptorSet*       m_pDescriptorSet;
+
+    void ReloadShader();
+
+    Device*                       m_pDevice;
+    Swapchain*                    m_pSwapchain;
+    std::atomic<ComputePipeline*> m_pPipeline;
+    class PipelineLayout*         m_pPipelineLayout;
+    class DescriptorSetLayout*    m_pDescriptorSetLayout;
+    DeviceMemoryAllocator*        m_pDeviceAllocator;
+    DescriptorPool*               m_pDescriptorPool;
+    class DescriptorSet*          m_pDescriptorSet;
 
     std::vector<class CommandBuffer*> m_CommandBuffers;
     std::vector<class Query*>         m_TimestampQueries;
