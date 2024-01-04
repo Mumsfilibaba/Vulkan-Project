@@ -157,15 +157,16 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     sphereBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_Spheres.reserve(MAX_SPHERES);
-    m_Spheres.push_back({ glm::vec3(1.5f, 0.5f, 1.5f), 0.4f, 0 });
-    m_Spheres.push_back({ glm::vec3(0.0f, 0.5f, 1.5f), 0.4f, 0 });
-    m_Spheres.push_back({ glm::vec3(-1.5f, 0.5f, 1.5f), 0.4f, 0 });
-    m_Spheres.push_back({ glm::vec3(1.5f, 0.5f, 0.0f), 0.4f, 1 });
-    m_Spheres.push_back({ glm::vec3(0.0f, 1.5f, 0.0f), 0.4f, 4 });
-    m_Spheres.push_back({ glm::vec3(-1.5f, 0.5f, 0.0f), 0.4f, 1 });
-    m_Spheres.push_back({ glm::vec3(1.5f, 0.5f, -1.5f), 0.4f, 2 });
-    m_Spheres.push_back({ glm::vec3(0.0f, 0.5f, -1.5f), 0.4f, 2 });
-    m_Spheres.push_back({ glm::vec3(-1.5f, 0.5f, -1.5f), 0.4f, 2 });
+    m_Spheres.push_back({ glm::vec3( 1.5f, 0.5f,  1.5f),  0.5f, 0 });
+    m_Spheres.push_back({ glm::vec3( 0.0f, 0.5f,  1.5f),  0.5f, 0 });
+    m_Spheres.push_back({ glm::vec3(-1.5f, 0.5f,  1.5f),  0.5f, 0 });
+    m_Spheres.push_back({ glm::vec3( 1.5f, 0.5f,  0.0f),  0.5f, 1 });
+    m_Spheres.push_back({ glm::vec3( 0.0f, 0.5f,  0.0f),  0.5f, 5 });
+    m_Spheres.push_back({ glm::vec3(-1.5f, 0.5f,  0.0f),  0.5f, 1 });
+    m_Spheres.push_back({ glm::vec3( 1.5f, 0.5f, -1.5f),  0.5f, 2 });
+    m_Spheres.push_back({ glm::vec3( 0.0f, 0.5f, -1.5f),  0.5f, 2 });
+    m_Spheres.push_back({ glm::vec3(-1.5f, 0.5f, -1.5f),  0.5f, 2 });
+    m_Spheres.push_back({ glm::vec3( 0.0f, 2.5f,  0.0f), 0.25f, 4 });
 
     m_pSphereBuffer = Buffer::Create(m_pDevice, sphereBufferParams, m_pDeviceAllocator);
     assert(m_pSphereBuffer != nullptr);
@@ -177,7 +178,11 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     planeBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_Planes.reserve(MAX_PLANES);
-    m_Planes.push_back({ glm::vec3(0.0f, 1.0f, 0.0),  0.0f, 3 });
+    m_Planes.push_back({ glm::vec3( 0.0f,  1.0f, 0.0),  0.0f, 3 });
+    m_Planes.push_back({ glm::vec3( 0.0f, -1.0f, 0.0), -4.0f, 3 });
+    m_Planes.push_back({ glm::vec3( 1.0f,  0.0f, 0.0), -3.0f, 3 });
+    m_Planes.push_back({ glm::vec3(-1.0f,  0.0f, 0.0), -3.0f, 3 });
+    m_Planes.push_back({ glm::vec3( 0.0f,  0.0f, 1.0), -3.0f, 6 });
 
     m_pPlaneBuffer = Buffer::Create(m_pDevice, planeBufferParams, m_pDeviceAllocator);
     assert(m_pPlaneBuffer != nullptr);
@@ -191,30 +196,30 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     m_Materials.reserve(MAX_MATERIALS);
     m_Materials.push_back(
     {
-        glm::vec4(1.0f, 0.1f, 0.1f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.05f,
+        glm::vec4(0.98f, 0.98f, 0.98f, 1.0f),
+        glm::vec4(0.0f,  0.0f,  0.0f, 0.0f),
+        0.0f,
         MATERIAL_STANDARD
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.1f, 1.0f, 0.1f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.3f,
+        glm::vec4(0.98f, 0.02f, 0.02f, 1.0f),
+        glm::vec4( 0.0f, 0.0f,  0.0f, 0.0f),
+        0.45f,
         MATERIAL_STANDARD
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.1f, 0.1f, 1.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.6f,
-        MATERIAL_STANDARD
-    });
-    m_Materials.push_back(
-    {
-        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.98f, 0.98f, 0.98f, 1.0f),
+        glm::vec4( 0.0f,  0.0f, 0.0f, 0.0f),
         0.9f,
+        MATERIAL_STANDARD
+    });
+    m_Materials.push_back(
+    {
+        glm::vec4(0.98f, 0.98f, 0.98f, 1.0f),
+        glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
+        1.0f,
         MATERIAL_STANDARD
     });
     m_Materials.push_back(
@@ -223,6 +228,20 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
         glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
         0.0f,
         MATERIAL_EMISSIVE
+    });
+    m_Materials.push_back(
+    {
+        glm::vec4(0.98f, 0.98f, 0.98f, 1.0f),
+        glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
+        0.0f,
+        MATERIAL_STANDARD
+    });
+    m_Materials.push_back(
+    {
+        glm::vec4(0.02f, 0.98f, 0.02f, 1.0f),
+        glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
+        1.0f,
+        MATERIAL_STANDARD
     });
 
     m_pMaterialBuffer = Buffer::Create(m_pDevice, materialBufferParams, m_pDeviceAllocator);

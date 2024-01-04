@@ -5,7 +5,7 @@
 #include "tonemap.glsl"
 
 #define NUM_THREADS (16)
-#define MAX_DEPTH   (64)
+#define MAX_DEPTH   (32)
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
@@ -383,7 +383,7 @@ void main()
             else if (Material.Type == MATERIAL_EMISSIVE) 
             {
                 // Add light
-                Emissive    = Material.Emissive.rgb * 4.0f;
+                Emissive    = Material.Emissive.rgb;
                 SampleColor = SampleColor + Emissive;
 
                 // Emissive materials do not scatter
