@@ -3,11 +3,22 @@
 #include "IRenderer.h"
 #include "Camera.h"
 
+/*///////////////////////////////////////////////////////////////////////////////////////////////*/
+// Primitives
+
+#define MAX_QUAD    (128)
 #define MAX_SPHERES (32)
 #define MAX_PLANES  (8)
+
+/*///////////////////////////////////////////////////////////////////////////////////////////////*/
+// Materials
+
 #define MAX_MATERIALS (32)
 
 class Buffer;
+
+/*///////////////////////////////////////////////////////////////////////////////////////////////*/
+// Buffer Structs
 
 struct RandomBuffer
 {
@@ -19,12 +30,14 @@ struct RandomBuffer
 
 struct SceneBuffer
 {
-    glm::vec4 LightDir;
-    uint32_t  NumSpheres   = 0;
-    uint32_t  NumPlanes    = 0;
-    uint32_t  NumMaterials = 0;
-    uint32_t  Padding0     = 0;
+    uint32_t NumQuads     = 0;
+    uint32_t NumSpheres   = 0;
+    uint32_t NumPlanes    = 0;
+    uint32_t NumMaterials = 0;
 };
+
+/*///////////////////////////////////////////////////////////////////////////////////////////////*/
+// Primitive Structs
 
 struct Sphere
 {
@@ -46,6 +59,20 @@ struct Plane
     uint32_t  Padding2;
 };
 
+struct Quad
+{
+    glm::vec4 Position;
+    glm::vec4 Edge0;
+    glm::vec4 Edge1;
+    uint32_t  MaterialIndex;
+    uint32_t  Padding0;
+    uint32_t  Padding1;
+    uint32_t  Padding2;
+};
+
+/*///////////////////////////////////////////////////////////////////////////////////////////////*/
+// Material
+
 #define MATERIAL_STANDARD (1)
 #define MATERIAL_EMISSIVE (2)
 
@@ -53,12 +80,14 @@ struct Material
 {
     glm::vec4 Albedo;
     glm::vec4 Emissive;
-    
     float     Roughness;
     uint32_t  Type;
     uint32_t  Padding0;
     uint32_t  Padding1;
 };
+
+/*///////////////////////////////////////////////////////////////////////////////////////////////*/
+// RayTracer
 
 class RayTracer : public IRenderer
 {
@@ -101,8 +130,10 @@ private:
     Buffer* m_pSceneBuffer;
     Buffer* m_pSphereBuffer;
     Buffer* m_pPlaneBuffer;
+    Buffer* m_pQuadBuffer;
     Buffer* m_pMaterialBuffer;
 
+    std::vector<Quad>     m_Quads;
     std::vector<Sphere>   m_Spheres;
     std::vector<Plane>    m_Planes;
     std::vector<Material> m_Materials;
@@ -113,14 +144,13 @@ private:
     class TextureView*   m_pSceneTextureView;
     class DescriptorSet* m_pSceneTextureDescriptorSet;
 
-    Camera    m_Camera;
-    glm::vec3 m_LightDir;
-
-    float    m_LastCPUTime;
-    float    m_LastGPUTime;
+    Camera           m_Camera;
 
     uint32_t         m_NumSamples;
     std::atomic_bool m_bResetImage;
+
+    float    m_LastCPUTime;
+    float    m_LastGPUTime;
 
     uint32_t m_ViewportWidth;
     uint32_t m_ViewportHeight;

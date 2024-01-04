@@ -33,11 +33,10 @@ layout(binding = 3) uniform RandomBufferObject
 
 layout(binding = 4) uniform SceneBufferObject 
 {
-    vec4 LightDir;
+    uint NumQuads;
     uint NumSpheres;
     uint NumPlanes;
     uint NumMaterials;
-    uint Padding2;
 } uScene;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -50,11 +49,21 @@ struct Material
 {
     vec4  Albedo;
     vec4  Emissive;
-
     float Roughness;
     uint  Type;
+    uint  Padding0;
     uint  Padding1;
-    uint  Padding2;
+};
+
+struct Quad
+{
+    vec4 Position;
+    vec4 Edge0;
+    vec4 Edge1;
+    uint MaterialIndex;
+    uint Padding0;
+    uint Padding1;
+    uint Padding2;
 };
 
 struct Sphere
@@ -75,17 +84,22 @@ struct Plane
     uint Padding2;
 };
 
-layout(std430, binding = 5) buffer SphereBuffer
+layout(std430, binding = 5) buffer QuadBuffer
+{
+    Quad Quads[];
+};
+
+layout(std430, binding = 6) buffer SphereBuffer
 {
     Sphere Spheres[];
 };
 
-layout(std430, binding = 6) buffer PlaneBuffer
+layout(std430, binding = 7) buffer PlaneBuffer
 {
     Plane Planes[];
 };
 
-layout(std430, binding = 7) buffer MaterialBuffer
+layout(std430, binding = 8) buffer MaterialBuffer
 {
     Material Materials[];
 };
@@ -120,6 +134,52 @@ vec3 HemisphereSampleUniform(float u, float v)
     return normalize(vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta));
 }
 
+void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
+{
+    vec3 Q = Quad.Position.xyz;
+    vec3 U = Quad.Edge0.xyz;
+    vec3 V = Quad.Edge1.xyz;
+    vec3 N = cross(U, V);
+    vec3 W = N / dot(N, N);
+
+    vec3  Normal = normalize(N);
+    float D = dot(Normal, Q);
+
+    float DdotN = dot(Ray.Direction, Normal);
+    if (abs(DdotN) < 0.0001)
+    {
+        return;
+    }
+
+    float t = (D - dot(Normal, Ray.Origin)) / DdotN;
+    if (PayLoad.MinT < t && t < PayLoad.MaxT)
+    {
+        if (t < PayLoad.T)
+        {
+            vec3 Intersection = Ray.Origin + (Ray.Direction * t);
+            vec3 PlanarHit    = Intersection - Q;
+            float Alpha = dot(W, cross(PlanarHit, V));
+            float Beta  = dot(W, cross(U, PlanarHit));
+            if (Alpha < 0.0 || 1.0 < Alpha || Beta < 0.0 || 1.0 < Beta)
+            {
+                return;
+            }
+
+            PayLoad.T             = t;
+            PayLoad.MaterialIndex = Quad.MaterialIndex;
+
+            if (DdotN > 0.0)
+            {
+                PayLoad.Normal = -Normal;
+            }
+            else
+            {
+                PayLoad.Normal = Normal;
+            }
+        }
+    }
+}
+
 void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
 {
     vec3  SpherePos    = Sphere.PositionAndRadius.xyz;
@@ -131,31 +191,33 @@ void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
     float c = dot(Distance, Distance) - (SphereRadius * SphereRadius);
 
     float Disc = (b * b) - (a * c);
-    if (Disc >= 0.0f)
+    if (Disc < 0.0f)
     {
-        float Root = sqrt(Disc);
-        float t = (-b - Root) / a;
+        return;
+    }
 
-        if (PayLoad.MinT < t && t < PayLoad.MaxT)
+    float Root = sqrt(Disc);
+    float t = (-b - Root) / a;
+
+    if (PayLoad.MinT < t && t < PayLoad.MaxT)
+    {
+        if (t < PayLoad.T)
         {
-            if (t < PayLoad.T)
+            PayLoad.T = t;
+
+            vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
+            PayLoad.MaterialIndex = Sphere.MaterialIndex;
+
+            vec3 OutsideNormal = normalize((Position - SpherePos) / SphereRadius);
+            if (dot(Ray.Direction, OutsideNormal) >= 0.0)
             {
-                PayLoad.T = t;
-
-                vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
-                PayLoad.MaterialIndex = Sphere.MaterialIndex;
-
-                vec3 OutsideNormal = normalize((Position - SpherePos) / SphereRadius);
-                if (dot(Ray.Direction, OutsideNormal) >= 0.0)
-                {
-                    PayLoad.Normal    = -OutsideNormal;
-                    PayLoad.FrontFace = false;
-                }
-                else
-                {
-                    PayLoad.Normal    = OutsideNormal;
-                    PayLoad.FrontFace = true;
-                }
+                PayLoad.Normal    = -OutsideNormal;
+                PayLoad.FrontFace = false;
+            }
+            else
+            {
+                PayLoad.Normal    = OutsideNormal;
+                PayLoad.FrontFace = true;
             }
         }
     }
@@ -167,28 +229,30 @@ void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
     float PlaneDist   = Plane.NormalAndDistance.w;
 
     float DdotN = dot(Ray.Direction, PlaneNormal);
-    if (abs(DdotN) > 0.0001)
+    if (abs(DdotN) < 0.0001)
     {
-        vec3 Center = PlaneNormal * PlaneDist;
-        vec3 Diff   = Center - Ray.Origin;
+        return;
+    }
 
-        float t = dot(Diff, PlaneNormal) / DdotN;
-        if (t > 0)
+    vec3 Center = PlaneNormal * PlaneDist;
+    vec3 Diff   = Center - Ray.Origin;
+
+    float t = dot(Diff, PlaneNormal) / DdotN;
+    if (t > 0)
+    {
+        if (t < PayLoad.T)
         {
-            if (t < PayLoad.T)
-            {
-                PayLoad.MaterialIndex = Plane.MaterialIndex;
-                PayLoad.FrontFace = true;
-                PayLoad.T = t;
+            PayLoad.T             = t;
+            PayLoad.MaterialIndex = Plane.MaterialIndex;
+            PayLoad.FrontFace     = true;
 
-                if (DdotN > 0.0f)
-                {
-                    PayLoad.Normal = -normalize(PlaneNormal);
-                }
-                else
-                {
-                    PayLoad.Normal = normalize(PlaneNormal);
-                }
+            if (DdotN > 0.0f)
+            {
+                PayLoad.Normal = -normalize(PlaneNormal);
+            }
+            else
+            {
+                PayLoad.Normal = normalize(PlaneNormal);
             }
         }
     }
@@ -196,6 +260,12 @@ void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
 
 bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
 {
+    for (uint i = 0; i < uScene.NumQuads; i++)
+    {
+        Quad Quad = Quads[i];
+        HitQuad(Quad, Ray, PayLoad);
+    }
+
     for (uint i = 0; i < uScene.NumSpheres; i++)
     {
         Sphere Sphere = Spheres[i];
@@ -217,85 +287,6 @@ bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
         return false;
     }
 }
-
-/*void ShadeLambertian(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
-{
-    vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
-    Halton.x = fract(Halton.x + NextRandom(Seed));
-    Halton.y = fract(Halton.y + NextRandom(Seed));
-
-    vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
-    if (dot(Rnd, N) <= 0.0f)
-    {
-        Rnd = -Rnd;
-    }
-
-    Direction = normalize(Rnd);
-    Color = Material.Albedo;
-}
-
-void ShadeMetal(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
-{
-    vec3 Reflection = reflect(Ray.Direction, N);
-    
-    if (Material.Roughness > 0.0f)
-    {
-        vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
-        Halton.x = fract(Halton.x + NextRandom(Seed));
-        Halton.y = fract(Halton.y + NextRandom(Seed));
-
-        vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
-        if (dot(Rnd, N) <= 0.0)
-        {
-            Rnd = -Rnd;
-        }
-
-        Direction = normalize(Reflection + Rnd * Material.Roughness);
-    }
-    else
-    {
-        Direction = normalize(Reflection);
-    }
-
-    Color = Material.Albedo;
-}
-
-void ShadeEmissive(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
-{
-    vec2 Halton = Halton23(NextRandomInt(Seed) % 16);
-    Halton.x = fract(Halton.x + NextRandom(Seed));
-    Halton.y = fract(Halton.y + NextRandom(Seed));
-
-    vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
-    if (dot(Rnd, N) <= 0.0f)
-    {
-        Rnd = -Rnd;
-    }
-
-    Direction = normalize(Rnd);
-    Color = Material.Albedo;
-}
-
-void ShadeDielectric(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in vec3 N, out vec3 Color, out vec3 Direction, inout uint Seed)
-{
-    float RefractionRatio = PayLoad.FrontFace ? 1.0f / Material.IndexOfRefraction : Material.IndexOfRefraction;
-
-    float CosTheta = min(dot(-Ray.Direction, N), 1.0f);
-    float SinTheta = sqrt(1.0f - CosTheta*CosTheta);
-
-    vec3 Refracted;
-    if (RefractionRatio * SinTheta > 1.0f)
-    {
-        Refracted = reflect(normalize(Ray.Direction), -normalize(N));
-    }
-    else
-    {
-        Refracted = refract(normalize(Ray.Direction), normalize(N), RefractionRatio);
-    }
-
-    Direction = normalize(Refracted);
-    Color = vec3(1.0f);
-}*/
 
 void main()
 {
@@ -398,15 +389,15 @@ void main()
         {
             vec3 BackGroundColor;
             
-        #if 0
+        #if 1
             // Create a gradient
             vec3 UnitDirection = normalize(Ray.Direction);
             float Alpha = 0.5 * (UnitDirection.y + 1.0);
             BackGroundColor = (1.0 - Alpha) * vec3(1.0, 1.0, 1.0) + Alpha * vec3(0.5, 0.7, 1.0);
-        #endif
-
+        #else
             // Only light source is the emissive surfaces
             BackGroundColor = vec3(0.0);
+        #endif
 
             // Break the loop
             i = MAX_DEPTH;
