@@ -82,26 +82,23 @@ void Device::ExecuteGraphics(CommandBuffer* pCommandBuffer, Swapchain* pSwapchai
 {
     VkSubmitInfo submitInfo;
     ZERO_STRUCT(&submitInfo);
-    
+
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     VkSemaphore waitSemaphores[1]   = {};
     VkSemaphore signalSemaphores[1] = {};
-    if (pSwapchain && pWaitStages)
+    if (pSwapchain)
     {
+        assert(pWaitStages != nullptr);
+
         signalSemaphores[0] = pSwapchain->GetRenderSemaphore();
+        waitSemaphores[0]   = pSwapchain->GetImageSemaphore();
         
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores    = signalSemaphores;
-
-        if (pWaitStages)
-        {
-            waitSemaphores[0] = pSwapchain->GetImageSemaphore();
-            
-            submitInfo.waitSemaphoreCount = 1;
-            submitInfo.pWaitSemaphores    = waitSemaphores;
-            submitInfo.pWaitDstStageMask  = pWaitStages;
-        }
+        submitInfo.waitSemaphoreCount   = 1;
+        submitInfo.pWaitSemaphores      = waitSemaphores;
+        submitInfo.pWaitDstStageMask    = pWaitStages;
     }
     else
     {

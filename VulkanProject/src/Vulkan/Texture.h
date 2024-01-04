@@ -6,9 +6,10 @@ class Device;
 
 struct TextureParams
 {
-    VkImageUsageFlags Usage     = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    VkFormat          Format    = VK_FORMAT_UNDEFINED;
-    VkImageType       ImageType = VK_IMAGE_TYPE_2D;
+    VkImageUsageFlags Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    VkFormat          Format        = VK_FORMAT_UNDEFINED;
+    VkImageType       ImageType     = VK_IMAGE_TYPE_2D;
+    VkImageLayout     InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     
     uint32_t Width  = 0;
     uint32_t Height = 0;

@@ -92,7 +92,7 @@ bool Swapchain::CreateSwapchain()
     int32_t width  = 0;
     int32_t height = 0;
     glfwGetFramebufferSize(m_pWindow, &width, &height);
-    
+
     // Get capabilities and formats that are supported
     VkSurfaceCapabilitiesKHR capabilities = {};
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_pDevice->GetPhysicalDevice(), m_Surface, &capabilities);
@@ -107,7 +107,7 @@ bool Swapchain::CreateSwapchain()
         actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
         m_Extent = actualExtent;
     }
-    
+
 
     std::vector<VkPresentModeKHR>   presentModes;
     std::vector<VkSurfaceFormatKHR> formats;
@@ -137,7 +137,7 @@ bool Swapchain::CreateSwapchain()
         return false;
     }
 
-    
+
     uint32_t presentModeCount;
     vkGetPhysicalDeviceSurfacePresentModesKHR(m_pDevice->GetPhysicalDevice(), m_Surface, &presentModeCount, nullptr);
     if (presentModeCount > 0)
@@ -166,29 +166,33 @@ bool Swapchain::CreateSwapchain()
         m_ImageCount = capabilities.maxImageCount;
     }
 
-    VkSwapchainCreateInfoKHR createInfo;
-    ZERO_STRUCT(&createInfo);
-    
-    createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface          = m_Surface;
-    createInfo.minImageCount    = m_ImageCount;
-    createInfo.imageFormat      = m_SwapchainFormat.format;
-    createInfo.imageColorSpace  = m_SwapchainFormat.colorSpace;
-    createInfo.imageExtent      = m_Extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    createInfo.preTransform     = capabilities.currentTransform;
-    createInfo.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode      = m_PresentMode;
-    createInfo.clipped          = VK_TRUE;
-    createInfo.oldSwapchain     = VK_NULL_HANDLE;
 
-    VkResult result = vkCreateSwapchainKHR(m_pDevice->GetDevice(), &createInfo, nullptr, &m_Swapchain);
-    if (result != VK_SUCCESS)
+    // Create the swapchain
     {
-        std::cout << "vkCreateSwapchainKHR failed. Error: " << result << '\n';
-        return false;
+        VkSwapchainCreateInfoKHR createInfo;
+        ZERO_STRUCT(&createInfo);
+
+        createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.surface          = m_Surface;
+        createInfo.minImageCount    = m_ImageCount;
+        createInfo.imageFormat      = m_SwapchainFormat.format;
+        createInfo.imageColorSpace  = m_SwapchainFormat.colorSpace;
+        createInfo.imageExtent      = m_Extent;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.preTransform     = capabilities.currentTransform;
+        createInfo.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        createInfo.presentMode      = m_PresentMode;
+        createInfo.clipped          = VK_TRUE;
+        createInfo.oldSwapchain     = VK_NULL_HANDLE;
+
+        VkResult result = vkCreateSwapchainKHR(m_pDevice->GetDevice(), &createInfo, nullptr, &m_Swapchain);
+        if (result != VK_SUCCESS)
+        {
+            std::cout << "vkCreateSwapchainKHR failed. Error: " << result << '\n';
+            return false;
+        }
     }
 
     // Get the images and create ImageViews
@@ -202,45 +206,53 @@ bool Swapchain::CreateSwapchain()
     std::vector<VkImage> images(realImageCount);
     vkGetSwapchainImagesKHR(m_pDevice->GetDevice(), m_Swapchain, &realImageCount, images.data());
 
-    VkImageViewCreateInfo imageViewCreateInfo;
-    ZERO_STRUCT(&imageViewCreateInfo);
-    
-    imageViewCreateInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    imageViewCreateInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-    imageViewCreateInfo.format                          = m_SwapchainFormat.format;
-    imageViewCreateInfo.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-    imageViewCreateInfo.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-    imageViewCreateInfo.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-    imageViewCreateInfo.components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-    imageViewCreateInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-    imageViewCreateInfo.subresourceRange.baseMipLevel   = 0;
-    imageViewCreateInfo.subresourceRange.levelCount     = 1;
-    imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-    imageViewCreateInfo.subresourceRange.layerCount     = 1;
 
-    for (uint32_t i = 0; i < m_ImageCount; i++)
+    // Create ImageViews for the BackBuffers
     {
-        VkImageView imageView = VK_NULL_HANDLE;
-        imageViewCreateInfo.image = images[i];
+        VkImageViewCreateInfo imageViewCreateInfo;
+        ZERO_STRUCT(&imageViewCreateInfo);
 
-        result = vkCreateImageView(m_pDevice->GetDevice(), &imageViewCreateInfo, nullptr, &imageView);
-        if (result != VK_SUCCESS)
-        {
-            std::cout << "vkCreateImageView failed. Error: " << result << '\n';
-        }
-        else
-        {
-            std::cout << "Created ImageView\n";
-        }
+        imageViewCreateInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        imageViewCreateInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+        imageViewCreateInfo.format                          = m_SwapchainFormat.format;
+        imageViewCreateInfo.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCreateInfo.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCreateInfo.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCreateInfo.components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCreateInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageViewCreateInfo.subresourceRange.baseMipLevel   = 0;
+        imageViewCreateInfo.subresourceRange.levelCount     = 1;
+        imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        imageViewCreateInfo.subresourceRange.layerCount     = 1;
 
-        m_FrameData[i].BackBuffer     = images[i];
-        m_FrameData[i].BackBufferView = imageView;
+        for (uint32_t i = 0; i < m_ImageCount; i++)
+        {
+            VkImageView imageView = VK_NULL_HANDLE;
+            imageViewCreateInfo.image = images[i];
+
+            VkResult result = vkCreateImageView(m_pDevice->GetDevice(), &imageViewCreateInfo, nullptr, &imageView);
+            if (result != VK_SUCCESS)
+            {
+                std::cout << "vkCreateImageView failed. Error: " << result << '\n';
+            }
+            else
+            {
+                std::cout << "Created ImageView\n";
+            }
+
+            m_FrameData[i].BackBuffer     = images[i];
+            m_FrameData[i].BackBufferView = imageView;
+        }
     }
 
-    result = AquireNextImage();
-    if (result != VK_SUCCESS)
+
+    // Acquire the first image
     {
-        std::cout << "AquireNextImage failed. Error: " << result << '\n';
+        VkResult result = AquireNextImage();
+        if (result != VK_SUCCESS)
+        {
+            std::cout << "AquireNextImage failed. Error: " << result << '\n';
+        }
     }
 
     return true;
@@ -285,6 +297,28 @@ VkResult Swapchain::AquireNextImage()
     return vkAcquireNextImageKHR(m_pDevice->GetDevice(), m_Swapchain, UINT64_MAX, signalSemaphore, VK_NULL_HANDLE, &m_CurrentBufferIndex);
 }
 
+void Swapchain::WaitForImage()
+{
+    VkSubmitInfo submitInfo;
+    ZERO_STRUCT(&submitInfo);
+
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[1] = {};
+    waitSemaphores[0] = GetImageSemaphore();
+
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores    = waitSemaphores;
+    submitInfo.pWaitDstStageMask  = waitStages;
+
+    VkResult result = vkQueueSubmit(m_pDevice->GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+    if (result != VK_SUCCESS)
+    {
+        std::cout << "vkQueueSubmit failed. Error: " << result << '\n';
+    }
+}
+
 void Swapchain::RecreateSwapchain()
 {
     m_pDevice->WaitForIdle();
@@ -297,16 +331,18 @@ void Swapchain::Resize(uint32_t width, uint32_t height)
 {
     if (m_Extent.width != width || m_Extent.height != height)
     {
-        std::cout << "Resize\n";
-        
+        // Since we always acquire an image, we need to wait for it
+        WaitForImage();
+        m_pDevice->WaitForIdle();
+
         ReleaseSwapchainResources();
         CreateSwapchain();
         
-        std::cout << "Resized Buffers: w=" << m_Extent.width << ", h=" << m_Extent.height << '\n';
+        std::cout << "Resized Swapchain: w=" << m_Extent.width << ", h=" << m_Extent.height << '\n';
     }
 }
 
-void Swapchain::Present()
+VkResult Swapchain::Present()
 {
     VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
 
@@ -335,13 +371,15 @@ void Swapchain::Present()
         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             RecreateSwapchain();
-            std::cout << "Suboptimal or Out Of Date Swapchain. Result: " << result << '\n';
+            std::cout << "Suboptimal or Out Of Date Swapchain\n";
         }
         else
         {
             std::cout << "Present Failed. Error: " << result << '\n';
         }
     }
+
+    return result;
 }
 
 void Swapchain::ReleaseSwapchainResources()

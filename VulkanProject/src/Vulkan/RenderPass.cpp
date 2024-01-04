@@ -2,7 +2,7 @@
 #include "Device.h"
 #include <vector>
 
-RenderPass* RenderPass::Create(Device* pDevice, const RenderPassParams &params)
+RenderPass* RenderPass::Create(Device* pDevice, const RenderPassParams& params)
 {
     RenderPass* pRenderPass = new RenderPass(pDevice->GetDevice());
     
@@ -15,22 +15,17 @@ RenderPass* RenderPass::Create(Device* pDevice, const RenderPassParams &params)
     colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     
     VkAttachmentReference colorAttachmentRef = {};
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     for (uint32_t i = 0; i < params.ColorAttachmentCount; i++)
     {
-        colorAttachment.loadOp = params.pColorAttachments[i].LoadOp;
-        if (colorAttachment.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD)
-        {
-            colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        }
-
-        colorAttachment.format  = params.pColorAttachments[i].Format;
-        colorAttachment.storeOp = params.pColorAttachments[i].StoreOp;
+        colorAttachment.format        = params.pColorAttachments[i].Format;
+        colorAttachment.loadOp        = params.pColorAttachments[i].LoadOp;
+        colorAttachment.storeOp       = params.pColorAttachments[i].StoreOp;
+        colorAttachment.initialLayout = params.pColorAttachments[i].initialLayout;
+        colorAttachment.finalLayout   = params.pColorAttachments[i].finalLayout;
         attachmentsInfos.push_back(colorAttachment);
         
         colorAttachmentRef.attachment = i;

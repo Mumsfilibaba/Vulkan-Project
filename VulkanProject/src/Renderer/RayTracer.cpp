@@ -15,6 +15,7 @@
 #include "Vulkan/Swapchain.h"
 #include "Vulkan/Texture.h"
 #include "Vulkan/TextureView.h"
+#include "Vulkan/Helpers.h"
 
 RayTracer::RayTracer()
     : m_pDevice(nullptr)
@@ -139,7 +140,7 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
         m_TimestampQueries[i] = pQuery;
     }
     
-    // Allocator for GPU mem
+    // Allocator for GPU memory
     m_pDeviceAllocator = new DeviceMemoryAllocator(m_pDevice->GetDevice(), m_pDevice->GetPhysicalDevice());
 }
 
@@ -378,20 +379,23 @@ void RayTracer::CreateOrResizeSceneTexture(uint32_t width, uint32_t height)
     
     // Create texture for the viewport
     TextureParams textureParams = {};
-    textureParams.Format    = VK_FORMAT_R32G32B32A32_SFLOAT;
-    textureParams.ImageType = VK_IMAGE_TYPE_2D;
-    textureParams.Width     = m_ViewportWidth  = width;
-    textureParams.Height    = m_ViewportHeight = height;
-    textureParams.Usage     = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-    
+    textureParams.Format        = VK_FORMAT_R32G32B32A32_SFLOAT;
+    textureParams.ImageType     = VK_IMAGE_TYPE_2D;
+    textureParams.Width         = m_ViewportWidth  = width;
+    textureParams.Height        = m_ViewportHeight = height;
+    textureParams.Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    textureParams.InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
     m_pSceneTexture = Texture::Create(m_pDevice, textureParams);
     assert(m_pSceneTexture != nullptr);
-    
+    SetDebugName(m_pDevice->GetDevice(), "SceneTexture", reinterpret_cast<uint64_t>(m_pSceneTexture->GetImage()), VK_OBJECT_TYPE_IMAGE);
+
     TextureViewParams textureViewParams = {};
     textureViewParams.pTexture = m_pSceneTexture;
     
     m_pSceneTextureView = TextureView::Create(m_pDevice, textureViewParams);
     assert(m_pSceneTextureView != nullptr);
+    SetDebugName(m_pDevice->GetDevice(), "SceneTextureView", reinterpret_cast<uint64_t>(m_pSceneTextureView->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
     
     // UI DescriptorSet
     m_pSceneTextureDescriptorSet = GUI::AllocateTextureID(m_pSceneTextureView);

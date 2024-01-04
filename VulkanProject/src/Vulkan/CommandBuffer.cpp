@@ -111,6 +111,7 @@ void CommandBuffer::TransitionImage(VkImage image, VkImageLayout oldLayout, VkIm
 
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
+
     if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_GENERAL)
     {
         barrier.srcAccessMask = 0;
@@ -126,6 +127,22 @@ void CommandBuffer::TransitionImage(VkImage image, VkImageLayout oldLayout, VkIm
 
         sourceStage      = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
+    else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        sourceStage      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
+    else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+
+        sourceStage      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     }
     else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
     {

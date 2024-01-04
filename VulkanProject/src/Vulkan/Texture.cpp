@@ -62,15 +62,36 @@ Texture* Texture::Create(Device* pDevice, const TextureParams& params)
     else
     {
         std::cout << "Created image w=" << params.Width << ", h=" << params.Height << "\n";
-        return pTexture;
     }
+
+    // Transfer image to the expected layout
+    if (params.InitialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
+    {
+        CommandBufferParams commandBufferParams = {};
+        commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        commandBufferParams.QueueType = ECommandQueueType::Graphics;
+
+        CommandBuffer* pCommandBuffer = CommandBuffer::Create(pDevice, commandBufferParams);
+        pCommandBuffer->Reset();
+        pCommandBuffer->Begin();
+        pCommandBuffer->TransitionImage(pTexture->m_Image, VK_IMAGE_LAYOUT_UNDEFINED, params.InitialLayout);
+        pCommandBuffer->End();
+
+        pDevice->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
+        pDevice->WaitForIdle();
+
+        SAFE_DELETE(pCommandBuffer);
+    }
+
+    return pTexture;
 }
 
 Texture* Texture::CreateWithData(Device* pDevice, const TextureParams& params, const void* pSource)
 {
     TextureParams paramsCopy = params;
-    paramsCopy.Usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    
+    paramsCopy.Usage         = paramsCopy.Usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    paramsCopy.InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
     Texture* pTexture = Texture::Create(pDevice, paramsCopy);
     if (!pTexture)
     {
@@ -83,7 +104,7 @@ Texture* Texture::CreateWithData(Device* pDevice, const TextureParams& params, c
     BufferParams bufferParams = {};
     bufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     bufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    bufferParams.Size      = uploadSize;
+    bufferParams.Size             = uploadSize;
     
     Buffer* pUploadBuffer = Buffer::CreateWithData(pDevice, bufferParams, nullptr, pSource);
     if (!pUploadBuffer)
@@ -117,7 +138,9 @@ Texture* Texture::CreateWithData(Device* pDevice, const TextureParams& params, c
     region.imageExtent.depth           = 1;
     
     pCommandBuffer->CopyBufferToImage(pUploadBuffer->GetBuffer(), pTexture->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    const VkImageLayout finalLayout = (params.InitialLayout == VK_IMAGE_LAYOUT_UNDEFINED) ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : params.InitialLayout;
+    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, finalLayout);
     
     pCommandBuffer->End();
     

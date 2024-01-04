@@ -12,6 +12,7 @@
 #include "Vulkan/Texture.h"
 #include "Vulkan/TextureView.h"
 #include "Vulkan/CommandBuffer.h"
+#include "Vulkan/Helpers.h"
 #include <GLFW/glfw3.h>
 
 #if PLATFORM_WINDOWS
@@ -1167,6 +1168,7 @@ namespace GUI
             
             pRendererBackend->pPipeline = GraphicsPipeline::Create(pRendererBackend->pDevice, graphicsPipelineStateParams);
             assert(pRendererBackend->pPipeline != nullptr);
+            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui Pipeline", reinterpret_cast<uint64_t>(pRendererBackend->pPipeline->GetPipeline()), VK_OBJECT_TYPE_PIPELINE);
         }
     }
     
@@ -1189,6 +1191,7 @@ namespace GUI
             
             pRendererBackend->pFontSampler = Sampler::Create(pRendererBackend->pDevice, samplerParams);
             assert(pRendererBackend->pFontSampler != nullptr);
+            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui FontSampler", reinterpret_cast<uint64_t>(pRendererBackend->pFontSampler->GetSampler()), VK_OBJECT_TYPE_SAMPLER);
         }
         
         if (!pRendererBackend->pImageSampler)
@@ -1206,6 +1209,7 @@ namespace GUI
             
             pRendererBackend->pImageSampler = Sampler::Create(pRendererBackend->pDevice, samplerParams);
             assert(pRendererBackend->pImageSampler != nullptr);
+            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui ImageSampler", reinterpret_cast<uint64_t>(pRendererBackend->pFontSampler->GetSampler()), VK_OBJECT_TYPE_SAMPLER);
         }
         
         if (!pRendererBackend->pDescriptorSetLayout)
@@ -1221,6 +1225,7 @@ namespace GUI
             
             pRendererBackend->pDescriptorSetLayout = DescriptorSetLayout::Create(pRendererBackend->pDevice, descriptorSetLayoutParams);
             assert(pRendererBackend->pDescriptorSetLayout != nullptr);
+            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui DescriptorSetLayout", reinterpret_cast<uint64_t>(pRendererBackend->pDescriptorSetLayout->GetDescriptorSetLayout()), VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT);
         }
         
         if (!pRendererBackend->pDescriptorPool)
@@ -1230,13 +1235,15 @@ namespace GUI
             descriptorPoolParams.NumCombinedImageSamplers = 1024;
             
             pRendererBackend->pDescriptorPool = DescriptorPool::Create(pRendererBackend->pDevice, descriptorPoolParams);
-            assert(pRendererBackend->pDescriptorSetLayout != nullptr);
+            assert(pRendererBackend->pDescriptorPool != nullptr);
+            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui DescriptorPool", reinterpret_cast<uint64_t>(pRendererBackend->pDescriptorPool->GetPool()), VK_OBJECT_TYPE_DESCRIPTOR_POOL);
         }
         
         if (!pRendererBackend->pFontDescriptorSet)
         {
             pRendererBackend->pFontDescriptorSet = DescriptorSet::Create(pRendererBackend->pDevice, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
             assert(pRendererBackend->pFontDescriptorSet != nullptr);
+            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui FontDescriptorSet", reinterpret_cast<uint64_t>(pRendererBackend->pFontDescriptorSet->GetDescriptorSet()), VK_OBJECT_TYPE_DESCRIPTOR_SET);
         }
         
         if (!pRendererBackend->pPipelineLayout)
@@ -1248,20 +1255,21 @@ namespace GUI
             
             pRendererBackend->pPipelineLayout = PipelineLayout::Create(pRendererBackend->pDevice, pipelineLayoutParams);
             assert(pRendererBackend->pPipelineLayout != nullptr);
+            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui PipelineLayout", reinterpret_cast<uint64_t>(pRendererBackend->pPipelineLayout->GetPipelineLayout()), VK_OBJECT_TYPE_PIPELINE_LAYOUT);
         }
         
         if (!pRendererBackend->pRenderPass)
         {
-            RenderPassAttachment attachments[1] = {};
-            attachments[0].Format = pRendererBackend->pSwapchain->GetFormat();
-            attachments[0].LoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            
+            RenderPassAttachment attachment = {};
+            attachment.Format = pRendererBackend->pSwapchain->GetFormat();
+
             RenderPassParams renderPassParams = {};
             renderPassParams.ColorAttachmentCount = 1;
-            renderPassParams.pColorAttachments    = attachments;
+            renderPassParams.pColorAttachments    = &attachment;
             
             pRendererBackend->pRenderPass = RenderPass::Create(pRendererBackend->pDevice, renderPassParams);
             assert(pRendererBackend->pRenderPass != nullptr);
+            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui RenderPass", reinterpret_cast<uint64_t>(pRendererBackend->pRenderPass->GetRenderPass()), VK_OBJECT_TYPE_RENDER_PASS);
         }
         
         ImGuiCreatePipeline();
@@ -1345,8 +1353,12 @@ namespace GUI
             // Create RenderPass for this Viewport
             RenderPassAttachment attachment = {};
             attachment.Format = pViewportData->pSwapchain->GetFormat();
-            attachment.LoadOp = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
-            
+
+            if (pViewport->Flags & ImGuiViewportFlags_NoRendererClear)
+            {
+                attachment.LoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            }
+
             RenderPassParams renderPassParams = {};
             renderPassParams.ColorAttachmentCount = 1;
             renderPassParams.pColorAttachments    = &attachment;
@@ -1456,7 +1468,7 @@ namespace GUI
         }
 
         // Setup scale and translation:
-        // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
+        // Our visible ImGui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
         {
             float scale[2];
             scale[0] = 2.0f / pDrawData->DisplaySize.x;
@@ -1596,7 +1608,7 @@ namespace GUI
                     scissor.extent.height = (uint32_t)(clipMax.y - clipMin.y);
                     pCommandBuffer->SetScissorRect(scissor);
 
-                    // Retrieve descriptorset
+                    // Retrieve DescriptorSet
                     DescriptorSet* pDescriptorSet = (DescriptorSet*)pDrawCmd->TextureId;
                     if constexpr (sizeof(ImTextureID) < sizeof(ImU64))
                     {
@@ -1605,7 +1617,7 @@ namespace GUI
                         pDescriptorSet = pRendererbackend->pFontDescriptorSet;
                     }
                     
-                    // Bind descriptorset
+                    // Bind DescriptorSet
                     pCommandBuffer->BindGraphicsDescriptorSet(pRendererbackend->pPipelineLayout, pDescriptorSet);
 
                     // Draw
@@ -1668,8 +1680,13 @@ namespace GUI
             return;
         }
         
-        Swapchain* pSwapchain = pViewportData->pSwapchain;
-        pSwapchain->Present();
+        VkResult result = pViewportData->pSwapchain->Present();
+        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
+            ImGuiDestroyFramebuffers(pViewportData);
+            ImGuiCreateFramebuffers(pRendererBackend->pDevice, pViewportData);
+        }
     }
 
     static void ImGuiInitRendererPlatformInterface()
@@ -1993,12 +2010,18 @@ namespace GUI
     
     void ReleaseImGui()
     {
+        // At this point the device should already be idle
+
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
         assert(pBackend != nullptr);
         
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         assert(pRendererBackend != nullptr);
         
+        ImGuiViewportData* pViewportData = ImGuiGetMainViewportData();
+        assert(pViewportData != nullptr);
+        ImGuiDestroyFramebuffers(pViewportData);
+
         ImGui::DestroyPlatformWindows();
         
         if (pBackend->bInstalledCallbacks)
@@ -2041,16 +2064,13 @@ namespace GUI
         return pDescriptorSet;
     }
 
-    void OnWindowResize(uint32_t width, uint32_t height)
+    void OnSwapchainRecreated()
     {
         ImGuiViewportData*        pViewportData    = ImGuiGetMainViewportData();
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
-        if (!pViewportData->ValidateFramebuffers())
-        {
-            pViewportData->WaitUntilIdle();
 
-            ImGuiDestroyFramebuffers(pViewportData);
-            ImGuiCreateFramebuffers(pRendererBackend->pDevice, pViewportData);
-        }
+        // At this point the device should already be idle
+        ImGuiDestroyFramebuffers(pViewportData);
+        ImGuiCreateFramebuffers(pRendererBackend->pDevice, pViewportData);
     }
 }

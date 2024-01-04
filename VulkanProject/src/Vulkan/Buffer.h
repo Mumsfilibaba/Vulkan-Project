@@ -39,9 +39,9 @@ public:
     
 private:
     DeviceMemoryAllocator* m_pAllocator;
-    Device*         m_pDevice;
+    Device*                m_pDevice;
     VkBuffer               m_Buffer;
     VkDeviceMemory         m_DeviceMemory;
     VkDeviceSize           m_Size;
-    DeviceAllocation     m_Allocation;
+    DeviceAllocation       m_Allocation;
 };

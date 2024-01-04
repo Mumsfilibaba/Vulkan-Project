@@ -61,6 +61,11 @@ public:
         return m_PresentationQueue;
     }
 
+    VkQueue GetGraphicsQueue() const
+    {
+        return m_GraphicsQueue;
+    }
+
     float GetTimestampPeriod() const
     {
         return m_DeviceProperties.limits.timestampPeriod;

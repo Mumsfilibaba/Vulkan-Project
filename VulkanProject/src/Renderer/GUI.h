@@ -17,7 +17,7 @@ namespace GUI
     
     void ReleaseImGui();
 
-    void OnWindowResize(uint32_t width, uint32_t height);
+    void OnSwapchainRecreated();
     
     DescriptorSet* AllocateTextureID(TextureView* pTextureView);
 }

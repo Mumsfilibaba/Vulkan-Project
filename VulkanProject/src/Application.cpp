@@ -112,11 +112,6 @@ bool Application::CreateWindow()
 
 void Application::OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height)
 {
-    // Perform flush on CommandBuffer
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    m_pDevice->ExecuteGraphics(nullptr, m_pSwapchain, waitStages);
-    m_pDevice->WaitForIdle();
-    
     m_Width  = width;
     m_Height = height;
 
@@ -124,7 +119,7 @@ void Application::OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t h
     m_pSwapchain->Resize(width, m_Height);
 
     // Ensure that ImGui can create necessary resources for the main window
-    GUI::OnWindowResize(width, height);
+    GUI::OnSwapchainRecreated();
 
     // Let the renderer know about the resize
     m_pRenderer->OnWindowResize(m_Width, m_Height);
@@ -159,9 +154,13 @@ void Application::Tick()
     // Render ImGui
     GUI::RenderImGui();
     
-    // Update screen
-    m_pSwapchain->Present();
-    
+    // Present main window
+    VkResult result = m_pSwapchain->Present();
+    if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        GUI::OnSwapchainRecreated();
+    }
+
     m_LastTime = currentTime;
 }
 
@@ -169,12 +168,11 @@ void Application::Release()
 {
     m_pDevice->WaitForIdle();
 
-    GUI::ReleaseImGui();
-    
     m_pRenderer->Release();
 
-    SAFE_DELETE(m_pSwapchain);
+    GUI::ReleaseImGui();
 
+    SAFE_DELETE(m_pSwapchain);
     m_pDevice->Destroy();
 
     glfwDestroyWindow(m_pWindow);

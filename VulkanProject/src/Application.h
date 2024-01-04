@@ -50,10 +50,10 @@ public:
     }
 
 private:
-    GLFWwindow*    m_pWindow;
-    IRenderer*     m_pRenderer;
-    Device* m_pDevice;
-    Swapchain*     m_pSwapchain;
+    GLFWwindow* m_pWindow;
+    IRenderer*  m_pRenderer;
+    Device*     m_pDevice;
+    Swapchain*  m_pSwapchain;
     
     uint32_t m_Width;
     uint32_t m_Height;

@@ -20,10 +20,11 @@ public:
     
     Swapchain(Device* pDevice, GLFWwindow* pWindow);
     ~Swapchain();
-    
+
     void Resize(uint32_t width, uint32_t height);
-    void Present();
-    
+
+    VkResult Present();
+
     VkSemaphore GetImageSemaphore() const
     {
         return m_FrameData[m_SemaphoreIndex].ImageSemaphore;
@@ -71,9 +72,11 @@ private:
    
     void ReleaseSwapchainResources();
     void RecreateSwapchain();
+    
     VkResult AquireNextImage();
+    void     WaitForImage();
 
-    Device*         m_pDevice;
+    Device*                m_pDevice;
     GLFWwindow*            m_pWindow;
     VkSurfaceKHR           m_Surface;
     VkSwapchainKHR         m_Swapchain;
