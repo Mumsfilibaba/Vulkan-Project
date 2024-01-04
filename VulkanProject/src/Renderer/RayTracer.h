@@ -114,8 +114,8 @@ private:
     float    m_LastCPUTime;
     float    m_LastGPUTime;
 
-    uint32_t m_NumSamples;
-    bool     m_bResetImage;
+    uint32_t         m_NumSamples;
+    std::atomic_bool m_bResetImage;
 
     uint32_t m_ViewportWidth;
     uint32_t m_ViewportHeight;

@@ -580,6 +580,9 @@ void RayTracer::CreateOrResizeSceneTexture(uint32_t width, uint32_t height)
 
     // Descriptor set for when tracing
     CreateDescriptorSet();
+    
+    // When we have resized we need to clear the image as well
+    m_bResetImage = true;
 }
 
 void RayTracer::CreateDescriptorSet()
@@ -656,7 +659,8 @@ void RayTracer::ReloadShader()
             SAFE_DELETE(pComputeShader);
             SAFE_DELETE(pComputePipeline);
             
-            bIsCompiling = false;
+            m_bResetImage = true;
+            bIsCompiling  = false;
             return true;
         });
     }
