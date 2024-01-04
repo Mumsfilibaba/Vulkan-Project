@@ -425,7 +425,7 @@ void main()
 
     // Store to scene texture
     FinalColor = currentColor.rgb / uRandom.NumSamples;
-    // FinalColor = AcesFitted(FinalColor);
+    //FinalColor = AcesFitted(FinalColor);
     FinalColor = pow(FinalColor, vec3(1.0 / 2.2));
     imageStore(Output, Pixel, vec4(FinalColor, 1.0));
 }

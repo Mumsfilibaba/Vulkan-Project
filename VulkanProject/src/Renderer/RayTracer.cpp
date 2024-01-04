@@ -163,10 +163,10 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     m_Spheres.push_back({ glm::vec3( 1.5f, 0.5f,  0.0f),  0.5f, 1 });
     m_Spheres.push_back({ glm::vec3( 0.0f, 0.5f,  0.0f),  0.5f, 5 });
     m_Spheres.push_back({ glm::vec3(-1.5f, 0.5f,  0.0f),  0.5f, 1 });
-    m_Spheres.push_back({ glm::vec3( 1.5f, 0.5f, -1.5f),  0.5f, 2 });
-    m_Spheres.push_back({ glm::vec3( 0.0f, 0.5f, -1.5f),  0.5f, 2 });
-    m_Spheres.push_back({ glm::vec3(-1.5f, 0.5f, -1.5f),  0.5f, 2 });
-    m_Spheres.push_back({ glm::vec3( 0.0f, 2.5f,  0.0f), 0.25f, 4 });
+    m_Spheres.push_back({ glm::vec3( 1.5f, 0.5f, -1.5f),  0.5f, 0 });
+    m_Spheres.push_back({ glm::vec3( 0.0f, 0.5f, -1.5f),  0.5f, 0 });
+    m_Spheres.push_back({ glm::vec3(-1.5f, 0.5f, -1.5f),  0.5f, 0 });
+    m_Spheres.push_back({ glm::vec3( 0.0f, 2.0f,  0.0f), 0.25f, 4 });
 
     m_pSphereBuffer = Buffer::Create(m_pDevice, sphereBufferParams, m_pDeviceAllocator);
     assert(m_pSphereBuffer != nullptr);
@@ -196,51 +196,51 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     m_Materials.reserve(MAX_MATERIALS);
     m_Materials.push_back(
     {
-        glm::vec4(0.98f, 0.98f, 0.98f, 1.0f),
+        glm::vec4(0.95f, 0.95f, 0.95f, 1.0f),
         glm::vec4(0.0f,  0.0f,  0.0f, 0.0f),
-        0.0f,
+        0.02f,
         MATERIAL_STANDARD
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.98f, 0.02f, 0.02f, 1.0f),
+        glm::vec4(0.95f, 0.02f, 0.02f, 1.0f),
         glm::vec4( 0.0f, 0.0f,  0.0f, 0.0f),
         0.45f,
         MATERIAL_STANDARD
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.98f, 0.98f, 0.98f, 1.0f),
+        glm::vec4(0.95f, 0.95f, 0.95f, 1.0f),
         glm::vec4( 0.0f,  0.0f, 0.0f, 0.0f),
         0.9f,
         MATERIAL_STANDARD
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.98f, 0.98f, 0.98f, 1.0f),
+        glm::vec4(0.95f, 0.95f, 0.95f, 1.0f),
         glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
-        1.0f,
+        0.98f,
         MATERIAL_STANDARD
     });
     m_Materials.push_back(
     {
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-        0.0f,
+        0.02f,
         MATERIAL_EMISSIVE
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.98f, 0.98f, 0.98f, 1.0f),
+        glm::vec4(0.95f, 0.95f, 0.95f, 1.0f),
         glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
-        0.0f,
+        0.02f,
         MATERIAL_STANDARD
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.02f, 0.98f, 0.02f, 1.0f),
+        glm::vec4(0.02f, 0.95f, 0.02f, 1.0f),
         glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
-        1.0f,
+        0.98f,
         MATERIAL_STANDARD
     });
 
