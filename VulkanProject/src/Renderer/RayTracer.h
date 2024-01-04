@@ -102,8 +102,12 @@ private:
     class TextureView*   m_pSceneTextureView;
     class DescriptorSet* m_pSceneTextureDescriptorSet;
 
-    Camera   m_Camera;
+    Camera    m_Camera;
+    glm::vec3 m_LightDir;
+
+    float    m_LastCPUTime;
     float    m_LastGPUTime;
+
     uint32_t m_ViewportWidth;
     uint32_t m_ViewportHeight;
 };

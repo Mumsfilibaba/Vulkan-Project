@@ -229,6 +229,7 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
 void RayTracer::Tick(float deltaTime)
 {
     constexpr float CameraSpeed = 1.5f;
+    m_LastCPUTime = deltaTime * 1000.0f; // deltaTime is in seconds
     
     // Update scene image
     CreateOrResizeSceneTexture(m_ViewportWidth, m_ViewportHeight);
@@ -406,9 +407,8 @@ void RayTracer::OnRenderUI()
     ImGui::End();
     
     ImGui::Begin("Scene");
+    ImGui::Text("CPU Time %.4f", m_LastCPUTime);
     ImGui::Text("GPU Time %.4f", m_LastGPUTime);
-    
-    
     ImGui::End();
     
     ImGui::Begin("Viewport");
@@ -526,8 +526,6 @@ void RayTracer::ReleaseDescriptorSet()
 {
     SAFE_DELETE(m_pDescriptorSet);
 }
-
-#include <Windows.h>
 
 void RayTracer::ReloadShader()
 {
