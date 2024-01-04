@@ -12,9 +12,9 @@ class Buffer;
 struct RandomBuffer
 {
     uint32_t FrameIndex = 0;
+    uint32_t NumSamples = 0;
     uint32_t Padding0   = 0;
     uint32_t Padding1   = 0;
-    uint32_t Padding2   = 0;
 };
 
 struct SceneBuffer
@@ -49,6 +49,10 @@ struct Plane
 struct Material
 {
     glm::vec4 Albedo;
+    float     Roughness;
+    uint32_t  Padding0;
+    uint32_t  Padding1;
+    uint32_t  Padding2;
 };
 
 class RayTracer : public IRenderer
@@ -98,6 +102,8 @@ private:
     std::vector<Plane>    m_Planes;
     std::vector<Material> m_Materials;
 
+    class Texture*       m_pAccumulationTexture;
+    class TextureView*   m_pAccumulationTextureView;
     class Texture*       m_pSceneTexture;
     class TextureView*   m_pSceneTextureView;
     class DescriptorSet* m_pSceneTextureDescriptorSet;
@@ -107,6 +113,9 @@ private:
 
     float    m_LastCPUTime;
     float    m_LastGPUTime;
+
+    uint32_t m_NumSamples;
+    bool     m_bResetImage;
 
     uint32_t m_ViewportWidth;
     uint32_t m_ViewportHeight;

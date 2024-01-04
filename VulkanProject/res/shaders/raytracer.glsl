@@ -5,17 +5,17 @@
 #include "tonemap.glsl"
 
 #define NUM_THREADS (16)
-#define MAX_DEPTH   (1)
-#define NUM_SAMPLES (1)
+#define MAX_DEPTH   (16)
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
 layout (binding = 0, rgba32f) uniform image2D Output;
+layout (binding = 1, rgba32f) uniform image2D Accumulation;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 /* Global uniforms */
 
-layout(binding = 1) uniform CameraBufferObject 
+layout(binding = 2) uniform CameraBufferObject 
 {
     mat4 Projection;
     mat4 View;
@@ -23,15 +23,15 @@ layout(binding = 1) uniform CameraBufferObject
     vec4 Forward;
 } uCamera;
 
-layout(binding = 2) uniform RandomBufferObject 
+layout(binding = 3) uniform RandomBufferObject 
 {
     uint FrameIndex;
+    uint NumSamples;
     uint Padding0;
     uint Padding1;
-    uint Padding2;
 } uRandom;
 
-layout(binding = 3) uniform SceneBufferObject 
+layout(binding = 4) uniform SceneBufferObject 
 {
     vec4 LightDir;
     uint NumSpheres;
@@ -50,7 +50,11 @@ layout(binding = 3) uniform SceneBufferObject
 
 struct Material
 {
-    vec4 Albedo;
+    vec4  Albedo;
+    float Roughness;
+    uint  Padding0;
+    uint  Padding1;
+    uint  Padding2;
 };
 
 struct Sphere
@@ -71,17 +75,17 @@ struct Plane
     uint Padding2;
 };
 
-layout(std430, binding = 4) buffer SphereBuffer
+layout(std430, binding = 5) buffer SphereBuffer
 {
     Sphere Spheres[];
 };
 
-layout(std430, binding = 5) buffer PlaneBuffer
+layout(std430, binding = 6) buffer PlaneBuffer
 {
     Plane Planes[];
 };
 
-layout(std430, binding = 6) buffer MaterialBuffer
+layout(std430, binding = 7) buffer MaterialBuffer
 {
     Material Materials[];
 };
@@ -312,9 +316,9 @@ void main()
     uint RandomSeed = InitRandom(uvec2(Pixel), Size.x, uRandom.FrameIndex);
 
     vec3 FinalColor = vec3(0.0f);
-    for (uint Sample = 0; Sample < NUM_SAMPLES; Sample++)
+    for (uint Sample = 0; Sample < 1; Sample++)
     {
-        vec2 Jitter = Halton23(Sample);
+        vec2 Jitter = Halton23(RandomSeed);
         Jitter = (Jitter * 2.0) - vec2(1.0);
 
         vec2 FilmUV = (vec2(Pixel) + Jitter) / vec2(Size.xy);
@@ -344,34 +348,30 @@ void main()
                 const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials);
                 Material Material = Materials[MaterialIndex];
                 
-                vec3 N        = normalize(PayLoad.Normal);
-                vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
-
-                /*
-                vec3 NewOrigin    = Position + (N * 0.0001f);
-                vec3 NewDirection = vec3(0.0f);
-
-                if (Material.Type == MAT_LAMBERTIAN)
-                {
-                    ShadeLambertian(Material, Ray, PayLoad, N, HitColor, NewDirection, RandomSeed);
-                }
-                else if (Material.Type == MAT_METAL)
-                {
-                    ShadeMetal(Material, Ray, PayLoad, N, HitColor, NewDirection, RandomSeed);
-                }
-                else if (Material.Type == MAT_EMISSIVE)
-                {
-                    ShadeEmissive(Material, Ray, PayLoad, N, HitColor, NewDirection, RandomSeed);
-                }
-                else if (Material.Type == MAT_DIELECTRIC)
-                {
-                    ShadeDielectric(Material, Ray, PayLoad, N, HitColor, NewDirection, RandomSeed);
-                    NewOrigin = Position;
-                }
-
-                Ray.Origin    = NewOrigin;
-                Ray.Direction = NewDirection;*/
+                vec3 N          = normalize(PayLoad.Normal);
+                vec3 Position   = Ray.Origin + Ray.Direction * PayLoad.T;
+                vec3 Reflection = reflect(Ray.Direction, N);
                 
+                vec3 Direction;
+                if (Material.Roughness > 0.0f)
+                {
+                    vec2 Halton = Halton23(NextRandomInt(RandomSeed) % 16);
+                    Halton.x = fract(Halton.x + NextRandom(RandomSeed));
+                    Halton.y = fract(Halton.y + NextRandom(RandomSeed));
+
+                    vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
+                    if (dot(Rnd, N) <= 0.0)
+                    {
+                        Rnd = -Rnd;
+                    }
+
+                    Direction = normalize(Reflection + Rnd * Material.Roughness);
+                }
+                else
+                {
+                    Direction = normalize(Reflection);
+                }
+
                 // Cast a shadow ray
                 const vec3 LightDir = -normalize(uScene.LightDir.xyz);
                 Ray.Origin    = Position + (N * 0.01f);
@@ -381,7 +381,7 @@ void main()
                 PayLoad.MaxT = 1000.0;
                 PayLoad.T    = PayLoad.MaxT;
 
-                float LightIntensity;
+                float LightIntensity = 1.0;
                 if (TraceRay(Ray, PayLoad))
                 {
                     LightIntensity = 0.0;
@@ -391,11 +391,23 @@ void main()
                     LightIntensity = clamp(dot(LightDir, N), 0.0, 1.0);
                 }
 
-                HitColor = Material.Albedo.rgb * LightIntensity;
+                HitColor = vec3(0.1, 0.1, 0.1) + Material.Albedo.rgb * LightIntensity;
+
+                // Setup the next ray
+                Ray.Origin    = Position + (N * 0.01f);
+                Ray.Direction = Direction;
             }
             else
             {
-                HitColor = vec3(0.0, 0.0, 0.0);
+                if (i == 0)
+                {
+                    HitColor = vec3(0.0, 0.0, 0.0);
+                }
+                else
+                {
+                    HitColor = vec3(0.1, 0.1, 1.0);
+                }
+
                 i = MAX_DEPTH;
             }
 
@@ -405,7 +417,13 @@ void main()
         FinalColor += SampleColor;
     }
 
-    FinalColor = FinalColor / vec3(NUM_SAMPLES);
+    // Accumulate samples over time
+    vec4 previousColor = imageLoad(Accumulation, Pixel);
+    vec4 currentColor  = previousColor + vec4(FinalColor, 0.0);
+    imageStore(Accumulation, Pixel, currentColor);
+
+    // Store to scene texture
+    FinalColor = currentColor.rgb / uRandom.NumSamples;
     // FinalColor = AcesFitted(FinalColor);
     FinalColor = pow(FinalColor, vec3(1.0 / 2.2));
     imageStore(Output, Pixel, vec4(FinalColor, 1.0));

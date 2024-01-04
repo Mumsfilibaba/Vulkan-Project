@@ -60,6 +60,11 @@ public:
         vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
+    void ClearColorImage(VkImage image, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
+    {
+        vkCmdClearColorImage(m_CommandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+    }
+
     void SetViewport(const VkViewport& viewport)
     {
         vkCmdSetViewport(m_CommandBuffer, 0, 1, &viewport);

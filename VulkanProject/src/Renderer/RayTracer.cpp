@@ -26,6 +26,7 @@ RayTracer::RayTracer()
     , m_pSceneTexture(nullptr)
     , m_pSceneTextureView(nullptr)
     , m_pSceneTextureDescriptorSet(nullptr)
+    , m_bResetImage(true)
 {
 }
 
@@ -36,16 +37,16 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     m_pSwapchain = pSwapchain;
 
     // Create DescriptorSetLayout
-    constexpr uint32_t numBindings = 7;
+    constexpr uint32_t numBindings = 8;
     VkDescriptorSetLayoutBinding bindings[numBindings];
     bindings[0].binding            = 0;
     bindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     bindings[0].descriptorCount    = 1;
     bindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[0].pImmutableSamplers = nullptr;
-    
+
     bindings[1].binding            = 1;
-    bindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     bindings[1].descriptorCount    = 1;
     bindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[1].pImmutableSamplers = nullptr;
@@ -55,7 +56,7 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     bindings[2].descriptorCount    = 1;
     bindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[2].pImmutableSamplers = nullptr;
-
+    
     bindings[3].binding            = 3;
     bindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     bindings[3].descriptorCount    = 1;
@@ -63,7 +64,7 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     bindings[3].pImmutableSamplers = nullptr;
 
     bindings[4].binding            = 4;
-    bindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     bindings[4].descriptorCount    = 1;
     bindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[4].pImmutableSamplers = nullptr;
@@ -79,6 +80,12 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     bindings[6].descriptorCount    = 1;
     bindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[6].pImmutableSamplers = nullptr;
+
+    bindings[7].binding            = 7;
+    bindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[7].descriptorCount    = 1;
+    bindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[7].pImmutableSamplers = nullptr;
 
     DescriptorSetLayoutParams descriptorSetLayoutParams;
     descriptorSetLayoutParams.pBindings   = bindings;
@@ -110,7 +117,7 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     // Create DescriptorPool
     DescriptorPoolParams poolParams;
     poolParams.NumUniformBuffers = 3;
-    poolParams.NumStorageImages  = 1;
+    poolParams.NumStorageImages  = 2;
     poolParams.NumStorageBuffers = 3;
     poolParams.MaxSets           = 1;
     m_pDescriptorPool = DescriptorPool::Create(m_pDevice, poolParams);
@@ -182,10 +189,10 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     materialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_Materials.reserve(MAX_MATERIALS);
-    m_Materials.push_back({ glm::vec4(1.0f, 0.0f, 0.0f, 1.0f) });
-    m_Materials.push_back({ glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) });
-    m_Materials.push_back({ glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) });
-    m_Materials.push_back({ glm::vec4(1.0f, 1.0f, 1.0f, 1.0f) });
+    m_Materials.push_back({ glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.1f });
+    m_Materials.push_back({ glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.4f });
+    m_Materials.push_back({ glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 0.7f });
+    m_Materials.push_back({ glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f });
 
     m_pMaterialBuffer = Buffer::Create(m_pDevice, materialBufferParams, m_pDeviceAllocator);
     assert(m_pMaterialBuffer != nullptr);
@@ -234,6 +241,7 @@ void RayTracer::Tick(float deltaTime)
     // Update scene image
     CreateOrResizeSceneTexture(m_ViewportWidth, m_ViewportHeight);
     
+    // Camera Movement
     glm::vec3 translation(0.0f);
     if (Input::IsKeyDown(GLFW_KEY_W))
     {
@@ -255,6 +263,7 @@ void RayTracer::Tick(float deltaTime)
     
     m_Camera.Move(translation);
 
+    // Camera rotation
     constexpr float CameraRotationSpeed = glm::pi<float>() / 2;
     
     glm::vec3 rotation(0.0f);
@@ -275,13 +284,20 @@ void RayTracer::Tick(float deltaTime)
     {
         rotation.x = CameraRotationSpeed * deltaTime;
     }
+
+    m_Camera.Rotate(rotation);
     
+    // Check if we moved and then we reset the image
+    if (glm::length(rotation) > 0.0f || glm::length(translation) > 0.0f)
+    {
+        m_bResetImage = true;
+    }
+
+    // Reload shaders
     if (Input::IsKeyDown(GLFW_KEY_R))
     {
         ReloadShader();
     }
-
-    m_Camera.Rotate(rotation);
     
     // Update
     m_Camera.Update(90.0f, m_pSceneTexture->GetWidth(), m_pSceneTexture->GetHeight(), 0.1f, 100.0f);
@@ -310,6 +326,32 @@ void RayTracer::Tick(float deltaTime)
     pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0);
     
     pCurrentCommandBuffer->TransitionImage(m_pSceneTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+    pCurrentCommandBuffer->TransitionImage(m_pAccumulationTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+
+    if (m_bResetImage)
+    {
+        VkClearColorValue clearColor = {};
+        clearColor.float32[0] = 0.0f;
+        clearColor.float32[1] = 0.0f;
+        clearColor.float32[2] = 0.0f;
+        clearColor.float32[3] = 1.0f;
+
+        VkImageSubresourceRange subresourceRange = {};
+        subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        subresourceRange.baseArrayLayer = 0;
+        subresourceRange.layerCount     = 1;
+        subresourceRange.baseMipLevel   = 0;
+        subresourceRange.levelCount     = 1;
+
+        pCurrentCommandBuffer->ClearColorImage(m_pAccumulationTexture->GetImage(), VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &subresourceRange);
+
+        m_bResetImage = false;
+        m_NumSamples  = 1;
+    }
+    else
+    {
+        m_NumSamples++;
+    }
 
     // Update CameraBuffer
     CameraBuffer cameraBuffer = {};
@@ -317,19 +359,18 @@ void RayTracer::Tick(float deltaTime)
     cameraBuffer.View       = m_Camera.GetViewMatrix();
     cameraBuffer.Position   = glm::vec4(m_Camera.GetPosition(), 0.0f);
     cameraBuffer.Forward    = glm::vec4(m_Camera.GetForward(), 0.0f);
+
     pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(CameraBuffer), &cameraBuffer);
-    
+
     // Update RandomBuffer
+    constexpr uint32_t maxSamples = 1024;
     static uint32_t randFrameIndex = 0;
-    randFrameIndex++;
-    
-    if (randFrameIndex >= 16)
-    {
-        randFrameIndex = 0;
-    }
-    
+    randFrameIndex = (randFrameIndex + 1) % 1024;
+ 
     RandomBuffer randomBuffer = {};
     randomBuffer.FrameIndex = randFrameIndex;
+    randomBuffer.NumSamples = m_NumSamples;
+
     pCurrentCommandBuffer->UpdateBuffer(m_pRandomBuffer, 0, sizeof(RandomBuffer), &randomBuffer);
 
     // Update Scene
@@ -352,9 +393,10 @@ void RayTracer::Tick(float deltaTime)
     const uint32_t Threads = 16;
     VkExtent2D dispatchSize = { Math::AlignUp(m_pSceneTexture->GetWidth(), Threads) / Threads, Math::AlignUp(m_pSceneTexture->GetHeight(), Threads) / Threads };
     pCurrentCommandBuffer->Dispatch(dispatchSize.width, dispatchSize.height, 1);
-    
+
     pCurrentCommandBuffer->TransitionImage(m_pSceneTexture->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    
+    pCurrentCommandBuffer->TransitionImage(m_pAccumulationTexture->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
     pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 1);
     pCurrentCommandBuffer->End();
 
@@ -363,6 +405,7 @@ void RayTracer::Tick(float deltaTime)
 
 void RayTracer::OnRenderUI()
 {
+    // Setup Dockspace
     static ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_None;
     
     ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDocking;
@@ -406,11 +449,21 @@ void RayTracer::OnRenderUI()
 
     ImGui::End();
     
-    ImGui::Begin("Scene");
-    ImGui::Text("CPU Time %.4f", m_LastCPUTime);
-    ImGui::Text("GPU Time %.4f", m_LastGPUTime);
-    ImGui::End();
+    // Scene Settings
+    if (ImGui::Begin("Scene"))
+    {
+        ImGui::Text("CPU Time %.4f", m_LastCPUTime);
+        ImGui::Text("GPU Time %.4f", m_LastGPUTime);
+
+        if (ImGui::Button("Clear Image"))
+        {
+            m_bResetImage = true;
+        }
+
+        ImGui::End();
+    }
     
+    // Viewport
     ImGui::Begin("Viewport");
 
     m_ViewportWidth  = ImGui::GetContentRegionAvail().x;
@@ -454,6 +507,8 @@ void RayTracer::Release()
     SAFE_DELETE(m_pPipelineLayout);
     SAFE_DELETE(m_pDescriptorSetLayout);
     SAFE_DELETE(m_pDeviceAllocator);
+    SAFE_DELETE(m_pAccumulationTexture);
+    SAFE_DELETE(m_pAccumulationTextureView);
     SAFE_DELETE(m_pSceneTexture);
     SAFE_DELETE(m_pSceneTextureView);
     SAFE_DELETE(m_pSceneTextureDescriptorSet);
@@ -474,6 +529,8 @@ void RayTracer::CreateOrResizeSceneTexture(uint32_t width, uint32_t height)
         
         m_pDevice->WaitForIdle();
         
+        SAFE_DELETE(m_pAccumulationTexture);
+        SAFE_DELETE(m_pAccumulationTextureView);
         SAFE_DELETE(m_pSceneTexture);
         SAFE_DELETE(m_pSceneTextureView);
         SAFE_DELETE(m_pSceneTextureDescriptorSet);
@@ -486,24 +543,41 @@ void RayTracer::CreateOrResizeSceneTexture(uint32_t width, uint32_t height)
     textureParams.ImageType     = VK_IMAGE_TYPE_2D;
     textureParams.Width         = m_ViewportWidth  = width;
     textureParams.Height        = m_ViewportHeight = height;
-    textureParams.Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    textureParams.Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     textureParams.InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+    // Accumulation texture
+    m_pAccumulationTexture = Texture::Create(m_pDevice, textureParams);
+    assert(m_pAccumulationTexture != nullptr);
+    SetDebugName(m_pDevice->GetDevice(), "AccumulationTexture", reinterpret_cast<uint64_t>(m_pAccumulationTexture->GetImage()), VK_OBJECT_TYPE_IMAGE);
+
+    {
+        TextureViewParams textureViewParams = {};
+        textureViewParams.pTexture = m_pAccumulationTexture;
+
+        m_pAccumulationTextureView = TextureView::Create(m_pDevice, textureViewParams);
+        assert(m_pAccumulationTextureView != nullptr);
+        SetDebugName(m_pDevice->GetDevice(), "AccumulationTextureView", reinterpret_cast<uint64_t>(m_pAccumulationTextureView->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
+    }
+
+    // Scene texture
     m_pSceneTexture = Texture::Create(m_pDevice, textureParams);
     assert(m_pSceneTexture != nullptr);
     SetDebugName(m_pDevice->GetDevice(), "SceneTexture", reinterpret_cast<uint64_t>(m_pSceneTexture->GetImage()), VK_OBJECT_TYPE_IMAGE);
 
-    TextureViewParams textureViewParams = {};
-    textureViewParams.pTexture = m_pSceneTexture;
-    
-    m_pSceneTextureView = TextureView::Create(m_pDevice, textureViewParams);
-    assert(m_pSceneTextureView != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "SceneTextureView", reinterpret_cast<uint64_t>(m_pSceneTextureView->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
-    
+    {
+        TextureViewParams textureViewParams = {};
+        textureViewParams.pTexture = m_pSceneTexture;
+
+        m_pSceneTextureView = TextureView::Create(m_pDevice, textureViewParams);
+        assert(m_pSceneTextureView != nullptr);
+        SetDebugName(m_pDevice->GetDevice(), "SceneTextureView", reinterpret_cast<uint64_t>(m_pSceneTextureView->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
+    }
+
     // UI DescriptorSet
     m_pSceneTextureDescriptorSet = GUI::AllocateTextureID(m_pSceneTextureView);
     assert(m_pSceneTextureDescriptorSet != nullptr);
-    
+
     // Descriptor set for when tracing
     CreateDescriptorSet();
 }
@@ -514,12 +588,13 @@ void RayTracer::CreateDescriptorSet()
     assert(m_pDescriptorSet != nullptr);
 
     m_pDescriptorSet->BindStorageImage(m_pSceneTextureView->GetImageView(), 0);
-    m_pDescriptorSet->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 1);
-    m_pDescriptorSet->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 2);
-    m_pDescriptorSet->BindUniformBuffer(m_pSceneBuffer->GetBuffer(), 3);
-    m_pDescriptorSet->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 4);
-    m_pDescriptorSet->BindStorageBuffer(m_pPlaneBuffer->GetBuffer(), 5);
-    m_pDescriptorSet->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 6);
+    m_pDescriptorSet->BindStorageImage(m_pAccumulationTextureView->GetImageView(), 1);
+    m_pDescriptorSet->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 2);
+    m_pDescriptorSet->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 3);
+    m_pDescriptorSet->BindUniformBuffer(m_pSceneBuffer->GetBuffer(), 4);
+    m_pDescriptorSet->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 5);
+    m_pDescriptorSet->BindStorageBuffer(m_pPlaneBuffer->GetBuffer(), 6);
+    m_pDescriptorSet->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 7);
 }
 
 void RayTracer::ReleaseDescriptorSet()
@@ -546,6 +621,7 @@ void RayTracer::ReloadShader()
             if (result != 0)
             {
                 std::cout << "FAILED to Compile Shaders\n";
+                bIsCompiling = false;
                 return false;
             }
 
@@ -557,6 +633,7 @@ void RayTracer::ReloadShader()
             if (!pComputeShader)
             {
                 std::cout << "FAILED to create ComputeShader\n";
+                bIsCompiling = false;
                 return false;
             }
 
@@ -568,6 +645,8 @@ void RayTracer::ReloadShader()
             if (!pComputePipeline)
             {
                 std::cout << "FAILED to create ComputePipeline\n";
+                SAFE_DELETE(pComputeShader);
+                bIsCompiling = false;
                 return false;
             }
 
