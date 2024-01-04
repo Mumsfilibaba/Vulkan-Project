@@ -355,8 +355,8 @@ workspace "Vulkan-Project"
 
 		-- Targets
 		builddir = "Build/bin/" .. outputdir .. "/%{prj.name}"
-		targetdir 	(builddir)
-		objdir 		("Build/bin-int/" .. outputdir .. "/%{prj.name}")	
+		targetdir(builddir)
+		objdir("Build/bin-int/" .. outputdir .. "/%{prj.name}")	
 
 		-- Files to include
 		files 
@@ -378,9 +378,6 @@ workspace "Vulkan-Project"
 		local resourceFolderPath = os.getcwd() .. "/VulkanProject/res"
 		printf("resourceFolderPath=%s", resourceFolderPath)
 
-		local finalResourceFolderPath = os.getcwd() .. "/" .. builddir
-		printf("finalResourceFolderPath=%s", finalResourceFolderPath)
-
 		-- Windows
 		filter "system:windows"
 			links
@@ -401,13 +398,10 @@ workspace "Vulkan-Project"
 				shaderScriptPath .. ".bat" 
 			}
 
-			-- TODO: We copy the files twice, do something better
-			postbuildcommands 
-			{ 
-				"{MKDIR} " .. finalResourceFolderPath, 
-				"{COPYDIR} " .. resourceFolderPath .. " " .. finalResourceFolderPath .. "/res/",
-				"{MKDIR} " .. "res/", 
-				"{COPYDIR} " .. resourceFolderPath .. " res/", 
+			defines
+			{
+				"RESOURCE_PATH=" .. "\"" .. resourceFolderPath .. "\"", 
+				"SHADER_SCRIPT_PATH=" .. "\"" .. shaderScriptPath .. ".bat\"", 
 			}
 
 		-- macOS
@@ -433,14 +427,11 @@ workspace "Vulkan-Project"
 			{ 
 				shaderScriptPath .. ".command" 
 			}
-		
-			-- TODO: We copy the files twice, do something better
-			postbuildcommands 
-			{ 
-				"{MKDIR} " .. finalResourceFolderPath, 
-				"{COPYDIR} " .. resourceFolderPath .. " " .. finalResourceFolderPath,
-				"{MKDIR} " .. "res/", 
-				"{COPYDIR} " .. resourceFolderPath .. " res/", 
+
+			defines
+			{
+				"RESOURCE_PATH=" .. "\"" .. resourceFolderPath .. "\"", 
+				"SHADER_SCRIPT_PATH=" .. "\"" .. shaderScriptPath .. ".command\"", 
 			}
 
 		-- Visual Studio

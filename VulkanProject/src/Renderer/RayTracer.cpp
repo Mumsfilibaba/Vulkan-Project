@@ -103,7 +103,7 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     assert(m_pPipelineLayout != nullptr);
 
     // Create shader and pipeline
-    ShaderModule* pComputeShader = ShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/raytracer.spv");
+    ShaderModule* pComputeShader = ShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/raytracer.spv");
 
     ComputePipelineStateParams pipelineParams = {};
     pipelineParams.pShader         = pComputeShader;
@@ -189,10 +189,41 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     materialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_Materials.reserve(MAX_MATERIALS);
-    m_Materials.push_back({ glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.1f });
-    m_Materials.push_back({ glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.4f });
-    m_Materials.push_back({ glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 0.7f });
-    m_Materials.push_back({ glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f });
+    m_Materials.push_back(
+    {
+        glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        0.05f,
+        MATERIAL_STANDARD
+    });
+    m_Materials.push_back(
+    {
+        glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        0.3f,
+        MATERIAL_STANDARD
+    });
+    m_Materials.push_back(
+    {
+        glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        0.6f,
+        MATERIAL_STANDARD
+    });
+    m_Materials.push_back(
+    {
+        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        0.9f,
+        MATERIAL_STANDARD
+    });
+    m_Materials.push_back(
+    {
+        glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+        0.0f,
+        MATERIAL_EMISSIVE
+    });
 
     m_pMaterialBuffer = Buffer::Create(m_pDevice, materialBufferParams, m_pDeviceAllocator);
     assert(m_pMaterialBuffer != nullptr);
@@ -452,14 +483,40 @@ void RayTracer::OnRenderUI()
     // Scene Settings
     if (ImGui::Begin("Scene"))
     {
+        ImGui::Text("Performance:");
+        ImGui::Separator();
+        
         ImGui::Text("CPU Time %.4f", m_LastCPUTime);
         ImGui::Text("GPU Time %.4f", m_LastGPUTime);
 
+        ImGui::NewLine();
+        
+        ImGui::Text("Image:");
+        ImGui::Separator();
+        
         if (ImGui::Button("Clear Image"))
         {
             m_bResetImage = true;
         }
+        
+        ImGui::NewLine();
+        
+        ImGui::Text("Objects:");
+        ImGui::Separator();
 
+        uint32_t index = 1;
+        for (Sphere& sphere : m_Spheres)
+        {
+            ImGui::Text("Sphere %d", index++);
+            ImGui::InputFloat3("Position", &sphere.Position.x);
+            ImGui::InputFloat("Radius", &sphere.Radius);
+        }
+        
+        ImGui::NewLine();
+        
+        ImGui::Text("Materials:");
+        ImGui::Separator();
+        
         ImGui::End();
     }
     
@@ -616,11 +673,7 @@ void RayTracer::ReloadShader()
         std::async(std::launch::async, [this]()
         {
             // Compile the shaders
-         #if PLATFORM_WINDOWS
-            auto result = std::system("res\\compile_shaders.bat");
-         #elif PLATFORM_MAC
-            auto result = std::system("res/compile_shaders.command");
-         #endif
+            auto result = std::system(SHADER_SCRIPT_PATH);
             if (result != 0)
             {
                 std::cout << "FAILED to Compile Shaders\n";
@@ -632,7 +685,7 @@ void RayTracer::ReloadShader()
             std::cout << "Compiled Shaders Successfully\n";
 
             // Create shader and pipeline
-            ShaderModule* pComputeShader = ShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/raytracer.spv");
+            ShaderModule* pComputeShader = ShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/raytracer.spv");
             if (!pComputeShader)
             {
                 std::cout << "FAILED to create ComputeShader\n";

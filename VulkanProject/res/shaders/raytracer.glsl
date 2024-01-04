@@ -43,16 +43,16 @@ layout(binding = 4) uniform SceneBufferObject
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 /* Scene objects */
 
-#define MATERIAL_METAL      (1)
-#define MATERIAL_LAMBERTIAN (2)
-#define MATERIAL_EMISSIVE   (3)
-#define MATERIAL_DIELECTRIC (4)
+#define MATERIAL_STANDARD (1)
+#define MATERIAL_EMISSIVE (2)
 
 struct Material
 {
     vec4  Albedo;
+    vec4  Emissive;
+
     float Roughness;
-    uint  Padding0;
+    uint  Type;
     uint  Padding1;
     uint  Padding2;
 };

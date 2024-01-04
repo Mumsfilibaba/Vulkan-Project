@@ -46,13 +46,18 @@ struct Plane
     uint32_t  Padding2;
 };
 
+#define MATERIAL_STANDARD (1)
+#define MATERIAL_EMISSIVE (2)
+
 struct Material
 {
     glm::vec4 Albedo;
+    glm::vec4 Emissive;
+    
     float     Roughness;
+    uint32_t  Type;
     uint32_t  Padding0;
     uint32_t  Padding1;
-    uint32_t  Padding2;
 };
 
 class RayTracer : public IRenderer
