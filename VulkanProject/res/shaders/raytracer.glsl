@@ -5,7 +5,7 @@
 #include "tonemap.glsl"
 
 #define NUM_THREADS (16)
-#define MAX_DEPTH   (16)
+#define MAX_DEPTH   (64)
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
@@ -114,7 +114,7 @@ struct RayPayLoad
 
 vec3 HemisphereSampleUniform(float u, float v) 
 {
-    float phi = v * 2.0 * PI;
+    float phi      = v * 2.0 * PI;
     float cosTheta = 1.0 - u;
     float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
     return normalize(vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta));
@@ -299,6 +299,7 @@ void ShadeDielectric(in Material Material, in Ray Ray, in RayPayLoad PayLoad, in
 
 void main()
 {
+    // Setup the camera
     vec3 CameraPosition = uCamera.Position.xyz;
     vec3 CamForward     = normalize(uCamera.Forward.xyz);
     vec3 CamUp          = vec3(0.0, 1.0, 0.0);
@@ -313,49 +314,52 @@ void main()
     float FilmDistance = 1.0;
     vec3  FilmCenter   = CameraPosition + (CamForward * FilmDistance);
 
+    // Jitter the camera each frame
     uint RandomSeed = InitRandom(uvec2(Pixel), Size.x, uRandom.FrameIndex);
 
-    vec3 FinalColor = vec3(0.0f);
-    for (uint Sample = 0; Sample < 1; Sample++)
+    vec2 Jitter = Halton23(uRandom.FrameIndex);
+    Jitter = (Jitter * 2.0) - vec2(1.0);
+
+    vec2 FilmUV = (vec2(Pixel) + Jitter) / vec2(Size.xy);
+    FilmUV.y = 1.0 - FilmUV.y;
+    FilmUV   = FilmUV * 2.0;
+
+    vec2 FilmCoord = FilmCorner + FilmUV;
+    FilmCoord.x = FilmCoord.x * AspectRatio;
+
+    vec3 FilmTarget = FilmCenter + (CamRight * FilmCoord.x) + (CamUp * FilmCoord.y);
+
+    // Setup the first ray
+    Ray Ray;
+    Ray.Origin    = CameraPosition;
+    Ray.Direction = normalize(FilmTarget - CameraPosition);
+
+    // Start tracing rays
+    vec3 SampleColor = vec3(1.0);
+    for (uint i = 0; i < MAX_DEPTH; i++)
     {
-        vec2 Jitter = Halton23(RandomSeed);
-        Jitter = (Jitter * 2.0) - vec2(1.0);
+        RayPayLoad PayLoad;
+        PayLoad.MinT = 0.0;
+        PayLoad.MaxT = 1000.0;
+        PayLoad.T    = PayLoad.MaxT;
 
-        vec2 FilmUV = (vec2(Pixel) + Jitter) / vec2(Size.xy);
-        FilmUV.y = 1.0 - FilmUV.y;
-        FilmUV   = FilmUV * 2.0;
-
-        vec2 FilmCoord = FilmCorner + FilmUV;
-        FilmCoord.x = FilmCoord.x * AspectRatio;
-
-        vec3 FilmTarget = FilmCenter + (CamRight * FilmCoord.x) + (CamUp * FilmCoord.y);
-
-        Ray Ray;
-        Ray.Origin    = CameraPosition;
-        Ray.Direction = normalize(FilmTarget - CameraPosition);
-
-        vec3 SampleColor = vec3(1.0);
-        for (uint i = 0; i < MAX_DEPTH; i++)
+        if (TraceRay(Ray, PayLoad))
         {
-            RayPayLoad PayLoad;
-            PayLoad.MinT = 0.0;
-            PayLoad.MaxT = 1000.0;
-            PayLoad.T    = PayLoad.MaxT;
-
-            vec3 HitColor = vec3(0.0);
-            if (TraceRay(Ray, PayLoad))
+            const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials);
+            Material Material = Materials[MaterialIndex];
+            
+            vec3 N          = normalize(PayLoad.Normal);
+            vec3 Position   = Ray.Origin + Ray.Direction * PayLoad.T;
+            vec3 Reflection = reflect(Ray.Direction, N);
+            
+            vec3 HitColor  = vec3(0.0);
+            vec3 Emissive  = vec3(0.0);
+            vec3 Direction = vec3(0.0);
+            if (Material.Type == MATERIAL_STANDARD)
             {
-                const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials);
-                Material Material = Materials[MaterialIndex];
-                
-                vec3 N          = normalize(PayLoad.Normal);
-                vec3 Position   = Ray.Origin + Ray.Direction * PayLoad.T;
-                vec3 Reflection = reflect(Ray.Direction, N);
-                
-                vec3 Direction;
-                if (Material.Roughness > 0.0f)
+                if (Material.Roughness > 0.0)
                 {
-                    vec2 Halton = Halton23(NextRandomInt(RandomSeed) % 16);
+                    vec2 Halton = Halton23(uRandom.FrameIndex);
                     Halton.x = fract(Halton.x + NextRandom(RandomSeed));
                     Halton.y = fract(Halton.y + NextRandom(RandomSeed));
 
@@ -372,50 +376,47 @@ void main()
                     Direction = normalize(Reflection);
                 }
 
-                // Cast a shadow ray
-                const vec3 LightDir = -normalize(uScene.LightDir.xyz);
-                Ray.Origin    = Position + (N * 0.01f);
-                Ray.Direction = LightDir;
-
-                PayLoad.MinT = 0.0;
-                PayLoad.MaxT = 1000.0;
-                PayLoad.T    = PayLoad.MaxT;
-
-                float LightIntensity = 1.0;
-                if (TraceRay(Ray, PayLoad))
-                {
-                    LightIntensity = 0.0;
-                }
-                else
-                {
-                    LightIntensity = clamp(dot(LightDir, N), 0.0, 1.0);
-                }
-
-                HitColor = vec3(0.1, 0.1, 0.1) + Material.Albedo.rgb * LightIntensity;
-
-                // Setup the next ray
-                Ray.Origin    = Position + (N * 0.01f);
-                Ray.Direction = Direction;
+                // Attenuate light
+                HitColor    = Material.Albedo.rgb;
+                SampleColor = SampleColor * HitColor;
             }
-            else
+            else if (Material.Type == MATERIAL_EMISSIVE) 
             {
-                if (i == 0)
-                {
-                    HitColor = vec3(0.0, 0.0, 0.0);
-                }
-                else
-                {
-                    HitColor = vec3(0.1, 0.1, 1.0);
-                }
+                // Add light
+                Emissive    = Material.Emissive.rgb * 4.0f;
+                SampleColor = SampleColor + Emissive;
 
+                // Emissive materials do not scatter
                 i = MAX_DEPTH;
             }
 
-            SampleColor = SampleColor * HitColor;
+            // Setup the next ray
+            Ray.Origin    = Position + N * 0.00001;
+            Ray.Direction = Direction;
         }
+        else
+        {
+            vec3 BackGroundColor;
+            
+        #if 0
+            // Create a gradient
+            vec3 UnitDirection = normalize(Ray.Direction);
+            float Alpha = 0.5 * (UnitDirection.y + 1.0);
+            BackGroundColor = (1.0 - Alpha) * vec3(1.0, 1.0, 1.0) + Alpha * vec3(0.5, 0.7, 1.0);
+        #endif
 
-        FinalColor += SampleColor;
+            // Only light source is the emissive surfaces
+            BackGroundColor = vec3(0.0);
+
+            // Break the loop
+            i = MAX_DEPTH;
+
+            // Add this hit color
+            SampleColor = SampleColor * BackGroundColor;
+        }
     }
+
+    vec3 FinalColor = SampleColor;
 
     // Accumulate samples over time
     vec4 previousColor = imageLoad(Accumulation, Pixel);
