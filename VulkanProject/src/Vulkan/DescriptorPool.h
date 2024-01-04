@@ -6,6 +6,7 @@ struct DescriptorPoolParams
     uint32_t NumUniformBuffers        = 0;
     uint32_t NumStorageImages         = 0;
     uint32_t NumCombinedImageSamplers = 0;
+    uint32_t NumStorageBuffers        = 0;
     uint32_t MaxSets                  = 0;
 };
 

@@ -82,64 +82,64 @@ Buffer* Buffer::CreateWithData(Device* pDevice, const BufferParams& params, Devi
         memcpy(pData, pSource, params.Size);
     
         pBuffer->FlushMappedMemoryRange();
-		pBuffer->Unmap();
+        pBuffer->Unmap();
     }
     
     return pBuffer;
 }
 
 Buffer::Buffer(Device* pDevice, DeviceMemoryAllocator* pAllocator)
-	: m_pDevice(pDevice)
-	, m_pAllocator(pAllocator)
-	, m_Buffer(VK_NULL_HANDLE)
-	, m_DeviceMemory(VK_NULL_HANDLE)
-	, m_Size(0)
-	, m_Allocation()
+    : m_pDevice(pDevice)
+    , m_pAllocator(pAllocator)
+    , m_Buffer(VK_NULL_HANDLE)
+    , m_DeviceMemory(VK_NULL_HANDLE)
+    , m_Size(0)
+    , m_Allocation()
 {
 }
 
 Buffer::~Buffer()
 {
-	if (m_Buffer != VK_NULL_HANDLE)
-	{
-		vkDestroyBuffer(m_pDevice->GetDevice(), m_Buffer, nullptr);
-		m_Buffer = VK_NULL_HANDLE;
-	}
+    if (m_Buffer != VK_NULL_HANDLE)
+    {
+        vkDestroyBuffer(m_pDevice->GetDevice(), m_Buffer, nullptr);
+        m_Buffer = VK_NULL_HANDLE;
+    }
 
-	if (m_pAllocator)
-	{
-		m_pAllocator->Deallocate(m_Allocation);
-	}
-	else
-	{
-		if (m_DeviceMemory != VK_NULL_HANDLE)
-		{
-			vkFreeMemory(m_pDevice->GetDevice(), m_DeviceMemory, nullptr);
-			m_DeviceMemory = VK_NULL_HANDLE;
-		}
-	}
+    if (m_pAllocator)
+    {
+        m_pAllocator->Deallocate(m_Allocation);
+    }
+    else
+    {
+        if (m_DeviceMemory != VK_NULL_HANDLE)
+        {
+            vkFreeMemory(m_pDevice->GetDevice(), m_DeviceMemory, nullptr);
+            m_DeviceMemory = VK_NULL_HANDLE;
+        }
+    }
     
     m_pDevice = nullptr;
 }
 
 void* Buffer::Map()
 {
-	void* pResult = nullptr;
-	if (m_pAllocator)
-	{
-		pResult = (void*)m_Allocation.pHostMemory;
-	}
-	else
-	{
-		VkResult result = vkMapMemory(m_pDevice->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
-		if (result != VK_SUCCESS)
-		{
-			std::cout << "vkMapMemory failed. Error: " << result << "\n";
+    void* pResult = nullptr;
+    if (m_pAllocator)
+    {
+        pResult = (void*)m_Allocation.pHostMemory;
+    }
+    else
+    {
+        VkResult result = vkMapMemory(m_pDevice->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
+        if (result != VK_SUCCESS)
+        {
+            std::cout << "vkMapMemory failed. Error: " << result << "\n";
             assert(false);
-		}
-	}
-	
-	return pResult;
+        }
+    }
+    
+    return pResult;
 }
 
 void Buffer::FlushMappedMemoryRange()

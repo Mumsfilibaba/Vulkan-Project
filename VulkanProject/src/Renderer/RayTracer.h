@@ -3,12 +3,52 @@
 #include "IRenderer.h"
 #include "Camera.h"
 
+#define MAX_SPHERES (32)
+#define MAX_PLANES  (8)
+#define MAX_MATERIALS (32)
+
+class Buffer;
+
 struct RandomBuffer
 {
-    uint32_t FrameIndex;
-    uint32_t Padding0;
-    uint32_t Padding1;
-    uint32_t Padding2;
+    uint32_t FrameIndex = 0;
+    
+    uint32_t Padding0 = 0;
+    uint32_t Padding1 = 0;
+    uint32_t Padding2 = 0;
+};
+
+struct SceneBuffer
+{
+    uint32_t NumSpheres   = 0;
+    uint32_t NumPlanes    = 0;
+    uint32_t NumMaterials = 0;
+    uint32_t Padding0     = 0;
+};
+
+struct Sphere
+{
+    glm::vec3 Position;
+    float     Radius;
+    uint32_t  MaterialIndex;
+    uint32_t  Padding0;
+    uint32_t  Padding1;
+    uint32_t  Padding2;
+};
+
+struct Plane
+{
+    glm::vec3 Normal;
+    float     Distance;
+    uint32_t  MaterialIndex;
+    uint32_t  Padding0;
+    uint32_t  Padding1;
+    uint32_t  Padding2;
+};
+
+struct Material
+{
+    glm::vec4 Albedo;
 };
 
 class RayTracer : public IRenderer
@@ -44,9 +84,17 @@ private:
     std::vector<class CommandBuffer*> m_CommandBuffers;
     std::vector<class Query*>         m_TimestampQueries;
     
-    class Buffer* m_pCameraBuffer;
-    class Buffer* m_pRandomBuffer;
-        
+    Buffer* m_pCameraBuffer;
+    Buffer* m_pRandomBuffer;
+    Buffer* m_pSceneBuffer;
+    Buffer* m_pSphereBuffer;
+    Buffer* m_pPlaneBuffer;
+    Buffer* m_pMaterialBuffer;
+
+    std::vector<Sphere>   m_Spheres;
+    std::vector<Plane>    m_Planes;
+    std::vector<Material> m_Materials;
+
     class Texture*       m_pSceneTexture;
     class TextureView*   m_pSceneTextureView;
     class DescriptorSet* m_pSceneTextureDescriptorSet;

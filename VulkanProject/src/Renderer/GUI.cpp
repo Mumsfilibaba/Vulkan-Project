@@ -730,7 +730,7 @@ namespace GUI
         pViewport->PlatformHandleRaw = glfwGetCocoaWindow(pViewportData->pWindow);
     #endif
                 
-        // Install GLFW callbacks for secondary viewports
+        // Install GLFW callbacks for secondary Viewports
         glfwSetWindowFocusCallback(pViewportData->pWindow, ImGuiWindowFocusCallback);
         glfwSetCursorEnterCallback(pViewportData->pWindow, ImGuiCursorEnterCallback);
         glfwSetCursorPosCallback(pViewportData->pWindow, ImGuiCursorPosCallback);
@@ -949,7 +949,7 @@ namespace GUI
         
         // Our mouse update function expect PlatformHandle to be filled for the main pViewport
         ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
-        pMainViewport->PlatformHandle = (void*)pBackend->Window;
+        pMainViewport->PlatformHandle = pBackend->Window;
     #ifdef PLATFORM_WINDOWS
         pMainViewport->PlatformHandleRaw = glfwGetWin32Window(pBackend->Window);
     #elif PLATFORM_MAC

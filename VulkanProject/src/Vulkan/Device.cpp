@@ -226,11 +226,13 @@ bool Device::CreateInstance(const DeviceParams& params)
     
     instanceCreateInfo.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
-    instanceCreateInfo.flags            = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 
-    // This extension is needed for MoltenVK
+    // This extension is needed for MoltenVK, but not supported by RenderDoc, so let's not enable it on other platforms
+#if PLATFORM_MAC
+    instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-    
+#endif
+
     if (m_bValidationEnabled)
     {
         instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);

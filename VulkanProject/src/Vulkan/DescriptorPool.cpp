@@ -29,6 +29,13 @@ DescriptorPool* DescriptorPool::Create(Device* pDevice, const DescriptorPoolPara
         poolSizes[numPools].descriptorCount = params.NumCombinedImageSamplers;
         numPools++;
     }
+
+    if (params.NumStorageBuffers > 0)
+    {
+        poolSizes[numPools].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        poolSizes[numPools].descriptorCount = params.NumStorageBuffers;
+        numPools++;
+    }
     
     VkDescriptorPoolCreateInfo poolInfo;
     ZERO_STRUCT(&poolInfo);

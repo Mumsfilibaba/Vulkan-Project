@@ -35,7 +35,7 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     m_pSwapchain = pSwapchain;
 
     // Create DescriptorSetLayout
-    constexpr uint32_t numBindings = 3;
+    constexpr uint32_t numBindings = 7;
     VkDescriptorSetLayoutBinding bindings[numBindings];
     bindings[0].binding            = 0;
     bindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -54,6 +54,30 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     bindings[2].descriptorCount    = 1;
     bindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[2].pImmutableSamplers = nullptr;
+
+    bindings[3].binding            = 3;
+    bindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[3].descriptorCount    = 1;
+    bindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[3].pImmutableSamplers = nullptr;
+
+    bindings[4].binding            = 4;
+    bindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[4].descriptorCount    = 1;
+    bindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[4].pImmutableSamplers = nullptr;
+
+    bindings[5].binding            = 5;
+    bindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[5].descriptorCount    = 1;
+    bindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[5].pImmutableSamplers = nullptr;
+
+    bindings[6].binding            = 6;
+    bindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[6].descriptorCount    = 1;
+    bindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[6].pImmutableSamplers = nullptr;
 
     DescriptorSetLayoutParams descriptorSetLayoutParams;
     descriptorSetLayoutParams.pBindings   = bindings;
@@ -84,30 +108,87 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
    
     // Create DescriptorPool
     DescriptorPoolParams poolParams;
-    poolParams.NumUniformBuffers = 6;
-    poolParams.NumStorageImages  = 3;
-    poolParams.MaxSets           = 3;
+    poolParams.NumUniformBuffers = 3;
+    poolParams.NumStorageImages  = 1;
+    poolParams.NumStorageBuffers = 3;
+    poolParams.MaxSets           = 1;
     m_pDescriptorPool = DescriptorPool::Create(m_pDevice, poolParams);
     assert(m_pDescriptorPool != nullptr);
 
     // Camera
-    BufferParams camBuffParams;
-    camBuffParams.Size             = sizeof(CameraBuffer);
-    camBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    camBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    BufferParams cameraBufferParams;
+    cameraBufferParams.Size             = sizeof(CameraBuffer);
+    cameraBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    cameraBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pCameraBuffer = Buffer::Create(m_pDevice, camBuffParams, m_pDeviceAllocator);
+    m_pCameraBuffer = Buffer::Create(m_pDevice, cameraBufferParams, m_pDeviceAllocator);
     assert(m_pCameraBuffer != nullptr);
 
     // Random
-    BufferParams randBuffParams;
-    randBuffParams.Size             = sizeof(RandomBuffer);
-    randBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    randBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    BufferParams randomBufferParams;
+    randomBufferParams.Size             = sizeof(RandomBuffer);
+    randomBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    randomBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pRandomBuffer = Buffer::Create(m_pDevice, randBuffParams, m_pDeviceAllocator);
+    m_pRandomBuffer = Buffer::Create(m_pDevice, randomBufferParams, m_pDeviceAllocator);
     assert(m_pRandomBuffer != nullptr);
+
+    // SceneBuffer
+    BufferParams sceneBufferParams;
+    sceneBufferParams.Size             = sizeof(SceneBuffer);
+    sceneBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    sceneBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pSceneBuffer = Buffer::Create(m_pDevice, sceneBufferParams, m_pDeviceAllocator);
+    assert(m_pSceneBuffer != nullptr);
   
+    // SphereBuffer
+    BufferParams sphereBufferParams;
+    sphereBufferParams.Size             = sizeof(Sphere) * MAX_SPHERES;
+    sphereBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    sphereBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_Spheres.reserve(MAX_SPHERES);
+    m_Spheres.push_back({ glm::vec3(1.0f, 0.5f, 1.0f), 0.45f, 0 });
+    m_Spheres.push_back({ glm::vec3(0.0f, 0.5f, 1.0f), 0.45f, 0 });
+    m_Spheres.push_back({ glm::vec3(-1.0f, 0.5f, 1.0f), 0.45f, 0 });
+    m_Spheres.push_back({ glm::vec3(1.0f, 0.5f, 0.0f), 0.45f, 1 });
+    m_Spheres.push_back({ glm::vec3(0.0f, 0.5f, 0.0f), 0.45f, 1 });
+    m_Spheres.push_back({ glm::vec3(-1.0f, 0.5f, 0.0f), 0.45f, 1 });
+    m_Spheres.push_back({ glm::vec3(1.0f, 0.5f, -1.0f), 0.45f, 2 });
+    m_Spheres.push_back({ glm::vec3(0.0f, 0.5f, -1.0f), 0.45f, 2 });
+    m_Spheres.push_back({ glm::vec3(-1.0f, 0.5f, -1.0f), 0.45f, 2 });
+
+    m_pSphereBuffer = Buffer::Create(m_pDevice, sphereBufferParams, m_pDeviceAllocator);
+    assert(m_pSphereBuffer != nullptr);
+
+    // PlaneBuffer
+    BufferParams planeBufferParams;
+    planeBufferParams.Size             = sizeof(Plane) * MAX_PLANES;
+    planeBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    planeBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_Planes.reserve(MAX_PLANES);
+    m_Planes.push_back({ glm::vec3(0.0f, 1.0f, 0.0),  0.0f, 3 });
+
+    m_pPlaneBuffer = Buffer::Create(m_pDevice, planeBufferParams, m_pDeviceAllocator);
+    assert(m_pPlaneBuffer != nullptr);
+
+    // MaterialBuffer
+    BufferParams materialBufferParams;
+    materialBufferParams.Size             = sizeof(Material) * MAX_MATERIALS;
+    materialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    materialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_Materials.reserve(MAX_MATERIALS);
+    m_Materials.push_back({ glm::vec4(1.0f, 0.0f, 0.0f, 1.0f) });
+    m_Materials.push_back({ glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) });
+    m_Materials.push_back({ glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) });
+    m_Materials.push_back({ glm::vec4(1.0f, 1.0f, 1.0f, 1.0f) });
+
+    m_pMaterialBuffer = Buffer::Create(m_pDevice, materialBufferParams, m_pDeviceAllocator);
+    assert(m_pMaterialBuffer != nullptr);
+
     // Create the scene texture
     m_ViewportWidth  = 0;
     m_ViewportHeight = 0;
@@ -223,15 +304,15 @@ void RayTracer::Tick(float deltaTime)
     
     pCurrentCommandBuffer->TransitionImage(m_pSceneTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 
-    // Update camera
-    CameraBuffer camBuff;
-    camBuff.Projection = m_Camera.GetProjectionMatrix();
-    camBuff.View       = m_Camera.GetViewMatrix();
-    camBuff.Position   = glm::vec4(m_Camera.GetPosition(), 0.0f);
-    camBuff.Forward    = glm::vec4(m_Camera.GetForward(), 0.0f);
-    pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(CameraBuffer), &camBuff);
+    // Update CameraBuffer
+    CameraBuffer cameraBuffer = {};
+    cameraBuffer.Projection = m_Camera.GetProjectionMatrix();
+    cameraBuffer.View       = m_Camera.GetViewMatrix();
+    cameraBuffer.Position   = glm::vec4(m_Camera.GetPosition(), 0.0f);
+    cameraBuffer.Forward    = glm::vec4(m_Camera.GetForward(), 0.0f);
+    pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(CameraBuffer), &cameraBuffer);
     
-    // Update random
+    // Update RandomBuffer
     static uint32_t randFrameIndex = 0;
     randFrameIndex++;
     
@@ -240,10 +321,21 @@ void RayTracer::Tick(float deltaTime)
         randFrameIndex = 0;
     }
     
-    RandomBuffer randBuff;
-    randBuff.FrameIndex = randFrameIndex;
-    pCurrentCommandBuffer->UpdateBuffer(m_pRandomBuffer, 0, sizeof(RandomBuffer), &randBuff);
-    
+    RandomBuffer randomBuffer = {};
+    randomBuffer.FrameIndex = randFrameIndex;
+    pCurrentCommandBuffer->UpdateBuffer(m_pRandomBuffer, 0, sizeof(RandomBuffer), &randomBuffer);
+
+    // Update Scene
+    SceneBuffer sceneBuffer = {};
+    sceneBuffer.NumSpheres   = m_Spheres.size();
+    sceneBuffer.NumPlanes    = m_Planes.size();
+    sceneBuffer.NumMaterials = m_Materials.size();
+
+    pCurrentCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(SceneBuffer), &sceneBuffer);
+    pCurrentCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(Sphere) * m_Spheres.size(), m_Spheres.data());
+    pCurrentCommandBuffer->UpdateBuffer(m_pPlaneBuffer, 0, sizeof(Plane) * m_Planes.size(), m_Planes.data());
+    pCurrentCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(Material) * m_Materials.size(), m_Materials.data());
+
     // Bind pipeline and descriptorSet
     pCurrentCommandBuffer->BindComputePipelineState(m_Pipeline);
     pCurrentCommandBuffer->BindComputeDescriptorSet(m_pPipelineLayout, m_pDescriptorSet);
@@ -289,7 +381,7 @@ void RayTracer::OnRenderUI()
     // all active windows docked into it will lose their parent and become undocked.
     // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
     // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
-    
+
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::Begin("DockSpace Demo", nullptr, windowFlags);
     ImGui::PopStyleVar();
@@ -343,7 +435,11 @@ void RayTracer::Release()
 
     SAFE_DELETE(m_pCameraBuffer);
     SAFE_DELETE(m_pRandomBuffer);
-    
+    SAFE_DELETE(m_pSceneBuffer);
+    SAFE_DELETE(m_pSphereBuffer);
+    SAFE_DELETE(m_pPlaneBuffer);
+    SAFE_DELETE(m_pMaterialBuffer);
+
     ReleaseDescriptorSet();
 
     SAFE_DELETE(m_pDescriptorPool);
@@ -409,10 +505,14 @@ void RayTracer::CreateDescriptorSet()
 {
     m_pDescriptorSet = DescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pDescriptorSetLayout);
     assert(m_pDescriptorSet != nullptr);
-        
+
     m_pDescriptorSet->BindStorageImage(m_pSceneTextureView->GetImageView(), 0);
     m_pDescriptorSet->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 1);
     m_pDescriptorSet->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 2);
+    m_pDescriptorSet->BindUniformBuffer(m_pSceneBuffer->GetBuffer(), 3);
+    m_pDescriptorSet->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 4);
+    m_pDescriptorSet->BindStorageBuffer(m_pPlaneBuffer->GetBuffer(), 5);
+    m_pDescriptorSet->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 6);
 }
 
 void RayTracer::ReleaseDescriptorSet()

@@ -5,10 +5,15 @@
 #include "tonemap.glsl"
 
 #define NUM_THREADS (16)
+#define MAX_DEPTH   (1)
+#define NUM_SAMPLES (1)
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
-layout (binding = 0, rgba16f) uniform image2D Output;
+layout (binding = 0, rgba32f) uniform image2D Output;
+
+/*///////////////////////////////////////////////////////////////////////////////////////////////*/
+/* Global uniforms */
 
 layout(binding = 1) uniform CameraBufferObject 
 {
@@ -26,8 +31,62 @@ layout(binding = 2) uniform RandomBufferObject
     uint Padding2;
 } uRandom;
 
-#define MAX_DEPTH   (1)
-#define NUM_SAMPLES (1)
+layout(binding = 3) uniform SceneBufferObject 
+{
+    uint NumSpheres;
+    uint NumPlanes;
+    uint NumMaterials;
+    uint Padding2;
+} uScene;
+
+/*///////////////////////////////////////////////////////////////////////////////////////////////*/
+/* Scene objects */
+
+#define MATERIAL_METAL      (1)
+#define MATERIAL_LAMBERTIAN (2)
+#define MATERIAL_EMISSIVE   (3)
+#define MATERIAL_DIELECTRIC (4)
+
+struct Material
+{
+    vec4 Albedo;
+};
+
+struct Sphere
+{
+    vec4 PositionAndRadius;
+    uint MaterialIndex;
+    uint Padding0;
+    uint Padding1;
+    uint Padding2;
+};
+
+struct Plane 
+{
+    vec4 NormalAndDistance;
+    uint MaterialIndex;
+    uint Padding0;
+    uint Padding1;
+    uint Padding2;
+};
+
+layout(std430, binding = 4) buffer SphereBuffer
+{
+    Sphere Spheres[];
+};
+
+layout(std430, binding = 5) buffer PlaneBuffer
+{
+    Plane Planes[];
+};
+
+layout(std430, binding = 6) buffer MaterialBuffer
+{
+    Material Materials[];
+};
+
+/*///////////////////////////////////////////////////////////////////////////////////////////////*/
+/* Ray Structs */
 
 struct Ray
 {
@@ -42,69 +101,11 @@ struct RayPayLoad
     float MinT;
     float MaxT;
     bool  FrontFace;
-    int   MaterialIndex;
+    uint  MaterialIndex;
 };
 
-struct Sphere
-{
-    vec3  Position;
-    float Radius;
-    int   MaterialIndex;
-};
-
-struct Plane 
-{
-    vec3  Normal;
-    float Distance;
-    int   MaterialIndex;
-};
-
-#define MAT_METAL      (1)
-#define MAT_LAMBERTIAN (2)
-#define MAT_EMISSIVE   (3)
-#define MAT_DIELECTRIC (4)
-
-struct Material
-{
-    int Type;
-
-    vec3  Albedo;
-    float Roughness;
-
-    float IndexOfRefraction;
-};
-
-#define NUM_SPHERES 3
-const Sphere GSpheres[NUM_SPHERES] =
-{
-    { vec3( 1.0f, 0.5f, 1.0f), 0.45f, 8 }, 
-    { vec3( 0.0f, 0.5f, 1.0f), 0.45f, 1 }, 
-    { vec3(-1.0f, 0.5f, 1.0f), 0.45f, 2 }, 
-};
-
-#define NUM_PLANES 1
-const Plane GPlanes[NUM_PLANES] =
-{
-    { vec3(0.0f, 1.0f, 0.0),  0.0f, 3 },
-    //{ vec3(1.0f, 0.0f, 0.0),  3.0f, 4 },
-    //{ vec3(1.0f, 0.0f, 0.0), -3.0f, 5 },
-    //{ vec3(0.0f, 0.0f, 1.0),  3.0f, 6 },
-    //{ vec3(0.0f, 1.0f, 0.0),  5.0f, 7 },
-};
-
-/* #define NUM_MATERIALS 9
-const Material GMaterials[NUM_MATERIALS] =
-{
-    { MAT_LAMBERTIAN, vec3(1.0f,  0.1f,  0.1f),  0.0f, 0.0f }, // 0
-    { MAT_METAL,      vec3(1.0f,  1.0f,  1.0f),  1.0f, 0.0f }, // 1
-    { MAT_METAL,      vec3(1.0f,  1.0f,  1.0f),  0.0f, 0.0f }, // 2
-    { MAT_LAMBERTIAN, vec3(0.01f, 0.01f, 1.0f),  1.0f, 0.0f }, // 3
-    { MAT_LAMBERTIAN, vec3(0.01f, 1.0f,  0.01f), 1.0f, 0.0f }, // 4
-    { MAT_LAMBERTIAN, vec3(1.0f,  0.01f, 0.01f), 1.0f, 0.0f }, // 5
-    { MAT_LAMBERTIAN, vec3(1.0f,  1.0f,  1.0f),  1.0f, 0.0f }, // 6
-    { MAT_EMISSIVE,   vec3(10.0f, 10.0f, 10.0f), 0.0f, 0.0f }, // 7
-    { MAT_LAMBERTIAN, vec3(1.0f,  1.0f,  1.0f),  0.0f, 1.5f }, // 8
-}; */
+/*///////////////////////////////////////////////////////////////////////////////////////////////*/
+/* Code */
 
 vec3 HemisphereSampleUniform(float u, float v) 
 {
@@ -116,10 +117,13 @@ vec3 HemisphereSampleUniform(float u, float v)
 
 void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
 {
-    vec3 Distance = Ray.Origin - Sphere.Position;
+    vec3  SpherePos    = Sphere.PositionAndRadius.xyz;
+    float SphereRadius = Sphere.PositionAndRadius.w;
+
+    vec3 Distance = Ray.Origin - SpherePos;
     float a = dot(Ray.Direction, Ray.Direction);
     float b = dot(Ray.Direction, Distance);
-    float c = dot(Distance, Distance) - (Sphere.Radius * Sphere.Radius);
+    float c = dot(Distance, Distance) - (SphereRadius * SphereRadius);
 
     float Disc = (b * b) - (a * c);
     if (Disc >= 0.0f)
@@ -136,7 +140,7 @@ void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
                 vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
                 PayLoad.MaterialIndex = Sphere.MaterialIndex;
 
-                vec3 OutsideNormal = normalize((Position - Sphere.Position) / Sphere.Radius);
+                vec3 OutsideNormal = normalize((Position - SpherePos) / SphereRadius);
                 if (dot(Ray.Direction, OutsideNormal) >= 0.0)
                 {
                     PayLoad.Normal    = -OutsideNormal;
@@ -154,13 +158,16 @@ void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
 
 void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
 {
-    float DdotN = dot(Ray.Direction, Plane.Normal);
+    vec3  PlaneNormal = Plane.NormalAndDistance.xyz;
+    float PlaneDist   = Plane.NormalAndDistance.w;
+
+    float DdotN = dot(Ray.Direction, PlaneNormal);
     if (abs(DdotN) > 0.0001)
     {
-        vec3 Center = Plane.Normal * Plane.Distance;
+        vec3 Center = PlaneNormal * PlaneDist;
         vec3 Diff   = Center - Ray.Origin;
 
-        float t = dot(Diff, Plane.Normal) / DdotN;
+        float t = dot(Diff, PlaneNormal) / DdotN;
         if (t > 0)
         {
             if (t < PayLoad.T)
@@ -171,11 +178,11 @@ void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
 
                 if (DdotN > 0.0f)
                 {
-                    PayLoad.Normal = -normalize(Plane.Normal);
+                    PayLoad.Normal = -normalize(PlaneNormal);
                 }
                 else
                 {
-                    PayLoad.Normal = normalize(Plane.Normal);
+                    PayLoad.Normal = normalize(PlaneNormal);
                 }
             }
         }
@@ -184,15 +191,15 @@ void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
 
 bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
 {
-    for (uint i = 0; i < NUM_SPHERES; i++)
+    for (uint i = 0; i < uScene.NumSpheres; i++)
     {
-        Sphere Sphere = GSpheres[i];
+        Sphere Sphere = Spheres[i];
         HitSphere(Sphere, Ray, PayLoad);
     }
 
-    for (uint i = 0; i < NUM_PLANES; i++)
+    for (uint i = 0; i < uScene.NumPlanes; i++)
     {
-        Plane Plane = GPlanes[i];
+        Plane Plane = Planes[i];
         HitPlane(Plane, Ray, PayLoad);
     }
 
@@ -334,10 +341,11 @@ void main()
             vec3 HitColor = vec3(0.0);
             if (TraceRay(Ray, PayLoad))
             {
+                const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials);
+                Material Material = Materials[MaterialIndex];
                 vec3 N = normalize(PayLoad.Normal);
 
-                /*Material Material = GMaterials[PayLoad.MaterialIndex];
-
+                /*
                 vec3 Position     = Ray.Origin + Ray.Direction * PayLoad.T;
                 vec3 NewOrigin    = Position + (N * 0.0001f);
                 vec3 NewDirection = vec3(0.0f);
@@ -363,7 +371,7 @@ void main()
                 Ray.Origin    = NewOrigin;
                 Ray.Direction = NewDirection;*/
 
-                HitColor = clamp((N + 1.0) * 0.5, 0.0, 1.0);
+                HitColor = Material.Albedo.rgb;
             }
             else
             {

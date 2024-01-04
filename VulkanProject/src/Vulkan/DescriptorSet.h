@@ -13,6 +13,7 @@ public:
     void BindStorageImage(VkImageView imageView, uint32_t binding);
     void BindCombinedImageSampler(VkImageView imageView, VkSampler sampler, uint32_t binding);
     void BindUniformBuffer(VkBuffer buffer, uint32_t binding);
+    void BindStorageBuffer(VkBuffer buffer, uint32_t binding);
     
     VkDescriptorSet GetDescriptorSet() const
     {
