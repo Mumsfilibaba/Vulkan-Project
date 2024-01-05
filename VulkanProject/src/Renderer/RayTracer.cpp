@@ -247,29 +247,33 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     {
         glm::vec4(0.8f, 0.8f, 0.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        MATERIAL_LAMBERTIAN,
         1.0f,
-        MATERIAL_LAMBERTIAN
+        0.0f,
     });
     m_Materials.push_back(
     {
         glm::vec4(0.7f, 0.3f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        MATERIAL_LAMBERTIAN,
         1.0f,
-        MATERIAL_LAMBERTIAN
+        0.0f,
     });
     m_Materials.push_back(
     {
         glm::vec4(0.8f, 0.8f, 0.8f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        MATERIAL_DIELECTRIC,
         0.3f,
-        MATERIAL_METAL
+        1.5f,
     });
     m_Materials.push_back(
     {
         glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        MATERIAL_METAL,
         1.0f,
-        MATERIAL_METAL
+        0.0f,
     });
     //m_Materials.push_back(
     //{

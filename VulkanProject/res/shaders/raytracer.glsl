@@ -47,14 +47,15 @@ layout(binding = 4) uniform SceneBufferObject
 #define MATERIAL_LAMBERTIAN (1)
 #define MATERIAL_METAL      (2)
 #define MATERIAL_EMISSIVE   (3)
+#define MATERIAL_DIELECTRIC (4)
 
 struct Material
 {
     vec4  Albedo;
     vec4  Emissive;
-    float Roughness;
     uint  Type;
-    uint  Padding0;
+    float Roughness;
+    float RefractionIndex;
     uint  Padding1;
 };
 
@@ -175,6 +176,7 @@ void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
 
             PayLoad.T             = t;
             PayLoad.MaterialIndex = Quad.MaterialIndex;
+            PayLoad.FrontFace     = true;
 
             if (DdotN >= 0.0)
             {
@@ -217,15 +219,15 @@ void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
             PayLoad.MaterialIndex = Sphere.MaterialIndex;
 
             vec3 OutsideNormal = normalize((Position - SpherePos) / SphereRadius);
-            if (dot(Ray.Direction, OutsideNormal) >= 0.0)
-            {
-                PayLoad.Normal    = -OutsideNormal;
-                PayLoad.FrontFace = false;
-            }
-            else
+            if (dot(Ray.Direction, OutsideNormal) < 0.0)
             {
                 PayLoad.Normal    = OutsideNormal;
                 PayLoad.FrontFace = true;
+            }
+            else
+            {
+                PayLoad.Normal    = -OutsideNormal;
+                PayLoad.FrontFace = false;
             }
         }
     }
@@ -356,15 +358,14 @@ void main()
             {
                 vec3 Rnd = NextRandomUnitSphereVec3(RandomSeed);
                 Direction = normalize(PayLoad.Normal + Rnd);
-                if (IsAlmostZero(Direction))
-                {
+                //if (IsAlmostZero(Direction))
+                //{
                     //Direction = PayLoad.Normal;
-                }
+                //}
 
                 // Attenuate light
                 vec3 Albedo = Material.Albedo.rgb;
                 SampleColor = Albedo * SampleColor;
-                // i = MAX_DEPTH;
             }
             else if (Material.Type == MATERIAL_METAL)
             {
@@ -376,9 +377,19 @@ void main()
                 // Attenuate light
                 vec3 Albedo = Material.Albedo.rgb;
                 SampleColor = Albedo * SampleColor;
-                                
-                //SampleColor = N;
-                //i = MAX_DEPTH;
+            }
+            else if (Material.Type == MATERIAL_DIELECTRIC)
+            {
+                float RefractionRatio = PayLoad.FrontFace ? (1.0 / Material.RefractionIndex) : Material.RefractionIndex;
+                
+                vec3 UnitDirection = normalize(Ray.Direction);
+                vec3 Refracted     = refract(UnitDirection, N, RefractionRatio);
+                Direction = Refracted;
+
+                // Attenuate light
+                vec3 Albedo = vec3(1.0, 1.0, 1.0);
+                SampleColor = Direction;//Albedo * SampleColor;
+                   i = MAX_DEPTH;
             }
             else if (Material.Type == MATERIAL_EMISSIVE) 
             {

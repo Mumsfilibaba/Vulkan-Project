@@ -76,14 +76,15 @@ struct Quad
 #define MATERIAL_LAMBERTIAN (1)
 #define MATERIAL_METAL      (2)
 #define MATERIAL_EMISSIVE   (3)
+#define MATERIAL_DIELECTRIC (4)
 
 struct Material
 {
     glm::vec4 Albedo;
     glm::vec4 Emissive;
-    float     Roughness;
     uint32_t  Type;
-    uint32_t  Padding0;
+    float     Roughness;
+    float     RefractionIndex;
     uint32_t  Padding1;
 };
 
