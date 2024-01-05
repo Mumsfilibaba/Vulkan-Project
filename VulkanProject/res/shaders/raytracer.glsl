@@ -5,7 +5,9 @@
 #include "tonemap.glsl"
 
 #define NUM_THREADS (16)
-#define MAX_DEPTH   (32)
+#define MAX_DEPTH   (8)
+
+#define SIGMA (0.000001f)
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
@@ -26,9 +28,9 @@ layout(binding = 2) uniform CameraBufferObject
 layout(binding = 3) uniform RandomBufferObject 
 {
     uint FrameIndex;
+    uint SampleIndex;
     uint NumSamples;
     uint Padding0;
-    uint Padding1;
 } uRandom;
 
 layout(binding = 4) uniform SceneBufferObject 
@@ -42,8 +44,9 @@ layout(binding = 4) uniform SceneBufferObject
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 /* Scene objects */
 
-#define MATERIAL_STANDARD (1)
-#define MATERIAL_EMISSIVE (2)
+#define MATERIAL_LAMBERTIAN (1)
+#define MATERIAL_METAL      (2)
+#define MATERIAL_EMISSIVE   (3)
 
 struct Material
 {
@@ -134,6 +137,11 @@ vec3 HemisphereSampleUniform(float u, float v)
     return normalize(vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta));
 }
 
+bool IsAlmostZero(vec3 Value)
+{
+    return (Value.x < SIGMA) && (Value.y < SIGMA) && (Value.z < SIGMA); 
+}
+
 void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
 {
     vec3 Q = Quad.Position.xyz;
@@ -146,7 +154,7 @@ void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
     float D = dot(Normal, Q);
 
     float DdotN = dot(Ray.Direction, Normal);
-    if (abs(DdotN) < 0.0001)
+    if (abs(DdotN) < SIGMA)
     {
         return;
     }
@@ -168,7 +176,7 @@ void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
             PayLoad.T             = t;
             PayLoad.MaterialIndex = Quad.MaterialIndex;
 
-            if (DdotN > 0.0)
+            if (DdotN >= 0.0)
             {
                 PayLoad.Normal = -Normal;
             }
@@ -225,11 +233,11 @@ void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
 
 void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
 {
-    vec3  PlaneNormal = Plane.NormalAndDistance.xyz;
+    vec3  PlaneNormal = normalize(Plane.NormalAndDistance.xyz);
     float PlaneDist   = Plane.NormalAndDistance.w;
 
     float DdotN = dot(Ray.Direction, PlaneNormal);
-    if (abs(DdotN) < 0.0001)
+    if (abs(DdotN) < SIGMA)
     {
         return;
     }
@@ -238,7 +246,7 @@ void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
     vec3 Diff   = Center - Ray.Origin;
 
     float t = dot(Diff, PlaneNormal) / DdotN;
-    if (t > 0)
+    if (t > 0.0)
     {
         if (t < PayLoad.T)
         {
@@ -246,13 +254,13 @@ void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
             PayLoad.MaterialIndex = Plane.MaterialIndex;
             PayLoad.FrontFace     = true;
 
-            if (DdotN > 0.0f)
+            if (DdotN >= 0.0)
             {
-                PayLoad.Normal = -normalize(PlaneNormal);
+                PayLoad.Normal = -PlaneNormal;
             }
             else
             {
-                PayLoad.Normal = normalize(PlaneNormal);
+                PayLoad.Normal = PlaneNormal;
             }
         }
     }
@@ -306,9 +314,9 @@ void main()
     vec3  FilmCenter   = CameraPosition + (CamForward * FilmDistance);
 
     // Jitter the camera each frame
-    uint RandomSeed = InitRandom(uvec2(Pixel), Size.x, uRandom.FrameIndex);
+    uint RandomSeed = InitRandom(uvec2(Pixel), uint(Size.x), uRandom.FrameIndex);
 
-    vec2 Jitter = Halton23(uRandom.FrameIndex);
+    vec2 Jitter = Halton23(uRandom.SampleIndex);
     Jitter = (Jitter * 2.0) - vec2(1.0);
 
     vec2 FilmUV = (vec2(Pixel) + Jitter) / vec2(Size.xy);
@@ -339,37 +347,38 @@ void main()
             const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials);
             Material Material = Materials[MaterialIndex];
             
-            vec3 N          = normalize(PayLoad.Normal);
-            vec3 Position   = Ray.Origin + Ray.Direction * PayLoad.T;
-            vec3 Reflection = reflect(Ray.Direction, N);
+            vec3 N        = normalize(PayLoad.Normal);
+            vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
             
-            vec3 HitColor  = vec3(0.0);
             vec3 Emissive  = vec3(0.0);
             vec3 Direction = vec3(0.0);
-            if (Material.Type == MATERIAL_STANDARD)
+            if (Material.Type == MATERIAL_LAMBERTIAN)
             {
-                if (Material.Roughness > 0.0)
+                vec3 Rnd = NextRandomUnitSphereVec3(RandomSeed);
+                Direction = normalize(PayLoad.Normal + Rnd);
+                if (IsAlmostZero(Direction))
                 {
-                    vec2 Halton = Halton23(uRandom.FrameIndex);
-                    Halton.x = fract(Halton.x + NextRandom(RandomSeed));
-                    Halton.y = fract(Halton.y + NextRandom(RandomSeed));
-
-                    vec3 Rnd = HemisphereSampleUniform(Halton.x, Halton.y);
-                    if (dot(Rnd, N) <= 0.0)
-                    {
-                        Rnd = -Rnd;
-                    }
-
-                    Direction = normalize(Reflection + Rnd * Material.Roughness);
-                }
-                else
-                {
-                    Direction = normalize(Reflection);
+                    //Direction = PayLoad.Normal;
                 }
 
                 // Attenuate light
-                HitColor    = Material.Albedo.rgb;
-                SampleColor = SampleColor * HitColor;
+                vec3 Albedo = Material.Albedo.rgb;
+                SampleColor = Albedo * SampleColor;
+                // i = MAX_DEPTH;
+            }
+            else if (Material.Type == MATERIAL_METAL)
+            {
+                vec3 Rnd = NextRandomHemisphere(RandomSeed, PayLoad.Normal);
+
+                vec3 Reflection = reflect(Ray.Direction, N);
+                Direction = normalize(Reflection + Rnd * Material.Roughness);
+
+                // Attenuate light
+                vec3 Albedo = Material.Albedo.rgb;
+                SampleColor = Albedo * SampleColor;
+                                
+                //SampleColor = N;
+                //i = MAX_DEPTH;
             }
             else if (Material.Type == MATERIAL_EMISSIVE) 
             {
@@ -380,9 +389,15 @@ void main()
                 // Emissive materials do not scatter
                 i = MAX_DEPTH;
             }
+            else
+            {
+                // Invalid material
+                SampleColor = vec3(0.0);
+                i = MAX_DEPTH;
+            }
 
             // Setup the next ray
-            Ray.Origin    = Position + N * 0.00001;
+            Ray.Origin    = Position + (N * SIGMA);
             Ray.Direction = Direction;
         }
         else

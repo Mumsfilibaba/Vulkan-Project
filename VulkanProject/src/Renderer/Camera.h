@@ -69,12 +69,12 @@ public:
     }
     
 private:
-    glm::mat4 m_View        = glm::identity<glm::mat4>();
+    glm::mat4 m_View       = glm::identity<glm::mat4>();
     glm::mat4 m_Projection = glm::identity<glm::mat4>();
     glm::vec3 m_Position   = glm::vec3(0.0f, 1.0f, -1.25f);
     glm::vec3 m_Rotation   = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3 m_Forward    = glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::vec3 m_Up           = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 m_Up         = glm::vec3(0.0f, 1.0f, 0.0f);
     glm::vec3 m_Right      = glm::vec3(1.0f, 0.0f, 0.0f);
     
     float m_FieldOfView = glm::pi<float>() / 2.0f;

@@ -37,16 +37,61 @@ uint XORShift(uint Value)
 	return Value;
 }
 
-float NextRandom(inout uint Seed)
-{
-	Seed = XORShift(Seed);
-	return float(Seed) * (1.0f / 4294967296.0f);
-}
-
 int NextRandomInt(inout uint Seed)
 {
-	Seed = XORShift(Seed);
+	Seed = (1664525u * Seed + 1013904223u);
 	return int(Seed);
+}
+
+float NextRandom(inout uint Seed)
+{
+	Seed = NextRandomInt(Seed);
+	return float(Seed & 0x00FFFFFF) / float(0x01000000);
+}
+
+float NextRandom(inout uint Seed, float Min, float Max)
+{
+	return Min + (Max - Min) * NextRandom(Seed);
+}
+
+vec3 NextRandomVec3(inout uint Seed)
+{
+	return vec3(NextRandom(Seed), NextRandom(Seed), NextRandom(Seed));
+}
+
+vec3 NextRandomVec3(inout uint Seed, float Min, float Max)
+{
+	return vec3(NextRandom(Seed, Min, Max), NextRandom(Seed, Min, Max), NextRandom(Seed, Min, Max));
+}
+
+vec3 NextRandomUnitSphereVec3(inout uint Seed)
+{
+	vec3 Result;
+	for (uint i = 0; i < 64; i++)
+	{
+		Result = NextRandomVec3(Seed, -1.0, 1.0);
+		if (dot(Result, Result) < 1.0)
+		{
+			break;
+		}
+	}
+
+	return normalize(Result);
+}
+
+vec3 NextRandomHemisphere(inout uint Seed, vec3 Normal)
+{
+	vec3 UnitVector = NextRandomUnitSphereVec3(Seed);
+
+	float UdotN = dot(UnitVector, Normal);
+	if (UdotN <= 0.0)
+	{
+		return -UnitVector;
+	}
+	else
+	{
+		return UnitVector;
+	}
 }
 
 #endif

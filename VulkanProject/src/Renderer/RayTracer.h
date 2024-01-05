@@ -22,10 +22,10 @@ class Buffer;
 
 struct RandomBuffer
 {
-    uint32_t FrameIndex = 0;
-    uint32_t NumSamples = 0;
-    uint32_t Padding0   = 0;
-    uint32_t Padding1   = 0;
+    uint32_t FrameIndex  = 0;
+    uint32_t SampleIndex = 0;
+    uint32_t NumSamples  = 0;
+    uint32_t Padding0    = 0;
 };
 
 struct SceneBuffer
@@ -73,8 +73,9 @@ struct Quad
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Material
 
-#define MATERIAL_STANDARD (1)
-#define MATERIAL_EMISSIVE (2)
+#define MATERIAL_LAMBERTIAN (1)
+#define MATERIAL_METAL      (2)
+#define MATERIAL_EMISSIVE   (3)
 
 struct Material
 {

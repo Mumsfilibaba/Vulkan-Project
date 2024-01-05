@@ -163,48 +163,48 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     quadBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_Quads.reserve(MAX_QUAD);
-    m_Quads.push_back(
-    {
-        glm::vec4(-2.0f, 0.0f, -2.0f, 0.0f),
-        glm::vec4( 0.0f, 0.0f,  4.0f, 0.0f),
-        glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
-        0
-    });
-    m_Quads.push_back(
-    {
-        glm::vec4(-2.0f, 0.0f, -2.0f, 0.0f),
-        glm::vec4( 0.0f, 4.0f,  0.0f, 0.0f),
-        glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
-        0
-    });
-    m_Quads.push_back(
-    {
-        glm::vec4(-2.0f, 4.0f, -2.0f, 0.0f),
-        glm::vec4( 0.0f, 0.0f,  4.0f, 0.0f),
-        glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
-        0
-    });
-    m_Quads.push_back(
-    {
-        glm::vec4(-2.0f, 0.0f,  2.0f, 0.0f),
-        glm::vec4( 0.0f, 4.0f,  0.0f, 0.0f),
-        glm::vec4( 0.0f, 0.0f, -4.0f, 0.0f),
-        1
-    });
-    m_Quads.push_back(
-    {
-        glm::vec4(2.0f, 0.0f,  2.0f, 0.0f),
-        glm::vec4(0.0f, 4.0f,  0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, -4.0f, 0.0f),
-        2
-    });
-    m_Quads.push_back(
-    {
-        glm::vec4(-0.75f, 3.995f, -0.75f, 0.0f),
-        glm::vec4(  0.0f,   0.0f,   1.5f, 0.0f),
-        glm::vec4(  1.5f,   0.0f,   0.0f, 0.0f),
-        4
-    });
+    //m_Quads.push_back(
+    //{
+    //    glm::vec4(-2.0f, 0.0f, -2.0f, 0.0f),
+    //    glm::vec4( 0.0f, 0.0f,  4.0f, 0.0f),
+    //    glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
+    //    0
+    //});
+    //m_Quads.push_back(
+    //{
+    //    glm::vec4(-2.0f, 0.0f, -2.0f, 0.0f),
+    //    glm::vec4( 0.0f, 4.0f,  0.0f, 0.0f),
+    //    glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
+    //    0
+    //});
+    //m_Quads.push_back(
+    //{
+    //    glm::vec4(-2.0f, 4.0f, -2.0f, 0.0f),
+    //    glm::vec4( 0.0f, 0.0f,  4.0f, 0.0f),
+    //    glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
+    //    0
+    //});
+    //m_Quads.push_back(
+    //{
+    //    glm::vec4(-2.0f, 0.0f,  2.0f, 0.0f),
+    //    glm::vec4( 0.0f, 4.0f,  0.0f, 0.0f),
+    //    glm::vec4( 0.0f, 0.0f, -4.0f, 0.0f),
+    //    1
+    //});
+    //m_Quads.push_back(
+    //{
+    //    glm::vec4( 2.0f, 4.0f, -2.0f, 0.0f),
+    //    glm::vec4( 0.0f,-4.0f,  0.0f, 0.0f),
+    //    glm::vec4( 0.0f, 0.0f,  4.0f, 0.0f),
+    //    2
+    //});
+    //m_Quads.push_back(
+    //{
+    //    glm::vec4(-0.75f, 3.995f, -0.75f, 0.0f),
+    //    glm::vec4(  0.0f,   0.0f,   1.5f, 0.0f),
+    //    glm::vec4(  1.5f,   0.0f,   0.0f, 0.0f),
+    //    4
+    //});
 
     m_pQuadBuffer = Buffer::Create(m_pDevice, quadBufferParams, m_pDeviceAllocator);
     assert(m_pQuadBuffer != nullptr);
@@ -216,9 +216,11 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     sphereBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_Spheres.reserve(MAX_SPHERES);
-    m_Spheres.push_back({ glm::vec3( 1.25f, 0.5f,  0.0f),  0.5f, 3 });
-    m_Spheres.push_back({ glm::vec3(  0.0f, 0.5f,  0.0f),  0.5f, 5 });
-    m_Spheres.push_back({ glm::vec3(-1.25f, 0.5f,  0.0f),  0.5f, 3 });
+    m_Spheres.push_back({ glm::vec3(0.0f, -100.5f, 0.0f), 100.0f, 0 });
+    m_Spheres.push_back({ glm::vec3(0.0f,    0.0f, 1.0f),   0.5f, 1 });
+
+    m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f), 0.5f, 2 });
+    m_Spheres.push_back({ glm::vec3( 1.0f, 0.0f, 1.0f), 0.5f, 3 });
 
     m_pSphereBuffer = Buffer::Create(m_pDevice, sphereBufferParams, m_pDeviceAllocator);
     assert(m_pSphereBuffer != nullptr);
@@ -243,46 +245,46 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     m_Materials.reserve(MAX_MATERIALS);
     m_Materials.push_back(
     {
-        glm::vec4(0.99f, 0.99f, 0.99f, 1.0f),
-        glm::vec4(0.0f,   0.0f,  0.0f, 0.0f),
-        0.9f,
-        MATERIAL_STANDARD
+        glm::vec4(0.8f, 0.8f, 0.0f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        1.0f,
+        MATERIAL_LAMBERTIAN
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.02f, 0.99f, 0.02f, 1.0f),
-        glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
-        0.9f,
-        MATERIAL_STANDARD
+        glm::vec4(0.7f, 0.3f, 0.3f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        1.0f,
+        MATERIAL_LAMBERTIAN
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.99f, 0.02f, 0.02f, 1.0f),
-        glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
-        0.9f,
-        MATERIAL_STANDARD
+        glm::vec4(0.8f, 0.8f, 0.8f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        0.3f,
+        MATERIAL_METAL
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.02f, 0.02f, 0.98f, 1.0f),
-        glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
-        0.8f,
-        MATERIAL_STANDARD
+        glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        1.0f,
+        MATERIAL_METAL
     });
-    m_Materials.push_back(
-    {
-        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-        glm::vec4(2.0f, 2.0f, 2.0f, 1.0f),
-        0.0f,
-        MATERIAL_EMISSIVE
-    });
-    m_Materials.push_back(
-    {
-        glm::vec4(0.99f, 0.99f, 0.99f, 1.0f),
-        glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
-        0.01f,
-        MATERIAL_STANDARD
-    });
+    //m_Materials.push_back(
+    //{
+    //    glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+    //    glm::vec4(2.0f, 2.0f, 2.0f, 1.0f),
+    //    0.0f,
+    //    MATERIAL_EMISSIVE
+    //});
+    //m_Materials.push_back(
+    //{
+    //    glm::vec4(0.02f, 0.02f, 0.99f, 1.0f),
+    //    glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
+    //    0.99f,
+    //    MATERIAL_LAMBERTIAN
+    //});
 
     m_pMaterialBuffer = Buffer::Create(m_pDevice, materialBufferParams, m_pDeviceAllocator);
     assert(m_pMaterialBuffer != nullptr);
@@ -453,13 +455,14 @@ void RayTracer::Tick(float deltaTime)
     pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(CameraBuffer), &cameraBuffer);
 
     // Update RandomBuffer
-    constexpr uint32_t maxSamples = 1024;
+    constexpr uint32_t maxSamples = 16;
     static uint32_t randFrameIndex = 0;
-    randFrameIndex = (randFrameIndex + 1) % 1024;
+    randFrameIndex++;
  
     RandomBuffer randomBuffer = {};
-    randomBuffer.FrameIndex = randFrameIndex;
-    randomBuffer.NumSamples = m_NumSamples;
+    randomBuffer.FrameIndex  = randFrameIndex;
+    randomBuffer.SampleIndex = randFrameIndex % maxSamples;
+    randomBuffer.NumSamples  = m_NumSamples;
 
     pCurrentCommandBuffer->UpdateBuffer(m_pRandomBuffer, 0, sizeof(RandomBuffer), &randomBuffer);
 
