@@ -21,4 +21,12 @@ vec3 RealRefract(vec3 uv, vec3 n, float EtaiOverEtat)
     return rOutPerp + rOutParallel;
 }
 
+float Reflectance(float cosine, float RefractionIndex) 
+{
+    // Use Schlick's approximation for reflectance.
+    float r0 = (1.0 - RefractionIndex) / (1.0 + RefractionIndex);
+    r0 = r0 * r0;
+    return r0 + (1.0 - r0) * pow((1.0 - cosine), 5.0);
+}
+
 #endif

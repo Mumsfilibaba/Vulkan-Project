@@ -217,10 +217,11 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
 
     m_Spheres.reserve(MAX_SPHERES);
     m_Spheres.push_back({ glm::vec3(0.0f, -100.5f, 0.0f), 100.0f, 0 });
-    m_Spheres.push_back({ glm::vec3(0.0f,    0.0f, 1.0f),   0.5f, 1 });
+    m_Spheres.push_back({ glm::vec3(0.0f,    0.0f, 1.0f),  0.49f, 1 });
 
-    m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f), 0.5f, 2 });
-    m_Spheres.push_back({ glm::vec3( 1.0f, 0.0f, 1.0f), 0.5f, 3 });
+    m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f), -0.47f, 2 });
+    m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f),  0.49f, 2 });
+    m_Spheres.push_back({ glm::vec3( 1.0f, 0.0f, 1.0f),  0.49f, 3 });
 
     m_pSphereBuffer = Buffer::Create(m_pDevice, sphereBufferParams, m_pDeviceAllocator);
     assert(m_pSphereBuffer != nullptr);
@@ -261,7 +262,7 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.8f, 0.8f, 0.8f, 1.0f),
+        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         MATERIAL_DIELECTRIC,
         0.3f,
@@ -272,7 +273,7 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
         glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         MATERIAL_METAL,
-        1.0f,
+        0.3f,
         0.0f,
     });
     //m_Materials.push_back(

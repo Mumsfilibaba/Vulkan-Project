@@ -5,9 +5,11 @@
 #include "tonemap.glsl"
 
 #define NUM_THREADS (16)
-#define MAX_DEPTH   (64)
+#define MAX_DEPTH   (128)
 
-#define SIGMA (0.000001f)
+#define SIGMA (0.0001)
+
+#define USE_RAY_OFFSET (0)
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
@@ -120,6 +122,7 @@ struct Ray
 struct RayPayLoad
 {
     vec3  Normal;
+    vec3  Position;
     float T;
     float MinT;
     float MaxT;
@@ -140,7 +143,7 @@ vec3 HemisphereSampleUniform(float u, float v)
 
 bool IsAlmostZero(vec3 Value)
 {
-    return (Value.x < SIGMA) && (Value.y < SIGMA) && (Value.z < SIGMA); 
+    return Value.x <= SIGMA && Value.y <= SIGMA && Value.z <= SIGMA; 
 }
 
 void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
@@ -177,6 +180,7 @@ void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
             PayLoad.T             = t;
             PayLoad.MaterialIndex = Quad.MaterialIndex;
             PayLoad.FrontFace     = true;
+            PayLoad.Position      = Ray.Origin + Ray.Direction * PayLoad.T;
 
             if (DdotN >= 0.0)
             {
@@ -195,40 +199,43 @@ void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
     vec3  SpherePos    = Sphere.PositionAndRadius.xyz;
     float SphereRadius = Sphere.PositionAndRadius.w;
 
-    vec3 Distance = Ray.Origin - SpherePos;
+    vec3  oc = Ray.Origin - SpherePos;
     float a = dot(Ray.Direction, Ray.Direction);
-    float b = dot(Ray.Direction, Distance);
-    float c = dot(Distance, Distance) - (SphereRadius * SphereRadius);
+    float b = dot(Ray.Direction, oc);
+    float c = dot(oc, oc) - (SphereRadius * SphereRadius);
 
-    float Disc = (b * b) - (a * c);
-    if (Disc < 0.0f)
+    float Discriminant = (b * b) - (a * c);
+    if (Discriminant < 0.0)
     {
         return;
     }
 
-    float Root = sqrt(Disc);
-    float t = (-b - Root) / a;
-
-    if (PayLoad.MinT < t && t < PayLoad.MaxT)
+    float t = (-b - sqrt(Discriminant)) / a;
+    if (t <= PayLoad.MinT || t >= PayLoad.MaxT)
     {
-        if (t < PayLoad.T)
+        t = (-b + sqrt(Discriminant)) / a;
+        if (t <= PayLoad.MinT || t >= PayLoad.MaxT)
         {
-            PayLoad.T = t;
+            return;
+        }
+    }
 
-            vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
-            PayLoad.MaterialIndex = Sphere.MaterialIndex;
+    if (t <= PayLoad.T)
+    {
+        PayLoad.T             = t;
+        PayLoad.MaterialIndex = Sphere.MaterialIndex;
+        PayLoad.Position      = Ray.Origin + Ray.Direction * PayLoad.T;
 
-            vec3 OutsideNormal = normalize((Position - SpherePos) / SphereRadius);
-            if (dot(Ray.Direction, OutsideNormal) < 0.0)
-            {
-                PayLoad.Normal    = OutsideNormal;
-                PayLoad.FrontFace = true;
-            }
-            else
-            {
-                PayLoad.Normal    = -OutsideNormal;
-                PayLoad.FrontFace = false;
-            }
+        vec3 OutsideNormal = normalize((PayLoad.Position - SpherePos) / SphereRadius);
+        if (dot(Ray.Direction, OutsideNormal) < 0.0)
+        {
+            PayLoad.Normal    = OutsideNormal;
+            PayLoad.FrontFace = true;
+        }
+        else
+        {
+            PayLoad.Normal    = -OutsideNormal;
+            PayLoad.FrontFace = false;
         }
     }
 }
@@ -255,6 +262,7 @@ void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
             PayLoad.T             = t;
             PayLoad.MaterialIndex = Plane.MaterialIndex;
             PayLoad.FrontFace     = true;
+            PayLoad.Position      = Ray.Origin + Ray.Direction * PayLoad.T;
 
             if (DdotN >= 0.0)
             {
@@ -340,7 +348,7 @@ void main()
     for (uint i = 0; i < MAX_DEPTH; i++)
     {
         RayPayLoad PayLoad;
-        PayLoad.MinT = 0.0;
+        PayLoad.MinT = 0.001;
         PayLoad.MaxT = 1000.0;
         PayLoad.T    = PayLoad.MaxT;
 
@@ -349,22 +357,26 @@ void main()
             const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials);
             Material Material = Materials[MaterialIndex];
             
-            vec3 N        = normalize(PayLoad.Normal);
-            vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
-            
+            vec3 N        = normalize(PayLoad.Normal);            
             vec3 Emissive  = vec3(0.0);
             vec3 Origin    = vec3(0.0);
             vec3 Direction = vec3(0.0);
+
             if (Material.Type == MATERIAL_LAMBERTIAN)
             {
                 vec3 Rnd = NextRandomUnitSphereVec3(RandomSeed);
                 Direction = normalize(PayLoad.Normal + Rnd);
-                Origin    = Position + (N * SIGMA);
 
-                //if (IsAlmostZero(Direction))
-                //{
-                    //Direction = PayLoad.Normal;
-                //}
+            #if USE_RAY_OFFSET
+                Origin = PayLoad.Position + (N * SIGMA);
+            #else
+                Origin = PayLoad.Position;
+            #endif
+
+                /*if (IsAlmostZero(Direction))
+                {
+                    Direction = PayLoad.Normal;
+                }*/
 
                 // Attenuate light
                 vec3 Albedo = Material.Albedo.rgb;
@@ -376,7 +388,11 @@ void main()
 
                 vec3 Reflection = reflect(Ray.Direction, N);
                 Direction = normalize(Reflection + Rnd * Material.Roughness);
-                Origin    = Position + (N * SIGMA);
+            #if USE_RAY_OFFSET
+                Origin = PayLoad.Position + (N * SIGMA);
+            #else
+                Origin = PayLoad.Position;
+            #endif
 
                 // Attenuate light
                 vec3 Albedo = Material.Albedo.rgb;
@@ -384,23 +400,47 @@ void main()
             }
             else if (Material.Type == MATERIAL_DIELECTRIC)
             {
-                float RefractionRatio = PayLoad.FrontFace ? (1.0 / Material.RefractionIndex) : Material.RefractionIndex;
-                
-                vec3 Refracted = refract(normalize(Ray.Direction), N, RefractionRatio);
-                Direction = Refracted;
-                
-                if (PayLoad.FrontFace)
+                float RefractionRatio = PayLoad.FrontFace ? (1.0 / max(Material.RefractionIndex, SIGMA)) : Material.RefractionIndex;
+
+                vec3  RayDirection = normalize(Ray.Direction); 
+                float CosTheta = min(dot(-RayDirection, PayLoad.Normal), 1.0);
+                float SinTheta = sqrt(1.0 - CosTheta * CosTheta);
+
+                bool bShouldReflect = RefractionRatio * SinTheta >= 1.0;
+                if (bShouldReflect || Reflectance(CosTheta, RefractionRatio) > NextRandom(RandomSeed))
                 {
-                    Origin = Position - (N * SIGMA);
+                    vec3 Rnd = NextRandomHemisphere(RandomSeed, PayLoad.Normal);
+
+                    vec3 Reflection = reflect(RayDirection, N);
+                    Direction = normalize(Reflection + Rnd * Material.Roughness);
                 }
                 else
                 {
-                    Origin = Position - (N * SIGMA);
+                    // TODO: The GLSL refract seems to give NaN sometimes
+                #if 0
+                    vec3 Refracted = refract(RayDirection, N, RefractionRatio);
+                #else
+                    vec3 Refracted = RealRefract(RayDirection, N, RefractionRatio);
+                #endif
+                    Direction = Refracted;
                 }
+                
+            #if USE_RAY_OFFSET
+                if (PayLoad.FrontFace)
+                {
+                    Origin = PayLoad.Position + (N * SIGMA);
+                }
+                else
+                {
+                    Origin = PayLoad.Position - (N * SIGMA);
+                }
+            #else
+                Origin = PayLoad.Position;
+            #endif
 
                 // Attenuate light
-                vec3 Albedo = vec3(0.95, 0.95, 0.95);
-                SampleColor = Albedo; // Albedo * SampleColor;
+                vec3 Albedo = Material.Albedo.rgb;
+                SampleColor = Albedo * SampleColor;
             }
             else if (Material.Type == MATERIAL_EMISSIVE) 
             {
@@ -452,7 +492,7 @@ void main()
     imageStore(Accumulation, Pixel, currentColor);
 
     // Store to scene texture
-    FinalColor = currentColor.rgb / uRandom.NumSamples;
+    FinalColor = currentColor.rgb / max(uRandom.NumSamples, 1.0);
     //FinalColor = AcesFitted(FinalColor);
     FinalColor = pow(FinalColor, vec3(1.0 / 2.2));
     imageStore(Output, Pixel, vec4(FinalColor, 1.0));
