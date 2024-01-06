@@ -5,7 +5,7 @@
 #include "tonemap.glsl"
 
 #define NUM_THREADS (16)
-#define MAX_DEPTH   (8)
+#define MAX_DEPTH   (64)
 
 #define SIGMA (0.000001f)
 
@@ -353,11 +353,14 @@ void main()
             vec3 Position = Ray.Origin + Ray.Direction * PayLoad.T;
             
             vec3 Emissive  = vec3(0.0);
+            vec3 Origin    = vec3(0.0);
             vec3 Direction = vec3(0.0);
             if (Material.Type == MATERIAL_LAMBERTIAN)
             {
                 vec3 Rnd = NextRandomUnitSphereVec3(RandomSeed);
                 Direction = normalize(PayLoad.Normal + Rnd);
+                Origin    = Position + (N * SIGMA);
+
                 //if (IsAlmostZero(Direction))
                 //{
                     //Direction = PayLoad.Normal;
@@ -373,6 +376,7 @@ void main()
 
                 vec3 Reflection = reflect(Ray.Direction, N);
                 Direction = normalize(Reflection + Rnd * Material.Roughness);
+                Origin    = Position + (N * SIGMA);
 
                 // Attenuate light
                 vec3 Albedo = Material.Albedo.rgb;
@@ -382,14 +386,21 @@ void main()
             {
                 float RefractionRatio = PayLoad.FrontFace ? (1.0 / Material.RefractionIndex) : Material.RefractionIndex;
                 
-                vec3 UnitDirection = normalize(Ray.Direction);
-                vec3 Refracted     = refract(UnitDirection, N, RefractionRatio);
+                vec3 Refracted = refract(normalize(Ray.Direction), N, RefractionRatio);
                 Direction = Refracted;
+                
+                if (PayLoad.FrontFace)
+                {
+                    Origin = Position - (N * SIGMA);
+                }
+                else
+                {
+                    Origin = Position - (N * SIGMA);
+                }
 
                 // Attenuate light
-                vec3 Albedo = vec3(1.0, 1.0, 1.0);
-                SampleColor = Direction;//Albedo * SampleColor;
-                   i = MAX_DEPTH;
+                vec3 Albedo = vec3(0.95, 0.95, 0.95);
+                SampleColor = Albedo; // Albedo * SampleColor;
             }
             else if (Material.Type == MATERIAL_EMISSIVE) 
             {
@@ -408,7 +419,7 @@ void main()
             }
 
             // Setup the next ray
-            Ray.Origin    = Position + (N * SIGMA);
+            Ray.Origin    = Origin;
             Ray.Direction = Direction;
         }
         else
