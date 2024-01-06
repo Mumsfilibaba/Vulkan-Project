@@ -223,6 +223,8 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f),  0.49f, 2 });
     m_Spheres.push_back({ glm::vec3( 1.0f, 0.0f, 1.0f),  0.49f, 3 });
 
+    m_Spheres.push_back({ glm::vec3(0.0f, 4.0f, 1.0f),  0.2f, 4 });
+
     m_pSphereBuffer = Buffer::Create(m_pDevice, sphereBufferParams, m_pDeviceAllocator);
     assert(m_pSphereBuffer != nullptr);
 
@@ -276,13 +278,14 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
         0.3f,
         0.0f,
     });
-    //m_Materials.push_back(
-    //{
-    //    glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-    //    glm::vec4(2.0f, 2.0f, 2.0f, 1.0f),
-    //    0.0f,
-    //    MATERIAL_EMISSIVE
-    //});
+    m_Materials.push_back(
+    {
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(200.0f, 200.0f, 200.0f, 1.0f),
+        MATERIAL_EMISSIVE,
+        0.0f,
+        0.0f
+    });
     //m_Materials.push_back(
     //{
     //    glm::vec4(0.02f, 0.02f, 0.99f, 1.0f),

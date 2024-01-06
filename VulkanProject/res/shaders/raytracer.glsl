@@ -5,7 +5,7 @@
 #include "tonemap.glsl"
 
 #define NUM_THREADS (16)
-#define MAX_DEPTH   (128)
+#define MAX_DEPTH   (1024)
 
 #define SIGMA (0.0001)
 
@@ -446,7 +446,7 @@ void main()
             {
                 // Add light
                 Emissive    = Material.Emissive.rgb;
-                SampleColor = SampleColor + Emissive;
+                SampleColor = SampleColor * Emissive;
 
                 // Emissive materials do not scatter
                 i = MAX_DEPTH;
@@ -466,7 +466,7 @@ void main()
         {
             vec3 BackGroundColor;
             
-        #if 1
+        #if 0
             // Create a gradient
             vec3 UnitDirection = normalize(Ray.Direction);
             float Alpha = 0.5 * (UnitDirection.y + 1.0);
