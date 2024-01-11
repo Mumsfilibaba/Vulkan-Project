@@ -2,18 +2,7 @@
 #include "Core.h"
 #include "IRenderer.h"
 #include "Camera.h"
-
-/*///////////////////////////////////////////////////////////////////////////////////////////////*/
-// Primitives
-
-#define MAX_QUAD    (128)
-#define MAX_SPHERES (32)
-#define MAX_PLANES  (8)
-
-/*///////////////////////////////////////////////////////////////////////////////////////////////*/
-// Materials
-
-#define MAX_MATERIALS (32)
+#include "Scene.h"
 
 class Buffer;
 
@@ -34,58 +23,11 @@ struct SceneBuffer
     uint32_t NumSpheres   = 0;
     uint32_t NumPlanes    = 0;
     uint32_t NumMaterials = 0;
-};
 
-/*///////////////////////////////////////////////////////////////////////////////////////////////*/
-// Primitive Structs
-
-struct Sphere
-{
-    glm::vec3 Position;
-    float     Radius;
-    uint32_t  MaterialIndex;
-    uint32_t  Padding0;
-    uint32_t  Padding1;
-    uint32_t  Padding2;
-};
-
-struct Plane
-{
-    glm::vec3 Normal;
-    float     Distance;
-    uint32_t  MaterialIndex;
-    uint32_t  Padding0;
-    uint32_t  Padding1;
-    uint32_t  Padding2;
-};
-
-struct Quad
-{
-    glm::vec4 Position;
-    glm::vec4 Edge0;
-    glm::vec4 Edge1;
-    uint32_t  MaterialIndex;
-    uint32_t  Padding0;
-    uint32_t  Padding1;
-    uint32_t  Padding2;
-};
-
-/*///////////////////////////////////////////////////////////////////////////////////////////////*/
-// Material
-
-#define MATERIAL_LAMBERTIAN (1)
-#define MATERIAL_METAL      (2)
-#define MATERIAL_EMISSIVE   (3)
-#define MATERIAL_DIELECTRIC (4)
-
-struct Material
-{
-    glm::vec4 Albedo;
-    glm::vec4 Emissive;
-    uint32_t  Type;
-    float     Roughness;
-    float     RefractionIndex;
-    uint32_t  Padding1;
+    uint32_t bUseGlobalLight = 0;
+    uint32_t Padding0        = 0;
+    uint32_t Padding1        = 0;
+    uint32_t Padding2        = 0;
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -95,7 +37,7 @@ class RayTracer : public IRenderer
 {
 public:
     RayTracer();
-    ~RayTracer() = default;
+    ~RayTracer();
     
     virtual void Init(Device* pDevice, Swapchain* pSwapchain) override;
     
@@ -127,6 +69,7 @@ private:
     std::vector<class CommandBuffer*> m_CommandBuffers;
     std::vector<class Query*>         m_TimestampQueries;
     
+    // Buffers
     Buffer* m_pCameraBuffer;
     Buffer* m_pRandomBuffer;
     Buffer* m_pSceneBuffer;
@@ -135,25 +78,26 @@ private:
     Buffer* m_pQuadBuffer;
     Buffer* m_pMaterialBuffer;
 
-    std::vector<Quad>     m_Quads;
-    std::vector<Sphere>   m_Spheres;
-    std::vector<Plane>    m_Planes;
-    std::vector<Material> m_Materials;
-
+    // SceneTexture
     class Texture*       m_pAccumulationTexture;
     class TextureView*   m_pAccumulationTextureView;
     class Texture*       m_pSceneTexture;
     class TextureView*   m_pSceneTextureView;
     class DescriptorSet* m_pSceneTextureDescriptorSet;
 
-    Camera           m_Camera;
+    // Scene
+    Scene* m_pScene;
+    Camera m_Camera;
 
+    // Samples
     uint32_t         m_NumSamples;
     std::atomic_bool m_bResetImage;
 
-    float    m_LastCPUTime;
-    float    m_LastGPUTime;
+    // Stats
+    float m_LastCPUTime;
+    float m_LastGPUTime;
 
+    // Viewport
     uint32_t m_ViewportWidth;
     uint32_t m_ViewportHeight;
 };

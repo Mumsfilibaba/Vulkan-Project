@@ -30,11 +30,21 @@ RayTracer::RayTracer()
 {
 }
 
+RayTracer::~RayTracer()
+{
+    SAFE_DELETE(m_pScene);
+}
+
 void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
 {
     // Set device
     m_pDevice    = pDevice;
     m_pSwapchain = pSwapchain;
+
+    // Create scene
+    // m_pScene = new SphereScene();
+    m_pScene = new CornellBoxScene();
+    m_pScene->Initialize();
 
     // Create DescriptorSetLayout
     constexpr uint32_t numBindings = 9;
@@ -162,50 +172,6 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     quadBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     quadBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_Quads.reserve(MAX_QUAD);
-    //m_Quads.push_back(
-    //{
-    //    glm::vec4(-2.0f, 0.0f, -2.0f, 0.0f),
-    //    glm::vec4( 0.0f, 0.0f,  4.0f, 0.0f),
-    //    glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
-    //    0
-    //});
-    //m_Quads.push_back(
-    //{
-    //    glm::vec4(-2.0f, 0.0f, -2.0f, 0.0f),
-    //    glm::vec4( 0.0f, 4.0f,  0.0f, 0.0f),
-    //    glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
-    //    0
-    //});
-    //m_Quads.push_back(
-    //{
-    //    glm::vec4(-2.0f, 4.0f, -2.0f, 0.0f),
-    //    glm::vec4( 0.0f, 0.0f,  4.0f, 0.0f),
-    //    glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
-    //    0
-    //});
-    //m_Quads.push_back(
-    //{
-    //    glm::vec4(-2.0f, 0.0f,  2.0f, 0.0f),
-    //    glm::vec4( 0.0f, 4.0f,  0.0f, 0.0f),
-    //    glm::vec4( 0.0f, 0.0f, -4.0f, 0.0f),
-    //    1
-    //});
-    //m_Quads.push_back(
-    //{
-    //    glm::vec4( 2.0f, 4.0f, -2.0f, 0.0f),
-    //    glm::vec4( 0.0f,-4.0f,  0.0f, 0.0f),
-    //    glm::vec4( 0.0f, 0.0f,  4.0f, 0.0f),
-    //    2
-    //});
-    //m_Quads.push_back(
-    //{
-    //    glm::vec4(-0.75f, 3.995f, -0.75f, 0.0f),
-    //    glm::vec4(  0.0f,   0.0f,   1.5f, 0.0f),
-    //    glm::vec4(  1.5f,   0.0f,   0.0f, 0.0f),
-    //    4
-    //});
-
     m_pQuadBuffer = Buffer::Create(m_pDevice, quadBufferParams, m_pDeviceAllocator);
     assert(m_pQuadBuffer != nullptr);
     
@@ -214,16 +180,6 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     sphereBufferParams.Size             = sizeof(Sphere) * MAX_SPHERES;
     sphereBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     sphereBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_Spheres.reserve(MAX_SPHERES);
-    m_Spheres.push_back({ glm::vec3(0.0f, -100.5f, 0.0f), 100.0f, 0 });
-    m_Spheres.push_back({ glm::vec3(0.0f,    0.0f, 1.0f),  0.49f, 1 });
-
-    m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f), -0.47f, 2 });
-    m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f),  0.49f, 2 });
-    m_Spheres.push_back({ glm::vec3( 1.0f, 0.0f, 1.0f),  0.49f, 3 });
-
-    m_Spheres.push_back({ glm::vec3(0.0f, 4.0f, 1.0f),  0.2f, 4 });
 
     m_pSphereBuffer = Buffer::Create(m_pDevice, sphereBufferParams, m_pDeviceAllocator);
     assert(m_pSphereBuffer != nullptr);
@@ -234,8 +190,6 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     planeBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     planeBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_Planes.reserve(MAX_PLANES);
-
     m_pPlaneBuffer = Buffer::Create(m_pDevice, planeBufferParams, m_pDeviceAllocator);
     assert(m_pPlaneBuffer != nullptr);
 
@@ -244,55 +198,6 @@ void RayTracer::Init(Device* pDevice, Swapchain* pSwapchain)
     materialBufferParams.Size             = sizeof(Material) * MAX_MATERIALS;
     materialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     materialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_Materials.reserve(MAX_MATERIALS);
-    m_Materials.push_back(
-    {
-        glm::vec4(0.8f, 0.8f, 0.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        MATERIAL_LAMBERTIAN,
-        1.0f,
-        0.0f,
-    });
-    m_Materials.push_back(
-    {
-        glm::vec4(0.7f, 0.3f, 0.3f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        MATERIAL_LAMBERTIAN,
-        1.0f,
-        0.0f,
-    });
-    m_Materials.push_back(
-    {
-        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        MATERIAL_DIELECTRIC,
-        0.3f,
-        1.5f,
-    });
-    m_Materials.push_back(
-    {
-        glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        MATERIAL_METAL,
-        0.3f,
-        0.0f,
-    });
-    m_Materials.push_back(
-    {
-        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-        glm::vec4(200.0f, 200.0f, 200.0f, 1.0f),
-        MATERIAL_EMISSIVE,
-        0.0f,
-        0.0f
-    });
-    //m_Materials.push_back(
-    //{
-    //    glm::vec4(0.02f, 0.02f, 0.99f, 1.0f),
-    //    glm::vec4( 0.0f,  0.0f,  0.0f, 0.0f),
-    //    0.99f,
-    //    MATERIAL_LAMBERTIAN
-    //});
 
     m_pMaterialBuffer = Buffer::Create(m_pDevice, materialBufferParams, m_pDeviceAllocator);
     assert(m_pMaterialBuffer != nullptr);
@@ -476,28 +381,29 @@ void RayTracer::Tick(float deltaTime)
 
     // Update Scene
     SceneBuffer sceneBuffer = {};
-    sceneBuffer.NumQuads     = m_Quads.size();
-    sceneBuffer.NumSpheres   = m_Spheres.size();
-    sceneBuffer.NumPlanes    = m_Planes.size();
-    sceneBuffer.NumMaterials = m_Materials.size();
+    sceneBuffer.NumQuads        = m_pScene->m_Quads.size();
+    sceneBuffer.NumSpheres      = m_pScene->m_Spheres.size();
+    sceneBuffer.NumPlanes       = m_pScene->m_Planes.size();
+    sceneBuffer.NumMaterials    = m_pScene->m_Materials.size();
+    sceneBuffer.bUseGlobalLight = m_pScene->m_Settings.bUseGlobalLight;
 
     pCurrentCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(SceneBuffer), &sceneBuffer);
     
-    if (!m_Quads.empty())
+    if (!m_pScene->m_Quads.empty())
     {
-        pCurrentCommandBuffer->UpdateBuffer(m_pQuadBuffer, 0, sizeof(Quad) * m_Quads.size(), m_Quads.data());
+        pCurrentCommandBuffer->UpdateBuffer(m_pQuadBuffer, 0, sizeof(Quad) * m_pScene->m_Quads.size(), m_pScene->m_Quads.data());
     }
-    if (!m_Spheres.empty())
+    if (!m_pScene->m_Spheres.empty())
     {
-        pCurrentCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(Sphere) * m_Spheres.size(), m_Spheres.data());
+        pCurrentCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(Sphere) * m_pScene->m_Spheres.size(), m_pScene->m_Spheres.data());
     }
-    if (!m_Planes.empty())
+    if (!m_pScene->m_Planes.empty())
     {
-        pCurrentCommandBuffer->UpdateBuffer(m_pPlaneBuffer, 0, sizeof(Plane) * m_Planes.size(), m_Planes.data());
+        pCurrentCommandBuffer->UpdateBuffer(m_pPlaneBuffer, 0, sizeof(Plane) * m_pScene->m_Planes.size(), m_pScene->m_Planes.data());
     }
-    if (!m_Materials.empty())
+    if (!m_pScene->m_Materials.empty())
     {
-        pCurrentCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(Material) * m_Materials.size(), m_Materials.data());
+        pCurrentCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(Material) * m_pScene->m_Materials.size(), m_pScene->m_Materials.data());
     }
 
     // Bind pipeline and descriptorSet
@@ -589,7 +495,7 @@ void RayTracer::OnRenderUI()
         ImGui::Separator();
 
         uint32_t index = 1;
-        for (Sphere& sphere : m_Spheres)
+        for (Sphere& sphere : m_pScene->m_Spheres)
         {
             ImGui::Text("Sphere %d", index++);
             ImGui::InputFloat3("Position", &sphere.Position.x);

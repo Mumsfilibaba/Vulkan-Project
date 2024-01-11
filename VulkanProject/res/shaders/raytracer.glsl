@@ -41,6 +41,11 @@ layout(binding = 4) uniform SceneBufferObject
     uint NumSpheres;
     uint NumPlanes;
     uint NumMaterials;
+
+    uint bUseGlobalLight;
+    uint Padding0;
+    uint Padding1;
+    uint Padding2;
 } uScene;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -465,16 +470,18 @@ void main()
         else
         {
             vec3 BackGroundColor;
-            
-        #if 0
-            // Create a gradient
-            vec3 UnitDirection = normalize(Ray.Direction);
-            float Alpha = 0.5 * (UnitDirection.y + 1.0);
-            BackGroundColor = (1.0 - Alpha) * vec3(1.0, 1.0, 1.0) + Alpha * vec3(0.5, 0.7, 1.0);
-        #else
-            // Only light source is the emissive surfaces
-            BackGroundColor = vec3(0.0);
-        #endif
+            if (uScene.bUseGlobalLight != 0)
+            {
+                // Create a gradient
+                vec3  UnitDirection = normalize(Ray.Direction);
+                float Alpha = 0.5 * (UnitDirection.y + 1.0);
+                BackGroundColor = (1.0 - Alpha) * vec3(1.0, 1.0, 1.0) + Alpha * vec3(0.5, 0.7, 1.0);
+            }
+            else
+            {
+                // Only light source is the emissive surfaces
+                BackGroundColor = vec3(0.0);
+            }
 
             // Break the loop
             i = MAX_DEPTH;
