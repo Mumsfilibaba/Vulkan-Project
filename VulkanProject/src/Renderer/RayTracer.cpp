@@ -266,7 +266,7 @@ void RayTracer::Tick(float deltaTime)
         translation.x = -CameraSpeed * deltaTime;
     }
     
-    m_Camera.Move(translation);
+    m_pScene->m_Camera.Move(translation);
 
     // Camera rotation
     constexpr float CameraRotationSpeed = glm::pi<float>() / 2;
@@ -290,7 +290,7 @@ void RayTracer::Tick(float deltaTime)
         rotation.x = CameraRotationSpeed * deltaTime;
     }
 
-    m_Camera.Rotate(rotation);
+    m_pScene->m_Camera.Rotate(rotation);
     
     // Check if we moved and then we reset the image
     if (glm::length(rotation) > 0.0f || glm::length(translation) > 0.0f)
@@ -305,7 +305,7 @@ void RayTracer::Tick(float deltaTime)
     }
     
     // Update
-    m_Camera.Update(90.0f, m_pSceneTexture->GetWidth(), m_pSceneTexture->GetHeight(), 0.1f, 100.0f);
+    m_pScene->m_Camera.Update(90.0f, m_pSceneTexture->GetWidth(), m_pSceneTexture->GetHeight(), 0.1f, 100.0f);
     
     // Draw
     uint32_t frameIndex = m_pSwapchain->GetCurrentBackBufferIndex();
@@ -360,10 +360,10 @@ void RayTracer::Tick(float deltaTime)
 
     // Update CameraBuffer
     CameraBuffer cameraBuffer = {};
-    cameraBuffer.Projection = m_Camera.GetProjectionMatrix();
-    cameraBuffer.View       = m_Camera.GetViewMatrix();
-    cameraBuffer.Position   = glm::vec4(m_Camera.GetPosition(), 0.0f);
-    cameraBuffer.Forward    = glm::vec4(m_Camera.GetForward(), 0.0f);
+    cameraBuffer.Projection = m_pScene->m_Camera.GetProjectionMatrix();
+    cameraBuffer.View       = m_pScene->m_Camera.GetViewMatrix();
+    cameraBuffer.Position   = glm::vec4(m_pScene->m_Camera.GetPosition(), 0.0f);
+    cameraBuffer.Forward    = glm::vec4(m_pScene->m_Camera.GetForward(), 0.0f);
 
     pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(CameraBuffer), &cameraBuffer);
 
@@ -486,6 +486,22 @@ void RayTracer::OnRenderUI()
         
         if (ImGui::Button("Clear Image"))
         {
+            m_bResetImage = true;
+        }
+        if (ImGui::Button("Sphere Scene"))
+        {
+            SAFE_DELETE(m_pScene);
+            
+            m_pScene = new SphereScene();
+            m_pScene->Initialize();
+            m_bResetImage = true;
+        }
+        if (ImGui::Button("CornellBox Scene"))
+        {
+            SAFE_DELETE(m_pScene);
+            
+            m_pScene = new CornellBoxScene();
+            m_pScene->Initialize();
             m_bResetImage = true;
         }
         

@@ -42,7 +42,7 @@ public:
         m_View       = glm::lookAtLH(m_Position, m_Position + m_Forward, m_Up);
         m_Projection = glm::perspectiveFovLH(glm::radians(fovDegrees), width, height, near, far);
     }
-
+    
     const glm::mat4& GetViewMatrix() const
     {
         return m_View;
@@ -63,7 +63,7 @@ public:
         return m_Position;
     }
     
-    inline const glm::vec3& GetForward() const
+    const glm::vec3& GetForward() const
     {
         return m_Forward;
     }

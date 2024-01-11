@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "Camera.h"
 
 #define MAX_QUAD (128)
 #define MAX_SPHERES (32)
@@ -63,12 +63,14 @@ struct Scene
     ~Scene() = default;
 
     virtual void Initialize() {}
+    
+    Camera                m_Camera;
+    SceneSettings         m_Settings;
 
     std::vector<Quad>     m_Quads;
     std::vector<Sphere>   m_Spheres;
     std::vector<Plane>    m_Planes;
     std::vector<Material> m_Materials;
-    SceneSettings         m_Settings;
 };
 
 struct SphereScene : public Scene

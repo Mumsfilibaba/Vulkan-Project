@@ -87,7 +87,6 @@ private:
 
     // Scene
     Scene* m_pScene;
-    Camera m_Camera;
 
     // Samples
     uint32_t         m_NumSamples;

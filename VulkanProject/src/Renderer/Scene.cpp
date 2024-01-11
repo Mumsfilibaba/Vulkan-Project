@@ -18,6 +18,13 @@ void SphereScene::Initialize()
     // Settings
     m_Settings.bUseGlobalLight = true;
 
+    // Setup Camera
+    glm::vec3 translation(0.0f, 0.0f, 1.0f);
+    m_Camera.Move(translation);
+    
+    glm::vec3 rotation(glm::pi<float>() / 4.0f, 0.0f, 0.0f);
+    m_Camera.Rotate(rotation);
+    
     // Spheres
     m_Spheres.push_back({ glm::vec3(0.0f, -100.5f, 0.0f), 100.0f, 0 });
     m_Spheres.push_back({ glm::vec3(0.0f,    0.0f, 1.0f),  0.49f, 1 });
@@ -65,6 +72,13 @@ void CornellBoxScene::Initialize()
 {
     // Settings
     m_Settings.bUseGlobalLight = false;
+    
+    // Setup Camera
+    glm::vec3 translation(0.0f, 2.5f, 5.0f);
+    m_Camera.Move(translation);
+    
+    glm::vec3 rotation(glm::pi<float>() / 8.0f, glm::pi<float>(), 0.0f);
+    m_Camera.Rotate(rotation);
 
     // Quads
     m_Quads.push_back(
