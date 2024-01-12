@@ -543,11 +543,12 @@ void FRayTracer::OnRenderUI()
         ImGui::Text("Objects:");
         ImGui::Separator();
 
+        uint32_t imguiID = 0;
         {
             uint32_t index = 1;
             for (FSphere& sphere : m_pScene->m_Spheres)
             {
-                ImGui::PushID(index);
+                ImGui::PushID(imguiID++);
 
                 ImGui::Text("Sphere %d", index++);
                 if (ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f))
@@ -568,7 +569,7 @@ void FRayTracer::OnRenderUI()
             uint32_t index = 1;
             for (FQuad& quad : m_pScene->m_Quads)
             {
-                ImGui::PushID(index);
+                ImGui::PushID(imguiID++);
 
                 ImGui::Text("Quad %d", index++);
                 if (ImGui::DragFloat3("Position", glm::value_ptr(quad.Position), 0.1f))
@@ -607,7 +608,7 @@ void FRayTracer::OnRenderUI()
             uint32_t index = 1;
             for (FMaterial& material : m_pScene->m_Materials)
             {
-                ImGui::PushID(index);
+                ImGui::PushID(imguiID++);
                 ImGui::Text("Material %d", index++);
                 
                 int materialType = material.Type;
