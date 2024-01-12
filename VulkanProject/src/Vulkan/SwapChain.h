@@ -3,11 +3,11 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-class Device;
+class FDevice;
 
-class Swapchain
+class FSwapchain
 {
-    struct FrameData
+    struct FFrameData
     {
         VkImage     BackBuffer      = VK_NULL_HANDLE;
         VkImageView BackBufferView  = VK_NULL_HANDLE;
@@ -16,10 +16,10 @@ class Swapchain
     };
     
 public:
-    static Swapchain* Create(Device* pDevice, GLFWwindow* pWindow);
+    static FSwapchain* Create(FDevice* pDevice, GLFWwindow* pWindow);
     
-    Swapchain(Device* pDevice, GLFWwindow* pWindow);
-    ~Swapchain();
+    FSwapchain(FDevice* pDevice, GLFWwindow* pWindow);
+    ~FSwapchain();
 
     void Resize(uint32_t width, uint32_t height);
 
@@ -76,15 +76,15 @@ private:
     VkResult AquireNextImage();
     void     WaitForImage();
 
-    Device*                m_pDevice;
-    GLFWwindow*            m_pWindow;
-    VkSurfaceKHR           m_Surface;
-    VkSwapchainKHR         m_Swapchain;
-    VkExtent2D             m_Extent;
-    VkSurfaceFormatKHR     m_SwapchainFormat;
-    VkPresentModeKHR       m_PresentMode;
-    uint32_t               m_ImageCount;
-    std::vector<FrameData> m_FrameData;
-    mutable uint32_t       m_SemaphoreIndex;
-    mutable uint32_t       m_CurrentBufferIndex;
+    FDevice*                m_pDevice;
+    GLFWwindow*             m_pWindow;
+    VkSurfaceKHR            m_Surface;
+    VkSwapchainKHR          m_Swapchain;
+    VkExtent2D              m_Extent;
+    VkSurfaceFormatKHR      m_SwapchainFormat;
+    VkPresentModeKHR        m_PresentMode;
+    uint32_t                m_ImageCount;
+    std::vector<FFrameData> m_FrameData;
+    mutable uint32_t        m_SemaphoreIndex;
+    mutable uint32_t        m_CurrentBufferIndex;
 };

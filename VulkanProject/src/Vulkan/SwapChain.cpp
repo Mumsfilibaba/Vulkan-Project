@@ -4,9 +4,9 @@
 
 #define NUM_BACK_BUFFERS (3)
 
-Swapchain* Swapchain::Create(Device* pDevice, GLFWwindow* pWindow)
+FSwapchain* FSwapchain::Create(FDevice* pDevice, GLFWwindow* pWindow)
 {
-    Swapchain* pSwapchain = new Swapchain(pDevice, pWindow);
+    FSwapchain* pSwapchain = new FSwapchain(pDevice, pWindow);
     if (!pSwapchain->CreateSurface())
     {
         return nullptr;
@@ -33,7 +33,7 @@ Swapchain* Swapchain::Create(Device* pDevice, GLFWwindow* pWindow)
     return pSwapchain;
 }
 
-Swapchain::Swapchain(Device* pDevice, GLFWwindow* pWindow)
+FSwapchain::FSwapchain(FDevice* pDevice, GLFWwindow* pWindow)
     : m_pDevice(pDevice)
     , m_pWindow(pWindow)
     , m_Surface(VK_NULL_HANDLE)
@@ -49,9 +49,9 @@ Swapchain::Swapchain(Device* pDevice, GLFWwindow* pWindow)
     m_FrameData.resize(m_ImageCount);
 }
 
-Swapchain::~Swapchain()
+FSwapchain::~FSwapchain()
 {
-    for (FrameData& frame : m_FrameData)
+    for (FFrameData& frame : m_FrameData)
     {
         if (frame.ImageSemaphore != VK_NULL_HANDLE)
         {
@@ -75,7 +75,7 @@ Swapchain::~Swapchain()
     }
 }
 
-bool Swapchain::CreateSurface()
+bool FSwapchain::CreateSurface()
 {
     VkResult result = glfwCreateWindowSurface(m_pDevice->GetInstance(), m_pWindow, nullptr, &m_Surface);
     if (result != VK_SUCCESS)
@@ -87,7 +87,7 @@ bool Swapchain::CreateSurface()
     return true;
 }
 
-bool Swapchain::CreateSwapchain()
+bool FSwapchain::CreateSwapchain()
 {
     int32_t width  = 0;
     int32_t height = 0;
@@ -258,7 +258,7 @@ bool Swapchain::CreateSwapchain()
     return true;
 }
 
-bool Swapchain::CreateSemaphores()
+bool FSwapchain::CreateSemaphores()
 {
     // Setup semaphore structure
     VkSemaphoreCreateInfo semaphoreInfo = {};
@@ -291,13 +291,13 @@ bool Swapchain::CreateSemaphores()
     return true;
 }
 
-VkResult Swapchain::AquireNextImage()
+VkResult FSwapchain::AquireNextImage()
 {
     VkSemaphore signalSemaphore = m_FrameData[m_SemaphoreIndex].ImageSemaphore;
     return vkAcquireNextImageKHR(m_pDevice->GetDevice(), m_Swapchain, UINT64_MAX, signalSemaphore, VK_NULL_HANDLE, &m_CurrentBufferIndex);
 }
 
-void Swapchain::WaitForImage()
+void FSwapchain::WaitForImage()
 {
     VkSubmitInfo submitInfo;
     ZERO_STRUCT(&submitInfo);
@@ -319,7 +319,7 @@ void Swapchain::WaitForImage()
     }
 }
 
-void Swapchain::RecreateSwapchain()
+void FSwapchain::RecreateSwapchain()
 {
     m_pDevice->WaitForIdle();
 
@@ -327,7 +327,7 @@ void Swapchain::RecreateSwapchain()
     CreateSwapchain();
 }
 
-void Swapchain::Resize(uint32_t width, uint32_t height)
+void FSwapchain::Resize(uint32_t width, uint32_t height)
 {
     if (m_Extent.width != width || m_Extent.height != height)
     {
@@ -342,7 +342,7 @@ void Swapchain::Resize(uint32_t width, uint32_t height)
     }
 }
 
-VkResult Swapchain::Present()
+VkResult FSwapchain::Present()
 {
     VkSemaphore waitSemaphores[] = { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
 
@@ -382,10 +382,10 @@ VkResult Swapchain::Present()
     return result;
 }
 
-void Swapchain::ReleaseSwapchainResources()
+void FSwapchain::ReleaseSwapchainResources()
 {
     // Release BackBuffers
-    for (FrameData& frame : m_FrameData)
+    for (FFrameData& frame : m_FrameData)
     {
         frame.BackBuffer = VK_NULL_HANDLE;
         if (frame.BackBufferView != VK_NULL_HANDLE)

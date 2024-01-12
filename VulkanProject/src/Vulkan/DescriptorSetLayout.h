@@ -2,21 +2,21 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class Device;
+class FDevice;
 
-struct DescriptorSetLayoutParams
+struct FDescriptorSetLayoutParams
 {
-    VkDescriptorSetLayoutBinding* pBindings = nullptr;
-    uint32_t numBindings = 0;
+    VkDescriptorSetLayoutBinding* pBindings   = nullptr;
+    uint32_t                      numBindings = 0;
 };
 
-class DescriptorSetLayout
+class FDescriptorSetLayout
 {
 public:
-    static DescriptorSetLayout* Create(Device* pDevice, const DescriptorSetLayoutParams& params);
+    static FDescriptorSetLayout* Create(FDevice* pDevice, const FDescriptorSetLayoutParams& params);
 
-    DescriptorSetLayout(VkDevice device);
-    ~DescriptorSetLayout();
+    FDescriptorSetLayout(VkDevice device);
+    ~FDescriptorSetLayout();
 
     VkDescriptorSetLayout GetDescriptorSetLayout() const
     {

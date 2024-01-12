@@ -2,9 +2,9 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class Device;
+class FDevice;
 
-struct SamplerParams
+struct FSamplerParams
 {
     VkFilter             magFilter;
     VkFilter             minFilter;
@@ -22,13 +22,13 @@ struct SamplerParams
     VkBorderColor        borderColor;
 };
 
-class Sampler
+class FSampler
 {
 public:
-    static Sampler* Create(Device* pDevice, const SamplerParams& params);
+    static FSampler* Create(FDevice* pDevice, const FSamplerParams& params);
     
-    Sampler(VkDevice device);
-    ~Sampler();
+    FSampler(VkDevice device);
+    ~FSampler();
 
     VkSampler GetSampler() const
     {

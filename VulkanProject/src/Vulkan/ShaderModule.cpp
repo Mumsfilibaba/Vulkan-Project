@@ -3,9 +3,9 @@
 #include <fstream>
 #include <iostream>
 
-ShaderModule* ShaderModule::Create(Device* pDevice, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint)
+FShaderModule* FShaderModule::Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint)
 {
-    ShaderModule* pShader = new ShaderModule(pDevice->GetDevice());
+    FShaderModule* pShader = new FShaderModule(pDevice->GetDevice());
     assert(pEntryPoint != nullptr);
     assert(pByteCode != nullptr);
     assert(byteCodeLength != 0);
@@ -34,7 +34,7 @@ ShaderModule* ShaderModule::Create(Device* pDevice, const uint32_t* pByteCode, u
     }
 }
 
-ShaderModule* ShaderModule::CreateFromFile(Device* pDevice, const char* pEntryPoint, const char* pFilePath)
+FShaderModule* FShaderModule::CreateFromFile(FDevice* pDevice, const char* pEntryPoint, const char* pFilePath)
 {
     if (!pFilePath)
     {
@@ -53,7 +53,7 @@ ShaderModule* ShaderModule::CreateFromFile(Device* pDevice, const char* pEntryPo
         file.read(buffer.data(), fileSize);
         file.close();
                 
-        ShaderModule* newShader = ShaderModule::Create(pDevice, reinterpret_cast<const uint32_t*>(buffer.data()), buffer.size(), pEntryPoint);
+        FShaderModule* newShader = FShaderModule::Create(pDevice, reinterpret_cast<const uint32_t*>(buffer.data()), buffer.size(), pEntryPoint);
         if (!newShader)
         {
             return nullptr;
@@ -69,14 +69,14 @@ ShaderModule* ShaderModule::CreateFromFile(Device* pDevice, const char* pEntryPo
     }
 }
 
-ShaderModule::ShaderModule(VkDevice device)
+FShaderModule::FShaderModule(VkDevice device)
     : m_Device(device)
     , m_Module(VK_NULL_HANDLE)
     , m_pEntryPoint(nullptr)
 {
 }
 
-ShaderModule::~ShaderModule()
+FShaderModule::~FShaderModule()
 {
     if (m_Module)
     {

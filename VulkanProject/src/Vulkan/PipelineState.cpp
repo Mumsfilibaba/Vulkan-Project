@@ -5,13 +5,13 @@
 #include "PipelineLayout.h"
 #include <vector>
 
-BasePipeline::BasePipeline(VkDevice device)
+FBasePipeline::FBasePipeline(VkDevice device)
     : m_Device(device)
     , m_Pipeline(VK_NULL_HANDLE)
 {
 }
 
-BasePipeline::~BasePipeline()
+FBasePipeline::~FBasePipeline()
 {
     if (m_Pipeline != VK_NULL_HANDLE)
     {
@@ -22,9 +22,9 @@ BasePipeline::~BasePipeline()
     m_Device = VK_NULL_HANDLE;
 }
 
-GraphicsPipeline* GraphicsPipeline::Create(Device* pDevice, const GraphicsPipelineStateParams& params)
+FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPipelineStateParams& params)
 {
-    GraphicsPipeline* pPipeline = new GraphicsPipeline(pDevice->GetDevice());
+    FGraphicsPipeline* pPipeline = new FGraphicsPipeline(pDevice->GetDevice());
     assert(params.pVertexShader != nullptr);
     assert(params.pRenderPass != nullptr);
     assert(params.pPipelineLayout != nullptr);
@@ -171,15 +171,15 @@ GraphicsPipeline* GraphicsPipeline::Create(Device* pDevice, const GraphicsPipeli
     return pPipeline;
 }
 
-GraphicsPipeline::GraphicsPipeline(VkDevice device)
-    : BasePipeline(device)
+FGraphicsPipeline::FGraphicsPipeline(VkDevice device)
+    : FBasePipeline(device)
 {
 }
 
 
-ComputePipeline* ComputePipeline::Create(Device* pDevice, const ComputePipelineStateParams& params)
+FComputePipeline* FComputePipeline::Create(FDevice* pDevice, const FComputePipelineStateParams& params)
 {
-    ComputePipeline* newPipeline = new ComputePipeline(pDevice->GetDevice());
+    FComputePipeline* newPipeline = new FComputePipeline(pDevice->GetDevice());
     assert(params.pShader != nullptr);
     assert(params.pPipelineLayout != nullptr);
 
@@ -213,7 +213,7 @@ ComputePipeline* ComputePipeline::Create(Device* pDevice, const ComputePipelineS
     return newPipeline;
 }
 
-ComputePipeline::ComputePipeline(VkDevice device)
-    : BasePipeline(device)
+FComputePipeline::FComputePipeline(VkDevice device)
+    : FBasePipeline(device)
 {
 }

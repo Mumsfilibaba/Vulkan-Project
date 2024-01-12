@@ -2,16 +2,16 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class Device;
+class FDevice;
 
-class ShaderModule
+class FShaderModule
 {
 public:
-    static ShaderModule* Create(Device* pDevice, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint);
-    static ShaderModule* CreateFromFile(Device* pDevice, const char* pEntryPoint, const char* pFilePath);
+    static FShaderModule* Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint);
+    static FShaderModule* CreateFromFile(FDevice* pDevice, const char* pEntryPoint, const char* pFilePath);
     
-    ShaderModule(VkDevice device);
-    ~ShaderModule();
+    FShaderModule(VkDevice device);
+    ~FShaderModule();
 
     VkShaderModule GetModule() const
     {

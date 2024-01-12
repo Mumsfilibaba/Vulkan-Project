@@ -6,13 +6,13 @@
 #include <vulkan/vulkan.h>
 
 // Allocates from pDescriptorPool and uses the layout from pPipeline
-DescriptorSet* DescriptorSet::Create(Device* pDevice, DescriptorPool* pDescriptorPool, DescriptorSetLayout* pDescriptorSetLayout)
+FDescriptorSet* FDescriptorSet::Create(FDevice* pDevice, FDescriptorPool* pDescriptorPool, FDescriptorSetLayout* pDescriptorSetLayout)
 {
     assert(pDevice != nullptr);
     assert(pDescriptorPool != nullptr);
     assert(pDescriptorSetLayout != nullptr);
     
-    DescriptorSet* pDescriptorSet = new DescriptorSet(pDevice->GetDevice(), pDescriptorPool);
+    FDescriptorSet* pDescriptorSet = new FDescriptorSet(pDevice->GetDevice(), pDescriptorPool);
     
     VkDescriptorSetAllocateInfo allocateInfo;
     ZERO_STRUCT(&allocateInfo);
@@ -33,7 +33,7 @@ DescriptorSet* DescriptorSet::Create(Device* pDevice, DescriptorPool* pDescripto
     return pDescriptorSet;
 }
 
-DescriptorSet::DescriptorSet(VkDevice device, class DescriptorPool* pool)
+FDescriptorSet::FDescriptorSet(VkDevice device, class FDescriptorPool* pool)
     : m_Pool(pool)
     , m_Device(device)
     , m_DescriptorSet(VK_NULL_HANDLE)
@@ -41,7 +41,7 @@ DescriptorSet::DescriptorSet(VkDevice device, class DescriptorPool* pool)
     assert(m_Pool != nullptr);
 }
 
-DescriptorSet::~DescriptorSet()
+FDescriptorSet::~FDescriptorSet()
 {
     if (m_DescriptorSet)
     {
@@ -52,7 +52,7 @@ DescriptorSet::~DescriptorSet()
     m_Device = VK_NULL_HANDLE;
 }
 
-void DescriptorSet::BindStorageImage(VkImageView imageView, uint32_t binding)
+void FDescriptorSet::BindStorageImage(VkImageView imageView, uint32_t binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
     assert(imageView != VK_NULL_HANDLE);
@@ -78,7 +78,7 @@ void DescriptorSet::BindStorageImage(VkImageView imageView, uint32_t binding)
     vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
 }
 
-void DescriptorSet::BindCombinedImageSampler(VkImageView imageView, VkSampler sampler, uint32_t binding)
+void FDescriptorSet::BindCombinedImageSampler(VkImageView imageView, VkSampler sampler, uint32_t binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
     assert(sampler != VK_NULL_HANDLE);
@@ -105,7 +105,7 @@ void DescriptorSet::BindCombinedImageSampler(VkImageView imageView, VkSampler sa
     vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
 }
 
-void DescriptorSet::BindUniformBuffer(VkBuffer buffer, uint32_t binding)
+void FDescriptorSet::BindUniformBuffer(VkBuffer buffer, uint32_t binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
     assert(buffer != VK_NULL_HANDLE);
@@ -131,7 +131,7 @@ void DescriptorSet::BindUniformBuffer(VkBuffer buffer, uint32_t binding)
     vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
 }
 
-void DescriptorSet::BindStorageBuffer(VkBuffer buffer, uint32_t binding)
+void FDescriptorSet::BindStorageBuffer(VkBuffer buffer, uint32_t binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
     assert(buffer != VK_NULL_HANDLE);

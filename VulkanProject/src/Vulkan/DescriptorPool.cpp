@@ -1,11 +1,11 @@
 #include "DescriptorPool.h"
 #include "Device.h"
 
-DescriptorPool* DescriptorPool::Create(Device* pDevice, const DescriptorPoolParams& params)
+FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPoolParams& params)
 {
     constexpr uint32_t numPoolSizes = 3;
     
-    DescriptorPool* pDescriptorPool = new DescriptorPool(pDevice->GetDevice());
+    FDescriptorPool* pDescriptorPool = new FDescriptorPool(pDevice->GetDevice());
     
     uint32_t numPools = 0;
     VkDescriptorPoolSize poolSizes[numPoolSizes];
@@ -58,13 +58,13 @@ DescriptorPool* DescriptorPool::Create(Device* pDevice, const DescriptorPoolPara
     }
 }
 
-DescriptorPool::DescriptorPool(VkDevice device)
+FDescriptorPool::FDescriptorPool(VkDevice device)
     : m_Device(device)
     , m_Pool(VK_NULL_HANDLE)
 {
 }
 
-DescriptorPool::~DescriptorPool()
+FDescriptorPool::~FDescriptorPool()
 {
     if (m_Pool != VK_NULL_HANDLE)
     {

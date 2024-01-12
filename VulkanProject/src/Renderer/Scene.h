@@ -11,7 +11,7 @@
 #define MATERIAL_EMISSIVE (3)
 #define MATERIAL_DIELECTRIC (4)
 
-struct Sphere
+struct FSphere
 {
     glm::vec3 Position;
     float     Radius;
@@ -21,7 +21,7 @@ struct Sphere
     uint32_t  Padding2;
 };
 
-struct Plane
+struct FPlane
 {
     glm::vec3 Normal;
     float     Distance;
@@ -31,7 +31,7 @@ struct Plane
     uint32_t  Padding2;
 };
 
-struct Quad
+struct FQuad
 {
     glm::vec4 Position;
     glm::vec4 Edge0;
@@ -42,7 +42,7 @@ struct Quad
     uint32_t  Padding2;
 };
 
-struct Material
+struct FMaterial
 {
     glm::vec4 Albedo;
     glm::vec4 Emissive;
@@ -52,33 +52,38 @@ struct Material
     uint32_t  Padding1;
 };
 
-struct SceneSettings
+struct FSceneSettings
 {
     uint32_t bUseGlobalLight;
 };
 
-struct Scene
+struct FScene
 {
-    Scene();
-    ~Scene() = default;
+    FScene();
 
     virtual void Initialize() {}
-    
-    Camera                m_Camera;
-    SceneSettings         m_Settings;
 
-    std::vector<Quad>     m_Quads;
-    std::vector<Sphere>   m_Spheres;
-    std::vector<Plane>    m_Planes;
-    std::vector<Material> m_Materials;
+    virtual void Reset() {}
+
+    FCamera                m_Camera;
+    FSceneSettings         m_Settings;
+
+    std::vector<FQuad>     m_Quads;
+    std::vector<FSphere>   m_Spheres;
+    std::vector<FPlane>    m_Planes;
+    std::vector<FMaterial> m_Materials;
 };
 
-struct SphereScene : public Scene
+struct FSphereScene : public FScene
 {
     virtual void Initialize() override;
+
+    virtual void Reset() override;
 };
 
-struct CornellBoxScene : public Scene
+struct FCornellBoxScene : public FScene
 {
     virtual void Initialize() override;
+
+    virtual void Reset() override;
 };

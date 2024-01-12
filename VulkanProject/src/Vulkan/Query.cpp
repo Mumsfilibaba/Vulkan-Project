@@ -1,9 +1,9 @@
 #include "Query.h"
 #include "Device.h"
 
-Query* Query::Create(class Device* pDevice, const QueryParams& params)
+FQuery* FQuery::Create(class FDevice* pDevice, const FQueryParams& params)
 {
-    Query* pQuery = new Query(pDevice->GetDevice());
+    FQuery* pQuery = new FQuery(pDevice->GetDevice());
     
     VkQueryPoolCreateInfo createInfo;
     ZERO_STRUCT(&createInfo);
@@ -26,13 +26,13 @@ Query* Query::Create(class Device* pDevice, const QueryParams& params)
     return pQuery;
 }
     
-Query::Query(VkDevice device)
+FQuery::FQuery(VkDevice device)
     : m_Device(device)
     , m_QueryPool(VK_NULL_HANDLE)
 {
 }
 
-Query::~Query()
+FQuery::~FQuery()
 {
     if (m_QueryPool != VK_NULL_HANDLE)
     {
@@ -43,7 +43,7 @@ Query::~Query()
     m_Device = VK_NULL_HANDLE;
 }
 
-void Query::Reset(uint32_t firstQuery, uint32_t queryCount)
+void FQuery::Reset(uint32_t firstQuery, uint32_t queryCount)
 {
     if (!queryCount)
     {
@@ -53,7 +53,7 @@ void Query::Reset(uint32_t firstQuery, uint32_t queryCount)
     vkResetQueryPool(m_Device, m_QueryPool, firstQuery, queryCount);
 }
 
-bool Query::GetData(uint32_t firstQuery, uint32_t queryCount, uint64_t dataSize, void* pData, VkDeviceSize stride, VkQueryResultFlags flags)
+bool FQuery::GetData(uint32_t firstQuery, uint32_t queryCount, uint64_t dataSize, void* pData, VkDeviceSize stride, VkQueryResultFlags flags)
 {
     VkResult result = vkGetQueryPoolResults(m_Device, m_QueryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
     if (result != VK_SUCCESS)

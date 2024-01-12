@@ -2,17 +2,17 @@
 #include "Core.h"
 #include "CommandBuffer.h"
 
-class Swapchain;
+class FSwapchain;
 
-struct DeviceParams
+struct FDeviceParams
 {
-    GLFWwindow* pWindow = nullptr;
-    bool bEnableRayTracing;
-    bool bEnableValidation;
-    bool bVerbose = false;
+    GLFWwindow* pWindow           = nullptr;
+    bool        bEnableRayTracing = false;
+    bool        bEnableValidation = false;
+    bool        bVerbose          = false;
 };
 
-struct QueueFamilyIndices
+struct FQueueFamilyIndices
 {
     uint32_t Graphics     = UINT32_MAX;
     uint32_t Presentation = UINT32_MAX;
@@ -25,15 +25,15 @@ struct QueueFamilyIndices
     }
 };
 
-class Device
+class FDevice
 {
 public:
-    static Device* Create(const DeviceParams& params);
+    static FDevice* Create(const FDeviceParams& params);
 
-    Device();
-    ~Device();
+    FDevice();
+    ~FDevice();
 
-    void ExecuteGraphics(CommandBuffer* pCommandBuffer, Swapchain* pSwapchain, VkPipelineStageFlags* pWaitStages);
+    void ExecuteGraphics(FCommandBuffer* pCommandBuffer, FSwapchain* pSwapchain, VkPipelineStageFlags* pWaitStages);
 
     void WaitForIdle();
 
@@ -72,15 +72,15 @@ public:
     }
     
 private:
-    bool Init(const DeviceParams& props);
-    bool CreateInstance(const DeviceParams& props);
+    bool Init(const FDeviceParams& props);
+    bool CreateInstance(const FDeviceParams& props);
     bool CreateDebugMessenger();
-    bool CreateDeviceAndQueues(const DeviceParams& props);
-    bool QueryPhysicalDevice(const DeviceParams& props);
+    bool CreateDeviceAndQueues(const FDeviceParams& props);
+    bool QueryPhysicalDevice(const FDeviceParams& props);
 
     void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
-    QueueFamilyIndices       GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
+    FQueueFamilyIndices      GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
     std::vector<const char*> GetRequiredDeviceExtensions();
     
     VkInstance               m_Instance;
@@ -100,7 +100,7 @@ private:
     VkPhysicalDeviceFeatures2              m_DeviceFeatures;
     VkPhysicalDeviceHostQueryResetFeatures m_HostQueryFeatures;
     VkPhysicalDeviceMemoryProperties       m_DeviceMemoryProperties;
-    QueueFamilyIndices                     m_QueueFamilyIndices;
+    FQueueFamilyIndices                    m_QueueFamilyIndices;
           
     bool m_bValidationEnabled : 1;
     bool m_bRayTracingEnabled : 1;

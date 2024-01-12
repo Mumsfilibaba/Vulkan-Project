@@ -3,13 +3,13 @@
 #include "Vulkan/Device.h"
 #include "Vulkan/DeviceMemoryAllocator.h"
 
-struct Vertex
+struct FVertex
 {
     glm::vec3 Position;
     glm::vec2 TexCoord;
     glm::vec3 Color;
     
-    bool operator==(const Vertex& other) const
+    bool operator==(const FVertex& other) const
     {
         return
             Position == other.Position &&
@@ -21,7 +21,7 @@ struct Vertex
     {
         VkVertexInputBindingDescription bindingDescription = {};
         bindingDescription.binding   = 0;
-        bindingDescription.stride    = sizeof(Vertex);
+        bindingDescription.stride    = sizeof(FVertex);
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
         return bindingDescription;
     }
@@ -33,45 +33,45 @@ struct Vertex
         attributeDescriptions[0].binding    = 0;
         attributeDescriptions[0].location   = 0;
         attributeDescriptions[0].format     = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset     = offsetof(Vertex, Position);
+        attributeDescriptions[0].offset     = offsetof(FVertex, Position);
         
         attributeDescriptions[1].binding    = 0;
         attributeDescriptions[1].location   = 1;
         attributeDescriptions[1].format     = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[1].offset     = offsetof(Vertex, TexCoord);
+        attributeDescriptions[1].offset     = offsetof(FVertex, TexCoord);
 
         attributeDescriptions[2].binding    = 0;
         attributeDescriptions[2].location   = 2;
         attributeDescriptions[2].format     = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[2].offset     = offsetof(Vertex, Color);
+        attributeDescriptions[2].offset     = offsetof(FVertex, Color);
 
         return attributeDescriptions;
     }
 };
 
-struct VertexHasher
+struct FVertexHasher
 {
-    size_t operator()(const Vertex& vertex) const
+    size_t operator()(const FVertex& vertex) const
     {
         using namespace std;
         return ((hash<glm::vec3>()(vertex.Position) ^ (hash<glm::vec3>()(vertex.Color) << 1)) >> 1) ^ (hash<glm::vec2>()(vertex.TexCoord) << 1);
     }
 };
 
-class Model
+class FModel
 {
 public:
-    Model() = default;
-    ~Model();
+    FModel() = default;
+    ~FModel();
     
-    bool LoadFromFile(const std::string& filepath, Device* pDevice, DeviceMemoryAllocator* pAllocator);
+    bool LoadFromFile(const std::string& filepath, FDevice* pDevice, FDeviceMemoryAllocator* pAllocator);
     
-    inline Buffer* GetVertexBuffer() const
+    inline FBuffer* GetVertexBuffer() const
     {
         return m_pVertexBuffer;
     }
     
-    inline Buffer* GetIndexBuffer() const
+    inline FBuffer* GetIndexBuffer() const
     {
         return m_pIndexBuffer;
     }
@@ -87,8 +87,8 @@ public:
     }
     
 private:
-    Buffer* m_pVertexBuffer = nullptr;
-    Buffer* m_pIndexBuffer = nullptr;
+    FBuffer* m_pVertexBuffer = nullptr;
+    FBuffer* m_pIndexBuffer = nullptr;
     uint32_t m_VertexCount = 0;
     uint32_t m_IndexCount = 0;
 };

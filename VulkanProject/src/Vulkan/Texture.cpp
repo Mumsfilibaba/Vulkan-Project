@@ -4,9 +4,9 @@
 #include "CommandBuffer.h"
 #include "Buffer.h"
 
-Texture* Texture::Create(Device* pDevice, const TextureParams& params)
+FTexture* FTexture::Create(FDevice* pDevice, const FTextureParams& params)
 {
-    Texture* pTexture = new Texture(pDevice);
+    FTexture* pTexture = new FTexture(pDevice);
     
     VkImageCreateInfo textureCreateInfo = {};
     ZERO_STRUCT(&textureCreateInfo);
@@ -67,11 +67,11 @@ Texture* Texture::Create(Device* pDevice, const TextureParams& params)
     // Transfer image to the expected layout
     if (params.InitialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
     {
-        CommandBufferParams commandBufferParams = {};
+        FCommandBufferParams commandBufferParams = {};
         commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         commandBufferParams.QueueType = ECommandQueueType::Graphics;
 
-        CommandBuffer* pCommandBuffer = CommandBuffer::Create(pDevice, commandBufferParams);
+        FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, commandBufferParams);
         pCommandBuffer->Reset();
         pCommandBuffer->Begin();
         pCommandBuffer->TransitionImage(pTexture->m_Image, VK_IMAGE_LAYOUT_UNDEFINED, params.InitialLayout);
@@ -86,13 +86,13 @@ Texture* Texture::Create(Device* pDevice, const TextureParams& params)
     return pTexture;
 }
 
-Texture* Texture::CreateWithData(Device* pDevice, const TextureParams& params, const void* pSource)
+FTexture* FTexture::CreateWithData(FDevice* pDevice, const FTextureParams& params, const void* pSource)
 {
-    TextureParams paramsCopy = params;
+    FTextureParams paramsCopy = params;
     paramsCopy.Usage         = paramsCopy.Usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     paramsCopy.InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    Texture* pTexture = Texture::Create(pDevice, paramsCopy);
+    FTexture* pTexture = FTexture::Create(pDevice, paramsCopy);
     if (!pTexture)
     {
         return nullptr;
@@ -101,23 +101,23 @@ Texture* Texture::CreateWithData(Device* pDevice, const TextureParams& params, c
     assert(params.Format == VK_FORMAT_R8G8B8A8_UNORM);
     VkDeviceSize uploadSize = params.Width * params.Height * 4 * sizeof(char);
     
-    BufferParams bufferParams = {};
+    FBufferParams bufferParams = {};
     bufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     bufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     bufferParams.Size             = uploadSize;
     
-    Buffer* pUploadBuffer = Buffer::CreateWithData(pDevice, bufferParams, nullptr, pSource);
+    FBuffer* pUploadBuffer = FBuffer::CreateWithData(pDevice, bufferParams, nullptr, pSource);
     if (!pUploadBuffer)
     {
         SAFE_DELETE(pTexture);
         return nullptr;
     }
     
-    CommandBufferParams commandBufferParams = {};
+    FCommandBufferParams commandBufferParams = {};
     commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferParams.QueueType = ECommandQueueType::Graphics;
     
-    CommandBuffer* pCommandBuffer = CommandBuffer::Create(pDevice, commandBufferParams);
+    FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, commandBufferParams);
     if (!pCommandBuffer)
     {
         SAFE_DELETE(pUploadBuffer);
@@ -152,7 +152,7 @@ Texture* Texture::CreateWithData(Device* pDevice, const TextureParams& params, c
     return pTexture;
 }
 
-Texture::Texture(Device* pDevice)
+FTexture::FTexture(FDevice* pDevice)
     : m_pDevice(pDevice)
     , m_Image(VK_NULL_HANDLE)
     , m_Memory(VK_NULL_HANDLE)
@@ -162,7 +162,7 @@ Texture::Texture(Device* pDevice)
 {
 }
 
-Texture::~Texture()
+FTexture::~FTexture()
 {
     VkDevice device = m_pDevice->GetDevice();
 

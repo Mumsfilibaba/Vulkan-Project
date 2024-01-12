@@ -2,7 +2,7 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-struct RenderPassAttachment
+struct FRenderPassAttachment
 {
     VkFormat            Format        = VK_FORMAT_UNDEFINED;
     VkAttachmentLoadOp  LoadOp        = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -11,19 +11,19 @@ struct RenderPassAttachment
     VkImageLayout       finalLayout   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 };
 
-struct RenderPassParams
+struct FRenderPassParams
 {
-    RenderPassAttachment* pColorAttachments    = nullptr;
-    uint32_t              ColorAttachmentCount = 0;
+    FRenderPassAttachment* pColorAttachments    = nullptr;
+    uint32_t               ColorAttachmentCount = 0;
 };
 
-class RenderPass
+class FRenderPass
 {
 public:
-    static RenderPass* Create(class Device* pDevice, const RenderPassParams& params);
+    static FRenderPass* Create(class FDevice* pDevice, const FRenderPassParams& params);
     
-    RenderPass(VkDevice device);
-    ~RenderPass();
+    FRenderPass(VkDevice device);
+    ~FRenderPass();
 
     VkRenderPass GetRenderPass() const
     {

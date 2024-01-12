@@ -1,9 +1,9 @@
 #include "DescriptorSetLayout.h"
 #include "Device.h"
 
-DescriptorSetLayout* DescriptorSetLayout::Create(Device* pDevice, const DescriptorSetLayoutParams& params)
+FDescriptorSetLayout* FDescriptorSetLayout::Create(FDevice* pDevice, const FDescriptorSetLayoutParams& params)
 {
-    DescriptorSetLayout* pDescriptorSetLayout = new DescriptorSetLayout(pDevice->GetDevice());
+    FDescriptorSetLayout* pDescriptorSetLayout = new FDescriptorSetLayout(pDevice->GetDevice());
     
     VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo;
     ZERO_STRUCT(&descriptorLayoutInfo);
@@ -25,13 +25,13 @@ DescriptorSetLayout* DescriptorSetLayout::Create(Device* pDevice, const Descript
     }
 }
 
-DescriptorSetLayout::DescriptorSetLayout(VkDevice device)
+FDescriptorSetLayout::FDescriptorSetLayout(VkDevice device)
     : m_Device(device)
     , m_DescriptorSetLayout(VK_NULL_HANDLE)
 {
 }
 
-DescriptorSetLayout::~DescriptorSetLayout()
+FDescriptorSetLayout::~FDescriptorSetLayout()
 {
     if (m_DescriptorSetLayout != VK_NULL_HANDLE)
     {

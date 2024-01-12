@@ -1,7 +1,7 @@
 #pragma once
 #include "Core.h"
 
-struct DescriptorPoolParams
+struct FDescriptorPoolParams
 {
     uint32_t NumUniformBuffers        = 0;
     uint32_t NumStorageImages         = 0;
@@ -10,13 +10,13 @@ struct DescriptorPoolParams
     uint32_t MaxSets                  = 0;
 };
 
-class DescriptorPool
+class FDescriptorPool
 {
 public:
-    static DescriptorPool* Create(class Device* pDevice, const DescriptorPoolParams& params);
+    static FDescriptorPool* Create(class FDevice* pDevice, const FDescriptorPoolParams& params);
 
-    DescriptorPool(VkDevice device);
-    ~DescriptorPool();
+    FDescriptorPool(VkDevice device);
+    ~FDescriptorPool();
     
     VkDescriptorPool GetPool() const
     {
@@ -24,7 +24,7 @@ public:
     }
         
 private:
-    VkDevice             m_Device;
-    VkDescriptorPool     m_Pool;
-    DescriptorPoolParams m_Params;
+    VkDevice              m_Device;
+    VkDescriptorPool      m_Pool;
+    FDescriptorPoolParams m_Params;
 };

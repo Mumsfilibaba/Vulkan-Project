@@ -5,9 +5,9 @@
 #include "Framebuffer.h"
 #include "PipelineState.h"
 
-CommandBuffer* CommandBuffer::Create(Device* pDevice, const CommandBufferParams& params)
+FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferParams& params)
 {
-    CommandBuffer* pCommandBuffer = new CommandBuffer(pDevice->GetDevice());
+    FCommandBuffer* pCommandBuffer = new FCommandBuffer(pDevice->GetDevice());
     
     VkCommandPoolCreateInfo poolInfo;
     ZERO_STRUCT(&poolInfo);
@@ -65,7 +65,7 @@ CommandBuffer* CommandBuffer::Create(Device* pDevice, const CommandBufferParams&
     return pCommandBuffer;
 }
 
-CommandBuffer::CommandBuffer(VkDevice device)
+FCommandBuffer::FCommandBuffer(VkDevice device)
     : m_Device(device)
     , m_CommandPool(VK_NULL_HANDLE)
     , m_CommandBuffer(VK_NULL_HANDLE)
@@ -73,7 +73,7 @@ CommandBuffer::CommandBuffer(VkDevice device)
 {
 }
 
-CommandBuffer::~CommandBuffer()
+FCommandBuffer::~FCommandBuffer()
 {
     if (m_Fence != VK_NULL_HANDLE)
     {
@@ -92,7 +92,7 @@ CommandBuffer::~CommandBuffer()
     m_Device = VK_NULL_HANDLE;
 }
 
-void CommandBuffer::TransitionImage(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout)
+void FCommandBuffer::TransitionImage(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
     VkImageMemoryBarrier barrier;
     ZERO_STRUCT(&barrier);

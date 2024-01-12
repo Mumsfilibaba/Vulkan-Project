@@ -2,9 +2,9 @@
 #include "Helpers.h"
 #include "Device.h"
 
-Buffer* Buffer::Create(Device* pDevice, const BufferParams& params, DeviceMemoryAllocator* pAllocator)
+FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& params, FDeviceMemoryAllocator* pAllocator)
 {
-    Buffer* pBuffer = new Buffer(pDevice, pAllocator);
+    FBuffer* pBuffer = new FBuffer(pDevice, pAllocator);
     
     VkBufferCreateInfo bufferInfo;
     ZERO_STRUCT(&bufferInfo);
@@ -66,11 +66,11 @@ Buffer* Buffer::Create(Device* pDevice, const BufferParams& params, DeviceMemory
     return pBuffer;
 }
 
-Buffer* Buffer::CreateWithData(Device* pDevice, const BufferParams& params, DeviceMemoryAllocator* pAllocator, const void* pSource)
+FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& params, FDeviceMemoryAllocator* pAllocator, const void* pSource)
 {
     assert(params.MemoryProperties == VK_CPU_BUFFER_USAGE);
     
-    Buffer* pBuffer = Buffer::Create(pDevice, params, pAllocator);
+    FBuffer* pBuffer = FBuffer::Create(pDevice, params, pAllocator);
     if (!pBuffer)
     {
         return nullptr;
@@ -88,7 +88,7 @@ Buffer* Buffer::CreateWithData(Device* pDevice, const BufferParams& params, Devi
     return pBuffer;
 }
 
-Buffer::Buffer(Device* pDevice, DeviceMemoryAllocator* pAllocator)
+FBuffer::FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator)
     : m_pDevice(pDevice)
     , m_pAllocator(pAllocator)
     , m_Buffer(VK_NULL_HANDLE)
@@ -98,7 +98,7 @@ Buffer::Buffer(Device* pDevice, DeviceMemoryAllocator* pAllocator)
 {
 }
 
-Buffer::~Buffer()
+FBuffer::~FBuffer()
 {
     if (m_Buffer != VK_NULL_HANDLE)
     {
@@ -122,7 +122,7 @@ Buffer::~Buffer()
     m_pDevice = nullptr;
 }
 
-void* Buffer::Map()
+void* FBuffer::Map()
 {
     void* pResult = nullptr;
     if (m_pAllocator)
@@ -142,7 +142,7 @@ void* Buffer::Map()
     return pResult;
 }
 
-void Buffer::FlushMappedMemoryRange()
+void FBuffer::FlushMappedMemoryRange()
 {
     if (!m_pAllocator)
     {
@@ -163,7 +163,7 @@ void Buffer::FlushMappedMemoryRange()
     }
 }
 
-void Buffer::Unmap()
+void FBuffer::Unmap()
 {
     if (!m_pAllocator)
     {

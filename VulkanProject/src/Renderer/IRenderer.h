@@ -5,7 +5,7 @@
 class IRenderer
 {
 public:
-    virtual void Init(Device* pDevice, Swapchain* pSwapchain) = 0;
+    virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) = 0;
     
     virtual void Release() = 0;
     

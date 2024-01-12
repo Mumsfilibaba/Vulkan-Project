@@ -3,13 +3,13 @@
 #include "Camera.h"
 #include "IRenderer.h"
 
-class Renderer : public IRenderer
+class FRenderer : public IRenderer
 {
 public:
-    Renderer();
-    ~Renderer() = default;
+    FRenderer();
+    ~FRenderer() = default;
     
-    virtual void Init(Device* pDevice, Swapchain* pSwapchain) override;
+    virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override;
     
     virtual void Release() override;
     
@@ -23,19 +23,19 @@ private:
     void CreateFramebuffers();
     void ReleaseFramebuffers();
 
-    Device*                 m_pDevice;
-    Swapchain*              m_pSwapchain;
-    class RenderPass*       m_pRenderPass;
-    class GraphicsPipeline* m_PipelineState;
-    class CommandBuffer*    m_pCurrentCommandBuffer;
-    DeviceMemoryAllocator*  m_pDeviceAllocator;
-    DescriptorPool*         m_pDescriptorPool;
+    FDevice*                 m_pDevice;
+    FSwapchain*              m_pSwapchain;
+    class FRenderPass*       m_pRenderPass;
+    class FGraphicsPipeline* m_PipelineState;
+    class FCommandBuffer*    m_pCurrentCommandBuffer;
+    FDeviceMemoryAllocator*  m_pDeviceAllocator;
+    FDescriptorPool*         m_pDescriptorPool;
     
-    std::vector<class Framebuffer*>   m_Framebuffers;
-    std::vector<class CommandBuffer*> m_CommandBuffers;
+    std::vector<class FFramebuffer*>   m_Framebuffers;
+    std::vector<class FCommandBuffer*> m_CommandBuffers;
     
-    class Buffer* m_pCameraBuffer;
+    class FBuffer* m_pCameraBuffer;
     
-    Model* m_pModel;
-    Camera m_Camera;
+    FModel* m_pModel;
+    FCamera m_Camera;
 };

@@ -3,15 +3,15 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-struct DeviceMemoryBlock;
-struct DeviceAllocation;
-class DeviceMemoryPage;
+struct FDeviceMemoryBlock;
+struct FDeviceAllocation;
+class FDeviceMemoryPage;
 
-struct DeviceMemoryBlock
+struct FDeviceMemoryBlock
 {
-    DeviceMemoryPage*  pPage     = nullptr;
-    DeviceMemoryBlock* pNext     = nullptr;
-    DeviceMemoryBlock* pPrevious = nullptr;
+    FDeviceMemoryPage*  pPage     = nullptr;
+    FDeviceMemoryBlock* pNext     = nullptr;
+    FDeviceMemoryBlock* pPrevious = nullptr;
 
     VkDeviceSize SizeInBytes        = 0;
     VkDeviceSize PaddedSizeInBytes  = 0;
@@ -20,35 +20,35 @@ struct DeviceMemoryBlock
     uint32_t     ID                 = 0;
 };
 
-struct DeviceAllocation
+struct FDeviceAllocation
 {
-    DeviceMemoryBlock* pBlock             = nullptr;
-    uint8_t*           pHostMemory        = nullptr;
-    VkDeviceSize       SizeInBytes        = 0;
-    VkDeviceSize       DeviceMemoryOffset = 0;
-    VkDeviceMemory     DeviceMemory       = VK_NULL_HANDLE;
+    FDeviceMemoryBlock* pBlock             = nullptr;
+    uint8_t*            pHostMemory        = nullptr;
+    VkDeviceSize        SizeInBytes        = 0;
+    VkDeviceSize        DeviceMemoryOffset = 0;
+    VkDeviceMemory      DeviceMemory       = VK_NULL_HANDLE;
 };
 
-class DeviceMemoryPage
+class FDeviceMemoryPage
 {
 public:
-    DeviceMemoryPage(VkDevice device, VkPhysicalDevice physicalDevice, const uint32_t id, VkDeviceSize sizeInBytes, uint32_t memoryType, VkMemoryPropertyFlags properties);
-    ~DeviceMemoryPage();
+    FDeviceMemoryPage(VkDevice device, VkPhysicalDevice physicalDevice, const uint32_t id, VkDeviceSize sizeInBytes, uint32_t memoryType, VkMemoryPropertyFlags properties);
+    ~FDeviceMemoryPage();
 
-    bool Allocate(DeviceAllocation& allocation, VkDeviceSize sizeInBytes, VkDeviceSize alignment, VkDeviceSize granularity);
-    void Deallocate(DeviceAllocation& allocation);
+    bool Allocate(FDeviceAllocation& allocation, VkDeviceSize sizeInBytes, VkDeviceSize alignment, VkDeviceSize granularity);
+    void Deallocate(FDeviceAllocation& allocation);
 
     bool IsEmpty() const
     {
         return m_pHead->pPrevious == nullptr && m_pHead->pNext == nullptr && m_pHead->IsFree;
     }
     
-    inline uint64_t GetSizeInBytes() const
+    uint64_t GetSizeInBytes() const
     {
         return m_SizeInBytes;
     }
     
-    inline uint32_t GetMemoryType() const
+    uint32_t GetMemoryType() const
     {
         return m_MemoryType;
     }
@@ -62,7 +62,7 @@ private:
     VkDevice              m_Device;
     VkPhysicalDevice      m_PhysicalDevice;
     VkDeviceMemory        m_DeviceMemory;
-    DeviceMemoryBlock*        m_pHead;
+    FDeviceMemoryBlock*   m_pHead;
     uint8_t*              m_pHostMemory;
     VkMemoryPropertyFlags m_Properties;
     const uint32_t        m_ID;
@@ -72,14 +72,14 @@ private:
     bool                  m_IsMapped;
 };
 
-class DeviceMemoryAllocator
+class FDeviceMemoryAllocator
 {
 public:
-    DeviceMemoryAllocator(VkDevice device, VkPhysicalDevice physicalDevice);
-    ~DeviceMemoryAllocator();
+    FDeviceMemoryAllocator(VkDevice device, VkPhysicalDevice physicalDevice);
+    ~FDeviceMemoryAllocator();
 
-    bool Allocate(DeviceAllocation& allocation, const VkMemoryRequirements& memoryRequirements, VkMemoryPropertyFlags properties);
-    void Deallocate(DeviceAllocation& allocation);
+    bool Allocate(FDeviceAllocation& allocation, const VkMemoryRequirements& memoryRequirements, VkMemoryPropertyFlags properties);
+    void Deallocate(FDeviceAllocation& allocation);
     void EmptyGarbageMemory();
 
     uint64_t GetTotalReserved() const
@@ -93,14 +93,14 @@ public:
     }
     
 private:
-    VkDevice                                   m_Device;
-    VkPhysicalDevice                           m_PhysicalDevice;
-    VkDeviceSize                               m_BufferImageGranularity;
-    std::vector<DeviceMemoryPage*>             m_Pages;
-    std::vector<std::vector<DeviceAllocation>> m_GarbageMemory;
-    uint64_t                                   m_FrameIndex;
-    uint64_t                                   m_TotalAllocated;
-    uint64_t                                   m_TotalReserved;
-    uint64_t                                   m_MaxAllocations;
+    VkDevice                                    m_Device;
+    VkPhysicalDevice                            m_PhysicalDevice;
+    VkDeviceSize                                m_BufferImageGranularity;
+    std::vector<FDeviceMemoryPage*>             m_Pages;
+    std::vector<std::vector<FDeviceAllocation>> m_GarbageMemory;
+    uint64_t                                    m_FrameIndex;
+    uint64_t                                    m_TotalAllocated;
+    uint64_t                                    m_TotalReserved;
+    uint64_t                                    m_MaxAllocations;
 };
 

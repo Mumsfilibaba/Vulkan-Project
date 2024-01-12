@@ -2,21 +2,21 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class Device;
-class Texture;
+class FDevice;
+class FTexture;
 
-struct TextureViewParams
+struct FTextureViewParams
 {
-    Texture* pTexture = nullptr;
+    FTexture* pTexture = nullptr;
 };
 
-class TextureView
+class FTextureView
 {
 public:
-    static TextureView* Create(Device* pDevice, const TextureViewParams& params);
+    static FTextureView* Create(FDevice* pDevice, const FTextureViewParams& params);
 
-    TextureView(VkDevice device);
-    ~TextureView();
+    FTextureView(VkDevice device);
+    ~FTextureView();
 
     VkImageView GetImageView() const
     {

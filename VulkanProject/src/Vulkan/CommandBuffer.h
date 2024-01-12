@@ -16,19 +16,19 @@ enum class ECommandQueueType
     Transfer = 3,
 };
 
-struct CommandBufferParams
+struct FCommandBufferParams
 {
     VkCommandBufferLevel Level;
     ECommandQueueType    QueueType;
 };
 
-class CommandBuffer
+class FCommandBuffer
 {
 public:
-    static CommandBuffer* Create(class Device* pDevice, const CommandBufferParams& params);
+    static FCommandBuffer* Create(class FDevice* pDevice, const FCommandBufferParams& params);
 
-    CommandBuffer(VkDevice device);
-    ~CommandBuffer();
+    FCommandBuffer(VkDevice device);
+    ~FCommandBuffer();
 
     void Begin(VkCommandBufferUsageFlags flags = 0)
     {
@@ -45,7 +45,7 @@ public:
         }
     }
 
-    void BeginRenderPass(RenderPass* pRenderPass, Framebuffer* pFramebuffer, const VkClearValue* pClearValues, uint32_t clearValuesCount)
+    void BeginRenderPass(FRenderPass* pRenderPass, FFramebuffer* pFramebuffer, const VkClearValue* pClearValues, uint32_t clearValuesCount)
     {
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -75,34 +75,34 @@ public:
         vkCmdSetScissor(m_CommandBuffer, 0, 1, &scissor);
     }
     
-    void WriteTimestamp(Query* pQuery, VkPipelineStageFlagBits pipelineStage, uint32_t queryIndex)
+    void WriteTimestamp(FQuery* pQuery, VkPipelineStageFlagBits pipelineStage, uint32_t queryIndex)
     {
         vkCmdWriteTimestamp(m_CommandBuffer, pipelineStage, pQuery->GetQueryPool(), queryIndex);
     }
 
-    void BindGraphicsPipelineState(GraphicsPipeline* pPipelineState)
+    void BindGraphicsPipelineState(FGraphicsPipeline* pPipelineState)
     {
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineState->GetPipeline());
     }
     
-    void BindComputePipelineState(ComputePipeline* pPipelineState)
+    void BindComputePipelineState(FComputePipeline* pPipelineState)
     {
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineState->GetPipeline());
     }
     
-    void BindGraphicsDescriptorSet(PipelineLayout* pPipelineLayout, DescriptorSet* pDescriptorSet)
+    void BindGraphicsDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet)
     {
         VkDescriptorSet descriptorSet = pDescriptorSet->GetDescriptorSet();
         vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineLayout->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
     }
     
-    void BindComputeDescriptorSet(PipelineLayout* pPipelineLayout, DescriptorSet* pDescriptorSet)
+    void BindComputeDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet)
     {
         VkDescriptorSet descriptorSet = pDescriptorSet->GetDescriptorSet();
         vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineLayout->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
     }
 
-    void BindVertexBuffer(Buffer* pBuffer, VkDeviceSize offset, uint32_t slot)
+    void BindVertexBuffer(FBuffer* pBuffer, VkDeviceSize offset, uint32_t slot)
     {
         assert(pBuffer);
 
@@ -111,20 +111,20 @@ public:
         vkCmdBindVertexBuffers(m_CommandBuffer, slot, 1, buffer, offsets);
     }
 
-    void BindIndexBuffer(Buffer* pBuffer, VkDeviceSize offset, VkIndexType indexType)
+    void BindIndexBuffer(FBuffer* pBuffer, VkDeviceSize offset, VkIndexType indexType)
     {
         assert(pBuffer != nullptr);
         vkCmdBindIndexBuffer(m_CommandBuffer, pBuffer->GetBuffer(), offset, indexType);
     }
     
-    void PushConstants(PipelineLayout* pPipelineLayout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pData)
+    void PushConstants(FPipelineLayout* pPipelineLayout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pData)
     {
         vkCmdPushConstants(m_CommandBuffer, pPipelineLayout->GetPipelineLayout(), stageFlags, offset, size, pData);
     }
     
     void TransitionImage(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
     
-    void UpdateBuffer(Buffer* pBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const void* pData)
+    void UpdateBuffer(FBuffer* pBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const void* pData)
     {
         vkCmdUpdateBuffer(m_CommandBuffer, pBuffer->GetBuffer(), dstOffset, dataSize, pData);
     }
@@ -177,7 +177,7 @@ public:
 
     void Reset(VkCommandPoolResetFlags flags = 0)
     {
-        // Wait for GPU to finish with this commandbuffer and then reset it
+        // Wait for GPU to finish with this CommandBuffer and then reset it
         WaitForAndResetFences();
         
         // Avoid using the VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT since we can reuse the memory

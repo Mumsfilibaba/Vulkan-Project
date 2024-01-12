@@ -10,7 +10,7 @@
 #include "Vulkan/DeviceMemoryAllocator.h"
 #include "Vulkan/Swapchain.h"
 
-Renderer::Renderer()
+FRenderer::FRenderer()
     : m_pDevice(nullptr)
     , m_pRenderPass(nullptr)
     , m_PipelineState(nullptr)
@@ -22,35 +22,35 @@ Renderer::Renderer()
 {
 }
 
-void Renderer::Init(Device* pDevice, Swapchain* pSwapchain)
+void FRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
 {
     // Set device
     m_pDevice    = pDevice;
     m_pSwapchain = pSwapchain;
     
     // PipelineState, RenderPass and Shaders
-    ShaderModule* pVertex   = ShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/vertex.spv");
-    ShaderModule* pFragment = ShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/fragment.spv");
+    FShaderModule* pVertex   = FShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/vertex.spv");
+    FShaderModule* pFragment = FShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/fragment.spv");
 
-    RenderPassAttachment attachments[1];
+    FRenderPassAttachment attachments[1];
     attachments[0].Format = m_pSwapchain->GetFormat();
 
-    RenderPassParams renderPassParams = {};
+    FRenderPassParams renderPassParams = {};
     renderPassParams.ColorAttachmentCount = 1;
     renderPassParams.pColorAttachments    = attachments;
-    m_pRenderPass = RenderPass::Create(m_pDevice, renderPassParams);
+    m_pRenderPass = FRenderPass::Create(m_pDevice, renderPassParams);
 
-    VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+    VkVertexInputBindingDescription bindingDescription = FVertex::GetBindingDescription();
 
-    GraphicsPipelineStateParams pipelineParams = {};
+    FGraphicsPipelineStateParams pipelineParams = {};
     pipelineParams.pBindingDescriptions      = &bindingDescription;
     pipelineParams.bindingDescriptionCount   = 1;
-    pipelineParams.pAttributeDescriptions    = Vertex::GetAttributeDescriptions();
+    pipelineParams.pAttributeDescriptions    = FVertex::GetAttributeDescriptions();
     pipelineParams.attributeDescriptionCount = 3;
     pipelineParams.pVertexShader             = pVertex;
     pipelineParams.pFragmentShader           = pFragment;
     pipelineParams.pRenderPass               = m_pRenderPass;
-    m_PipelineState = GraphicsPipeline::Create(m_pDevice, pipelineParams);
+    m_PipelineState = FGraphicsPipeline::Create(m_pDevice, pipelineParams);
 
     delete pVertex;
     delete pFragment;
@@ -59,7 +59,7 @@ void Renderer::Init(Device* pDevice, Swapchain* pSwapchain)
     CreateFramebuffers();
 
     // CommandBuffers
-    CommandBufferParams commandBufferParams = {};
+    FCommandBufferParams commandBufferParams = {};
     commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferParams.QueueType = ECommandQueueType::Graphics;
 
@@ -67,31 +67,31 @@ void Renderer::Init(Device* pDevice, Swapchain* pSwapchain)
     m_CommandBuffers.resize(imageCount);
     for (size_t i = 0; i < m_CommandBuffers.size(); i++)
     {
-        CommandBuffer* pCommandBuffer = CommandBuffer::Create(m_pDevice, commandBufferParams);
+        FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(m_pDevice, commandBufferParams);
         m_CommandBuffers[i] = pCommandBuffer;
     }
 
     // Allocator for GPU mem
-    m_pDeviceAllocator = new DeviceMemoryAllocator(m_pDevice->GetDevice(), m_pDevice->GetPhysicalDevice());
+    m_pDeviceAllocator = new FDeviceMemoryAllocator(m_pDevice->GetDevice(), m_pDevice->GetPhysicalDevice());
 
-    m_pModel = new Model();
+    m_pModel = new FModel();
     m_pModel->LoadFromFile("res/models/viking_room.obj", m_pDevice, m_pDeviceAllocator);
     
     // Camera
-    BufferParams camBuffParams;
-    camBuffParams.Size      = sizeof(CameraBuffer);
+    FBufferParams camBuffParams;
+    camBuffParams.Size      = sizeof(FCameraBuffer);
     camBuffParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     camBuffParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    m_pCameraBuffer = Buffer::Create(m_pDevice, camBuffParams, m_pDeviceAllocator);
+    m_pCameraBuffer = FBuffer::Create(m_pDevice, camBuffParams, m_pDeviceAllocator);
     
     // Create descriptorpool
-    DescriptorPoolParams poolParams;
+    FDescriptorPoolParams poolParams;
     poolParams.NumUniformBuffers = 1;
     poolParams.MaxSets           = 1;
-    m_pDescriptorPool = DescriptorPool::Create(m_pDevice, poolParams);
+    m_pDescriptorPool = FDescriptorPool::Create(m_pDevice, poolParams);
 }
 
-void Renderer::Tick(float deltaTime)
+void FRenderer::Tick(float deltaTime)
 {
     // Update
     VkExtent2D extent = m_pSwapchain->GetExtent();
@@ -106,10 +106,10 @@ void Renderer::Tick(float deltaTime)
     m_pCurrentCommandBuffer->Begin();
 
     // Update camera
-    CameraBuffer camBuff;
+    FCameraBuffer camBuff;
     camBuff.Projection = m_Camera.GetProjectionMatrix();
     camBuff.View       = m_Camera.GetViewMatrix();
-    m_pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(CameraBuffer), &camBuff);
+    m_pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(FCameraBuffer), &camBuff);
     
     // Begin renderpass
     VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -137,7 +137,7 @@ void Renderer::Tick(float deltaTime)
     m_pDevice->ExecuteGraphics(m_pCurrentCommandBuffer, m_pSwapchain, waitStages);
 }
 
-void Renderer::Release()
+void FRenderer::Release()
 {
     delete m_pModel;
 
@@ -156,20 +156,20 @@ void Renderer::Release()
     delete m_pDeviceAllocator;    
 }
 
-void Renderer::OnWindowResize(uint32_t width, uint32_t height)
+void FRenderer::OnWindowResize(uint32_t width, uint32_t height)
 {
     ReleaseFramebuffers();
     CreateFramebuffers();
 }
 
-void Renderer::CreateFramebuffers()
+void FRenderer::CreateFramebuffers()
 {
     uint32_t imageCount = m_pSwapchain->GetNumBackBuffers();
     m_Framebuffers.resize(imageCount);
 
     VkExtent2D extent = m_pSwapchain->GetExtent();
     
-    FramebufferParams framebufferParams = {};
+    FFramebufferParams framebufferParams = {};
     framebufferParams.AttachMentCount   = 1;
     framebufferParams.Width             = extent.width;
     framebufferParams.Height            = extent.height;
@@ -179,11 +179,11 @@ void Renderer::CreateFramebuffers()
     {
         VkImageView imageView = m_pSwapchain->GetImageView(uint32_t(i));
         framebufferParams.pAttachMents = &imageView;
-        m_Framebuffers[i] = Framebuffer::Create(m_pDevice, framebufferParams);
+        m_Framebuffers[i] = FFramebuffer::Create(m_pDevice, framebufferParams);
     }
 }
 
-void Renderer::ReleaseFramebuffers()
+void FRenderer::ReleaseFramebuffers()
 {
     for (auto& framebuffer : m_Framebuffers)
     {

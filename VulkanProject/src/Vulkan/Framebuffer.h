@@ -2,24 +2,24 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class RenderPass;
+class FRenderPass;
 
-struct FramebufferParams
+struct FFramebufferParams
 {
-    RenderPass*  pRenderPass     = nullptr;
+    FRenderPass* pRenderPass     = nullptr;
     VkImageView* pAttachMents    = nullptr;
     uint32_t     AttachMentCount = 0;
     uint32_t     Width           = 0;
     uint32_t     Height          = 0;
 };
 
-class Framebuffer
+class FFramebuffer
 {
 public:
-    static Framebuffer* Create(class Device* pDevice, const FramebufferParams& params);
+    static FFramebuffer* Create(class FDevice* pDevice, const FFramebufferParams& params);
     
-    Framebuffer(VkDevice device);
-    ~Framebuffer();
+    FFramebuffer(VkDevice device);
+    ~FFramebuffer();
 
     VkExtent2D GetExtent() const
     {

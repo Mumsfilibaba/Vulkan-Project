@@ -2,23 +2,23 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class Device;
-class DescriptorSetLayout;
+class FDevice;
+class FDescriptorSetLayout;
 
-struct PipelineLayoutParams
+struct FPipelineLayoutParams
 {
-    DescriptorSetLayout** ppLayouts = nullptr;
-    uint32_t numLayouts       = 0;
-    uint32_t numPushConstants = 0;
+    FDescriptorSetLayout** ppLayouts        = nullptr;
+    uint32_t               numLayouts       = 0;
+    uint32_t               numPushConstants = 0;
 };
 
-class PipelineLayout
+class FPipelineLayout
 {
 public:
-    static PipelineLayout* Create(Device* pDevice, const PipelineLayoutParams& params);
+    static FPipelineLayout* Create(FDevice* pDevice, const FPipelineLayoutParams& params);
 
-    PipelineLayout(VkDevice device);
-    ~PipelineLayout();
+    FPipelineLayout(VkDevice device);
+    ~FPipelineLayout();
 
     VkPipelineLayout GetPipelineLayout() const
     {

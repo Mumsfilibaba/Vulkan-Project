@@ -1,15 +1,15 @@
 #pragma once
 #include "Application.h"
 
-struct Input
+struct FInput
 {
     static bool IsKeyDown(int32_t key)
     {
-        return glfwGetKey(Application::GetWindow(), key) == GLFW_PRESS;
+        return glfwGetKey(FApplication::GetWindow(), key) == GLFW_PRESS;
     }
 
     static bool IsKeyUp(int32_t key)
     {
-        return glfwGetKey(Application::GetWindow(), key) == GLFW_RELEASE;
+        return glfwGetKey(FApplication::GetWindow(), key) == GLFW_RELEASE;
     }
 };

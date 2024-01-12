@@ -1,9 +1,9 @@
 #include "Sampler.h"
 #include "Device.h"
 
-Sampler* Sampler::Create(Device* pDevice, const SamplerParams& params)
+FSampler* FSampler::Create(FDevice* pDevice, const FSamplerParams& params)
 {
-    Sampler* pSampler = new Sampler(pDevice->GetDevice());
+    FSampler* pSampler = new FSampler(pDevice->GetDevice());
     
     VkSamplerCreateInfo samplerCreateInfo;
     ZERO_STRUCT(&samplerCreateInfo);
@@ -38,13 +38,13 @@ Sampler* Sampler::Create(Device* pDevice, const SamplerParams& params)
     }
 }
     
-Sampler::Sampler(VkDevice device)
+FSampler::FSampler(VkDevice device)
     : m_Device(device)
     , m_Sampler(VK_NULL_HANDLE)
 {
 }
 
-Sampler::~Sampler()
+FSampler::~FSampler()
 {
     if (m_Sampler != VK_NULL_HANDLE)
     {

@@ -2,9 +2,9 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class Device;
+class FDevice;
 
-struct TextureParams
+struct FTextureParams
 {
     VkImageUsageFlags Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     VkFormat          Format        = VK_FORMAT_UNDEFINED;
@@ -15,14 +15,14 @@ struct TextureParams
     uint32_t Height = 0;
 };
 
-class Texture
+class FTexture
 {
 public:
-    static Texture* Create(Device* pDevice, const TextureParams& params);
-    static Texture* CreateWithData(Device* pDevice, const TextureParams& params, const void* pSource);
+    static FTexture* Create(FDevice* pDevice, const FTextureParams& params);
+    static FTexture* CreateWithData(FDevice* pDevice, const FTextureParams& params, const void* pSource);
 
-    Texture(Device* pDevice);
-    ~Texture();
+    FTexture(FDevice* pDevice);
+    ~FTexture();
 
     VkImage GetImage() const
     {
@@ -45,7 +45,7 @@ public:
     }
 
 private:
-    Device*        m_pDevice;
+    FDevice*       m_pDevice;
     VkImage        m_Image;
     VkDeviceMemory m_Memory;
     VkFormat       m_Format;

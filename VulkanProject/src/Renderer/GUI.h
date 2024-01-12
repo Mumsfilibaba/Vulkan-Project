@@ -2,14 +2,14 @@
 #include "Core.h"
 #include <ImGui/ImGui.h>
 
-class Device;
-class DescriptorSet;
-class TextureView;
-class Swapchain;
+class FDevice;
+class FDescriptorSet;
+class FTextureView;
+class FSwapchain;
 
 namespace GUI
 {
-    void InitializeImgui(GLFWwindow* pWindow, Device* pDevice, Swapchain* pSwapchain);
+    void InitializeImgui(GLFWwindow* pWindow, FDevice* pDevice, FSwapchain* pSwapchain);
     
     void TickImGui();
     
@@ -19,5 +19,5 @@ namespace GUI
 
     void OnSwapchainRecreated();
     
-    DescriptorSet* AllocateTextureID(TextureView* pTextureView);
+    FDescriptorSet* AllocateTextureID(FTextureView* pTextureView);
 }

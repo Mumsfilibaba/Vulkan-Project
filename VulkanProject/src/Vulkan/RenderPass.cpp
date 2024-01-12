@@ -2,9 +2,9 @@
 #include "Device.h"
 #include <vector>
 
-RenderPass* RenderPass::Create(Device* pDevice, const RenderPassParams& params)
+FRenderPass* FRenderPass::Create(FDevice* pDevice, const FRenderPassParams& params)
 {
-    RenderPass* pRenderPass = new RenderPass(pDevice->GetDevice());
+    FRenderPass* pRenderPass = new FRenderPass(pDevice->GetDevice());
     
     std::vector<VkAttachmentReference>   colorAttachmentRefInfos;
     std::vector<VkAttachmentDescription> attachmentsInfos;
@@ -80,13 +80,13 @@ RenderPass* RenderPass::Create(Device* pDevice, const RenderPassParams& params)
     }
 }
 
-RenderPass::RenderPass(VkDevice device)
+FRenderPass::FRenderPass(VkDevice device)
     : m_Device(device)
     , m_RenderPass(VK_NULL_HANDLE)
 {
 }
 
-RenderPass::~RenderPass()
+FRenderPass::~FRenderPass()
 {
     if (m_RenderPass)
     {

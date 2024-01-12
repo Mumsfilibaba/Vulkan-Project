@@ -2,19 +2,19 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-struct QueryParams
+struct FQueryParams
 {
     VkQueryType queryType;
     uint32_t    queryCount;
 };
 
-class Query
+class FQuery
 {
 public:
-    static Query* Create(class Device* pDevice, const QueryParams& params);
+    static FQuery* Create(class FDevice* pDevice, const FQueryParams& params);
     
-    Query(VkDevice device);
-    ~Query();
+    FQuery(VkDevice device);
+    ~FQuery();
 
     void Reset(uint32_t firstQuery = 0, uint32_t queryCount = 0);
     

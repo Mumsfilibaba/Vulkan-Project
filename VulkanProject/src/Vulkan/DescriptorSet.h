@@ -1,14 +1,14 @@
 #pragma once
 #include "Core.h"
 
-class DescriptorSet
+class FDescriptorSet
 {
 public:
     // Allocates from pDescriptorPool and uses the layout from pPipeline
-    static DescriptorSet* Create(class Device* pDevice, class DescriptorPool* pDescriptorPool, class DescriptorSetLayout* pDescriptorSetLayout);
+    static FDescriptorSet* Create(class FDevice* pDevice, class FDescriptorPool* pDescriptorPool, class FDescriptorSetLayout* pDescriptorSetLayout);
 
-    DescriptorSet(VkDevice device, class DescriptorPool* pool);
-    ~DescriptorSet();
+    FDescriptorSet(VkDevice device, class FDescriptorPool* pool);
+    ~FDescriptorSet();
     
     void BindStorageImage(VkImageView imageView, uint32_t binding);
     void BindCombinedImageSampler(VkImageView imageView, VkSampler sampler, uint32_t binding);
@@ -21,7 +21,7 @@ public:
     }
     
 private:
-    class DescriptorPool* m_Pool;
-    VkDevice        m_Device;
-    VkDescriptorSet m_DescriptorSet;
+    class FDescriptorPool* m_Pool;
+    VkDevice               m_Device;
+    VkDescriptorSet        m_DescriptorSet;
 };

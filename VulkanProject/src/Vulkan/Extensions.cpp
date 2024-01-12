@@ -1,5 +1,5 @@
 #include "Extensions.h"
 
-PFN_vkSetDebugUtilsObjectNameEXT    Extensions::vkSetDebugUtilsObjectNameEXT    = nullptr;
-PFN_vkCreateDebugUtilsMessengerEXT  Extensions::vkCreateDebugUtilsMessengerEXT  = nullptr;
-PFN_vkDestroyDebugUtilsMessengerEXT Extensions::vkDestroyDebugUtilsMessengerEXT = nullptr;
+PFN_vkSetDebugUtilsObjectNameEXT    FExtensions::vkSetDebugUtilsObjectNameEXT    = nullptr;
+PFN_vkCreateDebugUtilsMessengerEXT  FExtensions::vkCreateDebugUtilsMessengerEXT  = nullptr;
+PFN_vkDestroyDebugUtilsMessengerEXT FExtensions::vkDestroyDebugUtilsMessengerEXT = nullptr;

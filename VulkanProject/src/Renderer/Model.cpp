@@ -1,47 +1,51 @@
 #include "Model.h"
-
 #include <tiny_obj_loader.h>
 
-Model::~Model()
+FModel::~FModel()
 {
-    delete m_pVertexBuffer;
-    delete m_pIndexBuffer;
+    SAFE_DELETE(m_pVertexBuffer);
+    SAFE_DELETE(m_pIndexBuffer);
 }
 
-
-bool Model::LoadFromFile(const std::string& filepath, Device* pDevice, DeviceMemoryAllocator* pAllocator)
+bool FModel::LoadFromFile(const std::string& filepath, FDevice* pDevice, FDeviceMemoryAllocator* pAllocator)
 {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
+    tinyobj::attrib_t                attrib;
+    std::vector<tinyobj::shape_t>    shapes;
     std::vector<tinyobj::material_t> materials;
-    std::string warn;
-    std::string err;
+    std::string                      warning;
+    std::string                      error;
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str()))
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, filepath.c_str()))
     {
         std::cout << "Failed to load model '" << filepath << "'" << std::endl;
-        if (!warn.empty())
-            std::cout << "  Warning: " << warn << std::endl;
-        if (!err.empty())
-            std::cout << "  Error: " << err << std::endl;
+        if (!warning.empty())
+        {
+            std::cout << "  Warning: " << warning << std::endl;
+        }
+        if (!error.empty())
+        {
+            std::cout << "  Error: " << error << std::endl;
+        }
         
         return false;
     }
     else
     {
         std::cout << "Loaded model '" << filepath << "'" << std::endl;
-        if (!warn.empty())
-            std::cout << "  Warning: " << warn << std::endl;
+        if (!warning.empty())
+        {
+            std::cout << "  Warning: " << warning << std::endl;
+        }
     }
     
-    std::vector<Vertex>     vertices;
-    std::vector<uint16_t>     indices;
-    std::unordered_map<Vertex, uint16_t, VertexHasher> uniqueVertices = {};
+    std::vector<FVertex>  vertices;
+    std::vector<uint16_t> indices;
+    std::unordered_map<FVertex, uint16_t, FVertexHasher> uniqueVertices = {};
     for (const auto& shape : shapes)
     {
         for (const auto& index : shape.mesh.indices)
         {
-            Vertex vertex{};
+            FVertex vertex{};
             vertex.Position =
             {
                 attrib.vertices[3 * index.vertex_index + 0],
@@ -69,21 +73,21 @@ bool Model::LoadFromFile(const std::string& filepath, Device* pDevice, DeviceMem
     
     assert(indices.size() < UINT16_MAX);
     
-    BufferParams vertexBufferParams = {};
-    vertexBufferParams.Size         = vertices.size() * sizeof(Vertex);
-    vertexBufferParams.Usage             = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    FBufferParams vertexBufferParams = {};
+    vertexBufferParams.Size             = vertices.size() * sizeof(FVertex);
+    vertexBufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     vertexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    m_pVertexBuffer = Buffer::Create(pDevice, vertexBufferParams, pAllocator);
+    m_pVertexBuffer = FBuffer::Create(pDevice, vertexBufferParams, pAllocator);
 
     void* pCPUMem = m_pVertexBuffer->Map();
     memcpy(pCPUMem, vertices.data(), vertexBufferParams.Size);
     m_pVertexBuffer->Unmap();
 
-    BufferParams indexBufferParams = {};
-    indexBufferParams.Size         = indices.size() * sizeof(uint16_t);
-    indexBufferParams.Usage             = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    indexBufferParams.MemoryProperties     = VK_CPU_BUFFER_USAGE;
-    m_pIndexBuffer = Buffer::Create(pDevice, indexBufferParams, pAllocator);
+    FBufferParams indexBufferParams = {};
+    indexBufferParams.Size             = indices.size() * sizeof(uint16_t);
+    indexBufferParams.Usage            = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    indexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    m_pIndexBuffer = FBuffer::Create(pDevice, indexBufferParams, pAllocator);
 
     pCPUMem = m_pIndexBuffer->Map();
     memcpy(pCPUMem, indices.data(), indexBufferParams.Size);

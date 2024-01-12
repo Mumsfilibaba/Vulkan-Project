@@ -4,12 +4,12 @@
 #include "Camera.h"
 #include "Scene.h"
 
-class Buffer;
+class FBuffer;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Buffer Structs
 
-struct RandomBuffer
+struct FRandomBuffer
 {
     uint32_t FrameIndex  = 0;
     uint32_t SampleIndex = 0;
@@ -17,7 +17,7 @@ struct RandomBuffer
     uint32_t Padding0    = 0;
 };
 
-struct SceneBuffer
+struct FSceneBuffer
 {
     uint32_t NumQuads     = 0;
     uint32_t NumSpheres   = 0;
@@ -33,13 +33,13 @@ struct SceneBuffer
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // RayTracer
 
-class RayTracer : public IRenderer
+class FRayTracer : public IRenderer
 {
 public:
-    RayTracer();
-    ~RayTracer();
+    FRayTracer();
+    ~FRayTracer();
     
-    virtual void Init(Device* pDevice, Swapchain* pSwapchain) override;
+    virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override;
     
     virtual void Release() override;
     
@@ -57,36 +57,36 @@ private:
 
     void ReloadShader();
 
-    Device*                       m_pDevice;
-    Swapchain*                    m_pSwapchain;
-    std::atomic<ComputePipeline*> m_pPipeline;
-    class PipelineLayout*         m_pPipelineLayout;
-    class DescriptorSetLayout*    m_pDescriptorSetLayout;
-    DeviceMemoryAllocator*        m_pDeviceAllocator;
-    DescriptorPool*               m_pDescriptorPool;
-    class DescriptorSet*          m_pDescriptorSet;
+    FDevice*                       m_pDevice;
+    FSwapchain*                    m_pSwapchain;
+    std::atomic<FComputePipeline*> m_pPipeline;
+    class FPipelineLayout*         m_pPipelineLayout;
+    class FDescriptorSetLayout*    m_pDescriptorSetLayout;
+    FDeviceMemoryAllocator*        m_pDeviceAllocator;
+    FDescriptorPool*               m_pDescriptorPool;
+    class FDescriptorSet*          m_pDescriptorSet;
 
-    std::vector<class CommandBuffer*> m_CommandBuffers;
-    std::vector<class Query*>         m_TimestampQueries;
+    std::vector<class FCommandBuffer*> m_CommandBuffers;
+    std::vector<class FQuery*>         m_TimestampQueries;
     
     // Buffers
-    Buffer* m_pCameraBuffer;
-    Buffer* m_pRandomBuffer;
-    Buffer* m_pSceneBuffer;
-    Buffer* m_pSphereBuffer;
-    Buffer* m_pPlaneBuffer;
-    Buffer* m_pQuadBuffer;
-    Buffer* m_pMaterialBuffer;
+    FBuffer* m_pCameraBuffer;
+    FBuffer* m_pRandomBuffer;
+    FBuffer* m_pSceneBuffer;
+    FBuffer* m_pSphereBuffer;
+    FBuffer* m_pPlaneBuffer;
+    FBuffer* m_pQuadBuffer;
+    FBuffer* m_pMaterialBuffer;
 
     // SceneTexture
-    class Texture*       m_pAccumulationTexture;
-    class TextureView*   m_pAccumulationTextureView;
-    class Texture*       m_pSceneTexture;
-    class TextureView*   m_pSceneTextureView;
-    class DescriptorSet* m_pSceneTextureDescriptorSet;
+    class FTexture*       m_pAccumulationTexture;
+    class FTextureView*   m_pAccumulationTextureView;
+    class FTexture*       m_pSceneTexture;
+    class FTextureView*   m_pSceneTextureView;
+    class FDescriptorSet* m_pSceneTextureDescriptorSet;
 
     // Scene
-    Scene* m_pScene;
+    FScene* m_pScene;
 
     // Samples
     uint32_t         m_NumSamples;

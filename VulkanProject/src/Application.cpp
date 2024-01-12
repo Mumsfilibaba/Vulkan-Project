@@ -4,15 +4,15 @@
 
 extern bool GIsRunning = false;
 
-Application* Application::AppInstance = nullptr;
+FApplication* FApplication::AppInstance = nullptr;
 
-Application* Application::Create()
+FApplication* FApplication::Create()
 {
-    AppInstance = new Application();
+    AppInstance = new FApplication();
     return AppInstance;
 }
 
-Application::Application()
+FApplication::FApplication()
     : m_pWindow(nullptr)
     , m_pDevice(nullptr)
     , m_Width(1440)
@@ -20,11 +20,11 @@ Application::Application()
 {
 }
 
-Application::~Application()
+FApplication::~FApplication()
 {
 }
 
-bool Application::Init()
+bool FApplication::Init()
 {
     // Setup error handling
     glfwSetErrorCallback([](int32_t, const char* pErrorMessage)
@@ -51,13 +51,13 @@ bool Application::Init()
     }
     
     // Init Vulkan
-    DeviceParams params;
+    FDeviceParams params;
     params.pWindow           = m_pWindow;
     params.bEnableRayTracing = true;
     params.bEnableValidation = true;
     params.bVerbose          = false;
 
-    m_pDevice = Device::Create(params);
+    m_pDevice = FDevice::Create(params);
     if (!m_pDevice)
     {
         std::cout << "Failed to init Vulkan\n";
@@ -65,12 +65,12 @@ bool Application::Init()
     }
     
     // Create Swapchain
-    m_pSwapchain = Swapchain::Create(m_pDevice, m_pWindow);
+    m_pSwapchain = FSwapchain::Create(m_pDevice, m_pWindow);
 
     // Initialize ImGui
     GUI::InitializeImgui(m_pWindow, m_pDevice, m_pSwapchain);
 
-    m_pRenderer = new RayTracer();
+    m_pRenderer = new FRayTracer();
     m_pRenderer->Init(m_pDevice, m_pSwapchain);
     
     // Show window
@@ -80,7 +80,7 @@ bool Application::Init()
     return true;
 }
 
-bool Application::CreateWindow()
+bool FApplication::CreateWindow()
 {
     // Setup window
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_TRUE);
@@ -110,7 +110,7 @@ bool Application::CreateWindow()
     }
 }
 
-void Application::OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height)
+void FApplication::OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height)
 {
     m_Width  = width;
     m_Height = height;
@@ -125,7 +125,7 @@ void Application::OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t h
     m_pRenderer->OnWindowResize(m_Width, m_Height);
 }
 
-void Application::OnWindowClose(GLFWwindow* pWindow)
+void FApplication::OnWindowClose(GLFWwindow* pWindow)
 {
     if (pWindow == m_pWindow)
     {
@@ -133,7 +133,7 @@ void Application::OnWindowClose(GLFWwindow* pWindow)
     }
 }
 
-void Application::Tick()
+void FApplication::Tick()
 {
     auto currentTime = std::chrono::system_clock::now();
     
@@ -164,7 +164,7 @@ void Application::Tick()
     m_LastTime = currentTime;
 }
 
-void Application::Release()
+void FApplication::Release()
 {
     m_pDevice->WaitForIdle();
 

@@ -2,9 +2,9 @@
 #include "Device.h"
 #include "DescriptorSetLayout.h"
 
-PipelineLayout* PipelineLayout::Create(Device* pDevice, const PipelineLayoutParams& params)
+FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayoutParams& params)
 {
-    PipelineLayout* pPipelineLayout = new PipelineLayout(pDevice->GetDevice());
+    FPipelineLayout* pPipelineLayout = new FPipelineLayout(pDevice->GetDevice());
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
     descriptorSetLayouts.reserve(params.numLayouts);
@@ -50,13 +50,13 @@ PipelineLayout* PipelineLayout::Create(Device* pDevice, const PipelineLayoutPara
     }
 }
 
-PipelineLayout::PipelineLayout(VkDevice device)
+FPipelineLayout::FPipelineLayout(VkDevice device)
     : m_Device(device)
     , m_PipelineLayout(VK_NULL_HANDLE)
 {
 }
 
-PipelineLayout::~PipelineLayout()
+FPipelineLayout::~FPipelineLayout()
 {
     if (m_PipelineLayout != VK_NULL_HANDLE)
     {

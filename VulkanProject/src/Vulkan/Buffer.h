@@ -5,23 +5,23 @@
 #define VK_CPU_BUFFER_USAGE (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
 #define VK_GPU_BUFFER_USAGE (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 
-class Device;
+class FDevice;
 
-struct BufferParams
+struct FBufferParams
 {
     VkDeviceSize          Size             = 0;
     VkMemoryPropertyFlags MemoryProperties = 0;
     VkBufferUsageFlags    Usage            = 0;
 };
 
-class Buffer
+class FBuffer
 {
 public:
-    static Buffer* Create(Device* pDevice, const BufferParams& params, DeviceMemoryAllocator* pAllocator);
-    static Buffer* CreateWithData(Device* pDevice, const BufferParams& params, DeviceMemoryAllocator* pAllocator, const void* pSource);
+    static FBuffer* Create(FDevice* pDevice, const FBufferParams& params, FDeviceMemoryAllocator* pAllocator);
+    static FBuffer* CreateWithData(FDevice* pDevice, const FBufferParams& params, FDeviceMemoryAllocator* pAllocator, const void* pSource);
 
-    Buffer(Device* pDevice, DeviceMemoryAllocator* pAllocator);
-    ~Buffer();
+    FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator);
+    ~FBuffer();
     
     void* Map();
     void FlushMappedMemoryRange();
@@ -38,10 +38,10 @@ public:
     }
     
 private:
-    DeviceMemoryAllocator* m_pAllocator;
-    Device*                m_pDevice;
-    VkBuffer               m_Buffer;
-    VkDeviceMemory         m_DeviceMemory;
-    VkDeviceSize           m_Size;
-    DeviceAllocation       m_Allocation;
+    FDeviceMemoryAllocator* m_pAllocator;
+    FDevice*                m_pDevice;
+    VkBuffer                m_Buffer;
+    VkDeviceMemory          m_DeviceMemory;
+    VkDeviceSize            m_Size;
+    FDeviceAllocation       m_Allocation;
 };

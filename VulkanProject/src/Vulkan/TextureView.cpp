@@ -2,9 +2,9 @@
 #include "Device.h"
 #include "Texture.h"
 
-TextureView* TextureView::Create(Device* pDevice, const TextureViewParams& params)
+FTextureView* FTextureView::Create(FDevice* pDevice, const FTextureViewParams& params)
 {
-    TextureView* pTextureView = new TextureView(pDevice->GetDevice());
+    FTextureView* pTextureView = new FTextureView(pDevice->GetDevice());
 
     VkImageViewCreateInfo textureViewCreateInfo = {};
     ZERO_STRUCT(&textureViewCreateInfo);
@@ -30,13 +30,13 @@ TextureView* TextureView::Create(Device* pDevice, const TextureViewParams& param
     }
 }
 
-TextureView::TextureView(VkDevice device)
+FTextureView::FTextureView(VkDevice device)
     : m_Device(device)
     , m_ImageView(VK_NULL_HANDLE)
 {
 }
 
-TextureView::~TextureView()
+FTextureView::~FTextureView()
 {
     if (m_ImageView != VK_NULL_HANDLE)
     {

@@ -2,11 +2,11 @@
 #include "Core.h"
 #include <vulkan/vulkan.h>
 
-class RenderPass;
-class ShaderModule;
-class PipelineLayout;
+class FRenderPass;
+class FShaderModule;
+class FPipelineLayout;
 
-struct GraphicsPipelineStateParams
+struct FGraphicsPipelineStateParams
 {
     VkVertexInputAttributeDescription* pAttributeDescriptions    = nullptr;
     uint32_t                           attributeDescriptionCount = 0;
@@ -18,17 +18,17 @@ struct GraphicsPipelineStateParams
     
     bool bBlendEnable = false;
     
-    RenderPass*     pRenderPass     = nullptr;
-    PipelineLayout* pPipelineLayout = nullptr;
-    ShaderModule*   pVertexShader   = nullptr;
-    ShaderModule*   pFragmentShader = nullptr;
+    FRenderPass*     pRenderPass     = nullptr;
+    FPipelineLayout* pPipelineLayout = nullptr;
+    FShaderModule*   pVertexShader   = nullptr;
+    FShaderModule*   pFragmentShader = nullptr;
 };
 
-class BasePipeline
+class FBasePipeline
 {
 public:
-    BasePipeline(VkDevice device);
-    ~BasePipeline();
+    FBasePipeline(VkDevice device);
+    ~FBasePipeline();
     
     VkPipeline GetPipeline() const
     {
@@ -40,26 +40,26 @@ protected:
     VkPipeline m_Pipeline;
 };
 
-class GraphicsPipeline : public BasePipeline
+class FGraphicsPipeline : public FBasePipeline
 {
 public:
-    static GraphicsPipeline* Create(class Device* pDevice, const GraphicsPipelineStateParams& params);
+    static FGraphicsPipeline* Create(class FDevice* pDevice, const FGraphicsPipelineStateParams& params);
     
-    GraphicsPipeline(VkDevice device);
-    ~GraphicsPipeline() = default;
+    FGraphicsPipeline(VkDevice device);
+    ~FGraphicsPipeline() = default;
 };
 
-struct ComputePipelineStateParams
+struct FComputePipelineStateParams
 {
-    ShaderModule*   pShader         = nullptr;
-    PipelineLayout* pPipelineLayout = nullptr;
+    FShaderModule*   pShader         = nullptr;
+    FPipelineLayout* pPipelineLayout = nullptr;
 };
 
-class ComputePipeline : public BasePipeline
+class FComputePipeline : public FBasePipeline
 {
 public:
-    static ComputePipeline* Create(class Device* pDevice, const ComputePipelineStateParams& params);
+    static FComputePipeline* Create(class FDevice* pDevice, const FComputePipelineStateParams& params);
     
-    ComputePipeline(VkDevice device);
-    ~ComputePipeline() = default;
+    FComputePipeline(VkDevice device);
+    ~FComputePipeline() = default;
 };

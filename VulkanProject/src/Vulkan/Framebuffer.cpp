@@ -2,9 +2,9 @@
 #include "RenderPass.h"
 #include "Device.h"
 
-Framebuffer* Framebuffer::Create(Device* pDevice, const FramebufferParams& params)
+FFramebuffer* FFramebuffer::Create(FDevice* pDevice, const FFramebufferParams& params)
 {
-    Framebuffer* pFramebuffer = new Framebuffer(pDevice->GetDevice());
+    FFramebuffer* pFramebuffer = new FFramebuffer(pDevice->GetDevice());
     
     assert(params.pRenderPass != nullptr);
 
@@ -36,13 +36,13 @@ Framebuffer* Framebuffer::Create(Device* pDevice, const FramebufferParams& param
     return pFramebuffer;
 }
 
-Framebuffer::Framebuffer(VkDevice device)
+FFramebuffer::FFramebuffer(VkDevice device)
     : m_Device(device)
     , m_Framebuffer(VK_NULL_HANDLE)
 {
 }
 
-Framebuffer::~Framebuffer()
+FFramebuffer::~FFramebuffer()
 {
     if (m_Framebuffer != VK_NULL_HANDLE)
     {

@@ -1,7 +1,7 @@
 #pragma once
 #include "Core.h"
 
-struct CameraBuffer
+struct FCameraBuffer
 {
     glm::mat4 Projection;
     glm::mat4 View;
@@ -9,22 +9,19 @@ struct CameraBuffer
     glm::vec4 Forward;
 };
 
-class Camera
+class FCamera
 {
 public:
-    Camera()  = default;
-    ~Camera() = default;
-    
     void Move(const glm::vec3& translation)
     {
         m_Position = m_Position + translation.x * m_Right + translation.y * m_Up + m_Forward * translation.z;
     }
-    
+
     void Rotate(const glm::vec3& rotation)
     {
         m_Rotation.x += rotation.x;
         m_Rotation.x = std::max<float>(glm::radians(-89.0f), std::min<float>(glm::radians(89.0f), m_Rotation.x));
-        
+
         m_Rotation.y += rotation.y;
         m_Rotation.z += rotation.z;
 
@@ -36,13 +33,22 @@ public:
         m_Right = glm::normalize(glm::cross(m_Forward, m_Up));
         m_Up    = glm::normalize(glm::cross(m_Right, m_Forward));
     }
-    
+
     void Update(float fovDegrees, float width, float height, float near, float far)
     {
         m_View       = glm::lookAtLH(m_Position, m_Position + m_Forward, m_Up);
         m_Projection = glm::perspectiveFovLH(glm::radians(fovDegrees), width, height, near, far);
     }
-    
+
+    void Reset()
+    {
+        m_Position = glm::vec3(0.0f, 1.0f, -1.25f);
+        m_Rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+        m_Forward  = glm::vec3(0.0f, 0.0f, 1.0f);
+        m_Up       = glm::vec3(0.0f, 1.0f, 0.0f);
+        m_Right    = glm::vec3(1.0f, 0.0f, 0.0f);
+    }
+
     const glm::mat4& GetViewMatrix() const
     {
         return m_View;
