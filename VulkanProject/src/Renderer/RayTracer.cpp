@@ -17,6 +17,7 @@
 #include "Vulkan/Texture.h"
 #include "Vulkan/TextureView.h"
 #include "Vulkan/Helpers.h"
+#include <glm/gtc/type_ptr.hpp>
 
 FRayTracer::FRayTracer()
     : m_pDevice(nullptr)
@@ -42,8 +43,7 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     m_pSwapchain = pSwapchain;
 
     // Create scene
-    // m_pScene = new SphereScene();
-    m_pScene = new FCornellBoxScene();
+    m_pScene = new FSphereScene();
     m_pScene->Initialize();
 
     // Create DescriptorSetLayout
@@ -456,8 +456,8 @@ void FRayTracer::OnRenderUI()
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::Begin("DockSpace Demo", nullptr, windowFlags);
-    ImGui::PopStyleVar();
 
+    ImGui::PopStyleVar();
     ImGui::PopStyleVar(2);
 
     // Submit the DockSpace
@@ -490,24 +490,45 @@ void FRayTracer::OnRenderUI()
             m_bResetImage = true;
         }
 
-        // Change to the Sphere-scene
-        if (ImGui::Button("Sphere Scene"))
-        {
-            SAFE_DELETE(m_pScene);
-            
-            m_pScene = new FSphereScene();
-            m_pScene->Initialize();
-            m_bResetImage = true;
-        }
+        ImGui::Text("Scene:");
+        ImGui::Separator();
 
-        // Change to the CornellBox-scene
-        if (ImGui::Button("CornellBox Scene"))
+        // Scene selector
         {
-            SAFE_DELETE(m_pScene);
-            
-            m_pScene = new FCornellBoxScene();
-            m_pScene->Initialize();
-            m_bResetImage = true;
+            const char* scenes[] =
+            {
+                "Spheres",
+                "CornellBox",
+            };
+
+            static int currentScene = 0;
+            static int prevScene = 0;
+            ImGui::Combo("Current Scene", &currentScene, scenes, IM_ARRAYSIZE(scenes));
+
+            if (prevScene != currentScene)
+            {
+                // Change to Sphere-scene
+                if (currentScene == 0)
+                {
+                    SAFE_DELETE(m_pScene);
+
+                    m_pScene = new FSphereScene();
+                    m_pScene->Initialize();
+                    m_bResetImage = true;
+                }
+
+                // Change to CornellBox-scene
+                if (currentScene == 1)
+                {
+                    SAFE_DELETE(m_pScene);
+
+                    m_pScene = new FCornellBoxScene();
+                    m_pScene->Initialize();
+                    m_bResetImage = true;
+                }
+
+                prevScene = currentScene;
+            }
         }
 
         // Reset the scene
@@ -522,18 +543,126 @@ void FRayTracer::OnRenderUI()
         ImGui::Text("Objects:");
         ImGui::Separator();
 
-        uint32_t index = 1;
-        for (FSphere& sphere : m_pScene->m_Spheres)
         {
-            ImGui::Text("Sphere %d", index++);
-            ImGui::InputFloat3("Position", &sphere.Position.x);
-            ImGui::InputFloat("Radius", &sphere.Radius);
+            uint32_t index = 1;
+            for (FSphere& sphere : m_pScene->m_Spheres)
+            {
+                ImGui::PushID(index);
+
+                ImGui::Text("Sphere %d", index++);
+                if (ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f))
+                {
+                    m_bResetImage = true;
+                }
+                if (ImGui::DragFloat("Radius", &sphere.Radius, 0.01f))
+                {
+                    m_bResetImage = true;
+                }
+
+                ImGui::PopID();
+                ImGui::Separator();
+            }
+        }
+
+        {
+            uint32_t index = 1;
+            for (FQuad& quad : m_pScene->m_Quads)
+            {
+                ImGui::PushID(index);
+
+                ImGui::Text("Quad %d", index++);
+                if (ImGui::DragFloat3("Position", glm::value_ptr(quad.Position), 0.1f))
+                {
+                    m_bResetImage = true;
+                }
+                if (ImGui::DragFloat3("Edge0", glm::value_ptr(quad.Edge0), 0.1f))
+                {
+                    m_bResetImage = true;
+                }
+                if (ImGui::DragFloat3("Edge1", glm::value_ptr(quad.Edge1), 0.1f))
+                {
+                    m_bResetImage = true;
+                }
+
+                ImGui::PopID();
+                ImGui::Separator();
+            }
         }
 
         ImGui::NewLine();
 
         ImGui::Text("Materials:");
         ImGui::Separator();
+
+        {
+            const char* materialTypes[] =
+            {
+                "None",
+                "Lambertian",
+                "Metal",
+                "Emissive",
+                "Dielectric",
+            };
+
+            uint32_t index = 1;
+            for (FMaterial& material : m_pScene->m_Materials)
+            {
+                ImGui::PushID(index);
+                ImGui::Text("Material %d", index++);
+                
+                int materialType = material.Type;
+                if (ImGui::Combo("Material Type", &materialType, materialTypes, IM_ARRAYSIZE(materialTypes)))
+                {
+                    material.Type = materialType;
+                    m_bResetImage = true;
+                }
+
+                if (material.Type == MATERIAL_LAMBERTIAN)
+                {
+                    if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                    {
+                        m_bResetImage = true;
+                    }
+                }
+                else if (material.Type == MATERIAL_METAL)
+                {
+                    if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                    {
+                        m_bResetImage = true;
+                    }
+
+                    if (ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+                    {
+                        m_bResetImage = true;
+                    }
+                }
+                else if (material.Type == MATERIAL_EMISSIVE)
+                {
+                    if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.Emissive)))
+                    {
+                        m_bResetImage = true;
+                    }
+                }
+                else if (material.Type == MATERIAL_DIELECTRIC)
+                {
+                    if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                    {
+                        m_bResetImage = true;
+                    }
+                    if (ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+                    {
+                        m_bResetImage = true;
+                    }
+                    if (ImGui::DragFloat("RefractionIndex", &material.RefractionIndex, 0.01f, 0.0f, 10.0f, "%.2f"))
+                    {
+                        m_bResetImage = true;
+                    }
+                }
+
+                ImGui::PopID();
+                ImGui::Separator();
+            }
+        }
 
         ImGui::End();
     }
