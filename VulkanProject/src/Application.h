@@ -1,48 +1,64 @@
 #pragma once
-#include "Vulkan/VulkanContext.h"
+#include "Renderer/IRenderer.h"
+#include "Vulkan/Device.h"
+#include "Vulkan/Swapchain.h"
 
-#include "Renderer/Renderer.h"
+extern bool GIsRunning;
 
-class Application
+inline bool IsApplicationRunning()
+{
+    return GIsRunning;
+}
+
+inline void StartApplicationLoop()
+{
+    GIsRunning = true;
+}
+
+class FApplication
 {
 public:
-    inline bool IsRunning()
-	{
-		return m_bIsRunning;
-	}
-	
-    void Init();
-    void Run();
+    static FApplication* Create();
+    
+    static FApplication& Get()
+    {
+        return *AppInstance;
+    }
+    
+    static GLFWwindow* GetWindow()
+    {
+        return AppInstance->m_pWindow;
+    }
+
+    FApplication();
+    ~FApplication();
+
+    bool Init();
+    
+    void Tick();
+    
     void Release();
     
-    inline VulkanContext* GetVulkanContext() const
-	{
-		return m_pContext;
-	}
+    bool CreateWindow();
+    
+    void OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height);
+    void OnWindowClose(GLFWwindow* pWindow);
 
-    static Application* Create();
-    inline static Application& Get()
-	{
-		return *s_pInstance;
-	}
-	
-private:
-    Application();
-    ~Application();
+    FDevice* GetVulkanContext() const
+    {
+        return m_pDevice;
+    }
 
-    void CreateWindow();
-
-    void OnWindowResize(uint32_t width, uint32_t height);
-    void OnWindowClose();
-	
 private:
     GLFWwindow* m_pWindow;
-	Renderer* m_pRenderer;
-    VulkanContext* m_pContext;
-	
+    IRenderer*  m_pRenderer;
+    FDevice*    m_pDevice;
+    FSwapchain* m_pSwapchain;
+    
     uint32_t m_Width;
     uint32_t m_Height;
-    bool m_bIsRunning;
+    
+    std::chrono::time_point<std::chrono::system_clock> m_LastTime;
 
-    static Application* s_pInstance;
+    static FApplication* AppInstance;
 };

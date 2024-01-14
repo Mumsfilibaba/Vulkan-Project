@@ -1,14 +1,20 @@
 #include "Application.h"
-
 #include <iostream>
 
 int main()
 {
-    Application* pApp = Application::Create();
-    pApp->Init();
+    FApplication* pApp = FApplication::Create();
+    if (!pApp->Init())
+    {
+        return 1;
+    }
+    
+    StartApplicationLoop();
 
-    while (pApp->IsRunning())
-        pApp->Run();
+    while (IsApplicationRunning())
+    {
+        pApp->Tick();
+    }
     
     pApp->Release();
     return 0;

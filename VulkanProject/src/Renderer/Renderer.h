@@ -1,41 +1,41 @@
 #pragma once
 #include "Model.h"
 #include "Camera.h"
+#include "IRenderer.h"
 
-#include "Vulkan/VulkanContext.h"
-#include "Vulkan/VulkanDescriptorPool.h"
-
-class Renderer
+class FRenderer : public IRenderer
 {
 public:
-	Renderer();
-	~Renderer() = default;
-	
-	void Init(VulkanContext* pContext);
-	void Release();
-	
-	// dt is in seconds
-	void Tick(float dt);
-	
-	void OnWindowResize(uint32_t width, uint32_t height);
-	
+    FRenderer();
+    ~FRenderer() = default;
+    
+    virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override;
+    
+    virtual void Release() override;
+    
+    virtual void Tick(float deltaTime) override;
+    
+    virtual void OnRenderUI() {}
+    
+    virtual void OnWindowResize(uint32_t width, uint32_t height) override;
+    
 private:
-	void CreateFramebuffers();
-	void ReleaseFramebuffers();
-	
-private:
-	VulkanContext* m_pContext;
-	VulkanRenderPass* m_pRenderPass;
-	VulkanGraphicsPipelineState* m_PipelineState;
-	VulkanCommandBuffer* m_pCurrentCommandBuffer;
-	VulkanDeviceAllocator* m_pDeviceAllocator;
-	VulkanDescriptorPool* m_pDescriptorPool;
-	
-	std::vector<VulkanFramebuffer*> m_Framebuffers;
-	std::vector<VulkanCommandBuffer*> m_CommandBuffers;
-	
-	VulkanBuffer* m_pCameraBuffer;
-	
-	Model* m_pModel;
-	Camera m_Camera;
+    void CreateFramebuffers();
+    void ReleaseFramebuffers();
+
+    FDevice*                 m_pDevice;
+    FSwapchain*              m_pSwapchain;
+    class FRenderPass*       m_pRenderPass;
+    class FGraphicsPipeline* m_PipelineState;
+    class FCommandBuffer*    m_pCurrentCommandBuffer;
+    FDeviceMemoryAllocator*  m_pDeviceAllocator;
+    FDescriptorPool*         m_pDescriptorPool;
+    
+    std::vector<class FFramebuffer*>   m_Framebuffers;
+    std::vector<class FCommandBuffer*> m_CommandBuffers;
+    
+    class FBuffer* m_pCameraBuffer;
+    
+    FModel* m_pModel;
+    FCamera m_Camera;
 };
