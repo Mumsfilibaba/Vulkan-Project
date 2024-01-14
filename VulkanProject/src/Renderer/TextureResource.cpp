@@ -238,7 +238,7 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* f
     textureParams.ImageType     = VK_IMAGE_TYPE_2D;
     textureParams.Width         = width;
     textureParams.Height        = height;
-    textureParams.Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    textureParams.Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     textureParams.InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     std::unique_ptr<FTexture> pTexture = std::unique_ptr<FTexture>(FTexture::CreateWithData(pDevice, textureParams, pixels.get()));
@@ -294,7 +294,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     textureParams.Width          = CubeMapSize;
     textureParams.Height         = CubeMapSize;
     textureParams.NumArraySlices = 6;
-    textureParams.Usage          = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    textureParams.Usage          = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     
     std::unique_ptr<FTexture> pTexture = std::unique_ptr<FTexture>(FTexture::Create(pDevice, textureParams));
     if (!pTexture)
