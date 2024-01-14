@@ -24,10 +24,10 @@ struct FSceneBuffer
     uint32_t NumPlanes    = 0;
     uint32_t NumMaterials = 0;
 
-    uint32_t bUseGlobalLight = 0;
-    uint32_t Padding0        = 0;
-    uint32_t Padding1        = 0;
-    uint32_t Padding2        = 0;
+    uint32_t BackgroundType = 0;
+    float    Exposure       = 0.0f;
+    uint32_t Padding0       = 0;
+    uint32_t Padding1       = 0;
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/

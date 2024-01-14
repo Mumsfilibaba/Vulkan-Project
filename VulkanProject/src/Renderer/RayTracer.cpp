@@ -411,11 +411,12 @@ void FRayTracer::Tick(float deltaTime)
 
     // Update Scene
     FSceneBuffer sceneBuffer = {};
-    sceneBuffer.NumQuads        = m_pScene->m_Quads.size();
-    sceneBuffer.NumSpheres      = m_pScene->m_Spheres.size();
-    sceneBuffer.NumPlanes       = m_pScene->m_Planes.size();
-    sceneBuffer.NumMaterials    = m_pScene->m_Materials.size();
-    sceneBuffer.bUseGlobalLight = m_pScene->m_Settings.BackgroundType;
+    sceneBuffer.NumQuads       = m_pScene->m_Quads.size();
+    sceneBuffer.NumSpheres     = m_pScene->m_Spheres.size();
+    sceneBuffer.NumPlanes      = m_pScene->m_Planes.size();
+    sceneBuffer.NumMaterials   = m_pScene->m_Materials.size();
+    sceneBuffer.BackgroundType = m_pScene->m_Settings.BackgroundType;
+    sceneBuffer.Exposure       = m_pScene->m_Settings.Exposure;
 
     pCurrentCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(FSceneBuffer), &sceneBuffer);
     
@@ -522,6 +523,8 @@ void FRayTracer::OnRenderUI()
             m_bResetImage = true;
         }
 
+        ImGui::NewLine();
+
         ImGui::Text("Scene:");
         ImGui::Separator();
 
@@ -543,7 +546,6 @@ void FRayTracer::OnRenderUI()
                 if (currentScene == 0)
                 {
                     SAFE_DELETE(m_pScene);
-
                     m_pScene = new FSphereScene();
                     m_pScene->Initialize();
                     m_bResetImage = true;
@@ -553,7 +555,6 @@ void FRayTracer::OnRenderUI()
                 if (currentScene == 1)
                 {
                     SAFE_DELETE(m_pScene);
-
                     m_pScene = new FCornellBoxScene();
                     m_pScene->Initialize();
                     m_bResetImage = true;
@@ -591,6 +592,13 @@ void FRayTracer::OnRenderUI()
                 
                 m_bResetImage = true;
                 prevBG = currentBG;
+            }
+
+            float exposure = m_pScene->m_Settings.Exposure;
+            if (ImGui::DragFloat("Exposure", &exposure, 0.01f, 0.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+            {
+                m_pScene->m_Settings.Exposure = exposure;
+                m_bResetImage = true;
             }
         }
 

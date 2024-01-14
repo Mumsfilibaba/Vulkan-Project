@@ -7,6 +7,8 @@ FScene::FScene()
     , m_Materials()
     , m_Settings()
 {
+    m_Settings.Exposure = 1.0f;
+
     m_Quads.reserve(MAX_QUAD);
     m_Spheres.reserve(MAX_SPHERES);
     m_Planes.reserve(MAX_PLANES);

@@ -59,6 +59,7 @@ struct FMaterial
 struct FSceneSettings
 {
     uint32_t BackgroundType;
+    float    Exposure;
 };
 
 struct FScene

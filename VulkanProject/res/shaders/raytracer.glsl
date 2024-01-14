@@ -13,6 +13,8 @@
 
 #define SIGMA (0.0001)
 
+#define GAMMA (2.2)
+
 #define USE_RAY_OFFSET (0)
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
@@ -43,15 +45,15 @@ layout(binding = 3) uniform RandomBufferObject
 
 layout(binding = 4) uniform SceneBufferObject 
 {
-    uint NumQuads;
-    uint NumSpheres;
-    uint NumPlanes;
-    uint NumMaterials;
-
-    uint BackgroundType;
-    uint Padding0;
-    uint Padding1;
-    uint Padding2;
+    uint  NumQuads;
+    uint  NumSpheres;
+    uint  NumPlanes;
+    uint  NumMaterials;
+    
+    uint  BackgroundType;
+    float Exposure;
+    uint  Padding0;
+    uint  Padding1;
 } uScene;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -513,7 +515,7 @@ void main()
 
     // Store to scene texture
     FinalColor = currentColor.rgb / max(uRandom.NumSamples, 1.0);
-    //FinalColor = AcesFitted(FinalColor);
-    FinalColor = pow(FinalColor, vec3(1.0 / 2.2));
+    FinalColor = vec3(1.0) - exp(-FinalColor * uScene.Exposure);
+    FinalColor = pow(FinalColor, vec3(1.0 / GAMMA));
     imageStore(uOutput, Pixel, vec4(FinalColor, 1.0));
 }
