@@ -392,7 +392,7 @@ void main()
                 }*/
 
                 // Attenuate light
-                vec3 Albedo = Material.Albedo.rgb;
+                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.9));
                 SampleColor = Albedo * SampleColor;
             }
             else if (Material.Type == MATERIAL_METAL)
@@ -408,7 +408,7 @@ void main()
             #endif
 
                 // Attenuate light
-                vec3 Albedo = Material.Albedo.rgb;
+                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.9));
                 SampleColor = Albedo * SampleColor;
             }
             else if (Material.Type == MATERIAL_DIELECTRIC)
@@ -452,7 +452,7 @@ void main()
             #endif
 
                 // Attenuate light
-                vec3 Albedo = Material.Albedo.rgb;
+                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.9));
                 SampleColor = Albedo * SampleColor;
             }
             else if (Material.Type == MATERIAL_EMISSIVE) 
