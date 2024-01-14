@@ -85,6 +85,10 @@ private:
     class FTextureView*   m_pSceneTextureView;
     class FDescriptorSet* m_pSceneTextureDescriptorSet;
 
+    // Skybox
+    class FTextureResource* m_pSkybox;
+    class FSampler*         m_pSkyboxSampler;
+    
     // Scene
     FScene* m_pScene;
 

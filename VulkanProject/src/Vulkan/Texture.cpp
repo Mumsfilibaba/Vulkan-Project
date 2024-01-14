@@ -4,6 +4,38 @@
 #include "CommandBuffer.h"
 #include "Buffer.h"
 
+#include <algorithm>
+
+static bool ValidateFormatForUpload(VkFormat format)
+{
+    return format == VK_FORMAT_R8G8B8A8_UNORM || format == VK_FORMAT_R32G32B32A32_SFLOAT;
+}
+
+static VkDeviceSize GetNumChannelsFromFormat(VkFormat format)
+{
+    switch(format)
+    {
+    case VK_FORMAT_R8G8B8A8_UNORM:
+    case VK_FORMAT_R32G32B32A32_SFLOAT:
+        return 4;
+    }
+    
+    return 0;
+}
+
+static VkDeviceSize GetStrideFromFormat(VkFormat format)
+{
+    switch(format)
+    {
+    case VK_FORMAT_R8G8B8A8_UNORM:
+        return sizeof(char);
+    case VK_FORMAT_R32G32B32A32_SFLOAT:
+        return sizeof(float);
+    }
+    
+    return 0;
+}
+
 FTexture* FTexture::Create(FDevice* pDevice, const FTextureParams& params)
 {
     FTexture* pTexture = new FTexture(pDevice);
@@ -12,13 +44,14 @@ FTexture* FTexture::Create(FDevice* pDevice, const FTextureParams& params)
     ZERO_STRUCT(&textureCreateInfo);
     
     textureCreateInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    textureCreateInfo.imageType     = params.ImageType;
+    textureCreateInfo.flags         = params.Flags;
+    textureCreateInfo.imageType     = pTexture->m_ImageType = params.ImageType;
     textureCreateInfo.format        = pTexture->m_Format = params.Format;
     textureCreateInfo.extent.width  = pTexture->m_Width  = params.Width;
     textureCreateInfo.extent.height = pTexture->m_Height = params.Height;
     textureCreateInfo.extent.depth  = 1;
     textureCreateInfo.mipLevels     = 1;
-    textureCreateInfo.arrayLayers   = 1;
+    textureCreateInfo.arrayLayers   = pTexture->m_NumArraySlices = std::max(params.NumArraySlices, 1u);
     textureCreateInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
     textureCreateInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
     textureCreateInfo.usage         = params.Usage;
@@ -98,8 +131,11 @@ FTexture* FTexture::CreateWithData(FDevice* pDevice, const FTextureParams& param
         return nullptr;
     }
     
-    assert(params.Format == VK_FORMAT_R8G8B8A8_UNORM);
-    VkDeviceSize uploadSize = params.Width * params.Height * 4 * sizeof(char);
+    assert(ValidateFormatForUpload(params.Format) == true);
+    
+    const VkDeviceSize numChannels = GetNumChannelsFromFormat(params.Format);
+    const VkDeviceSize stride      = GetStrideFromFormat(params.Format);
+    const VkDeviceSize uploadSize  = params.Width * params.Height * numChannels * stride;
     
     FBufferParams bufferParams = {};
     bufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;

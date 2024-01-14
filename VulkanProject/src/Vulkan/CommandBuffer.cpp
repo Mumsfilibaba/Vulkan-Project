@@ -107,7 +107,7 @@ void FCommandBuffer::TransitionImage(VkImage image, VkImageLayout oldLayout, VkI
     barrier.subresourceRange.baseMipLevel   = 0;
     barrier.subresourceRange.levelCount     = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount     = 1;
+    barrier.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
 
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;

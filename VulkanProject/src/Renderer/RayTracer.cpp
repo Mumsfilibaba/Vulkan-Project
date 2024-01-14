@@ -3,6 +3,7 @@
 #include "Input.h"
 #include "MathHelper.h"
 #include "GUI.h"
+#include "TextureResource.h"
 #include "Vulkan/Buffer.h"
 #include "Vulkan/Framebuffer.h"
 #include "Vulkan/ShaderModule.h"
@@ -42,12 +43,33 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     m_pDevice    = pDevice;
     m_pSwapchain = pSwapchain;
 
+    // Init the textureloader
+    FTextureResource::InitLoader(m_pDevice);
+    
+    // Create skybox
+    m_pSkybox = FTextureResource::LoadCubeMapFromPanoramaFile(m_pDevice, RESOURCE_PATH"/textures/arches.hdr");
+    assert(m_pSkybox != nullptr);
+
+    FSamplerParams samplerParams = {};
+    samplerParams.magFilter     = VK_FILTER_LINEAR;
+    samplerParams.minFilter     = VK_FILTER_LINEAR;
+    samplerParams.mipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerParams.addressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerParams.addressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerParams.addressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerParams.minLod        = -1000;
+    samplerParams.maxLod        = 1000;
+    samplerParams.maxAnisotropy = 1.0f;
+    
+    m_pSkyboxSampler = FSampler::Create(pDevice, samplerParams);
+    assert(m_pSkyboxSampler != nullptr);
+    
     // Create scene
     m_pScene = new FSphereScene();
     m_pScene->Initialize();
 
     // Create DescriptorSetLayout
-    constexpr uint32_t numBindings = 9;
+    constexpr uint32_t numBindings = 10;
     VkDescriptorSetLayoutBinding bindings[numBindings];
     bindings[0].binding            = 0;
     bindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -102,6 +124,12 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     bindings[8].descriptorCount    = 1;
     bindings[8].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[8].pImmutableSamplers = nullptr;
+    
+    bindings[9].binding            = 9;
+    bindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindings[9].descriptorCount    = 1;
+    bindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[9].pImmutableSamplers = nullptr;
 
     FDescriptorSetLayoutParams descriptorSetLayoutParams;
     descriptorSetLayoutParams.pBindings   = bindings;
@@ -132,10 +160,12 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
    
     // Create DescriptorPool
     FDescriptorPoolParams poolParams;
-    poolParams.NumUniformBuffers = 3;
-    poolParams.NumStorageImages  = 2;
-    poolParams.NumStorageBuffers = 4;
-    poolParams.MaxSets           = 1;
+    poolParams.NumUniformBuffers        = 3;
+    poolParams.NumStorageImages         = 2;
+    poolParams.NumStorageBuffers        = 4;
+    poolParams.NumCombinedImageSamplers = 1;
+    poolParams.MaxSets                  = 1;
+    
     m_pDescriptorPool = FDescriptorPool::Create(m_pDevice, poolParams);
     assert(m_pDescriptorPool != nullptr);
 
@@ -385,7 +415,7 @@ void FRayTracer::Tick(float deltaTime)
     sceneBuffer.NumSpheres      = m_pScene->m_Spheres.size();
     sceneBuffer.NumPlanes       = m_pScene->m_Planes.size();
     sceneBuffer.NumMaterials    = m_pScene->m_Materials.size();
-    sceneBuffer.bUseGlobalLight = m_pScene->m_Settings.bUseGlobalLight;
+    sceneBuffer.bUseGlobalLight = m_pScene->m_Settings.BackgroundType;
 
     pCurrentCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(FSceneBuffer), &sceneBuffer);
     
@@ -478,6 +508,8 @@ void FRayTracer::OnRenderUI()
 
         ImGui::Text("CPU Time %.4f", m_LastCPUTime);
         ImGui::Text("GPU Time %.4f", m_LastGPUTime);
+        
+        ImGui::Text("Current Resolution: %dx%d", m_ViewportWidth, m_ViewportHeight);
 
         ImGui::NewLine();
 
@@ -502,7 +534,7 @@ void FRayTracer::OnRenderUI()
             };
 
             static int currentScene = 0;
-            static int prevScene = 0;
+            static int prevScene    = 0;
             ImGui::Combo("Current Scene", &currentScene, scenes, IM_ARRAYSIZE(scenes));
 
             if (prevScene != currentScene)
@@ -528,6 +560,37 @@ void FRayTracer::OnRenderUI()
                 }
 
                 prevScene = currentScene;
+            }
+            
+            // Background
+            const char* background[] =
+            {
+                "None",
+                "Gradient",
+                "Skybox",
+            };
+            
+            int currentBG = m_pScene->m_Settings.BackgroundType;
+            static int prevBG = currentBG;
+            ImGui::Combo("Background", &currentBG, background, IM_ARRAYSIZE(background));
+            
+            if (prevBG != currentBG)
+            {
+                if (currentBG == 0)
+                {
+                    m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_NONE;
+                }
+                else if (currentBG == 1)
+                {
+                    m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
+                }
+                else if (currentBG == 2)
+                {
+                    m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_SKYBOX;
+                }
+                
+                m_bResetImage = true;
+                prevBG = currentBG;
             }
         }
 
@@ -684,6 +747,8 @@ void FRayTracer::OnRenderUI()
 
 void FRayTracer::Release()
 {
+    FTextureResource::ReleaseLoader();
+    
     for (auto& commandBuffer : m_CommandBuffers)
     {
         SAFE_DELETE(commandBuffer);
@@ -705,6 +770,9 @@ void FRayTracer::Release()
     SAFE_DELETE(m_pSphereBuffer);
     SAFE_DELETE(m_pPlaneBuffer);
     SAFE_DELETE(m_pMaterialBuffer);
+    
+    SAFE_DELETE(m_pSkybox);
+    SAFE_DELETE(m_pSkyboxSampler);
 
     ReleaseDescriptorSet();
 
@@ -805,6 +873,7 @@ void FRayTracer::CreateDescriptorSet()
     m_pDescriptorSet->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 6);
     m_pDescriptorSet->BindStorageBuffer(m_pPlaneBuffer->GetBuffer(), 7);
     m_pDescriptorSet->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
+    m_pDescriptorSet->BindCombinedImageSampler(m_pSkybox->GetTextureView()->GetImageView(), m_pSkyboxSampler->GetSampler(), 9);
 }
 
 void FRayTracer::ReleaseDescriptorSet()

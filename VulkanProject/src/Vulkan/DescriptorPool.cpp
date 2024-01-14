@@ -3,7 +3,7 @@
 
 FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPoolParams& params)
 {
-    constexpr uint32_t numPoolSizes = 3;
+    constexpr uint32_t numPoolSizes = 4;
     
     FDescriptorPool* pDescriptorPool = new FDescriptorPool(pDevice->GetDevice());
     

@@ -6,13 +6,15 @@ class FDevice;
 
 struct FTextureParams
 {
-    VkImageUsageFlags Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    VkFormat          Format        = VK_FORMAT_UNDEFINED;
-    VkImageType       ImageType     = VK_IMAGE_TYPE_2D;
-    VkImageLayout     InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageUsageFlags  Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    VkFormat           Format        = VK_FORMAT_UNDEFINED;
+    VkImageCreateFlags Flags         = 0;
+    VkImageType        ImageType     = VK_IMAGE_TYPE_2D;
+    VkImageLayout      InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     
-    uint32_t Width  = 0;
-    uint32_t Height = 0;
+    uint32_t Width          = 0;
+    uint32_t Height         = 0;
+    uint32_t NumArraySlices = 1;
 };
 
 class FTexture
@@ -43,6 +45,16 @@ public:
     {
         return m_Height;
     }
+    
+    uint32_t GetNumArraySlices() const
+    {
+        return m_NumArraySlices;
+    }
+
+    VkImageType GetImageType() const
+    {
+        return m_ImageType;
+    }
 
 private:
     FDevice*       m_pDevice;
@@ -51,4 +63,6 @@ private:
     VkFormat       m_Format;
     uint32_t       m_Width;
     uint32_t       m_Height;
+    uint32_t       m_NumArraySlices;
+    VkImageType    m_ImageType;
 };

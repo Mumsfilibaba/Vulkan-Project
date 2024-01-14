@@ -4,6 +4,10 @@
 #include "math.glsl"
 #include "tonemap.glsl"
 
+#define BACKGROUND_TYPE_NONE (0)
+#define BACKGROUND_TYPE_GRADIENT (1)
+#define BACKGROUND_TYPE_SKYBOX (2)
+
 #define NUM_THREADS (16)
 #define MAX_DEPTH   (1024)
 
@@ -13,8 +17,10 @@
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
-layout (binding = 0, rgba32f) uniform image2D Output;
-layout (binding = 1, rgba32f) uniform image2D Accumulation;
+layout (binding = 0, rgba32f) uniform image2D uOutput;
+layout (binding = 1, rgba32f) uniform image2D uAccumulation;
+
+layout (binding = 9) uniform samplerCube uSkybox;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 /* Global uniforms */
@@ -42,7 +48,7 @@ layout(binding = 4) uniform SceneBufferObject
     uint NumPlanes;
     uint NumMaterials;
 
-    uint bUseGlobalLight;
+    uint BackgroundType;
     uint Padding0;
     uint Padding1;
     uint Padding2;
@@ -470,17 +476,24 @@ void main()
         else
         {
             vec3 BackGroundColor;
-            if (uScene.bUseGlobalLight != 0)
+            if (uScene.BackgroundType == BACKGROUND_TYPE_NONE)
+            {
+                // Only light source is the emissive surfaces
+                BackGroundColor = vec3(0.0);
+            }
+            else if (uScene.BackgroundType == BACKGROUND_TYPE_GRADIENT)
             {
                 // Create a gradient
                 vec3  UnitDirection = normalize(Ray.Direction);
                 float Alpha = 0.5 * (UnitDirection.y + 1.0);
                 BackGroundColor = (1.0 - Alpha) * vec3(1.0, 1.0, 1.0) + Alpha * vec3(0.5, 0.7, 1.0);
             }
-            else
+            else if (uScene.BackgroundType == BACKGROUND_TYPE_SKYBOX)
             {
-                // Only light source is the emissive surfaces
-                BackGroundColor = vec3(0.0);
+                // Sample the Skybox
+                vec3 UnitDirection = normalize(Ray.Direction);
+                vec4 SkyboxColor   = texture(uSkybox, UnitDirection);
+                BackGroundColor = SkyboxColor.rgb;
             }
 
             // Break the loop
@@ -494,13 +507,13 @@ void main()
     vec3 FinalColor = SampleColor;
 
     // Accumulate samples over time
-    vec4 previousColor = imageLoad(Accumulation, Pixel);
+    vec4 previousColor = imageLoad(uAccumulation, Pixel);
     vec4 currentColor  = previousColor + vec4(FinalColor, 0.0);
-    imageStore(Accumulation, Pixel, currentColor);
+    imageStore(uAccumulation, Pixel, currentColor);
 
     // Store to scene texture
     FinalColor = currentColor.rgb / max(uRandom.NumSamples, 1.0);
     //FinalColor = AcesFitted(FinalColor);
     FinalColor = pow(FinalColor, vec3(1.0 / 2.2));
-    imageStore(Output, Pixel, vec4(FinalColor, 1.0));
+    imageStore(uOutput, Pixel, vec4(FinalColor, 1.0));
 }

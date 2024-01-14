@@ -11,6 +11,10 @@
 #define MATERIAL_EMISSIVE (3)
 #define MATERIAL_DIELECTRIC (4)
 
+#define BACKGROUND_TYPE_NONE (0)
+#define BACKGROUND_TYPE_GRADIENT (1)
+#define BACKGROUND_TYPE_SKYBOX (2)
+
 struct FSphere
 {
     glm::vec3 Position;
@@ -54,7 +58,7 @@ struct FMaterial
 
 struct FSceneSettings
 {
-    uint32_t bUseGlobalLight;
+    uint32_t BackgroundType;
 };
 
 struct FScene

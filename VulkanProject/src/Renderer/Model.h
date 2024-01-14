@@ -61,27 +61,26 @@ struct FVertexHasher
 class FModel
 {
 public:
-    FModel() = default;
     ~FModel();
     
     bool LoadFromFile(const std::string& filepath, FDevice* pDevice, FDeviceMemoryAllocator* pAllocator);
     
-    inline FBuffer* GetVertexBuffer() const
+    FBuffer* GetVertexBuffer() const
     {
         return m_pVertexBuffer;
     }
     
-    inline FBuffer* GetIndexBuffer() const
+    FBuffer* GetIndexBuffer() const
     {
         return m_pIndexBuffer;
     }
     
-    inline uint32_t GetVertexCount() const
+    uint32_t GetVertexCount() const
     {
         return m_VertexCount;
     }
     
-    inline uint32_t GetIndexCount() const
+    uint32_t GetIndexCount() const
     {
         return m_IndexCount;
     }

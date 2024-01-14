@@ -16,7 +16,7 @@ FScene::FScene()
 void FSphereScene::Initialize()
 {
     // Settings
-    m_Settings.bUseGlobalLight = true;
+    m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
 
     // Setup Camera
     Reset();
@@ -79,8 +79,8 @@ void FSphereScene::Reset()
 void FCornellBoxScene::Initialize()
 {
     // Settings
-    m_Settings.bUseGlobalLight = false;
-
+    m_Settings.BackgroundType = BACKGROUND_TYPE_NONE;
+    
     // Setup Camera
     Reset();
 
