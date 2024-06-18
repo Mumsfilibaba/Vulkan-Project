@@ -142,6 +142,7 @@ bool FMesh::LoadFromFile(const std::string& filepath)
                 attrib.vertices[3 * index.vertex_index + 0],
                 attrib.vertices[3 * index.vertex_index + 1],
                 attrib.vertices[3 * index.vertex_index + 2],
+                // Padding
                 0.0f
             };
 

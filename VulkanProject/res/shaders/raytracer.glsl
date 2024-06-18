@@ -46,7 +46,7 @@ layout(binding = 5) uniform SceneBufferObject
     uint  NumPlanes;
     uint  NumMaterials;
     // 16-28
-    uint  NumTriangles;
+    uint  NumTriangleMeshes;
     uint  BackgroundType;
     float Exposure;
     // Padding
@@ -113,6 +113,16 @@ struct Triangle
     uint Padding0;
 };
 
+struct TriangleMesh
+{
+    vec4 Min;
+    vec4 Max;
+    uint StartTriangle;
+    uint NumTriangles;
+    uint Padding0;
+    uint Padding1;
+};
+
 layout(std430, binding = 6) buffer QuadBuffer
 {
     Quad Quads[];
@@ -141,6 +151,11 @@ layout(std430, binding = 10) buffer VertexBuffer
 layout(std430, binding = 11) buffer TriangleBuffer
 {
     Triangle Triangles[];
+};
+
+layout(std430, binding = 12) buffer TriangleMeshBuffer
+{
+    TriangleMesh TriangleMeshes[];
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -388,14 +403,21 @@ bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
         HitPlane(Plane, Ray, PayLoad);
     }
 
-    for (uint i = 0; i < uScene.NumTriangles; i++)
+    for (uint i = 0; i < uScene.NumTriangleMeshes; i++)
     {
-        Triangle Triangle = Triangles[i];
-        vec3 Pos0 = Vertices[Triangle.Index0].Position.xyz;
-        vec3 Pos1 = Vertices[Triangle.Index1].Position.xyz;
-        vec3 Pos2 = Vertices[Triangle.Index2].Position.xyz;
+        TriangleMesh Mesh = TriangleMeshes[i];
 
-        HitTriangle(Pos0, Pos1, Pos2, Ray, PayLoad, 0);
+        const uint StartTriangle = Mesh.StartTriangle;
+        const uint EndTriangle   = StartTriangle + Mesh.NumTriangles;
+        for (uint j = StartTriangle; j < EndTriangle; j++)
+        {
+            Triangle Triangle = Triangles[j];
+            vec3 Pos0 = Vertices[Triangle.Index0].Position.xyz;
+            vec3 Pos1 = Vertices[Triangle.Index1].Position.xyz;
+            vec3 Pos2 = Vertices[Triangle.Index2].Position.xyz;
+
+            HitTriangle(Pos0, Pos1, Pos2, Ray, PayLoad, 0);
+        }
     }
 
     if (PayLoad.T < PayLoad.MaxT)

@@ -25,7 +25,7 @@ struct FSceneBuffer
     uint32_t NumPlanes = 0;
     uint32_t NumMaterials = 0;
     // 16-28
-    uint32_t NumTriangles = 0;
+    uint32_t NumTriangleMeshes = 0;
     uint32_t BackgroundType = 0;
     float    Exposure = 0.0f;
     // Padding
@@ -79,6 +79,7 @@ private:
     FBuffer* m_pPlaneBuffer;
     FBuffer* m_pQuadBuffer;
     FBuffer* m_pTriangleBuffer;
+    FBuffer* m_pTriangleMeshesBuffer;
     FBuffer* m_pVertexBuffer;
     FBuffer* m_pMaterialBuffer;
 

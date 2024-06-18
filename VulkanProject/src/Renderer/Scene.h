@@ -50,26 +50,48 @@ struct FQuad
 
 struct FTriangle
 {
+    // 0-12
     uint32_t Index0;
     uint32_t Index1;
     uint32_t Index2;
+    // Padding
     uint32_t Padding0;
+};
+
+struct FTriangleMesh
+{
+    // 0-32
+    glm::vec4 Min;
+    glm::vec4 Max;
+    // 32-40
+    uint32_t  StartTriangle;
+    uint32_t  NumTriangles;
+    // Padding
+    uint32_t  Padding0;
+    uint32_t  Padding1;
 };
 
 struct FMaterial
 {
+    // 0-32
     glm::vec4 Albedo;
     glm::vec4 Emissive;
+    // 32-44
     uint32_t  Type;
     float     Roughness;
     float     RefractionIndex;
-    uint32_t  Padding1;
+    // Padding
+    uint32_t  Padding0;
 };
 
 struct FSceneSettings
 {
+    // 0-8
     uint32_t BackgroundType;
     float    Exposure;
+    // Padding
+    uint32_t Padding0;
+    uint32_t Padding1;
 };
 
 struct FScene
@@ -80,16 +102,21 @@ struct FScene
 
     virtual void Reset() {}
 
-    FCamera                m_Camera;
-    FSceneSettings         m_Settings;
+    FCamera        m_Camera;
+    FSceneSettings m_Settings;
 
-    std::vector<FQuad>     m_Quads;
-    std::vector<FSphere>   m_Spheres;
-    std::vector<FPlane>    m_Planes;
+    // Materials
     std::vector<FMaterial> m_Materials;
     
-    std::vector<FVertexRT> m_Vertices;
-    std::vector<FTriangle> m_Triangles;
+    // Triangle Mesh Data
+    std::vector<FVertexRT>     m_Vertices;
+    std::vector<FTriangle>     m_Triangles;
+    std::vector<FTriangleMesh> m_TriangleMeshes;
+    
+    // Other primitive data
+    std::vector<FPlane>  m_Planes;
+    std::vector<FSphere> m_Spheres;
+    std::vector<FQuad>   m_Quads;
 };
 
 struct FModelScene : public FScene
