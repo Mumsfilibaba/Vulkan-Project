@@ -165,23 +165,30 @@ void FCornellBoxScene::Initialize()
     });
     m_Quads.push_back(
     {
-        glm::vec4(-2.0f, 0.0f, -2.0f, 0.0f),
-        glm::vec4( 0.0f, 4.0f,  0.0f, 0.0f),
-        glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
-        0
-    });
-    m_Quads.push_back(
-    {
-        glm::vec4(-2.0f, 4.0f, -2.0f, 0.0f),
-        glm::vec4( 0.0f, 0.0f,  4.0f, 0.0f),
-        glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
+        glm::vec4(-2.0f,  4.0f, -2.0f, 0.0f),
+        glm::vec4( 0.0f, -4.0f,  0.0f, 0.0f),
+        glm::vec4( 4.0f,  0.0f,  0.0f, 0.0f),
         0
     });
     m_Quads.push_back(
     {
         glm::vec4(-2.0f, 0.0f,  2.0f, 0.0f),
         glm::vec4( 0.0f, 4.0f,  0.0f, 0.0f),
+        glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
+        0
+    });
+    m_Quads.push_back(
+    {
+        glm::vec4(-2.0f, 4.0f,  2.0f, 0.0f),
         glm::vec4( 0.0f, 0.0f, -4.0f, 0.0f),
+        glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
+        0
+    });
+    m_Quads.push_back(
+    {
+        glm::vec4(-2.0f, 0.0f, -2.0f, 0.0f),
+        glm::vec4( 0.0f, 4.0f,  0.0f, 0.0f),
+        glm::vec4( 0.0f, 0.0f,  4.0f, 0.0f),
         1
     });
     m_Quads.push_back(
@@ -193,9 +200,9 @@ void FCornellBoxScene::Initialize()
     });
     m_Quads.push_back(
     {
-        glm::vec4(-0.35f, 3.995f, -0.35f, 0.0f),
-        glm::vec4(  0.0f,   0.0f,   0.7f, 0.0f),
-        glm::vec4(  0.7f,   0.0f,   0.0f, 0.0f),
+        glm::vec4(-0.35f, 3.995f,  0.35f, 0.0f),
+        glm::vec4(  0.0f,   0.0f, -0.7f, 0.0f),
+        glm::vec4(  0.7f,   0.0f,  0.0f, 0.0f),
         3
     });
 

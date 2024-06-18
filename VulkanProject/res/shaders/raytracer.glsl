@@ -12,6 +12,7 @@
 #define SIGMA 0.0001
 #define GAMMA 2.2
 #define USE_RAY_OFFSET 0
+#define ENABLE_QUAD_BACK_FACE_CULLING 1
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
@@ -206,6 +207,15 @@ void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
     float D = dot(Normal, Q);
 
     float DdotN = dot(Ray.Direction, Normal);
+
+#if ENABLE_QUAD_BACK_FACE_CULLING
+    // Back-face culling: skip if the dot product is positive (back face)
+    if (DdotN > 0.0) 
+    {
+        return;
+    }
+#endif
+
     if (abs(DdotN) < SIGMA)
     {
         return;

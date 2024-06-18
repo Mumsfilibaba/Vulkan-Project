@@ -628,7 +628,7 @@ void FRayTracer::OnRenderUI()
 
         // Scene selector
         {
-            const char* scenes[] =
+            static const char* scenes[] =
             {
                 "Spheres",
                 "CornellBox",
@@ -672,7 +672,7 @@ void FRayTracer::OnRenderUI()
             }
             
             // Background
-            const char* background[] =
+            static const char* background[] =
             {
                 "None",
                 "Gradient",
@@ -769,13 +769,30 @@ void FRayTracer::OnRenderUI()
             }
         }
 
+        {
+            uint32_t index = 1;
+            for (FTriangleMesh& mesh : m_pScene->m_TriangleMeshes)
+            {
+                ImGui::PushID(imguiID++);
+
+                ImGui::Text("TriangleMesh %d", index++);
+                
+                ImGui::InputInt("Num Triangles", reinterpret_cast<int*>(&mesh.NumTriangles), 1, 100, ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputFloat3("Bounds Min", glm::value_ptr(mesh.BoxMin), "%0.3f", ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputFloat3("Bounds Max", glm::value_ptr(mesh.BoxMax), "%0.3f", ImGuiInputTextFlags_ReadOnly);
+                
+                ImGui::PopID();
+                ImGui::Separator();
+            }
+        }
+
         ImGui::NewLine();
 
         ImGui::Text("Materials:");
         ImGui::Separator();
 
         {
-            const char* materialTypes[] =
+            static const char* materialTypes[] =
             {
                 "None",
                 "Lambertian",
