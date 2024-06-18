@@ -132,6 +132,10 @@ bool FMesh::LoadFromFile(const std::string& filepath)
     std::vector<FVertexRT> vertices;
     std::vector<uint32_t>  indices;
     std::unordered_map<FVertexRT, uint32_t, FVertexRTHasher> uniqueVertices = {};
+    
+    BoundingBoxMin = glm::vec3(0.0f, 0.0f, 0.0f);
+    BoundingBoxMax = glm::vec3(0.0f, 0.0f, 0.0f);
+    
     for (const auto& shape : shapes)
     {
         for (const auto& index : shape.mesh.indices)
@@ -145,11 +149,19 @@ bool FMesh::LoadFromFile(const std::string& filepath)
                 // Padding
                 0.0f
             };
-
+            
             if (uniqueVertices.count(vertex) == 0)
             {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
                 vertices.push_back(vertex);
+                
+                BoundingBoxMin.x = std::min(BoundingBoxMin.x, vertex.Position.x);
+                BoundingBoxMin.y = std::min(BoundingBoxMin.y, vertex.Position.y);
+                BoundingBoxMin.z = std::min(BoundingBoxMin.z, vertex.Position.z);
+                
+                BoundingBoxMax.x = std::max(BoundingBoxMax.x, vertex.Position.x);
+                BoundingBoxMax.y = std::max(BoundingBoxMax.y, vertex.Position.y);
+                BoundingBoxMax.z = std::max(BoundingBoxMax.z, vertex.Position.z);
             }
 
             indices.push_back(uniqueVertices[vertex]);

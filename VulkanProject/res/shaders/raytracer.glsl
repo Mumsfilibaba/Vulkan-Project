@@ -115,8 +115,8 @@ struct Triangle
 
 struct TriangleMesh
 {
-    vec4 Min;
-    vec4 Max;
+    vec4 BoxMin;
+    vec4 BoxMax;
     uint StartTriangle;
     uint NumTriangles;
     uint Padding0;
@@ -334,7 +334,7 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in Ray Ray, 
     vec3  DirectionCrossEdge2 = cross(Ray.Direction, Edge2);
     float Determinant        = dot(Edge1, DirectionCrossEdge2);
 
-    // If the determinant is almost zero that means that the ray is parallell to the triangle and we early return
+    // If the determinant is almost zero that means that the Ray is parallell to the triangle and we early return
     if (abs(Determinant) < SIGMA) 
     {
         return;
@@ -343,7 +343,7 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in Ray Ray, 
     // Calculate the inverse determinant
     float InvDeterminant = 1.0 / Determinant;
 
-    // Calculate vector from ray origin to vertex0
+    // Calculate vector from Ray origin to vertex0
     vec3 RayOriginToVertex0 = Ray.Origin - Vertex0;
 
     // If u is outside the range [0, 1], the intersection point is outside the triangle
@@ -383,6 +383,79 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in Ray Ray, 
     }
 }
 
+bool IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in Ray Ray) 
+{
+    // Initialize MinT and MaxT to the full range
+    float MinT = (BoxMin.x - Ray.Origin.x) / Ray.Direction.x;
+    float MaxT = (BoxMax.x - Ray.Origin.x) / Ray.Direction.x;
+
+    // Swap MinT and MaxT if needed
+    if (MinT > MaxT)
+    {
+        float Temp = MinT;
+        MinT = MaxT;
+        MaxT = Temp;
+    }
+
+    float MinTy = (BoxMin.y - Ray.Origin.y) / Ray.Direction.y;
+    float MaxTy = (BoxMax.y - Ray.Origin.y) / Ray.Direction.y;
+
+    // Swap MinTy and MaxTy if needed
+    if (MinTy > MaxTy)
+    {
+        float Temp = MinTy;
+        MinTy = MaxTy;
+        MaxTy = Temp;
+    }
+
+    // Check for overlap in the y-direction
+    if (MinT > MaxTy || MinTy > MaxT)
+    {
+        return false;
+    }
+
+    // Update MinT and MaxT to account for y-axis overlap
+    if (MinTy > MinT)
+    {
+        MinT = MinTy;
+    }
+
+    if (MaxTy < MaxT)
+    {
+        MaxT = MaxTy;
+    }
+
+    float MinTz = (BoxMin.z - Ray.Origin.z) / Ray.Direction.z;
+    float MaxTz = (BoxMax.z - Ray.Origin.z) / Ray.Direction.z;
+
+    // Swap MinTz and MaxTz if needed
+    if (MinTz > MaxTz)
+    {
+        float Temp = MinTz;
+        MinTz = MaxTz;
+        MaxTz = Temp;
+    }
+
+    // Check for overlap in the z-direction
+    if (MinT > MaxTz || MinTz > MaxT)
+    {
+        return false;
+    }
+
+    // Update MinT and MaxT to account for z-axis overlap
+    if (MinTz > MinT)
+    {
+        MinT = MinTz;
+    }
+    if (MaxTz < MaxT)
+    {
+        MaxT = MaxTz;
+    }
+
+    // If we reach this point, there is an intersection
+    return true;
+}
+
 bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
 {
     for (uint i = 0; i < uScene.NumQuads; i++)
@@ -407,8 +480,15 @@ bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
     {
         TriangleMesh Mesh = TriangleMeshes[i];
 
-        const uint StartTriangle = Mesh.StartTriangle;
-        const uint EndTriangle   = StartTriangle + Mesh.NumTriangles;
+        // Only test each triangle if we actually intersect the bounding box
+        if (!IntersectRayAABB(Mesh.BoxMin.xyz, Mesh.BoxMax.xyz, Ray))
+        {
+            continue;
+        }
+
+        // Test each triangle in the mesh 
+        uint StartTriangle = Mesh.StartTriangle;
+        uint EndTriangle = StartTriangle + Mesh.NumTriangles;
         for (uint j = StartTriangle; j < EndTriangle; j++)
         {
             Triangle Triangle = Triangles[j];
@@ -470,7 +550,7 @@ void main()
     const vec3 CameraPosition = uCamera.Position.xyz;
     const vec3 FilmTarget     = CalculateFilmTarget(Pixel, Size, Jitter);
 
-    // Setup the first ray
+    // Setup the first Ray
     Ray Ray;
     Ray.Origin    = CameraPosition;
     Ray.Direction = normalize(FilmTarget - CameraPosition);
@@ -590,7 +670,7 @@ void main()
                 break;
             }
 
-            // Setup the next ray
+            // Setup the next Ray
             Ray.Origin    = Origin;
             Ray.Direction = Direction;
         }

@@ -119,4 +119,7 @@ struct FMesh
     
     std::vector<FVertexRT> m_Positions;
     std::vector<uint32_t>  m_Indicies;
+    
+    glm::vec3 BoundingBoxMin;
+    glm::vec3 BoundingBoxMax;
 };

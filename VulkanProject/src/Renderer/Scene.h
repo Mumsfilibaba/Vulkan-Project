@@ -61,8 +61,8 @@ struct FTriangle
 struct FTriangleMesh
 {
     // 0-32
-    glm::vec4 Min;
-    glm::vec4 Max;
+    glm::vec4 BoxMin;
+    glm::vec4 BoxMax;
     // 32-40
     uint32_t  StartTriangle;
     uint32_t  NumTriangles;

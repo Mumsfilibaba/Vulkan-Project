@@ -52,8 +52,8 @@ void FModelScene::Initialize()
     // Mesh Data
     m_TriangleMeshes.push_back(
     {
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(Mesh.BoundingBoxMin, 0.0f),
+        glm::vec4(Mesh.BoundingBoxMax, 0.0f),
         0,
         static_cast<uint32_t>(m_Triangles.size()),
         // Padding
