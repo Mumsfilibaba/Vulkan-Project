@@ -175,7 +175,7 @@ void FCornellBoxScene::Initialize()
         glm::vec4(-2.0f, 0.0f,  2.0f, 0.0f),
         glm::vec4( 0.0f, 4.0f,  0.0f, 0.0f),
         glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
-        0
+        4
     });
     m_Quads.push_back(
     {

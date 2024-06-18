@@ -8,11 +8,12 @@
 #define BACKGROUND_TYPE_GRADIENT 1
 #define BACKGROUND_TYPE_SKYBOX 2
 #define NUM_THREADS 16
-#define MAX_DEPTH 3
+#define MAX_DEPTH 64
 #define SIGMA 0.0001
 #define GAMMA 2.2
 #define USE_RAY_OFFSET 0
 #define ENABLE_QUAD_BACK_FACE_CULLING 1
+#define ENABLE_TRIANGLE_BACK_FACE_CULLING 1
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
@@ -208,8 +209,8 @@ void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
 
     float DdotN = dot(Ray.Direction, Normal);
 
-#if ENABLE_QUAD_BACK_FACE_CULLING
     // Back-face culling: skip if the dot product is positive (back face)
+#if ENABLE_QUAD_BACK_FACE_CULLING
     if (DdotN > 0.0) 
     {
         return;
@@ -342,13 +343,23 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in Ray Ray, 
 
     // Compute the determinant between the 
     vec3  DirectionCrossEdge2 = cross(Ray.Direction, Edge2);
-    float Determinant        = dot(Edge1, DirectionCrossEdge2);
+    float Determinant = dot(Edge1, DirectionCrossEdge2);
 
     // If the determinant is almost zero that means that the Ray is parallell to the triangle and we early return
     if (abs(Determinant) < SIGMA) 
     {
         return;
     }
+
+    // Back-face culling: skip if the dot product is positive (back face)
+    vec3 Normal = normalize(cross(Edge1, Edge2));
+    float DdotN = dot(Ray.Direction, Normal);
+#if ENABLE_TRIANGLE_BACK_FACE_CULLING
+    if (DdotN > 0.0)
+    {
+        return;
+    }
+#endif
 
     // Calculate the inverse determinant
     float InvDeterminant = 1.0 / Determinant;
@@ -379,8 +390,7 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in Ray Ray, 
         PayLoad.MaterialIndex = MaterialIndex;
         PayLoad.Position      = Ray.Origin + t * Ray.Direction;
         
-        vec3 Normal = normalize(cross(Edge1, Edge2));
-        if (dot(Ray.Direction, Normal) < 0.0) 
+        if (DdotN < 0.0) 
         {
             PayLoad.Normal    = Normal;
             PayLoad.FrontFace = true;
@@ -705,6 +715,10 @@ void main()
                 vec3 UnitDirection = normalize(Ray.Direction);
                 vec4 SkyboxColor   = texture(uSkybox, UnitDirection);
                 BackGroundColor = SkyboxColor.rgb;
+            }
+            else
+            {
+                BackGroundColor = vec3(0.0, 0.0, 0.0);
             }
 
             // Add this hit color
