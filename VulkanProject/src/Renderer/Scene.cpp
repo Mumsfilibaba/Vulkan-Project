@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "Model.h"
 
 FScene::FScene()
     : m_Quads()
@@ -13,7 +14,61 @@ FScene::FScene()
     m_Spheres.reserve(MAX_SPHERES);
     m_Planes.reserve(MAX_PLANES);
     m_Materials.reserve(MAX_MATERIALS);
+    m_Triangles.reserve(MAX_TRIANGLES);
+    m_Vertices.reserve(MAX_TRIANGLES * 3);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Triangle Model
+
+void FModelScene::Initialize()
+{
+    // Settings
+    m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
+    
+    // Setup Camera
+    Reset();
+    
+    // Load Model
+    FMesh Mesh;
+    Mesh.LoadFromFile("res/models/queen.obj");
+
+    // Copy vertices
+    m_Vertices = Mesh.m_Positions;
+    
+    // Convert indices to triangle
+    for (uint32_t i = 0; i < Mesh.m_Indicies.size(); i += 3)
+    {
+        m_Triangles.push_back(FTriangle
+        {
+            Mesh.m_Indicies[i + 0],
+            Mesh.m_Indicies[i + 1],
+            Mesh.m_Indicies[i + 2],
+            0
+        });
+    }
+    
+    // Materials
+    m_Materials.push_back(
+    {
+        glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        MATERIAL_LAMBERTIAN,
+        1.0f,
+        0.0f,
+    });
+}
+
+void FModelScene::Reset()
+{
+    m_Camera.Reset();
+
+    glm::vec3 translation(0.0f, 0.5f, 0.0f);
+    m_Camera.Move(translation);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Spheres
 
 void FSphereScene::Initialize()
 {
@@ -70,13 +125,15 @@ void FSphereScene::Reset()
 {
     m_Camera.Reset();
 
-    glm::vec3 translation(0.0f, 0.0f, 1.0f);
+    glm::vec3 translation(0.0f, 1.0f, 0.75f);
     m_Camera.Move(translation);
 
     glm::vec3 rotation(glm::pi<float>() / 4.0f, 0.0f, 0.0f);
     m_Camera.Rotate(rotation);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// CornellBox
 
 void FCornellBoxScene::Initialize()
 {
@@ -199,7 +256,7 @@ void FCornellBoxScene::Reset()
 {
     m_Camera.Reset();
 
-    glm::vec3 translation(0.0f, 2.5f, 5.0f);
+    glm::vec3 translation(0.0f, 3.5f, 5.0f);
     m_Camera.Move(translation);
 
     glm::vec3 rotation(glm::pi<float>() / 8.0f, glm::pi<float>(), 0.0f);

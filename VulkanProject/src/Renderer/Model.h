@@ -58,6 +58,27 @@ struct FVertexHasher
     }
 };
 
+struct FVertexRT
+{
+    // TODO: Pack this better
+    glm::vec4 Position;
+    
+    bool operator==(const FVertexRT& other) const
+    {
+        return Position == other.Position;
+    }
+};
+
+struct FVertexRTHasher
+{
+    size_t operator()(const FVertexRT& vertex) const
+    {
+        using namespace std;
+        return hash<glm::vec4>()(vertex.Position);
+    }
+};
+
+
 class FModel
 {
 public:
@@ -90,4 +111,12 @@ private:
     FBuffer* m_pIndexBuffer = nullptr;
     uint32_t m_VertexCount = 0;
     uint32_t m_IndexCount = 0;
+};
+
+struct FMesh
+{
+    bool LoadFromFile(const std::string& filepath);
+    
+    std::vector<FVertexRT> m_Positions;
+    std::vector<uint32_t>  m_Indicies;
 };

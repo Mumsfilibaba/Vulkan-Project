@@ -97,3 +97,65 @@ bool FModel::LoadFromFile(const std::string& filepath, FDevice* pDevice, FDevice
     m_IndexCount  = indices.size();
     return true;
 }
+
+bool FMesh::LoadFromFile(const std::string& filepath)
+{
+    tinyobj::attrib_t                attrib;
+    std::vector<tinyobj::shape_t>    shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string                      warning;
+    std::string                      error;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, filepath.c_str()))
+    {
+        std::cout << "Failed to load model '" << filepath << "'" << std::endl;
+        if (!warning.empty())
+        {
+            std::cout << "  Warning: " << warning << std::endl;
+        }
+        if (!error.empty())
+        {
+            std::cout << "  Error: " << error << std::endl;
+        }
+        
+        return false;
+    }
+    else
+    {
+        std::cout << "Loaded model '" << filepath << "'" << std::endl;
+        if (!warning.empty())
+        {
+            std::cout << "  Warning: " << warning << std::endl;
+        }
+    }
+    
+    std::vector<FVertexRT> vertices;
+    std::vector<uint32_t>  indices;
+    std::unordered_map<FVertexRT, uint32_t, FVertexRTHasher> uniqueVertices = {};
+    for (const auto& shape : shapes)
+    {
+        for (const auto& index : shape.mesh.indices)
+        {
+            FVertexRT vertex;
+            vertex.Position =
+            {
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2],
+                0.0f
+            };
+
+            if (uniqueVertices.count(vertex) == 0)
+            {
+                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+                vertices.push_back(vertex);
+            }
+
+            indices.push_back(uniqueVertices[vertex]);
+        }
+    }
+    
+    m_Positions = std::move(vertices);
+    m_Indicies  = std::move(indices);
+    return true;
+}

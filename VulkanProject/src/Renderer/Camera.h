@@ -12,6 +12,11 @@ struct FCameraBuffer
 class FCamera
 {
 public:
+    FCamera()
+    {
+        Reset();
+    }
+    
     void Move(const glm::vec3& translation)
     {
         m_Position = m_Position + translation.x * m_Right + translation.y * m_Up + m_Forward * translation.z;
@@ -42,7 +47,7 @@ public:
 
     void Reset()
     {
-        m_Position = glm::vec3(0.0f, 1.0f, -1.25f);
+        m_Position = glm::vec3(0.0f, 0.0f, -1.0f);
         m_Rotation = glm::vec3(0.0f, 0.0f, 0.0f);
         m_Forward  = glm::vec3(0.0f, 0.0f, 1.0f);
         m_Up       = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -75,13 +80,13 @@ public:
     }
     
 private:
-    glm::mat4 m_View       = glm::identity<glm::mat4>();
+    glm::mat4 m_View = glm::identity<glm::mat4>();
     glm::mat4 m_Projection = glm::identity<glm::mat4>();
-    glm::vec3 m_Position   = glm::vec3(0.0f, 1.0f, -1.25f);
-    glm::vec3 m_Rotation   = glm::vec3(0.0f, 0.0f, 0.0f);
-    glm::vec3 m_Forward    = glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::vec3 m_Up         = glm::vec3(0.0f, 1.0f, 0.0f);
-    glm::vec3 m_Right      = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 m_Position;
+    glm::vec3 m_Rotation;
+    glm::vec3 m_Forward;
+    glm::vec3 m_Up;
+    glm::vec3 m_Right;
     
     float m_FieldOfView = glm::pi<float>() / 2.0f;
 

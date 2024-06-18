@@ -22,13 +22,38 @@
 
 FRayTracer::FRayTracer()
     : m_pDevice(nullptr)
-    , m_pPipeline(nullptr)
+    , m_pSwapchain(nullptr)
+    , m_pPipeline()
+    , m_pPipelineLayout(nullptr)
+    , m_pDescriptorSetLayout(nullptr)
     , m_pDeviceAllocator(nullptr)
+    , m_pDescriptorPool(nullptr)
+    , m_pDescriptorSet(nullptr)
     , m_CommandBuffers()
+    , m_TimestampQueries()
+    , m_pCameraBuffer(nullptr)
+    , m_pRandomBuffer(nullptr)
+    , m_pSceneBuffer(nullptr)
+    , m_pSphereBuffer(nullptr)
+    , m_pPlaneBuffer(nullptr)
+    , m_pQuadBuffer(nullptr)
+    , m_pTriangleBuffer(nullptr)
+    , m_pVertexBuffer(nullptr)
+    , m_pMaterialBuffer(nullptr)
+    , m_pAccumulationTexture(nullptr)
+    , m_pAccumulationTextureView(nullptr)
     , m_pSceneTexture(nullptr)
     , m_pSceneTextureView(nullptr)
     , m_pSceneTextureDescriptorSet(nullptr)
-    , m_bResetImage(true)
+    , m_pSkybox(nullptr)
+    , m_pSkyboxSampler(nullptr)
+    , m_pScene(nullptr)
+    , m_NumSamples(0)
+    , m_bResetImage(false)
+    , m_LastCPUTime(0.0f)
+    , m_LastGPUTime(0.0f)
+    , m_ViewportWidth(0)
+    , m_ViewportHeight(0)
 {
 }
 
@@ -69,67 +94,92 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     m_pScene->Initialize();
 
     // Create DescriptorSetLayout
-    constexpr uint32_t numBindings = 10;
+    constexpr uint32_t numBindings = 12;
     VkDescriptorSetLayoutBinding bindings[numBindings];
+    
+    // Output Image
     bindings[0].binding            = 0;
     bindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     bindings[0].descriptorCount    = 1;
     bindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[0].pImmutableSamplers = nullptr;
 
+    // Accumulation image
     bindings[1].binding            = 1;
     bindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     bindings[1].descriptorCount    = 1;
     bindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[1].pImmutableSamplers = nullptr;
     
+    // Skybox
     bindings[2].binding            = 2;
-    bindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     bindings[2].descriptorCount    = 1;
     bindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[2].pImmutableSamplers = nullptr;
     
+    // Camera Buffer
     bindings[3].binding            = 3;
     bindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     bindings[3].descriptorCount    = 1;
     bindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[3].pImmutableSamplers = nullptr;
-
+    
+    // Random Buffer
     bindings[4].binding            = 4;
     bindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     bindings[4].descriptorCount    = 1;
     bindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[4].pImmutableSamplers = nullptr;
 
+    // Scene Buffer
     bindings[5].binding            = 5;
-    bindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     bindings[5].descriptorCount    = 1;
     bindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[5].pImmutableSamplers = nullptr;
 
+    // Quads Buffer
     bindings[6].binding            = 6;
     bindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     bindings[6].descriptorCount    = 1;
     bindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[6].pImmutableSamplers = nullptr;
 
+    // Spheres Buffer
     bindings[7].binding            = 7;
     bindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     bindings[7].descriptorCount    = 1;
     bindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[7].pImmutableSamplers = nullptr;
-    
+
+    // Planes Buffer
     bindings[8].binding            = 8;
     bindings[8].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     bindings[8].descriptorCount    = 1;
     bindings[8].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[8].pImmutableSamplers = nullptr;
     
+    // Materials Buffer
     bindings[9].binding            = 9;
-    bindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     bindings[9].descriptorCount    = 1;
     bindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[9].pImmutableSamplers = nullptr;
+
+    // Vertex Buffer
+    bindings[10].binding            = 10;
+    bindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[10].descriptorCount    = 1;
+    bindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[10].pImmutableSamplers = nullptr;
+    
+    // Triangles Buffer
+    bindings[11].binding            = 11;
+    bindings[11].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[11].descriptorCount    = 1;
+    bindings[11].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[11].pImmutableSamplers = nullptr;
 
     FDescriptorSetLayoutParams descriptorSetLayoutParams;
     descriptorSetLayoutParams.pBindings   = bindings;
@@ -160,10 +210,10 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
    
     // Create DescriptorPool
     FDescriptorPoolParams poolParams;
-    poolParams.NumUniformBuffers        = 3;
+    poolParams.NumUniformBuffers        = 4;
     poolParams.NumStorageImages         = 2;
-    poolParams.NumStorageBuffers        = 4;
-    poolParams.NumCombinedImageSamplers = 1;
+    poolParams.NumStorageBuffers        = 8;
+    poolParams.NumCombinedImageSamplers = 4;
     poolParams.MaxSets                  = 1;
     
     m_pDescriptorPool = FDescriptorPool::Create(m_pDevice, poolParams);
@@ -222,6 +272,24 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
 
     m_pPlaneBuffer = FBuffer::Create(m_pDevice, planeBufferParams, m_pDeviceAllocator);
     assert(m_pPlaneBuffer != nullptr);
+
+    // VertexBuffer
+    FBufferParams vertexBufferParams;
+    vertexBufferParams.Size             = sizeof(FVertexRT) * MAX_TRIANGLES * 3;
+    vertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    vertexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pVertexBuffer = FBuffer::Create(m_pDevice, vertexBufferParams, m_pDeviceAllocator);
+    assert(m_pVertexBuffer != nullptr);
+    
+    // TriangleBuffer
+    FBufferParams triangleBufferParams;
+    triangleBufferParams.Size             = sizeof(FTriangle) * MAX_TRIANGLES;
+    triangleBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    triangleBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pTriangleBuffer = FBuffer::Create(m_pDevice, triangleBufferParams, m_pDeviceAllocator);
+    assert(m_pTriangleBuffer != nullptr);
 
     // MaterialBuffer
     FBufferParams materialBufferParams;
@@ -353,8 +421,8 @@ void FRayTracer::Tick(float deltaTime)
     pCurrentTimestampQuery->Reset();
 
     const double timestampPeriod = double(m_pDevice->GetTimestampPeriod());
-    const double gpuTiming       = (double(timestamps[1]) - double(timestamps[0])) * timestampPeriod;
-    const double gpuTimingMS     = gpuTiming / 1000000.0;
+    const double gpuTiming   = (double(timestamps[1]) - double(timestamps[0])) * timestampPeriod;
+    const double gpuTimingMS = gpuTiming / 1000000.0;
     m_LastGPUTime = static_cast<float>(gpuTimingMS);
 
     pCurrentCommandBuffer->Begin();
@@ -388,13 +456,13 @@ void FRayTracer::Tick(float deltaTime)
         m_NumSamples++;
     }
 
-    // Update FCameraBuffer
+    // Update CameraBuffer
     FCameraBuffer cameraBuffer = {};
     cameraBuffer.Projection = m_pScene->m_Camera.GetProjectionMatrix();
     cameraBuffer.View       = m_pScene->m_Camera.GetViewMatrix();
     cameraBuffer.Position   = glm::vec4(m_pScene->m_Camera.GetPosition(), 0.0f);
     cameraBuffer.Forward    = glm::vec4(m_pScene->m_Camera.GetForward(), 0.0f);
-
+    
     pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(FCameraBuffer), &cameraBuffer);
 
     // Update RandomBuffer
@@ -415,6 +483,7 @@ void FRayTracer::Tick(float deltaTime)
     sceneBuffer.NumSpheres     = m_pScene->m_Spheres.size();
     sceneBuffer.NumPlanes      = m_pScene->m_Planes.size();
     sceneBuffer.NumMaterials   = m_pScene->m_Materials.size();
+    sceneBuffer.NumTriangles   = m_pScene->m_Triangles.size();
     sceneBuffer.BackgroundType = m_pScene->m_Settings.BackgroundType;
     sceneBuffer.Exposure       = m_pScene->m_Settings.Exposure;
 
@@ -431,6 +500,14 @@ void FRayTracer::Tick(float deltaTime)
     if (!m_pScene->m_Planes.empty())
     {
         pCurrentCommandBuffer->UpdateBuffer(m_pPlaneBuffer, 0, sizeof(FPlane) * m_pScene->m_Planes.size(), m_pScene->m_Planes.data());
+    }
+    if (!m_pScene->m_Vertices.empty())
+    {
+        pCurrentCommandBuffer->UpdateBuffer(m_pVertexBuffer, 0, sizeof(FVertexRT) * m_pScene->m_Vertices.size(), m_pScene->m_Vertices.data());
+    }
+    if (!m_pScene->m_Triangles.empty())
+    {
+        pCurrentCommandBuffer->UpdateBuffer(m_pTriangleBuffer, 0, sizeof(FTriangle) * m_pScene->m_Triangles.size(), m_pScene->m_Triangles.data());
     }
     if (!m_pScene->m_Materials.empty())
     {
@@ -534,6 +611,7 @@ void FRayTracer::OnRenderUI()
             {
                 "Spheres",
                 "CornellBox",
+                "Triangles"
             };
 
             static int currentScene = 0;
@@ -556,6 +634,15 @@ void FRayTracer::OnRenderUI()
                 {
                     SAFE_DELETE(m_pScene);
                     m_pScene = new FCornellBoxScene();
+                    m_pScene->Initialize();
+                    m_bResetImage = true;
+                }
+                
+                // Change to Triangles-scene
+                if (currentScene == 2)
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FModelScene();
                     m_pScene->Initialize();
                     m_bResetImage = true;
                 }
@@ -691,14 +778,16 @@ void FRayTracer::OnRenderUI()
 
                 if (material.Type == MATERIAL_LAMBERTIAN)
                 {
-                    if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                    // if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                    if (ImGui::InputFloat3("Albedo", glm::value_ptr(material.Albedo)))
                     {
                         m_bResetImage = true;
                     }
                 }
                 else if (material.Type == MATERIAL_METAL)
                 {
-                    if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                    // if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                    if (ImGui::InputFloat3("Albedo", glm::value_ptr(material.Albedo)))
                     {
                         m_bResetImage = true;
                     }
@@ -710,14 +799,16 @@ void FRayTracer::OnRenderUI()
                 }
                 else if (material.Type == MATERIAL_EMISSIVE)
                 {
-                    if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.Emissive)))
+                    // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.Emissive)))
+                    if (ImGui::InputFloat3("Emissive", glm::value_ptr(material.Emissive)))
                     {
                         m_bResetImage = true;
                     }
                 }
                 else if (material.Type == MATERIAL_DIELECTRIC)
                 {
-                    if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                    // if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                    if (ImGui::InputFloat3("Albedo", glm::value_ptr(material.Albedo)))
                     {
                         m_bResetImage = true;
                     }
@@ -776,6 +867,8 @@ void FRayTracer::Release()
     SAFE_DELETE(m_pSceneBuffer);
     SAFE_DELETE(m_pQuadBuffer);
     SAFE_DELETE(m_pSphereBuffer);
+    SAFE_DELETE(m_pVertexBuffer);
+    SAFE_DELETE(m_pTriangleBuffer);
     SAFE_DELETE(m_pPlaneBuffer);
     SAFE_DELETE(m_pMaterialBuffer);
     
@@ -874,14 +967,16 @@ void FRayTracer::CreateDescriptorSet()
 
     m_pDescriptorSet->BindStorageImage(m_pSceneTextureView->GetImageView(), 0);
     m_pDescriptorSet->BindStorageImage(m_pAccumulationTextureView->GetImageView(), 1);
-    m_pDescriptorSet->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 2);
-    m_pDescriptorSet->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 3);
-    m_pDescriptorSet->BindUniformBuffer(m_pSceneBuffer->GetBuffer(), 4);
-    m_pDescriptorSet->BindStorageBuffer(m_pQuadBuffer->GetBuffer(), 5);
-    m_pDescriptorSet->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 6);
-    m_pDescriptorSet->BindStorageBuffer(m_pPlaneBuffer->GetBuffer(), 7);
-    m_pDescriptorSet->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
-    m_pDescriptorSet->BindCombinedImageSampler(m_pSkybox->GetTextureView()->GetImageView(), m_pSkyboxSampler->GetSampler(), 9);
+    m_pDescriptorSet->BindCombinedImageSampler(m_pSkybox->GetTextureView()->GetImageView(), m_pSkyboxSampler->GetSampler(), 2);
+    m_pDescriptorSet->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 3);
+    m_pDescriptorSet->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 4);
+    m_pDescriptorSet->BindUniformBuffer(m_pSceneBuffer->GetBuffer(), 5);
+    m_pDescriptorSet->BindStorageBuffer(m_pQuadBuffer->GetBuffer(), 6);
+    m_pDescriptorSet->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 7);
+    m_pDescriptorSet->BindStorageBuffer(m_pPlaneBuffer->GetBuffer(), 8);
+    m_pDescriptorSet->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 9);
+    m_pDescriptorSet->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 10);
+    m_pDescriptorSet->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 11);
 }
 
 void FRayTracer::ReleaseDescriptorSet()

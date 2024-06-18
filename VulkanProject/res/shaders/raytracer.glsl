@@ -4,30 +4,25 @@
 #include "math.glsl"
 #include "tonemap.glsl"
 
-#define BACKGROUND_TYPE_NONE (0)
-#define BACKGROUND_TYPE_GRADIENT (1)
-#define BACKGROUND_TYPE_SKYBOX (2)
-
-#define NUM_THREADS (16)
-#define MAX_DEPTH   (1024)
-
-#define SIGMA (0.0001)
-
-#define GAMMA (2.2)
-
-#define USE_RAY_OFFSET (0)
+#define BACKGROUND_TYPE_NONE 0
+#define BACKGROUND_TYPE_GRADIENT 1
+#define BACKGROUND_TYPE_SKYBOX 2
+#define NUM_THREADS 16
+#define MAX_DEPTH 3
+#define SIGMA 0.0001
+#define GAMMA 2.2
+#define USE_RAY_OFFSET 0
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
 layout (binding = 0, rgba32f) uniform image2D uOutput;
 layout (binding = 1, rgba32f) uniform image2D uAccumulation;
-
-layout (binding = 9) uniform samplerCube uSkybox;
+layout (binding = 2) uniform samplerCube uSkybox;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 /* Global uniforms */
 
-layout(binding = 2) uniform CameraBufferObject 
+layout(binding = 3) uniform CameraBufferObject 
 {
     mat4 Projection;
     mat4 View;
@@ -35,7 +30,7 @@ layout(binding = 2) uniform CameraBufferObject
     vec4 Forward;
 } uCamera;
 
-layout(binding = 3) uniform RandomBufferObject 
+layout(binding = 4) uniform RandomBufferObject 
 {
     uint FrameIndex;
     uint SampleIndex;
@@ -43,26 +38,28 @@ layout(binding = 3) uniform RandomBufferObject
     uint Padding0;
 } uRandom;
 
-layout(binding = 4) uniform SceneBufferObject 
+layout(binding = 5) uniform SceneBufferObject 
 {
+    // 0-16
     uint  NumQuads;
     uint  NumSpheres;
     uint  NumPlanes;
     uint  NumMaterials;
-    
+    // 16-28
+    uint  NumTriangles;
     uint  BackgroundType;
     float Exposure;
+    // Padding
     uint  Padding0;
-    uint  Padding1;
 } uScene;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 /* Scene objects */
 
-#define MATERIAL_LAMBERTIAN (1)
-#define MATERIAL_METAL      (2)
-#define MATERIAL_EMISSIVE   (3)
-#define MATERIAL_DIELECTRIC (4)
+#define MATERIAL_LAMBERTIAN 1
+#define MATERIAL_METAL 2
+#define MATERIAL_EMISSIVE 3
+#define MATERIAL_DIELECTRIC 4
 
 struct Material
 {
@@ -103,24 +100,47 @@ struct Plane
     uint Padding2;
 };
 
-layout(std430, binding = 5) buffer QuadBuffer
+struct VertexRT
+{
+    vec4 Position;
+};
+
+struct Triangle
+{
+    uint Index0;
+    uint Index1;
+    uint Index2;
+    uint Padding0;
+};
+
+layout(std430, binding = 6) buffer QuadBuffer
 {
     Quad Quads[];
 };
 
-layout(std430, binding = 6) buffer SphereBuffer
+layout(std430, binding = 7) buffer SphereBuffer
 {
     Sphere Spheres[];
 };
 
-layout(std430, binding = 7) buffer PlaneBuffer
+layout(std430, binding = 8) buffer PlaneBuffer
 {
     Plane Planes[];
 };
 
-layout(std430, binding = 8) buffer MaterialBuffer
+layout(std430, binding = 9) buffer MaterialBuffer
 {
     Material Materials[];
+};
+
+layout(std430, binding = 10) buffer VertexBuffer
+{
+    VertexRT Vertices[];
+};
+
+layout(std430, binding = 11) buffer TriangleBuffer
+{
+    Triangle Triangles[];
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -289,6 +309,65 @@ void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
     }
 }
 
+void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in Ray Ray, inout RayPayLoad PayLoad, uint MaterialIndex) 
+{
+    // Compute the triangle edges
+    vec3 Edge1 = Vertex1 - Vertex0;
+    vec3 Edge2 = Vertex2 - Vertex0;
+
+    // Compute the determinant between the 
+    vec3  DirectionCrossEdge2 = cross(Ray.Direction, Edge2);
+    float Determinant        = dot(Edge1, DirectionCrossEdge2);
+
+    // If the determinant is almost zero that means that the ray is parallell to the triangle and we early return
+    if (abs(Determinant) < SIGMA) 
+    {
+        return;
+    }
+
+    // Calculate the inverse determinant
+    float InvDeterminant = 1.0 / Determinant;
+
+    // Calculate vector from ray origin to vertex0
+    vec3 RayOriginToVertex0 = Ray.Origin - Vertex0;
+
+    // If u is outside the range [0, 1], the intersection point is outside the triangle
+    float u = InvDeterminant * dot(RayOriginToVertex0, DirectionCrossEdge2);
+    if (u < 0.0 || u > 1.0) 
+    {
+        return;
+    }
+
+    vec3 RayOriginToVertex0CrossEdge1 = cross(RayOriginToVertex0, Edge1);
+
+    float v = InvDeterminant * dot(Ray.Direction, RayOriginToVertex0CrossEdge1);
+    if (v < 0.0 || u + v > 1.0) 
+    {
+        return;
+    }
+
+    // At this stage we can compute t to find out where the intersection point is on the line.
+    float t = InvDeterminant * dot(Edge2, RayOriginToVertex0CrossEdge1);
+    if (t > PayLoad.MinT && t < PayLoad.MaxT && t < PayLoad.T) 
+    {
+        PayLoad.T             = t;
+        PayLoad.MaterialIndex = MaterialIndex;
+        PayLoad.Position      = Ray.Origin + t * Ray.Direction;
+        
+        vec3 Normal = normalize(cross(Edge1, Edge2));
+        if (dot(Ray.Direction, Normal) < 0.0) 
+        {
+            PayLoad.Normal    = Normal;
+            PayLoad.FrontFace = true;
+        }
+        else
+        {
+            PayLoad.Normal    = -Normal;
+            PayLoad.FrontFace = false;
+        }
+    }
+}
+
 bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
 {
     for (uint i = 0; i < uScene.NumQuads; i++)
@@ -309,6 +388,16 @@ bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
         HitPlane(Plane, Ray, PayLoad);
     }
 
+    for (uint i = 0; i < uScene.NumTriangles; i++)
+    {
+        Triangle Triangle = Triangles[i];
+        vec3 Pos0 = Vertices[Triangle.Index0].Position.xyz;
+        vec3 Pos1 = Vertices[Triangle.Index1].Position.xyz;
+        vec3 Pos2 = Vertices[Triangle.Index2].Position.xyz;
+
+        HitTriangle(Pos0, Pos1, Pos2, Ray, PayLoad, 0);
+    }
+
     if (PayLoad.T < PayLoad.MaxT)
     {
         return true;
@@ -319,22 +408,36 @@ bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
     }
 }
 
-void main()
+vec3 CalculateFilmTarget(ivec2 Pixel, ivec2 Size, vec2 Jitter)
 {
-    // Setup the camera
     vec3 CameraPosition = uCamera.Position.xyz;
     vec3 CamForward     = normalize(uCamera.Forward.xyz);
-    vec3 CamUp          = vec3(0.0, 1.0, 0.0);
+    
+    vec3 CamUp = vec3(0.0, 1.0, 0.0);
     CamUp = normalize(CamUp - dot(CamUp, CamForward) * CamForward);
     vec3 CamRight = normalize(cross(CamUp, CamForward));
-
-    const ivec2 Pixel = ivec2(gl_GlobalInvocationID.xy);
-    const ivec2 Size  = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
 
     float AspectRatio  = float(Size.x) / float(Size.y);
     vec2  FilmCorner   = vec2(-1.0, -1.0);
     float FilmDistance = 1.0;
     vec3  FilmCenter   = CameraPosition + (CamForward * FilmDistance);
+
+    // This puts the pixel coordinate in the center, similar to rasterization
+    vec2 PixelCenter = vec2(Pixel) + 0.5;
+
+    vec2 FilmUV = (PixelCenter + Jitter) / vec2(Size.xy);
+    FilmUV.y = 1.0 - FilmUV.y;
+    FilmUV   = FilmUV * 2.0;
+
+    vec2 FilmCoord = FilmCorner + FilmUV;
+    FilmCoord.x = FilmCoord.x * AspectRatio;
+    return FilmCenter + (CamRight * FilmCoord.x) + (CamUp * FilmCoord.y);
+}
+
+void main()
+{
+    const ivec2 Pixel = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 Size  = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
 
     // Jitter the camera each frame
     uint RandomSeed = InitRandom(uvec2(Pixel), uint(Size.x), uRandom.FrameIndex);
@@ -342,14 +445,8 @@ void main()
     vec2 Jitter = Halton23(uRandom.SampleIndex);
     Jitter = (Jitter * 2.0) - vec2(1.0);
 
-    vec2 FilmUV = (vec2(Pixel) + Jitter) / vec2(Size.xy);
-    FilmUV.y = 1.0 - FilmUV.y;
-    FilmUV   = FilmUV * 2.0;
-
-    vec2 FilmCoord = FilmCorner + FilmUV;
-    FilmCoord.x = FilmCoord.x * AspectRatio;
-
-    vec3 FilmTarget = FilmCenter + (CamRight * FilmCoord.x) + (CamUp * FilmCoord.y);
+    const vec3 CameraPosition = uCamera.Position.xyz;
+    const vec3 FilmTarget     = CalculateFilmTarget(Pixel, Size, Jitter);
 
     // Setup the first ray
     Ray Ray;
@@ -367,10 +464,10 @@ void main()
 
         if (TraceRay(Ray, PayLoad))
         {
-            const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials);
+            const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
             Material Material = Materials[MaterialIndex];
             
-            vec3 N        = normalize(PayLoad.Normal);            
+            vec3 N        = normalize(PayLoad.Normal);
             vec3 Emissive  = vec3(0.0);
             vec3 Origin    = vec3(0.0);
             vec3 Direction = vec3(0.0);
@@ -392,7 +489,7 @@ void main()
                 }*/
 
                 // Attenuate light
-                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.9));
+                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.99));
                 SampleColor = Albedo * SampleColor;
             }
             else if (Material.Type == MATERIAL_METAL)
@@ -408,7 +505,7 @@ void main()
             #endif
 
                 // Attenuate light
-                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.9));
+                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.99));
                 SampleColor = Albedo * SampleColor;
             }
             else if (Material.Type == MATERIAL_DIELECTRIC)
@@ -452,7 +549,7 @@ void main()
             #endif
 
                 // Attenuate light
-                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.9));
+                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.99));
                 SampleColor = Albedo * SampleColor;
             }
             else if (Material.Type == MATERIAL_EMISSIVE) 
@@ -462,13 +559,13 @@ void main()
                 SampleColor = SampleColor * Emissive;
 
                 // Emissive materials do not scatter
-                i = MAX_DEPTH;
+                break;
             }
             else
             {
                 // Invalid material
                 SampleColor = vec3(0.0);
-                i = MAX_DEPTH;
+                break;
             }
 
             // Setup the next ray
@@ -498,11 +595,9 @@ void main()
                 BackGroundColor = SkyboxColor.rgb;
             }
 
-            // Break the loop
-            i = MAX_DEPTH;
-
             // Add this hit color
             SampleColor = SampleColor * BackGroundColor;
+            break;
         }
     }
 

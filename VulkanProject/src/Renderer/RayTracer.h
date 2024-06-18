@@ -11,23 +11,25 @@ class FBuffer;
 
 struct FRandomBuffer
 {
-    uint32_t FrameIndex  = 0;
+    uint32_t FrameIndex = 0;
     uint32_t SampleIndex = 0;
-    uint32_t NumSamples  = 0;
-    uint32_t Padding0    = 0;
+    uint32_t NumSamples = 0;
+    uint32_t Padding0 = 0;
 };
 
 struct FSceneBuffer
 {
-    uint32_t NumQuads     = 0;
-    uint32_t NumSpheres   = 0;
-    uint32_t NumPlanes    = 0;
+    // 0-16
+    uint32_t NumQuads = 0;
+    uint32_t NumSpheres = 0;
+    uint32_t NumPlanes = 0;
     uint32_t NumMaterials = 0;
-
+    // 16-28
+    uint32_t NumTriangles = 0;
     uint32_t BackgroundType = 0;
-    float    Exposure       = 0.0f;
-    uint32_t Padding0       = 0;
-    uint32_t Padding1       = 0;
+    float    Exposure = 0.0f;
+    // Padding
+    uint32_t Padding0 = 0;
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -76,6 +78,8 @@ private:
     FBuffer* m_pSphereBuffer;
     FBuffer* m_pPlaneBuffer;
     FBuffer* m_pQuadBuffer;
+    FBuffer* m_pTriangleBuffer;
+    FBuffer* m_pVertexBuffer;
     FBuffer* m_pMaterialBuffer;
 
     // SceneTexture

@@ -1,19 +1,21 @@
 #pragma once
 #include "Camera.h"
+#include "Model.h"
 
-#define MAX_QUAD (128)
-#define MAX_SPHERES (32)
-#define MAX_PLANES (8)
-#define MAX_MATERIALS (32)
+#define MAX_QUAD 128
+#define MAX_SPHERES 32
+#define MAX_PLANES 8
+#define MAX_MATERIALS 32
+#define MAX_TRIANGLES 1024
 
-#define MATERIAL_LAMBERTIAN (1)
-#define MATERIAL_METAL (2)
-#define MATERIAL_EMISSIVE (3)
-#define MATERIAL_DIELECTRIC (4)
+#define MATERIAL_LAMBERTIAN 1
+#define MATERIAL_METAL 2
+#define MATERIAL_EMISSIVE 3
+#define MATERIAL_DIELECTRIC 4
 
-#define BACKGROUND_TYPE_NONE (0)
-#define BACKGROUND_TYPE_GRADIENT (1)
-#define BACKGROUND_TYPE_SKYBOX (2)
+#define BACKGROUND_TYPE_NONE 0
+#define BACKGROUND_TYPE_GRADIENT 1
+#define BACKGROUND_TYPE_SKYBOX 2
 
 struct FSphere
 {
@@ -44,6 +46,14 @@ struct FQuad
     uint32_t  Padding0;
     uint32_t  Padding1;
     uint32_t  Padding2;
+};
+
+struct FTriangle
+{
+    uint32_t Index0;
+    uint32_t Index1;
+    uint32_t Index2;
+    uint32_t Padding0;
 };
 
 struct FMaterial
@@ -77,6 +87,16 @@ struct FScene
     std::vector<FSphere>   m_Spheres;
     std::vector<FPlane>    m_Planes;
     std::vector<FMaterial> m_Materials;
+    
+    std::vector<FVertexRT> m_Vertices;
+    std::vector<FTriangle> m_Triangles;
+};
+
+struct FModelScene : public FScene
+{
+    virtual void Initialize() override;
+
+    virtual void Reset() override;
 };
 
 struct FSphereScene : public FScene
