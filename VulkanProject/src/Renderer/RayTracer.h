@@ -37,8 +37,17 @@ struct FSceneBuffer
     // 16-32
     uint32_t NumTriangleMeshes = 0;
     uint32_t BackgroundType = 0;
-    float    Exposure = 0.0f;
     uint32_t NumBounces = 4;
+    // Padding
+    uint32_t Padding0 = 0;
+};
+
+struct FTonemappingBuffer
+{
+    float    Exposure = 0.5f;
+    uint32_t Padding0 = 0;
+    uint32_t Padding1 = 0;
+    uint32_t Padding2 = 0;
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -94,6 +103,7 @@ private:
     FBuffer* m_pCameraBuffer;
     FBuffer* m_pRandomBuffer;
     FBuffer* m_pSceneBuffer;
+    FBuffer* m_pTonemappingBuffer;
     FBuffer* m_pSphereBuffer;
     FBuffer* m_pPlaneBuffer;
     FBuffer* m_pQuadBuffer;

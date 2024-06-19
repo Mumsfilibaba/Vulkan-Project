@@ -312,6 +312,12 @@ void FRayTracer::Tick(float deltaTime)
 
     pCurrentCommandBuffer->UpdateBuffer(m_pRandomBuffer, 0, sizeof(FRandomBuffer), &randomBuffer);
 
+    // Update Tonemapping Settings
+    FTonemappingBuffer tonemappingBuffer = {};
+    tonemappingBuffer.Exposure = m_pScene->m_Settings.Exposure;
+    
+    pCurrentCommandBuffer->UpdateBuffer(m_pTonemappingBuffer, 0, sizeof(FTonemappingBuffer), &tonemappingBuffer);
+    
     // Update Scene
     FSceneBuffer sceneBuffer = {};
     sceneBuffer.NumQuads          = m_pScene->m_Quads.size();
@@ -320,7 +326,6 @@ void FRayTracer::Tick(float deltaTime)
     sceneBuffer.NumMaterials      = m_pScene->m_Materials.size();
     sceneBuffer.NumTriangleMeshes = m_pScene->m_TriangleMeshes.size();
     sceneBuffer.BackgroundType    = m_pScene->m_Settings.BackgroundType;
-    sceneBuffer.Exposure          = m_pScene->m_Settings.Exposure;
     sceneBuffer.NumBounces        = m_pScene->m_Settings.NumBounces;
 
     pCurrentCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(FSceneBuffer), &sceneBuffer);
@@ -778,6 +783,7 @@ void FRayTracer::Release()
     SAFE_DELETE(m_pCameraBuffer);
     SAFE_DELETE(m_pRandomBuffer);
     SAFE_DELETE(m_pSceneBuffer);
+    SAFE_DELETE(m_pTonemappingBuffer);
     SAFE_DELETE(m_pQuadBuffer);
     SAFE_DELETE(m_pSphereBuffer);
     SAFE_DELETE(m_pVertexBuffer);
@@ -945,7 +951,7 @@ void FRayTracer::CreateRayTracingResources()
 void FRayTracer::CreateTonemappingResources()
 {
     // Create Tonemapping DescriptorSetLayout
-    constexpr uint32_t numTonemappingBindings = 1;
+    constexpr uint32_t numTonemappingBindings = 2;
     VkDescriptorSetLayoutBinding tonemappingBindings[numTonemappingBindings];
     
     // Output Image
@@ -956,11 +962,11 @@ void FRayTracer::CreateTonemappingResources()
     tonemappingBindings[0].pImmutableSamplers = nullptr;
 
     // Accumulation image
-    // tonemappingBindings[1].binding            = 1;
-    // tonemappingBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    // tonemappingBindings[1].descriptorCount    = 1;
-    // tonemappingBindings[1].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-    // tonemappingBindings[1].pImmutableSamplers = nullptr;
+    tonemappingBindings[1].binding            = 1;
+    tonemappingBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    tonemappingBindings[1].descriptorCount    = 1;
+    tonemappingBindings[1].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+    tonemappingBindings[1].pImmutableSamplers = nullptr;
     
     FDescriptorSetLayoutParams tonemappingDescriptorSetLayoutParams;
     tonemappingDescriptorSetLayoutParams.pBindings   = tonemappingBindings;
@@ -1041,6 +1047,15 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pSceneBuffer = FBuffer::Create(m_pDevice, sceneBufferParams, m_pDeviceAllocator);
     assert(m_pSceneBuffer != nullptr);
+    
+    // SceneBuffer
+    FBufferParams tonemappingBufferParams;
+    tonemappingBufferParams.Size             = sizeof(FTonemappingBuffer);
+    tonemappingBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    tonemappingBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pTonemappingBuffer = FBuffer::Create(m_pDevice, tonemappingBufferParams, m_pDeviceAllocator);
+    assert(m_pTonemappingBuffer != nullptr);
   
     // QuadBuffer
     FBufferParams quadBufferParams;
@@ -1146,11 +1161,13 @@ void FRayTracer::CreateDescriptorSet()
     assert(m_pTonemappingDescriptorSet0 != nullptr);
 
     m_pTonemappingDescriptorSet0->BindCombinedImageSampler(m_pSceneTextureView0->GetImageView(), m_pTonemapSampler->GetSampler(), 0);
+    m_pTonemappingDescriptorSet0->BindUniformBuffer(m_pTonemappingBuffer->GetBuffer(), 1);
     
     m_pTonemappingDescriptorSet1 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pTonemappingDescriptorSetLayout);
     assert(m_pTonemappingDescriptorSet1 != nullptr);
 
     m_pTonemappingDescriptorSet1->BindCombinedImageSampler(m_pSceneTextureView1->GetImageView(), m_pTonemapSampler->GetSampler(), 0);
+    m_pTonemappingDescriptorSet1->BindUniformBuffer(m_pTonemappingBuffer->GetBuffer(), 1);
 }
 
 void FRayTracer::ReleaseDescriptorSets()

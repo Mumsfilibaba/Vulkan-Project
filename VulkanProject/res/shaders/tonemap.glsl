@@ -6,6 +6,16 @@ layout(location = 0) out vec4 outColor;
 
 layout(binding = 0) uniform sampler2D sceneTexture;
 
+layout(binding = 1) uniform SettingsBufferObject 
+{
+    // 0-4
+    float Exposure;
+    // Padding
+    uint Padding0;
+    uint Padding1;
+    uint Padding2;
+} uSettings;
+
 // ACES tone mapping curve fit to go from HDR to LDR
 //https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
 vec3 ACESFilm(vec3 x)
@@ -39,7 +49,16 @@ vec3 LinearToSRGB(vec3 LinearColor)
 void main()
 {
     vec3 Color = texture(sceneTexture, inFragCoord).rgb;
+
+    // apply exposure
+    Color *= uSettings.Exposure;
+    
+    // tonemap
     Color = ACESFilm(Color);
+
+    // convert to sRGB
     Color = LinearToSRGB(Color);
+
+    // output image
     outColor = vec4(Color, 1.0);
 }

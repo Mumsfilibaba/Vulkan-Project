@@ -55,15 +55,16 @@ layout(binding = 4) uniform RandomBufferObject
 layout(binding = 5) uniform SceneBufferObject 
 {
     // 0-16
-    uint  NumQuads;
-    uint  NumSpheres;
-    uint  NumPlanes;
-    uint  NumMaterials;
-    // 16-32
-    uint  NumTriangleMeshes;
-    uint  BackgroundType;
-    float Exposure;
-    uint  NumBounces;
+    uint NumQuads;
+    uint NumSpheres;
+    uint NumPlanes;
+    uint NumMaterials;
+    // 16-28
+    uint NumTriangleMeshes;
+    uint BackgroundType;
+    uint NumBounces;
+    // Padding
+    uint Padding0;
 } uScene;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/

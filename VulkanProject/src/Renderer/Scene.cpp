@@ -8,7 +8,7 @@ FScene::FScene()
     , m_Materials()
     , m_Settings()
 {
-    m_Settings.Exposure    = 1.0f;
+    m_Settings.Exposure    = 0.5f;
     m_Settings.NumBounces  = 4;
     m_Settings.FieldOfView = 90.0f;
 
@@ -135,7 +135,7 @@ void FSphereScene::Initialize()
         0.0f,
     });
     
-#if 0
+#if 0 // Disabled for now, all materials use a diffuse only model
     m_Materials.push_back(
     {
         glm::vec4(0.8f, 0.8f, 0.0f, 1.0f),
@@ -188,7 +188,7 @@ void FSphereScene::Reset()
 void FCornellBoxScene::Initialize()
 {
     // Settings
-    m_Settings.BackgroundType = BACKGROUND_TYPE_NONE;
+    m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
     
     // Setup Camera
     Reset();
@@ -208,6 +208,8 @@ void FCornellBoxScene::Initialize()
         glm::vec4( 4.0f,  0.0f,  0.0f, 0.0f),
         0
     });
+
+#if 0 // NOTE: Disabled to let some light into the box for now
     m_Quads.push_back(
     {
         glm::vec4(-2.0f, 0.0f,  2.0f, 0.0f),
@@ -215,6 +217,8 @@ void FCornellBoxScene::Initialize()
         glm::vec4( 4.0f, 0.0f,  0.0f, 0.0f),
         4
     });
+#endif
+    
     m_Quads.push_back(
     {
         glm::vec4(-2.0f, 4.0f,  2.0f, 0.0f),
@@ -308,7 +312,7 @@ void FCornellBoxScene::Initialize()
         1.5f,
     });
     
-#if 0
+#if 0 // Disabled for now, all materials use a diffuse only model
     m_Materials.push_back(
     {
         glm::vec4(0.73f, 0.73f, 0.73f, 1.0f),
