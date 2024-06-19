@@ -1,7 +1,7 @@
 #ifndef MATH_H
 #define MATH_H
 
-#define PI (3.14159265358979);
+#define PI 3.14159265358979
 
 vec3 RealReflect(vec3 v, vec3 n) 
 {

@@ -3,10 +3,19 @@
 
 struct FCameraBuffer
 {
+    // 0-64
     glm::mat4 Projection;
+    // 64-128
     glm::mat4 View;
+    // 128-160
     glm::vec4 Position;
     glm::vec4 Forward;
+    // 160-164
+    float FieldOfViewDegrees;
+    // Padding
+    uint32_t Padding0;
+    uint32_t Padding1;
+    uint32_t Padding2;
 };
 
 class FCamera
@@ -41,8 +50,9 @@ public:
 
     void Update(float fovDegrees, float width, float height, float near, float far)
     {
-        m_View       = glm::lookAtLH(m_Position, m_Position + m_Forward, m_Up);
-        m_Projection = glm::perspectiveFovLH(glm::radians(fovDegrees), width, height, near, far);
+        m_FieldOfView = glm::radians(fovDegrees);
+        m_View        = glm::lookAtLH(m_Position, m_Position + m_Forward, m_Up);
+        m_Projection  = glm::perspectiveFovLH(m_FieldOfView, width, height, near, far);
     }
 
     void Reset()
@@ -79,6 +89,11 @@ public:
         return m_Forward;
     }
     
+    float GetFieldOfView() const
+    {
+        return m_FieldOfView;
+    }
+    
 private:
     glm::mat4 m_View = glm::identity<glm::mat4>();
     glm::mat4 m_Projection = glm::identity<glm::mat4>();
@@ -87,7 +102,5 @@ private:
     glm::vec3 m_Forward;
     glm::vec3 m_Up;
     glm::vec3 m_Right;
-    
-    float m_FieldOfView = glm::pi<float>() / 2.0f;
-
+    float     m_FieldOfView = glm::pi<float>() / 2.0f;
 };

@@ -7,29 +7,40 @@
 #define BACKGROUND_TYPE_NONE 0
 #define BACKGROUND_TYPE_GRADIENT 1
 #define BACKGROUND_TYPE_SKYBOX 2
+
 #define NUM_THREADS 16
-#define MAX_DEPTH 64
+#define MAX_DEPTH 1024
 #define SIGMA 0.0001
 #define GAMMA 2.2
-#define USE_RAY_OFFSET 0
+
+#define ENABLE_RAY_OFFSET 0
 #define ENABLE_QUAD_BACK_FACE_CULLING 1
-#define ENABLE_TRIANGLE_BACK_FACE_CULLING 1
+#define ENABLE_TRIANGLE_BACK_FACE_CULLING 0
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
 layout (binding = 0, rgba32f) uniform image2D uOutput;
 layout (binding = 1, rgba32f) uniform image2D uAccumulation;
-layout (binding = 2) uniform samplerCube uSkybox;
+layout (binding = 2)          uniform samplerCube uSkybox;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 /* Global uniforms */
 
 layout(binding = 3) uniform CameraBufferObject 
 {
+    // 0-64
     mat4 Projection;
+    // 64-128
     mat4 View;
+    // 128-160
     vec4 Position;
     vec4 Forward;
+    // 160-164
+    float FieldOfViewDegrees;
+    // Padding
+    uint Padding0;
+    uint Padding1;
+    uint Padding2;
 } uCamera;
 
 layout(binding = 4) uniform RandomBufferObject 
@@ -47,12 +58,11 @@ layout(binding = 5) uniform SceneBufferObject
     uint  NumSpheres;
     uint  NumPlanes;
     uint  NumMaterials;
-    // 16-28
+    // 16-32
     uint  NumTriangleMeshes;
     uint  BackgroundType;
     float Exposure;
-    // Padding
-    uint  Padding0;
+    uint  NumBounces;
 } uScene;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -63,7 +73,7 @@ layout(binding = 5) uniform SceneBufferObject
 #define MATERIAL_EMISSIVE 3
 #define MATERIAL_DIELECTRIC 4
 
-struct Material
+struct FMaterial
 {
     vec4  Albedo;
     vec4  Emissive;
@@ -73,7 +83,7 @@ struct Material
     uint  Padding1;
 };
 
-struct Quad
+struct FQuad
 {
     vec4 Position;
     vec4 Edge0;
@@ -84,7 +94,7 @@ struct Quad
     uint Padding2;
 };
 
-struct Sphere
+struct FSphere
 {
     vec4 PositionAndRadius;
     uint MaterialIndex;
@@ -93,7 +103,7 @@ struct Sphere
     uint Padding2;
 };
 
-struct Plane 
+struct FPlane 
 {
     vec4 NormalAndDistance;
     uint MaterialIndex;
@@ -102,12 +112,12 @@ struct Plane
     uint Padding2;
 };
 
-struct VertexRT
+struct FVertexRT
 {
     vec4 Position;
 };
 
-struct Triangle
+struct FTriangle
 {
     uint Index0;
     uint Index1;
@@ -115,7 +125,7 @@ struct Triangle
     uint Padding0;
 };
 
-struct TriangleMesh
+struct FTriangleMesh
 {
     vec4 BoxMin;
     vec4 BoxMax;
@@ -127,49 +137,49 @@ struct TriangleMesh
 
 layout(std430, binding = 6) buffer QuadBuffer
 {
-    Quad Quads[];
+    FQuad Quads[];
 };
 
 layout(std430, binding = 7) buffer SphereBuffer
 {
-    Sphere Spheres[];
+    FSphere Spheres[];
 };
 
 layout(std430, binding = 8) buffer PlaneBuffer
 {
-    Plane Planes[];
+    FPlane Planes[];
 };
 
 layout(std430, binding = 9) buffer MaterialBuffer
 {
-    Material Materials[];
+    FMaterial Materials[];
 };
 
 layout(std430, binding = 10) buffer VertexBuffer
 {
-    VertexRT Vertices[];
+    FVertexRT Vertices[];
 };
 
 layout(std430, binding = 11) buffer TriangleBuffer
 {
-    Triangle Triangles[];
+    FTriangle Triangles[];
 };
 
 layout(std430, binding = 12) buffer TriangleMeshBuffer
 {
-    TriangleMesh TriangleMeshes[];
+    FTriangleMesh TriangleMeshes[];
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 /* Ray Structs */
 
-struct Ray
+struct FRay
 {
     vec3 Origin;
     vec3 Direction;
 };
 
-struct RayPayLoad
+struct FRayPayLoad
 {
     vec3  Normal;
     vec3  Position;
@@ -196,7 +206,7 @@ bool IsAlmostZero(vec3 Value)
     return Value.x <= SIGMA && Value.y <= SIGMA && Value.z <= SIGMA; 
 }
 
-void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
+void HitQuad(in FQuad Quad, in FRay Ray, inout FRayPayLoad PayLoad)
 {
     vec3 Q = Quad.Position.xyz;
     vec3 U = Quad.Edge0.xyz;
@@ -253,7 +263,7 @@ void HitQuad(in Quad Quad, in Ray Ray, inout RayPayLoad PayLoad)
     }
 }
 
-void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
+void HitSphere(in FSphere Sphere, in FRay Ray, inout FRayPayLoad PayLoad)
 {
     vec3  SpherePos    = Sphere.PositionAndRadius.xyz;
     float SphereRadius = Sphere.PositionAndRadius.w;
@@ -299,7 +309,7 @@ void HitSphere(in Sphere Sphere, in Ray Ray, inout RayPayLoad PayLoad)
     }
 }
 
-void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
+void HitPlane(in FPlane Plane, in FRay Ray, inout FRayPayLoad PayLoad)
 {
     vec3  PlaneNormal = normalize(Plane.NormalAndDistance.xyz);
     float PlaneDist   = Plane.NormalAndDistance.w;
@@ -335,7 +345,7 @@ void HitPlane(in Plane Plane, in Ray Ray, inout RayPayLoad PayLoad)
     }
 }
 
-void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in Ray Ray, inout RayPayLoad PayLoad, uint MaterialIndex) 
+void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray, inout FRayPayLoad PayLoad, uint MaterialIndex) 
 {
     // Compute the triangle edges
     vec3 Edge1 = Vertex1 - Vertex0;
@@ -403,7 +413,7 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in Ray Ray, 
     }
 }
 
-bool IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in Ray Ray) 
+bool IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray) 
 {
     // Initialize MinT and MaxT to the full range
     float MinT = (BoxMin.x - Ray.Origin.x) / Ray.Direction.x;
@@ -476,29 +486,29 @@ bool IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in Ray Ray)
     return true;
 }
 
-bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
+bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad)
 {
     for (uint i = 0; i < uScene.NumQuads; i++)
     {
-        Quad Quad = Quads[i];
+        FQuad Quad = Quads[i];
         HitQuad(Quad, Ray, PayLoad);
     }
 
     for (uint i = 0; i < uScene.NumSpheres; i++)
     {
-        Sphere Sphere = Spheres[i];
+        FSphere Sphere = Spheres[i];
         HitSphere(Sphere, Ray, PayLoad);
     }
 
     for (uint i = 0; i < uScene.NumPlanes; i++)
     {
-        Plane Plane = Planes[i];
+        FPlane Plane = Planes[i];
         HitPlane(Plane, Ray, PayLoad);
     }
 
     for (uint i = 0; i < uScene.NumTriangleMeshes; i++)
     {
-        TriangleMesh Mesh = TriangleMeshes[i];
+        FTriangleMesh Mesh = TriangleMeshes[i];
 
         // Only test each triangle if we actually intersect the bounding box
         if (!IntersectRayAABB(Mesh.BoxMin.xyz, Mesh.BoxMax.xyz, Ray))
@@ -511,7 +521,7 @@ bool TraceRay(in Ray Ray, inout RayPayLoad PayLoad)
         uint EndTriangle = StartTriangle + Mesh.NumTriangles;
         for (uint j = StartTriangle; j < EndTriangle; j++)
         {
-            Triangle Triangle = Triangles[j];
+            FTriangle Triangle = Triangles[j];
             vec3 Pos0 = Vertices[Triangle.Index0].Position.xyz;
             vec3 Pos1 = Vertices[Triangle.Index1].Position.xyz;
             vec3 Pos2 = Vertices[Triangle.Index2].Position.xyz;
@@ -540,20 +550,47 @@ vec3 CalculateFilmTarget(ivec2 Pixel, ivec2 Size, vec2 Jitter)
     vec3 CamRight = normalize(cross(CamUp, CamForward));
 
     float AspectRatio  = float(Size.x) / float(Size.y);
-    vec2  FilmCorner   = vec2(-1.0, -1.0);
-    float FilmDistance = 1.0;
+    float FieldOfView  = clamp(uCamera.FieldOfViewDegrees, 30.0, 120.0);
+    float FilmDistance = 1.0 / tan(FieldOfView * 0.5 * PI / 180.0); 
     vec3  FilmCenter   = CameraPosition + (CamForward * FilmDistance);
 
     // This puts the pixel coordinate in the center, similar to rasterization
     vec2 PixelCenter = vec2(Pixel) + 0.5;
-
     vec2 FilmUV = (PixelCenter + Jitter) / vec2(Size.xy);
     FilmUV.y = 1.0 - FilmUV.y;
     FilmUV   = FilmUV * 2.0;
 
-    vec2 FilmCoord = FilmCorner + FilmUV;
+    vec2 FilmCorner = vec2(-1.0, -1.0);
+    vec2 FilmCoord  = FilmCorner + FilmUV;
     FilmCoord.x = FilmCoord.x * AspectRatio;
     return FilmCenter + (CamRight * FilmCoord.x) + (CamUp * FilmCoord.y);
+}
+
+vec3 GetEnvironmentLight(vec3 RayDirection)
+{
+    if (uScene.BackgroundType == BACKGROUND_TYPE_NONE)
+    {
+        // Only light source is the emissive surfaces
+        return vec3(0.0);
+    }
+    else if (uScene.BackgroundType == BACKGROUND_TYPE_GRADIENT)
+    {
+        // Create a gradient
+        vec3 UnitDirection = normalize(RayDirection);
+        float Alpha = 0.5 * (UnitDirection.y + 1.0);
+        return (1.0 - Alpha) * vec3(1.0, 1.0, 1.0) + Alpha * vec3(0.5, 0.7, 1.0);
+    }
+    else if (uScene.BackgroundType == BACKGROUND_TYPE_SKYBOX)
+    {
+        // Sample the Skybox
+        vec3 UnitDirection = normalize(RayDirection);
+        vec4 SkyboxColor = texture(uSkybox, UnitDirection);
+        return SkyboxColor.rgb;
+    }
+    else
+    {
+        return vec3(0.0, 0.0, 0.0);
+    }
 }
 
 void main()
@@ -571,15 +608,18 @@ void main()
     const vec3 FilmTarget     = CalculateFilmTarget(Pixel, Size, Jitter);
 
     // Setup the first Ray
-    Ray Ray;
+    FRay Ray;
     Ray.Origin    = CameraPosition;
     Ray.Direction = normalize(FilmTarget - CameraPosition);
 
     // Start tracing rays
-    vec3 SampleColor = vec3(1.0);
-    for (uint i = 0; i < MAX_DEPTH; i++)
+    vec3 RayColor    = vec3(1.0);
+    vec3 SampleColor = vec3(0.0);
+
+    uint MaxBounces = min(uScene.NumBounces, MAX_DEPTH);
+    for (uint i = 0; i < MaxBounces; i++)
     {
-        RayPayLoad PayLoad;
+        FRayPayLoad PayLoad;
         PayLoad.MinT = 0.001;
         PayLoad.MaxT = 1000.0;
         PayLoad.T    = PayLoad.MaxT;
@@ -587,7 +627,79 @@ void main()
         if (TraceRay(Ray, PayLoad))
         {
             const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
-            Material Material = Materials[MaterialIndex];
+            FMaterial Material = Materials[MaterialIndex];
+
+            vec3 Rnd       = NextRandomUnitSphereVec3(RandomSeed);
+            vec3 Direction = normalize(PayLoad.Normal + Rnd);
+            vec3 Origin    = PayLoad.Position;
+
+            vec3 Emissive = Material.Emissive.rgb * RayColor;
+            SampleColor += Emissive;
+
+            RayColor *= Material.Albedo.rgb * RayColor;
+
+            // Setup the next Ray
+            Ray.Origin    = Origin;
+            Ray.Direction = Direction;
+        }
+        else
+        {
+            // Add this hit color
+            vec3 EnvironmentLight = GetEnvironmentLight(Ray.Direction) * RayColor;
+            SampleColor += EnvironmentLight;
+            break;
+        }
+    }
+
+    vec3 FinalColor = SampleColor;
+
+    // Accumulate samples over time
+    vec4 previousColor = imageLoad(uAccumulation, Pixel);
+    vec4 currentColor  = previousColor + vec4(FinalColor, 0.0);
+    imageStore(uAccumulation, Pixel, currentColor);
+
+    // Store to scene texture
+    FinalColor = currentColor.rgb / max(uRandom.NumSamples, 1.0);
+    FinalColor = vec3(1.0) - exp(-FinalColor * uScene.Exposure);
+    FinalColor = pow(FinalColor, vec3(1.0 / GAMMA));
+    imageStore(uOutput, Pixel, vec4(FinalColor, 1.0));
+}
+
+#if 0
+void main()
+{
+    const ivec2 Pixel = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 Size  = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
+
+    // Jitter the camera each frame
+    uint RandomSeed = InitRandom(uvec2(Pixel), uint(Size.x), uRandom.FrameIndex);
+
+    vec2 Jitter = Halton23(uRandom.SampleIndex);
+    Jitter = (Jitter * 2.0) - vec2(1.0);
+
+    const vec3 CameraPosition = uCamera.Position.xyz;
+    const vec3 FilmTarget     = CalculateFilmTarget(Pixel, Size, Jitter);
+
+    // Setup the first Ray
+    FRay Ray;
+    Ray.Origin    = CameraPosition;
+    Ray.Direction = normalize(FilmTarget - CameraPosition);
+
+    // Start tracing rays
+    vec3 SampleColor = vec3(1.0);
+
+    uint MaxBounces = min(uScene.NumBounces, MAX_DEPTH);
+    for (uint i = 0; i < MaxBounces; i++)
+    {
+        FRayPayLoad PayLoad;
+        PayLoad.MinT = 0.001;
+        PayLoad.MaxT = 1000.0;
+        PayLoad.T    = PayLoad.MaxT;
+
+        if (TraceRay(Ray, PayLoad))
+        {
+            const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
+            FMaterial Material = Materials[MaterialIndex];
             
             vec3 N        = normalize(PayLoad.Normal);
             vec3 Emissive  = vec3(0.0);
@@ -599,7 +711,7 @@ void main()
                 vec3 Rnd = NextRandomUnitSphereVec3(RandomSeed);
                 Direction = normalize(PayLoad.Normal + Rnd);
 
-            #if USE_RAY_OFFSET
+            #if ENABLE_RAY_OFFSET
                 Origin = PayLoad.Position + (N * SIGMA);
             #else
                 Origin = PayLoad.Position;
@@ -620,7 +732,7 @@ void main()
 
                 vec3 Reflection = reflect(Ray.Direction, N);
                 Direction = normalize(Reflection + Rnd * Material.Roughness);
-            #if USE_RAY_OFFSET
+            #if ENABLE_RAY_OFFSET
                 Origin = PayLoad.Position + (N * SIGMA);
             #else
                 Origin = PayLoad.Position;
@@ -657,7 +769,7 @@ void main()
                     Direction = Refracted;
                 }
                 
-            #if USE_RAY_OFFSET
+            #if ENABLE_RAY_OFFSET
                 if (PayLoad.FrontFace)
                 {
                     Origin = PayLoad.Position + (N * SIGMA);
@@ -696,32 +808,8 @@ void main()
         }
         else
         {
-            vec3 BackGroundColor;
-            if (uScene.BackgroundType == BACKGROUND_TYPE_NONE)
-            {
-                // Only light source is the emissive surfaces
-                BackGroundColor = vec3(0.0);
-            }
-            else if (uScene.BackgroundType == BACKGROUND_TYPE_GRADIENT)
-            {
-                // Create a gradient
-                vec3  UnitDirection = normalize(Ray.Direction);
-                float Alpha = 0.5 * (UnitDirection.y + 1.0);
-                BackGroundColor = (1.0 - Alpha) * vec3(1.0, 1.0, 1.0) + Alpha * vec3(0.5, 0.7, 1.0);
-            }
-            else if (uScene.BackgroundType == BACKGROUND_TYPE_SKYBOX)
-            {
-                // Sample the Skybox
-                vec3 UnitDirection = normalize(Ray.Direction);
-                vec4 SkyboxColor   = texture(uSkybox, UnitDirection);
-                BackGroundColor = SkyboxColor.rgb;
-            }
-            else
-            {
-                BackGroundColor = vec3(0.0, 0.0, 0.0);
-            }
-
             // Add this hit color
+            vec3 BackGroundColor = GetEnvironmentLight(Ray.Direction);
             SampleColor = SampleColor * BackGroundColor;
             break;
         }
@@ -740,3 +828,4 @@ void main()
     FinalColor = pow(FinalColor, vec3(1.0 / GAMMA));
     imageStore(uOutput, Pixel, vec4(FinalColor, 1.0));
 }
+#endif

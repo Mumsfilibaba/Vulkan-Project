@@ -420,7 +420,7 @@ void FRayTracer::Tick(float deltaTime)
     }
 
     // Update
-    m_pScene->m_Camera.Update(90.0f, m_pSceneTexture->GetWidth(), m_pSceneTexture->GetHeight(), 0.1f, 100.0f);
+    m_pScene->m_Camera.Update(m_pScene->m_Settings.FieldOfView, m_pSceneTexture->GetWidth(), m_pSceneTexture->GetHeight(), 0.1f, 100.0f);
 
     // Draw
     uint32_t frameIndex = m_pSwapchain->GetCurrentBackBufferIndex();
@@ -475,10 +475,11 @@ void FRayTracer::Tick(float deltaTime)
 
     // Update CameraBuffer
     FCameraBuffer cameraBuffer = {};
-    cameraBuffer.Projection = m_pScene->m_Camera.GetProjectionMatrix();
-    cameraBuffer.View       = m_pScene->m_Camera.GetViewMatrix();
-    cameraBuffer.Position   = glm::vec4(m_pScene->m_Camera.GetPosition(), 0.0f);
-    cameraBuffer.Forward    = glm::vec4(m_pScene->m_Camera.GetForward(), 0.0f);
+    cameraBuffer.Projection         = m_pScene->m_Camera.GetProjectionMatrix();
+    cameraBuffer.View               = m_pScene->m_Camera.GetViewMatrix();
+    cameraBuffer.Position           = glm::vec4(m_pScene->m_Camera.GetPosition(), 0.0f);
+    cameraBuffer.Forward            = glm::vec4(m_pScene->m_Camera.GetForward(), 0.0f);
+    cameraBuffer.FieldOfViewDegrees = Math::ToDegrees(m_pScene->m_Camera.GetFieldOfView());
     
     pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(FCameraBuffer), &cameraBuffer);
 
@@ -503,6 +504,7 @@ void FRayTracer::Tick(float deltaTime)
     sceneBuffer.NumTriangleMeshes = m_pScene->m_TriangleMeshes.size();
     sceneBuffer.BackgroundType    = m_pScene->m_Settings.BackgroundType;
     sceneBuffer.Exposure          = m_pScene->m_Settings.Exposure;
+    sceneBuffer.NumBounces        = m_pScene->m_Settings.NumBounces;
 
     pCurrentCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(FSceneBuffer), &sceneBuffer);
     
@@ -706,6 +708,20 @@ void FRayTracer::OnRenderUI()
             if (ImGui::DragFloat("Exposure", &exposure, 0.01f, 0.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
             {
                 m_pScene->m_Settings.Exposure = exposure;
+                m_bResetImage = true;
+            }
+            
+            float fieldOfView = m_pScene->m_Settings.FieldOfView;
+            if (ImGui::DragFloat("FieldOfView", &fieldOfView, 0.1f, 30.0f, 120.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+            {
+                m_pScene->m_Settings.FieldOfView = fieldOfView;
+                m_bResetImage = true;
+            }
+            
+            int numBounces = m_pScene->m_Settings.NumBounces;
+            if (ImGui::DragInt("Num Bounces", &numBounces, 1, 1, 1024, "%d", ImGuiSliderFlags_AlwaysClamp))
+            {
+                m_pScene->m_Settings.NumBounces = numBounces;
                 m_bResetImage = true;
             }
         }

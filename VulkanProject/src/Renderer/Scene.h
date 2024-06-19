@@ -86,12 +86,10 @@ struct FMaterial
 
 struct FSceneSettings
 {
-    // 0-8
     uint32_t BackgroundType;
     float    Exposure;
-    // Padding
-    uint32_t Padding0;
-    uint32_t Padding1;
+    uint32_t NumBounces;
+    float    FieldOfView;
 };
 
 struct FScene
