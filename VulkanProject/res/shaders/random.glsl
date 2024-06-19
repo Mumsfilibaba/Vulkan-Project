@@ -1,12 +1,7 @@
 #ifndef RANDOM_H
 #define RANDOM_H
 
-float Random(vec3 Seed, int i)
-{
-	vec4 Seed4 = vec4(Seed, i);
-	float Dot = dot(Seed4, vec4(12.9898f, 78.233f, 45.164f, 94.673f));
-	return fract(sin(Dot) * 43758.5453f);
-}
+#include "math.glsl"
 
 // Source: https://github.com/NVIDIAGameWorks/GettingStartedWithRTXRayTracing/blob/master/11-OneShadowRayPerPixel/Data/Tutorial11/diffusePlus1ShadowUtils.hlsli
 uint InitRandom(uvec2 Pixel, uint Width, uint FrameIndex)
@@ -37,16 +32,26 @@ uint XORShift(uint Value)
 	return Value;
 }
 
+uint WangHash(inout uint Seed)
+{
+    Seed = uint(Seed ^ uint(61)) ^ uint(Seed >> uint(16));
+    Seed *= uint(9);
+    Seed = Seed ^ (Seed >> 4);
+    Seed *= uint(0x27d4eb2d);
+    Seed = Seed ^ (Seed >> 15);
+    return Seed;
+}
+
 int NextRandomInt(inout uint Seed)
 {
-	Seed = (1664525u * Seed + 1013904223u);
+	Seed = WangHash(Seed);
 	return int(Seed);
 }
 
 float NextRandom(inout uint Seed)
 {
 	Seed = NextRandomInt(Seed);
-	return float(Seed & 0x00FFFFFF) / float(0x01000000);
+	return float(Seed) / 4294967296.0;
 }
 
 float NextRandom(inout uint Seed, float Min, float Max)
@@ -66,6 +71,14 @@ vec3 NextRandomVec3(inout uint Seed, float Min, float Max)
 
 vec3 NextRandomUnitSphereVec3(inout uint Seed)
 {
+	float z = NextRandom(Seed) * 2.0 - 1.0;
+	float a = NextRandom(Seed) * TWO_PI;
+	float r = sqrt(1.0 - z * z);
+	float x = r * cos(a);
+	float y = r * sin(a);
+	return vec3(x, y, z);
+
+#if 0
 	vec3 Result;
 	for (uint i = 0; i < 64; i++)
 	{
@@ -77,6 +90,7 @@ vec3 NextRandomUnitSphereVec3(inout uint Seed)
 	}
 
 	return normalize(Result);
+#endif
 }
 
 vec3 NextRandomHemisphere(inout uint Seed, vec3 Normal)

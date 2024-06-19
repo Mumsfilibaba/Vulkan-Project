@@ -238,9 +238,9 @@ void FCornellBoxScene::Initialize()
     });
     m_Quads.push_back(
     {
-        glm::vec4(-0.35f, 3.995f,  0.35f, 0.0f),
-        glm::vec4(  0.0f,   0.0f, -0.7f, 0.0f),
-        glm::vec4(  0.7f,   0.0f,  0.0f, 0.0f),
+        glm::vec4(-0.75f, 3.995f,  0.75f, 0.0f),
+        glm::vec4( 0.0f,  0.0f,   -1.5f, 0.0f),
+        glm::vec4( 1.5f,  0.0f,    0.0f, 0.0f),
         3
     });
 
@@ -253,24 +253,24 @@ void FCornellBoxScene::Initialize()
     // Materials
     m_Materials.push_back(
     {
-        glm::vec4(0.73f, 0.73f, 0.73f, 1.0f),
-        glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
+        glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         MATERIAL_LAMBERTIAN,
         0.0f,
         0.0f
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.65f, 0.05f, 0.05f, 1.0f),
-        glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
+        glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         MATERIAL_LAMBERTIAN,
         0.0f,
         0.0f
     });
     m_Materials.push_back(
     {
-        glm::vec4(0.12f, 0.45f, 0.15f, 1.0f),
-        glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
+        glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         MATERIAL_LAMBERTIAN,
         0.0f,
         0.0f
@@ -278,7 +278,7 @@ void FCornellBoxScene::Initialize()
     m_Materials.push_back(
     {
         glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
-        glm::vec4(30.0f, 30.0f, 30.0f, 1.0f),
+        glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
         MATERIAL_EMISSIVE,
         0.0f,
         0.0f
@@ -293,7 +293,7 @@ void FCornellBoxScene::Initialize()
     });
     m_Materials.push_back(
     {
-        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+        glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         MATERIAL_LAMBERTIAN,
         0.0f,
@@ -301,7 +301,7 @@ void FCornellBoxScene::Initialize()
     });
     m_Materials.push_back(
     {
-        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+        glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         MATERIAL_LAMBERTIAN,
         0.3f,

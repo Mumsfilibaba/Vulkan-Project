@@ -1,37 +1,45 @@
-#ifndef TONEMAP_H
-#define TONEMAP_H
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
 
-vec3 RTTAndODTFit(vec3 v)
+layout(location = 0) in vec2 inFragCoord;
+layout(location = 0) out vec4 outColor;
+
+layout(binding = 0) uniform sampler2D sceneTexture;
+
+// ACES tone mapping curve fit to go from HDR to LDR
+//https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+vec3 ACESFilm(vec3 x)
 {
-    vec3 a = v * (v + 0.0245786f) - 0.000090537f;
-    vec3 b = v * (0.983729f * v + 0.4329510f) + 0.238081f;
-    return a / b;
+    float a = 2.51;
+    float b = 0.03;
+    float c = 2.43;
+    float d = 0.59;
+    float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
-vec3 AcesFitted(vec3 Color)
+vec3 LinearToSRGB(vec3 LinearColor)
 {
-    const mat3 InputMatrix =
+    vec3 SRGBColor;
+    for (int i = 0; i < 3; ++i)
     {
-        { 0.59719f, 0.35458f, 0.04823f },
-        { 0.07600f, 0.90834f, 0.01566f },
-        { 0.02840f, 0.13383f, 0.83777f },
-    };
+        if (LinearColor[i] <= 0.0031308)
+        {
+            SRGBColor[i] = 12.92 * LinearColor[i];
+        }
+        else
+        {
+            SRGBColor[i] = 1.055 * pow(LinearColor[i], 1.0 / 2.4) - 0.055;
+        }
+    }
 
-    const mat3 OutputMatrix =
-    {
-        { 1.60475f, -0.53108f, -0.07367f },
-        { -0.10208f, 1.10813f, -0.00605f },
-        { -0.00327f, -0.07276f, 1.07602f },
-    };
-
-    Color = InputMatrix * Color;
-    Color = RTTAndODTFit(Color);
-    return clamp(OutputMatrix * Color, 0.0f, 1.0f);
+    return SRGBColor;
 }
 
-vec3 ReinhardSimple(vec3 Color, float Intensity)
+void main()
 {
-    return Color / (vec3(Intensity) + Color);
+    vec3 Color = texture(sceneTexture, inFragCoord).rgb;
+    Color = ACESFilm(Color);
+    Color = LinearToSRGB(Color);
+    outColor = vec4(Color, 1.0);
 }
-
-#endif

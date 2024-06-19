@@ -2,6 +2,7 @@
 #define MATH_H
 
 #define PI 3.14159265358979
+#define TWO_PI 6.28318530717958
 
 vec3 RealReflect(vec3 v, vec3 n) 
 {

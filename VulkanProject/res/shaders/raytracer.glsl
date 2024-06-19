@@ -2,7 +2,6 @@
 #include "halton.glsl"
 #include "random.glsl"
 #include "math.glsl"
-#include "tonemap.glsl"
 
 #define BACKGROUND_TYPE_NONE 0
 #define BACKGROUND_TYPE_GRADIENT 1
@@ -20,7 +19,7 @@
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
 layout (binding = 0, rgba32f) uniform image2D uOutput;
-layout (binding = 1, rgba32f) uniform image2D uAccumulation;
+layout (binding = 1, rgba32f) uniform image2D uPreviousFrame;
 layout (binding = 2)          uniform samplerCube uSkybox;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -45,10 +44,12 @@ layout(binding = 3) uniform CameraBufferObject
 
 layout(binding = 4) uniform RandomBufferObject 
 {
+    // 0-8
     uint FrameIndex;
-    uint SampleIndex;
-    uint NumSamples;
+    uint HaltonIndex;
+    // Padding
     uint Padding0;
+    uint Padding1;
 } uRandom;
 
 layout(binding = 5) uniform SceneBufferObject 
@@ -554,9 +555,7 @@ vec3 CalculateFilmTarget(ivec2 Pixel, ivec2 Size, vec2 Jitter)
     float FilmDistance = 1.0 / tan(FieldOfView * 0.5 * PI / 180.0); 
     vec3  FilmCenter   = CameraPosition + (CamForward * FilmDistance);
 
-    // This puts the pixel coordinate in the center, similar to rasterization
-    vec2 PixelCenter = vec2(Pixel) + 0.5;
-    vec2 FilmUV = (PixelCenter + Jitter) / vec2(Size.xy);
+    vec2 FilmUV = (vec2(Pixel) + Jitter) / vec2(Size.xy);
     FilmUV.y = 1.0 - FilmUV.y;
     FilmUV   = FilmUV * 2.0;
 
@@ -601,7 +600,7 @@ void main()
     // Jitter the camera each frame
     uint RandomSeed = InitRandom(uvec2(Pixel), uint(Size.x), uRandom.FrameIndex);
 
-    vec2 Jitter = Halton23(uRandom.SampleIndex);
+    vec2 Jitter = Halton23(uRandom.HaltonIndex);
     Jitter = (Jitter * 2.0) - vec2(1.0);
 
     const vec3 CameraPosition = uCamera.Position.xyz;
@@ -651,18 +650,10 @@ void main()
         }
     }
 
-    vec3 FinalColor = SampleColor;
-
     // Accumulate samples over time
-    vec4 previousColor = imageLoad(uAccumulation, Pixel);
-    vec4 currentColor  = previousColor + vec4(FinalColor, 0.0);
-    imageStore(uAccumulation, Pixel, currentColor);
-
-    // Store to scene texture
-    FinalColor = currentColor.rgb / max(uRandom.NumSamples, 1.0);
-    FinalColor = vec3(1.0) - exp(-FinalColor * uScene.Exposure);
-    FinalColor = pow(FinalColor, vec3(1.0 / GAMMA));
-    imageStore(uOutput, Pixel, vec4(FinalColor, 1.0));
+    vec4 PreviousColor = imageLoad(uPreviousFrame, Pixel);
+    vec3 CurrentColor  = mix(PreviousColor.rgb, SampleColor, 1.0 / float(uRandom.FrameIndex + 1));
+    imageStore(uOutput, Pixel, vec4(CurrentColor, 1.0));
 }
 
 #if 0

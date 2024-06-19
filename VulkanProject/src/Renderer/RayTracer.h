@@ -5,16 +5,26 @@
 #include "Scene.h"
 
 class FBuffer;
+class FDescriptorSet;
+class FTexture;
+class FTextureView;
+class FPipelineLayout;
+class FDescriptorSetLayout;
+class FGraphicsPipeline;
+class FRenderPass;
+class FSampler;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Buffer Structs
 
 struct FRandomBuffer
 {
-    uint32_t FrameIndex = 0;
-    uint32_t SampleIndex = 0;
-    uint32_t NumSamples = 0;
+    // 0-8
+    uint32_t FrameIndex  = 0;
+    uint32_t HaltonIndex = 0;
+    // Padding
     uint32_t Padding0 = 0;
+    uint32_t Padding1 = 0;
 };
 
 struct FSceneBuffer
@@ -41,34 +51,44 @@ public:
     ~FRayTracer();
     
     virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override;
-    
     virtual void Release() override;
-    
     virtual void Tick(float deltaTime) override;
     
     virtual void OnRenderUI() override;
-    
     virtual void OnWindowResize(uint32_t width, uint32_t height) override;
     
 private:
-    void CreateOrResizeSceneTexture(uint32_t width, uint32_t height);
-
+    void CreateRayTracingResources();
+    void CreateTonemappingResources();
+    void CreateGlobalBuffers();
     void CreateDescriptorSet();
-    void ReleaseDescriptorSet();
-
+    void ReleaseDescriptorSets();
+    void CreateOrResizeSceneTexture(uint32_t width, uint32_t height);
     void ReloadShader();
 
     FDevice*                       m_pDevice;
     FSwapchain*                    m_pSwapchain;
-    std::atomic<FComputePipeline*> m_pPipeline;
-    class FPipelineLayout*         m_pPipelineLayout;
-    class FDescriptorSetLayout*    m_pDescriptorSetLayout;
     FDeviceMemoryAllocator*        m_pDeviceAllocator;
     FDescriptorPool*               m_pDescriptorPool;
-    class FDescriptorSet*          m_pDescriptorSet;
 
     std::vector<class FCommandBuffer*> m_CommandBuffers;
     std::vector<class FQuery*>         m_TimestampQueries;
+
+    // RayTracing
+    std::atomic<FComputePipeline*> m_pRayTracingPipeline;
+    FPipelineLayout*               m_pRayTracingPipelineLayout;
+    FDescriptorSetLayout*          m_pRayTracingDescriptorSetLayout;
+    FDescriptorSet*                m_pRayTracingDescriptorSet0;
+    FDescriptorSet*                m_pRayTracingDescriptorSet1;
+    
+    // ToneMapping
+    FGraphicsPipeline*    m_pTonemappingPipeline;
+    FRenderPass*          m_pTonemappingRenderPass;
+    FPipelineLayout*      m_pTonemappingPipelineLayout;
+    FDescriptorSetLayout* m_pTonemappingDescriptorSetLayout;
+    FDescriptorSet*       m_pTonemappingDescriptorSet0;
+    FDescriptorSet*       m_pTonemappingDescriptorSet1;
+    class FFramebuffer*   m_pTonemappingFramebuffer;
     
     // Buffers
     FBuffer* m_pCameraBuffer;
@@ -83,27 +103,32 @@ private:
     FBuffer* m_pMaterialBuffer;
 
     // SceneTexture
-    class FTexture*       m_pAccumulationTexture;
-    class FTextureView*   m_pAccumulationTextureView;
-    class FTexture*       m_pSceneTexture;
-    class FTextureView*   m_pSceneTextureView;
-    class FDescriptorSet* m_pSceneTextureDescriptorSet;
+    FTexture*       m_pSceneTexture0;
+    FTexture*       m_pSceneTexture1;
+    FTexture*       m_pOutputTexture;
+    FTextureView*   m_pSceneTextureView0;
+    FTextureView*   m_pSceneTextureView1;
+    FTextureView*   m_pOutputTextureView;
+    FDescriptorSet* m_pOutputTextureDescriptorSet;
 
     // Skybox
     class FTextureResource* m_pSkybox;
-    class FSampler*         m_pSkyboxSampler;
+    
+    // Samplers
+    FSampler* m_pSkyboxSampler;
+    FSampler* m_pTonemapSampler;
     
     // Scene
     FScene* m_pScene;
-
+    
     // Samples
-    uint32_t         m_NumSamples;
     std::atomic_bool m_bResetImage;
-
+    uint64_t         m_FrameIndex;
+    
     // Stats
-    float m_LastCPUTime;
-    float m_LastGPUTime;
-
+    float    m_LastCPUTime;
+    float    m_LastGPUTime;
+    
     // Viewport
     uint32_t m_ViewportWidth;
     uint32_t m_ViewportHeight;
