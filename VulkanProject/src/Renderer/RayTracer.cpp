@@ -791,11 +791,15 @@ void FRayTracer::Release()
     SAFE_DELETE(m_pSkyboxSampler);
     SAFE_DELETE(m_pTonemapSampler);
 
-    SAFE_DELETE(m_pDescriptorPool);
     SAFE_DELETE(m_pRayTracingPipeline);
     SAFE_DELETE(m_pRayTracingPipelineLayout);
     SAFE_DELETE(m_pRayTracingDescriptorSetLayout);
-    SAFE_DELETE(m_pDeviceAllocator);
+    
+    SAFE_DELETE(m_pTonemappingRenderPass);
+    SAFE_DELETE(m_pTonemappingPipeline);
+    SAFE_DELETE(m_pTonemappingPipelineLayout);
+    SAFE_DELETE(m_pTonemappingDescriptorSetLayout);
+
     SAFE_DELETE(m_pSceneTexture1);
     SAFE_DELETE(m_pSceneTextureView1);
     SAFE_DELETE(m_pSceneTexture0);
@@ -803,6 +807,9 @@ void FRayTracer::Release()
     SAFE_DELETE(m_pOutputTexture);
     SAFE_DELETE(m_pOutputTextureView);
     SAFE_DELETE(m_pTonemappingFramebuffer);
+
+    SAFE_DELETE(m_pDescriptorPool);
+    SAFE_DELETE(m_pDeviceAllocator);
 }
 
 void FRayTracer::OnWindowResize(uint32_t width, uint32_t height)
