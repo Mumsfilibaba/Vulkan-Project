@@ -8,11 +8,6 @@
 #define MAX_MATERIALS 32
 #define MAX_TRIANGLES 1024
 
-#define MATERIAL_LAMBERTIAN 1
-#define MATERIAL_METAL 2
-#define MATERIAL_EMISSIVE 3
-#define MATERIAL_DIELECTRIC 4
-
 #define BACKGROUND_TYPE_NONE 0
 #define BACKGROUND_TYPE_GRADIENT 1
 #define BACKGROUND_TYPE_SKYBOX 2
@@ -73,15 +68,18 @@ struct FTriangleMesh
 
 struct FMaterial
 {
-    // 0-32
-    glm::vec4 Albedo;
-    glm::vec4 Emissive;
-    // 32-44
-    uint32_t  Type;
+    // 0-16
+    glm::vec4 AlbedoColor;
+    // 16-32
+    glm::vec4 EmissiveColor;
+    // 32-48
+    glm::vec4 SpecularColor;
+    // 48-60
+    float     SpecularFactor;
     float     Roughness;
     float     RefractionIndex;
     // Padding
-    uint32_t  Padding0;
+    uint      Padding0;
 };
 
 struct FSceneSettings

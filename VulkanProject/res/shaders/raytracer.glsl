@@ -70,19 +70,15 @@ layout(binding = 5) uniform SceneBufferObject
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 /* Scene objects */
 
-#define MATERIAL_LAMBERTIAN 1
-#define MATERIAL_METAL 2
-#define MATERIAL_EMISSIVE 3
-#define MATERIAL_DIELECTRIC 4
-
 struct FMaterial
 {
-    vec4  Albedo;
-    vec4  Emissive;
-    uint  Type;
+    vec4  AlbedoColor;
+    vec4  EmissiveColor;
+    vec4  SpecularColor;
+    float SpecularFactor;
     float Roughness;
     float RefractionIndex;
-    uint  Padding1;
+    uint  Padding0;
 };
 
 struct FQuad
@@ -633,10 +629,10 @@ void main()
             vec3 Direction = normalize(PayLoad.Normal + Rnd);
             vec3 Origin    = PayLoad.Position;
 
-            vec3 Emissive = Material.Emissive.rgb * RayColor;
-            SampleColor += Emissive;
+            vec3 EmissiveColor = Material.EmissiveColor.rgb * RayColor;
+            SampleColor += EmissiveColor;
 
-            RayColor *= Material.Albedo.rgb * RayColor;
+            RayColor *= Material.AlbedoColor.rgb * RayColor;
 
             // Setup the next Ray
             Ray.Origin    = Origin;
@@ -694,7 +690,7 @@ void main()
             FMaterial Material = Materials[MaterialIndex];
             
             vec3 N        = normalize(PayLoad.Normal);
-            vec3 Emissive  = vec3(0.0);
+            vec3 EmissiveColor  = vec3(0.0);
             vec3 Origin    = vec3(0.0);
             vec3 Direction = vec3(0.0);
 
@@ -715,8 +711,8 @@ void main()
                 }*/
 
                 // Attenuate light
-                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.99));
-                SampleColor = Albedo * SampleColor;
+                vec3 AlbedoColor = min(Material.AlbedoColor.rgb, vec3(0.99));
+                SampleColor = AlbedoColor * SampleColor;
             }
             else if (Material.Type == MATERIAL_METAL)
             {
@@ -731,8 +727,8 @@ void main()
             #endif
 
                 // Attenuate light
-                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.99));
-                SampleColor = Albedo * SampleColor;
+                vec3 AlbedoColor = min(Material.AlbedoColor.rgb, vec3(0.99));
+                SampleColor = AlbedoColor * SampleColor;
             }
             else if (Material.Type == MATERIAL_DIELECTRIC)
             {
@@ -775,16 +771,16 @@ void main()
             #endif
 
                 // Attenuate light
-                vec3 Albedo = min(Material.Albedo.rgb, vec3(0.99));
-                SampleColor = Albedo * SampleColor;
+                vec3 AlbedoColor = min(Material.AlbedoColor.rgb, vec3(0.99));
+                SampleColor = AlbedoColor * SampleColor;
             }
             else if (Material.Type == MATERIAL_EMISSIVE) 
             {
                 // Add light
-                Emissive    = Material.Emissive.rgb;
-                SampleColor = SampleColor * Emissive;
+                EmissiveColor    = Material.EmissiveColor.rgb;
+                SampleColor = SampleColor * EmissiveColor;
 
-                // Emissive materials do not scatter
+                // EmissiveColor materials do not scatter
                 break;
             }
             else

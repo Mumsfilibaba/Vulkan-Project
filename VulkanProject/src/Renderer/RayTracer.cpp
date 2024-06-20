@@ -684,58 +684,33 @@ void FRayTracer::OnRenderUI()
             {
                 ImGui::PushID(imguiID++);
                 ImGui::Text("Material %d", index++);
-                
-                int materialType = material.Type;
-                if (ImGui::Combo("Material Type", &materialType, materialTypes, IM_ARRAYSIZE(materialTypes)))
+            
+                // if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                if (ImGui::InputFloat3("AlbedoColor", glm::value_ptr(material.AlbedoColor)))
                 {
-                    material.Type = materialType;
                     m_bResetImage = true;
                 }
-
-                if (material.Type == MATERIAL_LAMBERTIAN)
+                // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.Emissive)))
+                if (ImGui::InputFloat3("EmissiveColor", glm::value_ptr(material.EmissiveColor)))
                 {
-                    // if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
-                    if (ImGui::InputFloat3("Albedo", glm::value_ptr(material.Albedo)))
-                    {
-                        m_bResetImage = true;
-                    }
+                    m_bResetImage = true;
                 }
-                else if (material.Type == MATERIAL_METAL)
+                // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.Emissive)))
+                if (ImGui::InputFloat3("SpecularColor", glm::value_ptr(material.SpecularColor)))
                 {
-                    // if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
-                    if (ImGui::InputFloat3("Albedo", glm::value_ptr(material.Albedo)))
-                    {
-                        m_bResetImage = true;
-                    }
-
-                    if (ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
-                    {
-                        m_bResetImage = true;
-                    }
+                    m_bResetImage = true;
                 }
-                else if (material.Type == MATERIAL_EMISSIVE)
+                if (ImGui::DragFloat("SpecularFactor", &material.SpecularFactor, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
                 {
-                    // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.Emissive)))
-                    if (ImGui::InputFloat3("Emissive", glm::value_ptr(material.Emissive)))
-                    {
-                        m_bResetImage = true;
-                    }
+                    m_bResetImage = true;
                 }
-                else if (material.Type == MATERIAL_DIELECTRIC)
+                if (ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
                 {
-                    // if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
-                    if (ImGui::InputFloat3("Albedo", glm::value_ptr(material.Albedo)))
-                    {
-                        m_bResetImage = true;
-                    }
-                    if (ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
-                    {
-                        m_bResetImage = true;
-                    }
-                    if (ImGui::DragFloat("RefractionIndex", &material.RefractionIndex, 0.01f, 0.0f, 10.0f, "%.2f"))
-                    {
-                        m_bResetImage = true;
-                    }
+                    m_bResetImage = true;
+                }
+                if (ImGui::DragFloat("RefractionIndex", &material.RefractionIndex, 0.01f, 0.0f, 10.0f, "%.2f"))
+                {
+                    m_bResetImage = true;
                 }
 
                 ImGui::PopID();
