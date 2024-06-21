@@ -597,9 +597,10 @@ void main()
     // Jitter the camera each frame
     uint RandomSeed = InitRandom(uvec2(Pixel), uint(Size.x), uRandom.FrameIndex);
 
-    vec2 Jitter = Halton23(uRandom.HaltonIndex);
-    Jitter = (Jitter * 2.0) - vec2(1.0);
+    // vec2 Jitter = Halton23(uRandom.HaltonIndex);
+    // Jitter = (Jitter * 2.0) - vec2(1.0);
 
+    vec2 Jitter = vec2(NextRandom(RandomSeed), NextRandom(RandomSeed)) - 0.5;
     const vec3 CameraPosition = uCamera.Position.xyz;
     const vec3 FilmTarget     = CalculateFilmTarget(Pixel, Size, Jitter);
 
@@ -625,17 +626,20 @@ void main()
             const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
             FMaterial Material = Materials[MaterialIndex];
 
-            vec3 Rnd       = NextRandomUnitSphereVec3(RandomSeed);
-            vec3 Direction = normalize(PayLoad.Normal + Rnd);
-            vec3 Origin    = PayLoad.Position;
-
+            float DoSpecular = (NextRandom(RandomSeed) < Material.SpecularFactor) ? 1.0 : 0.0;
+            vec3 RandomDir   = NextRandomUnitSphereVec3(RandomSeed);
+            vec3 DiffuseRay  = normalize(PayLoad.Normal + RandomDir);
+            vec3 SpecularRay = reflect(Ray.Direction, PayLoad.Normal);
+            SpecularRay      = normalize(mix(SpecularRay, DiffuseRay, Material.Roughness * Material.Roughness));
+            vec3 Direction   = mix(DiffuseRay, SpecularRay, DoSpecular);
+            
             vec3 EmissiveColor = Material.EmissiveColor.rgb * RayColor;
             SampleColor += EmissiveColor;
 
-            RayColor *= Material.AlbedoColor.rgb * RayColor;
+            RayColor *= mix(Material.AlbedoColor.rgb, Material.SpecularColor.rgb, DoSpecular);
 
             // Setup the next Ray
-            Ray.Origin    = Origin;
+            Ray.Origin    = PayLoad.Position;
             Ray.Direction = Direction;
         }
         else

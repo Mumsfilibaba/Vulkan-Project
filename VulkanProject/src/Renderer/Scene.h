@@ -4,7 +4,7 @@
 
 #define MAX_QUAD 128
 #define MAX_SPHERES 32
-#define MAX_PLANES 8
+#define MAX_PLANES 32
 #define MAX_MATERIALS 32
 #define MAX_TRIANGLES 1024
 

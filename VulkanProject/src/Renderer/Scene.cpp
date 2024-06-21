@@ -76,7 +76,7 @@ void FModelScene::Initialize()
     // Left Quad
     m_Quads.push_back({ glm::vec4(1.0f, 2.0f, -1.0f, 0.0f), glm::vec4(0.0f, -2.0f, 0.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), 2 });
     // Light Quad
-    m_Quads.push_back({ glm::vec4(-0.375f, 1.995f, 0.375f, 0.0f), glm::vec4(0.0f, 0.0f, -0.75f, 0.0f), glm::vec4(0.75f, 0.0f, 0.0f, 0.0f), 3 });
+    m_Quads.push_back({ glm::vec4(0.15f, 1.995f, 0.375f, 0.0f), glm::vec4(0.0f, 0.0f, -0.75f, 0.0f), glm::vec4(0.75f, 0.0f, 0.0f, 0.0f), 3 });
     
     // Materials
     m_Materials.push_back(
@@ -154,23 +154,22 @@ void FSphereScene::Initialize()
     Reset();
 
     // Spheres
-    m_Spheres.push_back({ glm::vec3(0.0f, -100.5f, 0.0f), 100.0f, 0 });
-    m_Spheres.push_back({ glm::vec3(0.0f,    0.0f, 1.0f),  0.49f, 1 });
+    m_Spheres.push_back({ glm::vec3( 1.0f, 0.0f, 1.0f), 0.49f, 0 });
+    m_Spheres.push_back({ glm::vec3(0.0f, 0.0f, 1.0f), 0.49f, 1 });
+    m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f), 0.49f, 2 });
 
-    m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f), -0.47f, 2 });
-    m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f),  0.49f, 2 });
-    m_Spheres.push_back({ glm::vec3( 1.0f, 0.0f, 1.0f),  0.49f, 3 });
+    m_Spheres.push_back({ glm::vec3(0.0f, -100.5f, 0.0f), 100.0f, 3 });
 
     // Materials
     
     // Right Ball (Golden Ball)
     m_Materials.push_back(
     {
-        glm::vec4(0.8f, 0.8f, 0.0f, 1.0f),
+        glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
         1.0f,
-        0.0f,
+        0.5f,
         0.0f,
         0
     });
@@ -180,9 +179,9 @@ void FSphereScene::Initialize()
     {
         glm::vec4(0.7f, 0.3f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.7f, 0.3f, 0.3f, 1.0f),
         1.0f,
-        0.0f,
+        0.1f,
         0.0f,
         0
     });
@@ -193,8 +192,8 @@ void FSphereScene::Initialize()
         glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        1.0f,
         0.0f,
+        0.8f,
         0.0f,
         0
     });
@@ -202,11 +201,11 @@ void FSphereScene::Initialize()
     // Large Ball (Green Ball)
     m_Materials.push_back(
     {
-        glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
+        glm::vec4(0.7f, 0.9f, 0.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        1.0f,
         0.0f,
+        1.0f,
         0.0f,
         0
     });
@@ -252,41 +251,52 @@ void FCornellBoxScene::Initialize()
     m_Quads.push_back({ glm::vec4(-0.75f, 3.995f, 0.75f, 0.0f), glm::vec4(0.0f, 0.0f, -1.5f, 0.0f), glm::vec4(1.5f, 0.0f, 0.0f, 0.0f), 3 });
 
     // Spheres
-    m_Spheres.push_back({ glm::vec3(-2.2f, 0.71f, 0.0f), 0.7f, 4 });
-    m_Spheres.push_back({ glm::vec3(0.0f, 0.71f, 0.0f), 0.7f, 0 });
-    m_Spheres.push_back({ glm::vec3(2.2f, 0.71f, 0.0f), 0.7f, 0 });
+    m_Spheres.push_back({ glm::vec3( 2.0f, 2.5f, -1.5f), 0.25f, 4 });
+    m_Spheres.push_back({ glm::vec3( 1.0f, 2.5f, -1.5f), 0.25f, 5 });
+    m_Spheres.push_back({ glm::vec3( 0.0f, 2.5f, -1.5f), 0.25f, 6 });
+    m_Spheres.push_back({ glm::vec3(-1.0f, 2.5f, -1.5f), 0.25f, 7 });
+    m_Spheres.push_back({ glm::vec3(-2.0f, 2.5f, -1.5f), 0.25f, 8 });
+    
+    m_Spheres.push_back({ glm::vec3( 2.2f, 0.75f, 0.5f), 0.7f, 9 });
+    m_Spheres.push_back({ glm::vec3( 0.0f, 0.75f, 0.5f), 0.7f, 10 });
+    m_Spheres.push_back({ glm::vec3(-2.2f, 0.75f, 0.5f), 0.7f, 11 });
+    
 
-    // Materials
+    // Wall Materials
     m_Materials.push_back(
     {
         glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        1.0f,
         0.0f,
+        0.9f,
         0.0f,
         0
     });
+    
     m_Materials.push_back(
     {
         glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        1.0f,
         0.0f,
+        0.9f,
         0.0f,
         0
     });
+    
     m_Materials.push_back(
     {
         glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        1.0f,
         0.0f,
+        0.9f,
         0.0f,
         0
     });
+    
+    // Light
     m_Materials.push_back(
     {
         glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
@@ -297,13 +307,93 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0
     });
+    
+    // Green Materials
     m_Materials.push_back(
     {
-        glm::vec4(0.1f, 0.1f, 0.7f, 1.0f),
+        glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         1.0f,
         0.0f,
+        0.0f,
+        0
+    });
+    
+    m_Materials.push_back(
+    {
+        glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        1.0f,
+        0.25f,
+        0.0f,
+        0
+    });
+    
+    m_Materials.push_back(
+    {
+        glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        1.0f,
+        0.5f,
+        0.0f,
+        0
+    });
+    
+    m_Materials.push_back(
+    {
+        glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        1.0f,
+        0.75f,
+        0.0f,
+        0
+    });
+    
+    m_Materials.push_back(
+    {
+        glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        1.0f,
+        1.0f,
+        0.0f,
+        0
+    });
+    
+    // Ball Materials
+    m_Materials.push_back(
+    {
+        glm::vec4(0.9f, 0.9f, 0.75f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
+        0.1f,
+        0.2f,
+        0.0f,
+        0
+    });
+    
+    m_Materials.push_back(
+    {
+        glm::vec4(0.9f, 0.75f, 0.9f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
+        0.5f,
+        0.2f,
+        0.0f,
+        0
+    });
+    
+    m_Materials.push_back(
+    {
+        glm::vec4(0.75f, 0.9f, 0.9f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+        glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
+        1.0f,
+        0.2f,
         0.0f,
         0
     });
