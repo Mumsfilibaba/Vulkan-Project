@@ -59,8 +59,9 @@ void FModelScene::Initialize()
         glm::vec4(Mesh.BoundingBoxMax, 0.0f),
         0,
         static_cast<uint32_t>(m_Triangles.size()),
+        4,
         // Padding
-        0, 0,
+        0,
     });
     
     // Quads
@@ -84,31 +85,35 @@ void FModelScene::Initialize()
         glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        1.0f,
         0.0f,
+        0.9f,
         0.0f,
         0
     });
+    
     m_Materials.push_back(
     {
         glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        1.0f,
         0.0f,
+        0.9f,
         0.0f,
         0
     });
+    
     m_Materials.push_back(
     {
         glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        1.0f,
         0.0f,
+        0.9f,
         0.0f,
         0
     });
+    
+    // Light
     m_Materials.push_back(
     {
         glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
@@ -119,13 +124,14 @@ void FModelScene::Initialize()
         0.0f,
         0
     });
+    
     m_Materials.push_back(
     {
-        glm::vec4(0.1f, 0.1f, 0.7f, 1.0f),
+        glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        1.0f,
-        0.0f,
+        glm::vec4(0.9f, 0.9f, 0.9f, 0.0f),
+        0.1f,
+        0.2f,
         0.0f,
         0
     });

@@ -125,12 +125,15 @@ struct FTriangle
 
 struct FTriangleMesh
 {
+    // 0-32
     vec4 BoxMin;
     vec4 BoxMax;
+    // 32-44
     uint StartTriangle;
     uint NumTriangles;
+    uint MaterialIndex;
+    // Padding
     uint Padding0;
-    uint Padding1;
 };
 
 layout(std430, binding = 6) buffer QuadBuffer
@@ -524,7 +527,7 @@ bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad)
             vec3 Pos1 = Vertices[Triangle.Index1].Position.xyz;
             vec3 Pos2 = Vertices[Triangle.Index2].Position.xyz;
 
-            HitTriangle(Pos0, Pos1, Pos2, Ray, PayLoad, 0);
+            HitTriangle(Pos0, Pos1, Pos2, Ray, PayLoad, Mesh.MaterialIndex);
         }
     }
 
