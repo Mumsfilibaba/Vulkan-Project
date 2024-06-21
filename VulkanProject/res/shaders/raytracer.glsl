@@ -15,6 +15,7 @@
 #define ENABLE_RAY_OFFSET 0
 #define ENABLE_QUAD_BACK_FACE_CULLING 1
 #define ENABLE_TRIANGLE_BACK_FACE_CULLING 0
+#define ENABLE_RUSSIAN_ROULETTE 1
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
 
@@ -641,6 +642,17 @@ void main()
 
             RayColor *= mix(Material.AlbedoColor.rgb, Material.SpecularColor.rgb, DoSpecular);
 
+        #if ENABLE_RUSSIAN_ROULETTE
+            float Probability = max(RayColor.r, max(RayColor.g, RayColor.b));
+            if (NextRandom(RandomSeed) > Probability)
+            {
+                break;
+            }
+        
+            // Add the energy we 'lose' by randomly terminating paths
+            RayColor *= 1.0 / Probability;
+        #endif
+
             // Setup the next Ray
             Ray.Origin    = PayLoad.Position;
             Ray.Direction = Direction;
@@ -659,168 +671,3 @@ void main()
     vec3 CurrentColor  = mix(PreviousColor.rgb, SampleColor, 1.0 / float(uRandom.FrameIndex + 1));
     imageStore(uOutput, Pixel, vec4(CurrentColor, 1.0));
 }
-
-#if 0
-void main()
-{
-    const ivec2 Pixel = ivec2(gl_GlobalInvocationID.xy);
-    const ivec2 Size  = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
-
-    // Jitter the camera each frame
-    uint RandomSeed = InitRandom(uvec2(Pixel), uint(Size.x), uRandom.FrameIndex);
-
-    vec2 Jitter = Halton23(uRandom.SampleIndex);
-    Jitter = (Jitter * 2.0) - vec2(1.0);
-
-    const vec3 CameraPosition = uCamera.Position.xyz;
-    const vec3 FilmTarget     = CalculateFilmTarget(Pixel, Size, Jitter);
-
-    // Setup the first Ray
-    FRay Ray;
-    Ray.Origin    = CameraPosition;
-    Ray.Direction = normalize(FilmTarget - CameraPosition);
-
-    // Start tracing rays
-    vec3 SampleColor = vec3(1.0);
-
-    uint MaxBounces = min(uScene.NumBounces, MAX_DEPTH);
-    for (uint i = 0; i < MaxBounces; i++)
-    {
-        FRayPayLoad PayLoad;
-        PayLoad.MinT = 0.001;
-        PayLoad.MaxT = 1000.0;
-        PayLoad.T    = PayLoad.MaxT;
-
-        if (TraceRay(Ray, PayLoad))
-        {
-            const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
-            FMaterial Material = Materials[MaterialIndex];
-            
-            vec3 N        = normalize(PayLoad.Normal);
-            vec3 EmissiveColor  = vec3(0.0);
-            vec3 Origin    = vec3(0.0);
-            vec3 Direction = vec3(0.0);
-
-            if (Material.Type == MATERIAL_LAMBERTIAN)
-            {
-                vec3 Rnd = NextRandomUnitSphereVec3(RandomSeed);
-                Direction = normalize(PayLoad.Normal + Rnd);
-
-            #if ENABLE_RAY_OFFSET
-                Origin = PayLoad.Position + (N * SIGMA);
-            #else
-                Origin = PayLoad.Position;
-            #endif
-
-                /*if (IsAlmostZero(Direction))
-                {
-                    Direction = PayLoad.Normal;
-                }*/
-
-                // Attenuate light
-                vec3 AlbedoColor = min(Material.AlbedoColor.rgb, vec3(0.99));
-                SampleColor = AlbedoColor * SampleColor;
-            }
-            else if (Material.Type == MATERIAL_METAL)
-            {
-                vec3 Rnd = NextRandomHemisphere(RandomSeed, PayLoad.Normal);
-
-                vec3 Reflection = reflect(Ray.Direction, N);
-                Direction = normalize(Reflection + Rnd * Material.Roughness);
-            #if ENABLE_RAY_OFFSET
-                Origin = PayLoad.Position + (N * SIGMA);
-            #else
-                Origin = PayLoad.Position;
-            #endif
-
-                // Attenuate light
-                vec3 AlbedoColor = min(Material.AlbedoColor.rgb, vec3(0.99));
-                SampleColor = AlbedoColor * SampleColor;
-            }
-            else if (Material.Type == MATERIAL_DIELECTRIC)
-            {
-                float RefractionRatio = PayLoad.FrontFace ? (1.0 / max(Material.RefractionIndex, SIGMA)) : Material.RefractionIndex;
-
-                vec3  RayDirection = normalize(Ray.Direction); 
-                float CosTheta = min(dot(-RayDirection, PayLoad.Normal), 1.0);
-                float SinTheta = sqrt(1.0 - CosTheta * CosTheta);
-
-                bool bShouldReflect = RefractionRatio * SinTheta >= 1.0;
-                if (bShouldReflect || Reflectance(CosTheta, RefractionRatio) > NextRandom(RandomSeed))
-                {
-                    vec3 Rnd = NextRandomHemisphere(RandomSeed, PayLoad.Normal);
-
-                    vec3 Reflection = reflect(RayDirection, N);
-                    Direction = normalize(Reflection + Rnd * Material.Roughness);
-                }
-                else
-                {
-                    // TODO: The GLSL refract seems to give NaN sometimes
-                #if 0
-                    vec3 Refracted = refract(RayDirection, N, RefractionRatio);
-                #else
-                    vec3 Refracted = RealRefract(RayDirection, N, RefractionRatio);
-                #endif
-                    Direction = Refracted;
-                }
-                
-            #if ENABLE_RAY_OFFSET
-                if (PayLoad.FrontFace)
-                {
-                    Origin = PayLoad.Position + (N * SIGMA);
-                }
-                else
-                {
-                    Origin = PayLoad.Position - (N * SIGMA);
-                }
-            #else
-                Origin = PayLoad.Position;
-            #endif
-
-                // Attenuate light
-                vec3 AlbedoColor = min(Material.AlbedoColor.rgb, vec3(0.99));
-                SampleColor = AlbedoColor * SampleColor;
-            }
-            else if (Material.Type == MATERIAL_EMISSIVE) 
-            {
-                // Add light
-                EmissiveColor    = Material.EmissiveColor.rgb;
-                SampleColor = SampleColor * EmissiveColor;
-
-                // EmissiveColor materials do not scatter
-                break;
-            }
-            else
-            {
-                // Invalid material
-                SampleColor = vec3(0.0);
-                break;
-            }
-
-            // Setup the next Ray
-            Ray.Origin    = Origin;
-            Ray.Direction = Direction;
-        }
-        else
-        {
-            // Add this hit color
-            vec3 BackGroundColor = GetEnvironmentLight(Ray.Direction);
-            SampleColor = SampleColor * BackGroundColor;
-            break;
-        }
-    }
-
-    vec3 FinalColor = SampleColor;
-
-    // Accumulate samples over time
-    vec4 previousColor = imageLoad(uAccumulation, Pixel);
-    vec4 currentColor  = previousColor + vec4(FinalColor, 0.0);
-    imageStore(uAccumulation, Pixel, currentColor);
-
-    // Store to scene texture
-    FinalColor = currentColor.rgb / max(uRandom.NumSamples, 1.0);
-    FinalColor = vec3(1.0) - exp(-FinalColor * uScene.Exposure);
-    FinalColor = pow(FinalColor, vec3(1.0 / GAMMA));
-    imageStore(uOutput, Pixel, vec4(FinalColor, 1.0));
-}
-#endif
