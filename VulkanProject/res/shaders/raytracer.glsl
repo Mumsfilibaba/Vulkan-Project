@@ -76,10 +76,15 @@ struct FMaterial
     vec4  AlbedoColor;
     vec4  EmissiveColor;
     vec4  SpecularColor;
-    float SpecularFactor;
-    float Roughness;
-    float RefractionIndex;
+    vec4  AbsorbtionColor;
+    float SpecularChance;
+    float SpecularRoughness;
+    float IncidenceOfRefraction;
+    float RefractionChance;
+    float RefractionRoughness;
     uint  Padding0;
+    uint  Padding1;
+    uint  Padding2;
 };
 
 struct FQuad
@@ -542,6 +547,32 @@ bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad)
     }
 }
 
+float FresnelReflectAmount(float N1, float N2, vec3 Normal, vec3 Incident, float F0, float F90)
+{
+        // Schlick aproximation
+        float R0 = (N1 - N2) / (N1 + N2);
+        R0 *= R0;
+
+        float CosX = -dot(Normal, Incident);
+        if (N1 > N2)
+        {
+            float N     = N1 / N2;
+            float SinT2 = N * N * (1.0 - CosX * CosX);
+            if (SinT2 > 1.0)
+            {
+                return F90;
+            }
+
+            CosX = sqrt(1.0 - SinT2);
+        }
+
+        float X  = 1.0 - CosX;
+        float X2 = X * X;
+
+        float Result = R0 + (1.0 - R0) * X2 * X2 * X;
+        return mix(F0, F90, Result);
+}
+
 vec3 CalculateFilmTarget(ivec2 Pixel, ivec2 Size, vec2 Jitter)
 {
     vec3 CameraPosition = uCamera.Position.xyz;
@@ -630,11 +661,17 @@ void main()
             const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
             FMaterial Material = Materials[MaterialIndex];
 
-            float DoSpecular = (NextRandom(RandomSeed) < Material.SpecularFactor) ? 1.0 : 0.0;
+            float SpecularChance = Material.SpecularChance;
+            if (SpecularChance > 0.0)
+            {
+                SpecularChance = FresnelReflectAmount(1.0, Material.IncidenceOfRefraction, Ray.Direction, PayLoad.Normal, Material.SpecularChance, 1.0);
+            }
+
+            float DoSpecular = (NextRandom(RandomSeed) < SpecularChance) ? 1.0 : 0.0;
             vec3 RandomDir   = NextRandomUnitSphereVec3(RandomSeed);
             vec3 DiffuseRay  = normalize(PayLoad.Normal + RandomDir);
             vec3 SpecularRay = reflect(Ray.Direction, PayLoad.Normal);
-            SpecularRay      = normalize(mix(SpecularRay, DiffuseRay, Material.Roughness * Material.Roughness));
+            SpecularRay      = normalize(mix(SpecularRay, DiffuseRay, Material.SpecularRoughness * Material.SpecularRoughness));
             vec3 Direction   = mix(DiffuseRay, SpecularRay, DoSpecular);
             
             vec3 EmissiveColor = Material.EmissiveColor.rgb * RayColor;
@@ -648,7 +685,7 @@ void main()
             {
                 break;
             }
-        
+
             // Add the energy we 'lose' by randomly terminating paths
             RayColor *= 1.0 / Probability;
         #endif

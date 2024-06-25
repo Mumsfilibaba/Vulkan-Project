@@ -142,4 +142,5 @@ private:
     // Viewport
     uint32_t m_ViewportWidth;
     uint32_t m_ViewportHeight;
+    bool     m_bViewportHasFocus;
 };

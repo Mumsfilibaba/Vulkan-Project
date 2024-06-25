@@ -74,13 +74,22 @@ struct FMaterial
     glm::vec4 EmissiveColor;
     // 32-48
     glm::vec4 SpecularColor;
-    // 48-60
-    float     SpecularFactor;
-    float     Roughness;
-    float     RefractionIndex;
+    // 48-64
+    glm::vec4 AbsorbtionColor;
+    // 64-80
+    float     SpecularChance;
+    float     SpecularRoughness;
+    float     IncidenceOfRefraction;
+    float     RefractionChance;
+    // 80-84
+    float     RefractionRoughness;
     // Padding
-    uint      Padding0;
+    uint32_t  Padding0;
+    uint32_t  Padding1;
+    uint32_t  Padding2;
 };
+
+
 
 struct FSceneSettings
 {
@@ -122,11 +131,24 @@ struct FModelScene : public FScene
     virtual void Reset() override;
 };
 
+enum class ESphereSceneType
+{
+    Default = 1,
+    PolishedGlass = 2,
+};
+
 struct FSphereScene : public FScene
 {
+    FSphereScene(ESphereSceneType InType)
+        : Type(InType)
+    {
+    }
+    
     virtual void Initialize() override;
 
     virtual void Reset() override;
+    
+    const ESphereSceneType Type;
 };
 
 struct FCornellBoxScene : public FScene

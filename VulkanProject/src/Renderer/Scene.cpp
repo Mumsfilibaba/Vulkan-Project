@@ -85,10 +85,14 @@ void FModelScene::Initialize()
         glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.0f,
         0.9f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -96,10 +100,14 @@ void FModelScene::Initialize()
         glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.0f,
         0.9f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -107,10 +115,14 @@ void FModelScene::Initialize()
         glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.0f,
         0.9f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     // Light
@@ -119,10 +131,14 @@ void FModelScene::Initialize()
         glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
         glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.0f,
         0.0f,
         0.0f,
-        0
+        0.0f,
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -130,10 +146,14 @@ void FModelScene::Initialize()
         glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.9f, 0.9f, 0.9f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.1f,
         0.2f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
 }
 
@@ -153,68 +173,183 @@ void FModelScene::Reset()
 
 void FSphereScene::Initialize()
 {
-    // Settings
-    m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
-
     // Setup Camera
     Reset();
 
-    // Spheres
-    m_Spheres.push_back({ glm::vec3( 1.0f, 0.0f, 1.0f), 0.49f, 0 });
-    m_Spheres.push_back({ glm::vec3(0.0f, 0.0f, 1.0f), 0.49f, 1 });
-    m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f), 0.49f, 2 });
-
-    m_Spheres.push_back({ glm::vec3(0.0f, -100.5f, 0.0f), 100.0f, 3 });
-
-    // Materials
-    
-    // Right Ball (Golden Ball)
-    m_Materials.push_back(
+    if (Type == ESphereSceneType::Default)
     {
-        glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
-        1.0f,
-        0.5f,
-        0.0f,
-        0
-    });
-    
-    // Middle Ball (Pink Ball)
-    m_Materials.push_back(
+        // Settings
+        m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
+        
+        // Spheres
+        m_Spheres.push_back({ glm::vec3( 1.0f, 0.0f, 1.0f), 0.49f, 0 });
+        m_Spheres.push_back({ glm::vec3(0.0f, 0.0f, 1.0f), 0.49f, 1 });
+        m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f), 0.49f, 2 });
+        
+        m_Spheres.push_back({ glm::vec3(0.0f, -100.5f, 0.0f), 100.0f, 3 });
+        
+        // Materials
+        
+        // Right Ball (Golden Ball)
+        m_Materials.push_back(
+        {
+            glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            1.0f,
+            0.5f,
+            1.0f,
+            0.0f,
+            0.0f,
+            // padding
+            0, 0, 0
+        });
+        
+        // Middle Ball (Pink Ball)
+        m_Materials.push_back(
+        {
+            glm::vec4(0.7f, 0.3f, 0.3f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.7f, 0.3f, 0.3f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            1.0f,
+            0.1f,
+            1.0f,
+            0.0f,
+            0.0f,
+            // padding
+            0, 0, 0
+        });
+        
+        // Left Ball (White Ball)
+        m_Materials.push_back(
+        {
+            glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            0.0f,
+            0.8f,
+            1.0f,
+            0.0f,
+            0.0f,
+            // padding
+            0, 0, 0
+        });
+        
+        // Large Ball (Green Ball)
+        m_Materials.push_back(
+        {
+            glm::vec4(0.7f, 0.9f, 0.0f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            0.0f,
+            1.0f,
+            1.0f,
+            0.0f,
+            0.0f,
+            // padding
+            0, 0, 0
+        });
+    }
+    else
     {
-        glm::vec4(0.7f, 0.3f, 0.3f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.7f, 0.3f, 0.3f, 1.0f),
-        1.0f,
-        0.1f,
-        0.0f,
-        0
-    });
-    
-    // Left Ball (White Ball)
-    m_Materials.push_back(
-    {
-        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.0f,
-        0.8f,
-        0.0f,
-        0
-    });
-    
-    // Large Ball (Green Ball)
-    m_Materials.push_back(
-    {
-        glm::vec4(0.7f, 0.9f, 0.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.0f,
-        1.0f,
-        0.0f,
-        0
-    });
+        // Settings
+        m_Settings.BackgroundType = BACKGROUND_TYPE_SKYBOX;
+        
+        // Roof Quad
+        m_Quads.push_back({ glm::vec4(-0.5f, 2.2f, 0.5f, 0.0f), glm::vec4(0.0f, 0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 0.0f), 0 });
+        
+        // Floor Quad
+        m_Quads.push_back({ glm::vec4(-2.5f, 0.0f, -0.5f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 0.0f), glm::vec4(5.0f, 0.0f, 0.0f, 0.0f), 0 });
+        
+        // Wall Quad
+        constexpr float totalWidth = 5.0f;
+        constexpr float quadWidth = 0.05f;
+        constexpr uint32_t numQuads = totalWidth / quadWidth;
+        for (uint32_t i = 0; i < numQuads; i++)
+        {
+            const uint32_t materialIndex = i % 2;
+            m_Quads.push_back({ glm::vec4(-2.5f + (quadWidth * static_cast<float>(i)), 1.2f, -0.5f, 0.0f), glm::vec4(0.0f, -1.0f, 0.0f, 0.0f), glm::vec4(quadWidth, 0.0f, 0.0f, 0.0f), materialIndex });
+        }
+        
+        // Light Quad
+        m_Quads.push_back({ glm::vec4(-0.375f, 2.195f, 0.375f, 0.0f), glm::vec4(0.0f, 0.0f, -0.75f, 0.0f), glm::vec4(0.75f, 0.0f, 0.0f, 0.0f), 2 });
+        
+        // Roof-, Floor- and Wall- Material
+        m_Materials.push_back(
+        {
+            glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            0.0f,
+            0.9f,
+            1.0f,
+            0.0f,
+            0.0f,
+            // padding
+            0, 0, 0
+        });
+        
+        // Wall- Material
+        m_Materials.push_back(
+        {
+            glm::vec4(0.02f, 0.02f, 0.02f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            0.0f,
+            0.9f,
+            1.0f,
+            0.0f,
+            0.0f,
+            // padding
+            0, 0, 0
+        });
+        
+        // Light Material
+        m_Materials.push_back(
+        {
+            glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
+            glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            // padding
+            0, 0, 0
+        });
+        
+        // Spheres
+        const uint32_t startMaterialIndex = static_cast<uint32_t>(m_Materials.size());
+        constexpr int32_t numSpheres = 7;
+        for (int32_t i = 0; i < numSpheres; i++)
+        {
+            m_Spheres.push_back({ glm::vec3( -1.85f + static_cast<float>(i) * 0.6f, 0.4f, 0.0f), 0.29f, startMaterialIndex + static_cast<uint32_t>(i) });
+            
+            const float incidenceOfRefraction = 1.0f + 0.5f * float(i) / float(numSpheres - 1);
+            m_Materials.push_back(
+            {
+                glm::vec4(0.9f, 0.25f, 0.25f, 1.0f),
+                glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+                glm::vec4(0.8f, 0.8f, 0.8f, 1.0f),
+                glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+                0.02f,
+                0.0f,
+                incidenceOfRefraction,
+                1.0f,
+                0.0f,
+                // padding
+                0, 0, 0
+            });
+        }
+    }
 }
 
 void FSphereScene::Reset()
@@ -267,17 +402,20 @@ void FCornellBoxScene::Initialize()
     m_Spheres.push_back({ glm::vec3( 0.0f, 0.75f, 0.5f), 0.7f, 10 });
     m_Spheres.push_back({ glm::vec3(-2.2f, 0.75f, 0.5f), 0.7f, 11 });
     
-
     // Wall Materials
     m_Materials.push_back(
     {
         glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.0f,
         0.9f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -285,10 +423,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.0f,
         0.9f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -296,10 +438,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.0f,
         0.9f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     // Light
@@ -308,10 +454,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
         glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.0f,
         0.0f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     // Green Materials
@@ -320,10 +470,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        1.0f,
+        0.0f,
         1.0f,
         0.0f,
         0.0f,
-        0
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -331,10 +485,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         1.0f,
         0.25f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -342,10 +500,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         1.0f,
         0.5f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -353,10 +515,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         1.0f,
         0.75f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -364,10 +530,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        1.0f,
         1.0f,
         1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     // Ball Materials
@@ -376,10 +546,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4(0.9f, 0.9f, 0.75f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.1f,
         0.2f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -387,10 +561,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4(0.9f, 0.75f, 0.9f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.5f,
         0.2f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
     
     m_Materials.push_back(
@@ -398,10 +576,14 @@ void FCornellBoxScene::Initialize()
         glm::vec4(0.75f, 0.9f, 0.9f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
         glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         1.0f,
         0.2f,
+        1.0f,
         0.0f,
-        0
+        0.0f,
+        // padding
+        0, 0, 0
     });
 }
 

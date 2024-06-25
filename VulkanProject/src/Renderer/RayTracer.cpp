@@ -57,6 +57,7 @@ FRayTracer::FRayTracer()
     , m_LastGPUTime(0.0f)
     , m_ViewportWidth(0)
     , m_ViewportHeight(0)
+    , m_bViewportHasFocus(false)
 {
 }
 
@@ -113,7 +114,7 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     }
     
     // Create scene
-    m_pScene = new FSphereScene();
+    m_pScene = new FSphereScene(ESphereSceneType::Default);
     m_pScene->Initialize();
 
     // RenderPasses
@@ -179,61 +180,64 @@ void FRayTracer::Tick(float deltaTime)
     CreateOrResizeSceneTexture(m_ViewportWidth, m_ViewportHeight);
 
     // Camera Movement
-    glm::vec3 translation(0.0f);
-    if (FInput::IsKeyDown(GLFW_KEY_W))
+    if (m_bViewportHasFocus)
     {
-        translation.z = CameraSpeed * deltaTime;
-    }
-    else if (FInput::IsKeyDown(GLFW_KEY_S))
-    {
-        translation.z = -CameraSpeed * deltaTime;
-    }
+        glm::vec3 translation(0.0f);
+        if (FInput::IsKeyDown(GLFW_KEY_W))
+        {
+            translation.z = CameraSpeed * deltaTime;
+        }
+        else if (FInput::IsKeyDown(GLFW_KEY_S))
+        {
+            translation.z = -CameraSpeed * deltaTime;
+        }
 
-    if (FInput::IsKeyDown(GLFW_KEY_A))
-    {
-        translation.x = CameraSpeed * deltaTime;
-    }
-    else if (FInput::IsKeyDown(GLFW_KEY_D))
-    {
-        translation.x = -CameraSpeed * deltaTime;
-    }
+        if (FInput::IsKeyDown(GLFW_KEY_A))
+        {
+            translation.x = CameraSpeed * deltaTime;
+        }
+        else if (FInput::IsKeyDown(GLFW_KEY_D))
+        {
+            translation.x = -CameraSpeed * deltaTime;
+        }
 
-    m_pScene->m_Camera.Move(translation);
+        m_pScene->m_Camera.Move(translation);
 
-    // Camera rotation
-    constexpr float CameraRotationSpeed = glm::pi<float>() / 2;
+        // Camera rotation
+        constexpr float CameraRotationSpeed = glm::pi<float>() / 2;
 
-    glm::vec3 rotation(0.0f);
-    if (FInput::IsKeyDown(GLFW_KEY_LEFT))
-    {
-        rotation.y = -CameraRotationSpeed * deltaTime;
-    }
-    else if (FInput::IsKeyDown(GLFW_KEY_RIGHT))
-    {
-        rotation.y = CameraRotationSpeed * deltaTime;
-    }
+        glm::vec3 rotation(0.0f);
+        if (FInput::IsKeyDown(GLFW_KEY_LEFT))
+        {
+            rotation.y = -CameraRotationSpeed * deltaTime;
+        }
+        else if (FInput::IsKeyDown(GLFW_KEY_RIGHT))
+        {
+            rotation.y = CameraRotationSpeed * deltaTime;
+        }
 
-    if (FInput::IsKeyDown(GLFW_KEY_UP))
-    {
-        rotation.x = -CameraRotationSpeed * deltaTime;
-    }
-    else if (FInput::IsKeyDown(GLFW_KEY_DOWN))
-    {
-        rotation.x = CameraRotationSpeed * deltaTime;
-    }
+        if (FInput::IsKeyDown(GLFW_KEY_UP))
+        {
+            rotation.x = -CameraRotationSpeed * deltaTime;
+        }
+        else if (FInput::IsKeyDown(GLFW_KEY_DOWN))
+        {
+            rotation.x = CameraRotationSpeed * deltaTime;
+        }
 
-    m_pScene->m_Camera.Rotate(rotation);
+        m_pScene->m_Camera.Rotate(rotation);
 
-    // Check if we moved and then we reset the image
-    if (glm::length(rotation) > 0.0f || glm::length(translation) > 0.0f)
-    {
-        m_bResetImage = true;
-    }
+        // Check if we moved and then we reset the image
+        if (glm::length(rotation) > 0.0f || glm::length(translation) > 0.0f)
+        {
+            m_bResetImage = true;
+        }
 
-    // Reload shaders
-    if (FInput::IsKeyDown(GLFW_KEY_R))
-    {
-        ReloadShader();
+        // Reload shaders
+        if (FInput::IsKeyDown(GLFW_KEY_R))
+        {
+            ReloadShader();
+        }
     }
 
     // Update
@@ -494,9 +498,10 @@ void FRayTracer::OnRenderUI()
         {
             static const char* scenes[] =
             {
-                "Spheres",
+                "Spheres Default",
                 "CornellBox",
-                "Triangles"
+                "Triangles",
+                "Polished Glass Spheres"
             };
 
             static int currentScene = 0;
@@ -505,29 +510,31 @@ void FRayTracer::OnRenderUI()
 
             if (prevScene != currentScene)
             {
-                // Change to Sphere-scene
-                if (currentScene == 0)
+                if (currentScene == 0) // Change to Sphere-scene
                 {
                     SAFE_DELETE(m_pScene);
-                    m_pScene = new FSphereScene();
+                    m_pScene = new FSphereScene(ESphereSceneType::Default);
                     m_pScene->Initialize();
                     m_bResetImage = true;
                 }
-
-                // Change to CornellBox-scene
-                if (currentScene == 1)
+                else if (currentScene == 1) // Change to CornellBox-scene
                 {
                     SAFE_DELETE(m_pScene);
                     m_pScene = new FCornellBoxScene();
                     m_pScene->Initialize();
                     m_bResetImage = true;
                 }
-                
-                // Change to Triangles-scene
-                if (currentScene == 2)
+                else if (currentScene == 2) // Change to Triangles-scene
                 {
                     SAFE_DELETE(m_pScene);
                     m_pScene = new FModelScene();
+                    m_pScene->Initialize();
+                    m_bResetImage = true;
+                }
+                else if (currentScene == 3) // Change to "Polished Glass Sphere"-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FSphereScene(ESphereSceneType::PolishedGlass);
                     m_pScene->Initialize();
                     m_bResetImage = true;
                 }
@@ -700,15 +707,28 @@ void FRayTracer::OnRenderUI()
                 {
                     m_bResetImage = true;
                 }
-                if (ImGui::DragFloat("SpecularFactor", &material.SpecularFactor, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+                // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.AbsorbtionColor)))
+                if (ImGui::InputFloat3("AbsorbtionColor", glm::value_ptr(material.AbsorbtionColor)))
                 {
                     m_bResetImage = true;
                 }
-                if (ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+                if (ImGui::DragFloat("SpecularChance", &material.SpecularChance, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
                 {
                     m_bResetImage = true;
                 }
-                if (ImGui::DragFloat("RefractionIndex", &material.RefractionIndex, 0.01f, 0.0f, 10.0f, "%.2f"))
+                if (ImGui::DragFloat("SpecularRoughness", &material.SpecularRoughness, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+                {
+                    m_bResetImage = true;
+                }
+                if (ImGui::DragFloat("RefractionChance", &material.RefractionChance, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+                {
+                    m_bResetImage = true;
+                }
+                if (ImGui::DragFloat("RefractionRoughness", &material.RefractionRoughness, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+                {
+                    m_bResetImage = true;
+                }
+                if (ImGui::DragFloat("IncidenceOfRefraction", &material.IncidenceOfRefraction, 0.1f, 0.5f, 2.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
                 {
                     m_bResetImage = true;
                 }
@@ -724,8 +744,9 @@ void FRayTracer::OnRenderUI()
     // Viewport
     ImGui::Begin("Viewport");
 
-    m_ViewportWidth  = ImGui::GetContentRegionAvail().x;
-    m_ViewportHeight = ImGui::GetContentRegionAvail().y;
+    m_bViewportHasFocus = ImGui::IsWindowFocused();
+    m_ViewportWidth     = ImGui::GetContentRegionAvail().x;
+    m_ViewportHeight    = ImGui::GetContentRegionAvail().y;
 
     if (m_pOutputTexture)
     {
