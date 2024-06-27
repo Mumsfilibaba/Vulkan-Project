@@ -10,9 +10,10 @@
 #define NUM_THREADS 16
 #define MAX_DEPTH 1024
 #define SIGMA 0.0001
+#define RAY_OFFSET 0.01
 #define GAMMA 2.2
+#define SKYBOX_MULTIPLIER 1.0
 
-#define ENABLE_RAY_OFFSET 0
 #define ENABLE_QUAD_BACK_FACE_CULLING 1
 #define ENABLE_TRIANGLE_BACK_FACE_CULLING 0
 #define ENABLE_RUSSIAN_ROULETTE 1
@@ -193,8 +194,9 @@ struct FRayPayLoad
     float T;
     float MinT;
     float MaxT;
-    bool  FrontFace;
     uint  MaterialIndex;
+    bool  bFrontFace;
+    bool  bFromInside;
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -255,7 +257,8 @@ void HitQuad(in FQuad Quad, in FRay Ray, inout FRayPayLoad PayLoad)
 
             PayLoad.T             = t;
             PayLoad.MaterialIndex = Quad.MaterialIndex;
-            PayLoad.FrontFace     = true;
+            PayLoad.bFrontFace    = true;
+            PayLoad.bFromInside   = false;
             PayLoad.Position      = Ray.Origin + Ray.Direction * PayLoad.T;
 
             if (DdotN >= 0.0)
@@ -272,47 +275,56 @@ void HitQuad(in FQuad Quad, in FRay Ray, inout FRayPayLoad PayLoad)
 
 void HitSphere(in FSphere Sphere, in FRay Ray, inout FRayPayLoad PayLoad)
 {
-    vec3  SpherePos    = Sphere.PositionAndRadius.xyz;
+    // Extract sphere position and radius
+    vec3 SpherePos = Sphere.PositionAndRadius.xyz;
     float SphereRadius = Sphere.PositionAndRadius.w;
 
-    vec3  oc = Ray.Origin - SpherePos;
-    float a = dot(Ray.Direction, Ray.Direction);
-    float b = dot(Ray.Direction, oc);
+    // Vector from ray origin to sphere center
+    vec3 oc = Ray.Origin - SpherePos;
+
+    // Coefficients for the quadratic equation (a*t^2 + 2*b*t + c = 0)
+    float a = dot(Ray.Direction, Ray.Direction); // Direction should be normalized, so a is usually 1
+    float b = dot(Ray.Direction, oc); // Note that this is b' which is b/2 in some formulations
     float c = dot(oc, oc) - (SphereRadius * SphereRadius);
 
-    float Discriminant = (b * b) - (a * c);
+    // Discriminant of the quadratic equation
+    float Discriminant = (b * b) - a * c;
+
+    // If the discriminant is negative, there are no real roots, hence no intersection
     if (Discriminant < 0.0)
     {
         return;
     }
 
-    float t = (-b - sqrt(Discriminant)) / a;
+    // Calculate the first intersection point (nearest point)
+    float sqrtDiscriminant = sqrt(Discriminant);
+    float t = (-b - sqrtDiscriminant) / a;
+
+    bool bFromInside = false;
+
+    // Check if the first intersection point is within the valid range
     if (t <= PayLoad.MinT || t >= PayLoad.MaxT)
     {
-        t = (-b + sqrt(Discriminant)) / a;
+        // Calculate the second intersection point (farther point)
+        t = (-b + sqrtDiscriminant) / a;
+        bFromInside = true;
+
+        // Check if the second intersection point is within the valid range
         if (t <= PayLoad.MinT || t >= PayLoad.MaxT)
         {
             return;
         }
     }
 
+    // If this intersection point is closer than the previous hit, update the payload
     if (t <= PayLoad.T)
     {
-        PayLoad.T             = t;
+        PayLoad.T = t;
         PayLoad.MaterialIndex = Sphere.MaterialIndex;
-        PayLoad.Position      = Ray.Origin + Ray.Direction * PayLoad.T;
-
-        vec3 OutsideNormal = normalize((PayLoad.Position - SpherePos) / SphereRadius);
-        if (dot(Ray.Direction, OutsideNormal) < 0.0)
-        {
-            PayLoad.Normal    = OutsideNormal;
-            PayLoad.FrontFace = true;
-        }
-        else
-        {
-            PayLoad.Normal    = -OutsideNormal;
-            PayLoad.FrontFace = false;
-        }
+        PayLoad.Position = Ray.Origin + Ray.Direction * PayLoad.T;
+        PayLoad.bFromInside = bFromInside;
+        PayLoad.bFrontFace = !bFromInside; // front face if ray hits from outside
+        PayLoad.Normal = normalize((PayLoad.Position - SpherePos) / SphereRadius) * (bFromInside ? -1.0 : 1.0);
     }
 }
 
@@ -337,7 +349,8 @@ void HitPlane(in FPlane Plane, in FRay Ray, inout FRayPayLoad PayLoad)
         {
             PayLoad.T             = t;
             PayLoad.MaterialIndex = Plane.MaterialIndex;
-            PayLoad.FrontFace     = true;
+            PayLoad.bFrontFace    = true;
+            PayLoad.bFromInside   = false;
             PayLoad.Position      = Ray.Origin + Ray.Direction * PayLoad.T;
 
             if (DdotN >= 0.0)
@@ -406,16 +419,17 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
         PayLoad.T             = t;
         PayLoad.MaterialIndex = MaterialIndex;
         PayLoad.Position      = Ray.Origin + t * Ray.Direction;
-        
+        PayLoad.bFromInside   = false;
+
         if (DdotN < 0.0) 
         {
-            PayLoad.Normal    = Normal;
-            PayLoad.FrontFace = true;
+            PayLoad.Normal     = Normal;
+            PayLoad.bFrontFace = true;
         }
         else
         {
-            PayLoad.Normal    = -Normal;
-            PayLoad.FrontFace = false;
+            PayLoad.Normal     = -Normal;
+            PayLoad.bFrontFace = false;
         }
     }
 }
@@ -549,28 +563,28 @@ bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad)
 
 float FresnelReflectAmount(float N1, float N2, vec3 Normal, vec3 Incident, float F0, float F90)
 {
-        // Schlick aproximation
-        float R0 = (N1 - N2) / (N1 + N2);
-        R0 *= R0;
+    // Schlick aproximation
+    float R0 = (N1 - N2) / (N1 + N2);
+    R0 *= R0;
 
-        float CosX = -dot(Normal, Incident);
-        if (N1 > N2)
+    float CosX = -dot(Normal, Incident);
+    if (N1 > N2)
+    {
+        float N     = N1 / N2;
+        float SinT2 = N * N * (1.0 - CosX * CosX);
+        if (SinT2 > 1.0)
         {
-            float N     = N1 / N2;
-            float SinT2 = N * N * (1.0 - CosX * CosX);
-            if (SinT2 > 1.0)
-            {
-                return F90;
-            }
-
-            CosX = sqrt(1.0 - SinT2);
+            return F90;
         }
 
-        float X  = 1.0 - CosX;
-        float X2 = X * X;
+        CosX = sqrt(1.0 - SinT2);
+    }
 
-        float Result = R0 + (1.0 - R0) * X2 * X2 * X;
-        return mix(F0, F90, Result);
+    float X  = 1.0 - CosX;
+    float X2 = X * X;
+
+    float Result = R0 + (1.0 - R0) * X2 * X2 * X;
+    return mix(F0, F90, Result);
 }
 
 vec3 CalculateFilmTarget(ivec2 Pixel, ivec2 Size, vec2 Jitter)
@@ -616,7 +630,7 @@ vec3 GetEnvironmentLight(vec3 RayDirection)
         // Sample the Skybox
         vec3 UnitDirection = normalize(RayDirection);
         vec4 SkyboxColor = texture(uSkybox, UnitDirection);
-        return SkyboxColor.rgb;
+        return SkyboxColor.rgb * SKYBOX_MULTIPLIER;
     }
     else
     {
@@ -652,32 +666,91 @@ void main()
     for (uint i = 0; i < MaxBounces; i++)
     {
         FRayPayLoad PayLoad;
-        PayLoad.MinT = 0.001;
-        PayLoad.MaxT = 1000.0;
-        PayLoad.T    = PayLoad.MaxT;
+        PayLoad.MinT        = 0.0001;
+        PayLoad.MaxT        = 100000.0;
+        PayLoad.T           = PayLoad.MaxT;
+        PayLoad.bFrontFace  = false;
+        PayLoad.bFromInside = false;
 
         if (TraceRay(Ray, PayLoad))
         {
             const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
             FMaterial Material = Materials[MaterialIndex];
 
-            float SpecularChance = Material.SpecularChance;
-            if (SpecularChance > 0.0)
+            if (PayLoad.bFromInside)
             {
-                SpecularChance = FresnelReflectAmount(1.0, Material.IncidenceOfRefraction, Ray.Direction, PayLoad.Normal, Material.SpecularChance, 1.0);
+                RayColor *= exp(-Material.AbsorbtionColor.rgb * PayLoad.T);
             }
 
-            float DoSpecular = (NextRandom(RandomSeed) < SpecularChance) ? 1.0 : 0.0;
-            vec3 RandomDir   = NextRandomUnitSphereVec3(RandomSeed);
-            vec3 DiffuseRay  = normalize(PayLoad.Normal + RandomDir);
-            vec3 SpecularRay = reflect(Ray.Direction, PayLoad.Normal);
-            SpecularRay      = normalize(mix(SpecularRay, DiffuseRay, Material.SpecularRoughness * Material.SpecularRoughness));
-            vec3 Direction   = mix(DiffuseRay, SpecularRay, DoSpecular);
+            float SpecularChance   = Material.SpecularChance;
+            float RefractionChance = Material.RefractionChance;
             
-            vec3 EmissiveColor = Material.EmissiveColor.rgb * RayColor;
-            SampleColor += EmissiveColor;
+            if (SpecularChance > 0.0)
+            {
+                float IncidenceOfRefraction1 = PayLoad.bFromInside ? Material.IncidenceOfRefraction : 1.0;
+                float IncidenceOfRefraction2 = !PayLoad.bFromInside ? Material.IncidenceOfRefraction : 1.0;
+                SpecularChance = FresnelReflectAmount(IncidenceOfRefraction1, IncidenceOfRefraction2, Ray.Direction, PayLoad.Normal, Material.SpecularChance, 1.0);
 
-            RayColor *= mix(Material.AlbedoColor.rgb, Material.SpecularColor.rgb, DoSpecular);
+                float ChanceMultiplier = (1.0 - SpecularChance) / (1.0 - Material.SpecularChance);
+                RefractionChance *= ChanceMultiplier;
+            }
+
+            float DoSpecular     = 0.0;
+            float DoRefraction   = 0.0;
+            float RayProbability = 1.0;
+            float RaySelectRoll  = NextRandom(RandomSeed);
+            if (SpecularChance > 0.0 && RaySelectRoll < SpecularChance)
+            {
+                DoSpecular     = 1.0;
+                RayProbability = SpecularChance;
+            }
+            else if (RefractionChance > 0.0 && RaySelectRoll < (SpecularChance + RefractionChance))
+            {
+                DoRefraction   = 1.0;
+                RayProbability = RefractionChance;
+            }
+            else
+            {
+                RayProbability = 1.0 - (SpecularChance + RefractionChance);
+            }
+
+            RayProbability = max(RayProbability, 0.001); 
+
+            vec3 RayDirection = Ray.Direction;
+            vec3 RayPosition  = PayLoad.Position;
+            if (DoRefraction == 1.0)
+            {
+                RayPosition = RayPosition - PayLoad.Normal * RAY_OFFSET;
+            }
+            else
+            {
+                RayPosition = RayPosition + PayLoad.Normal * RAY_OFFSET;
+            }
+
+            // Create diffuse ray
+            vec3 DiffuseRay = normalize(PayLoad.Normal + NextRandomUnitSphereVec3(RandomSeed));
+
+            // Create specular ray 
+            vec3 SpecularRay = reflect(RayDirection, PayLoad.Normal);
+            SpecularRay = normalize(mix(SpecularRay, DiffuseRay, Material.SpecularRoughness * Material.SpecularRoughness));
+            
+            // Create refraction ray
+            vec3 RefractionRay = refract(RayDirection, PayLoad.Normal, PayLoad.bFromInside ? Material.IncidenceOfRefraction : 1.0 / Material.IncidenceOfRefraction);
+            RefractionRay = normalize(mix(RefractionRay, normalize(PayLoad.Normal + NextRandomUnitSphereVec3(RandomSeed)), Material.RefractionRoughness * Material.RefractionRoughness));
+
+            // blend rays
+            RayDirection = mix(DiffuseRay, SpecularRay, DoSpecular);
+            RayDirection = mix(RayDirection, RefractionRay, DoRefraction);
+
+            SampleColor += Material.EmissiveColor.rgb * RayColor;
+
+            if (DoRefraction == 0.0)
+            {
+                RayColor *= mix(Material.AlbedoColor.rgb, Material.SpecularColor.rgb, DoSpecular);
+            }
+
+            // Take ray probability into account
+            RayColor /= RayProbability;
 
         #if ENABLE_RUSSIAN_ROULETTE
             float Probability = max(RayColor.r, max(RayColor.g, RayColor.b));
@@ -687,18 +760,17 @@ void main()
             }
 
             // Add the energy we 'lose' by randomly terminating paths
-            RayColor *= 1.0 / Probability;
+            RayColor /= Probability;
         #endif
 
             // Setup the next Ray
-            Ray.Origin    = PayLoad.Position;
-            Ray.Direction = Direction;
+            Ray.Origin    = RayPosition;
+            Ray.Direction = RayDirection;
         }
         else
         {
             // Add this hit color
-            vec3 EnvironmentLight = GetEnvironmentLight(Ray.Direction) * RayColor;
-            SampleColor += EnvironmentLight;
+            SampleColor += GetEnvironmentLight(Ray.Direction) * RayColor;
             break;
         }
     }

@@ -173,13 +173,13 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
 
 void FRayTracer::Tick(float deltaTime)
 {
-    constexpr float CameraSpeed = 1.5f;
     m_LastCPUTime = deltaTime * 1000.0f; // deltaTime is in seconds
 
     // Update scene image
     CreateOrResizeSceneTexture(m_ViewportWidth, m_ViewportHeight);
 
     // Camera Movement
+    const float CameraSpeed = m_pScene->m_Settings.CameraSpeed;
     if (m_bViewportHasFocus)
     {
         glm::vec3 translation(0.0f);
@@ -501,7 +501,9 @@ void FRayTracer::OnRenderUI()
                 "Spheres Default",
                 "CornellBox",
                 "Triangles",
-                "Polished Glass Spheres"
+                "Polished Glass Spheres",
+                "Rough Colored Glass Spheres",
+                "Rough Transparent Glass Spheres",
             };
 
             static int currentScene = 0;
@@ -535,6 +537,20 @@ void FRayTracer::OnRenderUI()
                 {
                     SAFE_DELETE(m_pScene);
                     m_pScene = new FSphereScene(ESphereSceneType::PolishedGlass);
+                    m_pScene->Initialize();
+                    m_bResetImage = true;
+                }
+                else if (currentScene == 4) // Change to "Rough Colored Glass Spheres"-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FSphereScene(ESphereSceneType::ColoredRoughGlass);
+                    m_pScene->Initialize();
+                    m_bResetImage = true;
+                }
+                else if (currentScene == 5) // Change to "Rough Transparent Glass Spheres"-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FSphereScene(ESphereSceneType::RoughGlass);
                     m_pScene->Initialize();
                     m_bResetImage = true;
                 }

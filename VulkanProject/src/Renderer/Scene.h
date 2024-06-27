@@ -89,14 +89,13 @@ struct FMaterial
     uint32_t  Padding2;
 };
 
-
-
 struct FSceneSettings
 {
     uint32_t BackgroundType;
     float    Exposure;
     uint32_t NumBounces;
     float    FieldOfView;
+    float    CameraSpeed;
 };
 
 struct FScene
@@ -134,7 +133,9 @@ struct FModelScene : public FScene
 enum class ESphereSceneType
 {
     Default = 1,
-    PolishedGlass = 2,
+    ColoredRoughGlass = 2,
+    PolishedGlass = 3,
+    RoughGlass = 4, 
 };
 
 struct FSphereScene : public FScene
