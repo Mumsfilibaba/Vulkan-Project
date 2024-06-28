@@ -78,7 +78,7 @@ void FModelScene::Initialize()
     // Left Quad
     m_Quads.push_back({ glm::vec4(1.0f, 2.0f, -1.0f, 0.0f), glm::vec4(0.0f, -2.0f, 0.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), 2 });
     // Light Quad
-    m_Quads.push_back({ glm::vec4(0.15f, 1.995f, 0.375f, 0.0f), glm::vec4(0.0f, 0.0f, -0.75f, 0.0f), glm::vec4(0.75f, 0.0f, 0.0f, 0.0f), 3 });
+    m_Quads.push_back({ glm::vec4(0.5f, 1.999f, 0.2f, 0.0f), glm::vec4(0.0f, 0.0f, -0.4f, 0.0f), glm::vec4(0.4f, 0.0f, 0.0f, 0.0f), 3 });
     
     // Materials
     m_Materials.push_back(
@@ -130,7 +130,7 @@ void FModelScene::Initialize()
     m_Materials.push_back(
     {
         glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
-        glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
+        glm::vec4(40.0f, 36.0f, 28.0f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.0f,

@@ -473,8 +473,13 @@ void FRayTracer::OnRenderUI()
         ImGui::Text("Performance:");
         ImGui::Separator();
 
-        ImGui::Text("CPU Time %.4f", m_LastCPUTime);
-        ImGui::Text("GPU Time %.4f", m_LastGPUTime);
+        const uint32_t cpuCurrentFPS = static_cast<uint32_t>(1000.0f / m_LastCPUTime);
+        ImGui::Text("[CPU FPS] %u", cpuCurrentFPS);
+        ImGui::Text("[CPU Time] %.4f", m_LastCPUTime);
+        
+        const uint32_t gpuCurrentFPS = static_cast<uint32_t>(1000.0f / m_LastGPUTime);
+        ImGui::Text("[GPU FPS] %u", gpuCurrentFPS);
+        ImGui::Text("[GPU Time] %.4f", m_LastGPUTime);
         
         ImGui::Text("Current Resolution: %dx%d", m_ViewportWidth, m_ViewportHeight);
 
