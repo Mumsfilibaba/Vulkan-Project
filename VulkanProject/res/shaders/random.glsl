@@ -1,5 +1,5 @@
-#ifndef RANDOM_H
-#define RANDOM_H
+#ifndef RANDOM_GLSL
+#define RANDOM_GLSL
 
 #include "math.glsl"
 

@@ -1,5 +1,5 @@
-#ifndef MATH_H
-#define MATH_H
+#ifndef MATH_GLSL
+#define MATH_GLSL
 
 #define PI 3.14159265358979
 #define TWO_PI 6.28318530717958

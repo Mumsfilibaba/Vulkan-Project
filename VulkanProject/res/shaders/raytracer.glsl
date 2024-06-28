@@ -2,6 +2,8 @@
 #include "halton.glsl"
 #include "random.glsl"
 #include "math.glsl"
+#include "primitives.glsl"
+#include "ray.glsl"
 
 #define BACKGROUND_TYPE_NONE 0
 #define BACKGROUND_TYPE_GRADIENT 1
@@ -25,7 +27,7 @@ layout (binding = 1, rgba32f) uniform image2D uPreviousFrame;
 layout (binding = 2)          uniform samplerCube uSkybox;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
-/* Global uniforms */
+// Global uniforms
 
 layout(binding = 3) uniform CameraBufferObject 
 {
@@ -70,78 +72,7 @@ layout(binding = 5) uniform SceneBufferObject
 } uScene;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
-/* Scene objects */
-
-struct FMaterial
-{
-    vec4  AlbedoColor;
-    vec4  EmissiveColor;
-    vec4  SpecularColor;
-    vec4  AbsorbtionColor;
-    float SpecularChance;
-    float SpecularRoughness;
-    float IncidenceOfRefraction;
-    float RefractionChance;
-    float RefractionRoughness;
-    uint  Padding0;
-    uint  Padding1;
-    uint  Padding2;
-};
-
-struct FQuad
-{
-    vec4 Position;
-    vec4 Edge0;
-    vec4 Edge1;
-    uint MaterialIndex;
-    uint Padding0;
-    uint Padding1;
-    uint Padding2;
-};
-
-struct FSphere
-{
-    vec4 PositionAndRadius;
-    uint MaterialIndex;
-    uint Padding0;
-    uint Padding1;
-    uint Padding2;
-};
-
-struct FPlane 
-{
-    vec4 NormalAndDistance;
-    uint MaterialIndex;
-    uint Padding0;
-    uint Padding1;
-    uint Padding2;
-};
-
-struct FVertexRT
-{
-    vec4 Position;
-};
-
-struct FTriangle
-{
-    uint Index0;
-    uint Index1;
-    uint Index2;
-    uint Padding0;
-};
-
-struct FTriangleMesh
-{
-    // 0-32
-    vec4 BoxMin;
-    vec4 BoxMax;
-    // 32-44
-    uint StartTriangle;
-    uint NumTriangles;
-    uint MaterialIndex;
-    // Padding
-    uint Padding0;
-};
+// Scene objects
 
 layout(std430, binding = 6) buffer QuadBuffer
 {
@@ -179,28 +110,7 @@ layout(std430, binding = 12) buffer TriangleMeshBuffer
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
-/* Ray Structs */
-
-struct FRay
-{
-    vec3 Origin;
-    vec3 Direction;
-};
-
-struct FRayPayLoad
-{
-    vec3  Normal;
-    vec3  Position;
-    float T;
-    float MinT;
-    float MaxT;
-    uint  MaterialIndex;
-    bool  bFrontFace;
-    bool  bFromInside;
-};
-
-/*///////////////////////////////////////////////////////////////////////////////////////////////*/
-/* Code */
+// Code
 
 vec3 HemisphereSampleUniform(float u, float v) 
 {
