@@ -3,6 +3,7 @@
 #include "IRenderer.h"
 #include "Camera.h"
 #include "Scene.h"
+#include "Bvh.h"
 
 class FBuffer;
 class FDescriptorSet;
@@ -13,6 +14,7 @@ class FDescriptorSetLayout;
 class FGraphicsPipeline;
 class FRenderPass;
 class FSampler;
+class FCommandBuffer;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Buffer Structs
@@ -22,6 +24,7 @@ struct FRandomBuffer
     // 0-8
     uint32_t FrameIndex  = 0;
     uint32_t HaltonIndex = 0;
+
     // Padding
     uint32_t Padding0 = 0;
     uint32_t Padding1 = 0;
@@ -32,19 +35,21 @@ struct FSceneBuffer
     // 0-16
     uint32_t NumQuads = 0;
     uint32_t NumSpheres = 0;
-    uint32_t NumPlanes = 0;
+    uint32_t NumTriangleMeshes = 0;
     uint32_t NumMaterials = 0;
     // 16-32
-    uint32_t NumTriangleMeshes = 0;
+    uint32_t NumBvhNodes = 0;
     uint32_t BackgroundType = 0;
     uint32_t NumBounces = 4;
-    // Padding
-    uint32_t Padding0 = 0;
+    uint32_t ViewMode = 0;
 };
 
 struct FTonemappingBuffer
 {
-    float    Exposure = 0.5f;
+    // 0-4
+    float Exposure = 0.5f;
+    
+    // Padding
     uint32_t Padding0 = 0;
     uint32_t Padding1 = 0;
     uint32_t Padding2 = 0;
@@ -74,14 +79,15 @@ private:
     void ReleaseDescriptorSets();
     void CreateOrResizeSceneTexture(uint32_t width, uint32_t height);
     void ReloadShader();
+    void UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer);
 
     FDevice*                       m_pDevice;
     FSwapchain*                    m_pSwapchain;
     FDeviceMemoryAllocator*        m_pDeviceAllocator;
     FDescriptorPool*               m_pDescriptorPool;
 
-    std::vector<class FCommandBuffer*> m_CommandBuffers;
-    std::vector<class FQuery*>         m_TimestampQueries;
+    std::vector<FCommandBuffer*> m_CommandBuffers;
+    std::vector<class FQuery*>   m_TimestampQueries;
 
     // RayTracing
     std::atomic<FComputePipeline*> m_pRayTracingPipeline;
@@ -105,12 +111,12 @@ private:
     FBuffer* m_pSceneBuffer;
     FBuffer* m_pTonemappingBuffer;
     FBuffer* m_pSphereBuffer;
-    FBuffer* m_pPlaneBuffer;
     FBuffer* m_pQuadBuffer;
     FBuffer* m_pTriangleBuffer;
     FBuffer* m_pTriangleMeshesBuffer;
     FBuffer* m_pVertexBuffer;
     FBuffer* m_pMaterialBuffer;
+    FBuffer* m_pBvhBuffer;
 
     // SceneTexture
     FTexture*       m_pSceneTexture0;

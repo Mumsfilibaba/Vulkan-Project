@@ -4,10 +4,15 @@
 #include "math.glsl"
 #include "primitives.glsl"
 #include "ray.glsl"
+#include "bvh.glsl"
 
 #define BACKGROUND_TYPE_NONE 0
 #define BACKGROUND_TYPE_GRADIENT 1
 #define BACKGROUND_TYPE_SKYBOX 2
+
+#define VIEW_MODE_RENDER 0
+#define VIEW_MODE_NORMALS 1
+#define VIEW_MODE_TOP_BVH 2
 
 #define NUM_THREADS 16
 #define MAX_DEPTH 1024
@@ -40,6 +45,7 @@ layout(binding = 3) uniform CameraBufferObject
     vec4 Forward;
     // 160-164
     float FieldOfViewDegrees;
+
     // Padding
     uint Padding0;
     uint Padding1;
@@ -51,6 +57,7 @@ layout(binding = 4) uniform RandomBufferObject
     // 0-8
     uint FrameIndex;
     uint HaltonIndex;
+
     // Padding
     uint Padding0;
     uint Padding1;
@@ -61,14 +68,13 @@ layout(binding = 5) uniform SceneBufferObject
     // 0-16
     uint NumQuads;
     uint NumSpheres;
-    uint NumPlanes;
-    uint NumMaterials;
-    // 16-28
     uint NumTriangleMeshes;
+    uint NumMaterials;
+    // 16-32
+    uint NumBvhNodes;
     uint BackgroundType;
     uint NumBounces;
-    // Padding
-    uint Padding0;
+    uint ViewMode;
 } uScene;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -84,29 +90,29 @@ layout(std430, binding = 7) buffer SphereBuffer
     FSphere Spheres[];
 };
 
-layout(std430, binding = 8) buffer PlaneBuffer
-{
-    FPlane Planes[];
-};
-
-layout(std430, binding = 9) buffer MaterialBuffer
+layout(std430, binding = 8) buffer MaterialBuffer
 {
     FMaterial Materials[];
 };
 
-layout(std430, binding = 10) buffer VertexBuffer
+layout(std430, binding = 9) buffer VertexBuffer
 {
     FVertexRT Vertices[];
 };
 
-layout(std430, binding = 11) buffer TriangleBuffer
+layout(std430, binding = 10) buffer TriangleBuffer
 {
     FTriangle Triangles[];
 };
 
-layout(std430, binding = 12) buffer TriangleMeshBuffer
+layout(std430, binding = 11) buffer TriangleMeshBuffer
 {
     FTriangleMesh TriangleMeshes[];
+};
+
+layout(std430, binding = 12) buffer BvhBuffer
+{
+    FBvhNode BvhNodes[];
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -235,43 +241,6 @@ void HitSphere(in FSphere Sphere, in FRay Ray, inout FRayPayLoad PayLoad)
         PayLoad.bFromInside = bFromInside;
         PayLoad.bFrontFace = !bFromInside; // front face if ray hits from outside
         PayLoad.Normal = normalize((PayLoad.Position - SpherePos) / SphereRadius) * (bFromInside ? -1.0 : 1.0);
-    }
-}
-
-void HitPlane(in FPlane Plane, in FRay Ray, inout FRayPayLoad PayLoad)
-{
-    vec3  PlaneNormal = normalize(Plane.NormalAndDistance.xyz);
-    float PlaneDist   = Plane.NormalAndDistance.w;
-
-    float DdotN = dot(Ray.Direction, PlaneNormal);
-    if (abs(DdotN) < SIGMA)
-    {
-        return;
-    }
-
-    vec3 Center = PlaneNormal * PlaneDist;
-    vec3 Diff   = Center - Ray.Origin;
-
-    float t = dot(Diff, PlaneNormal) / DdotN;
-    if (t > 0.0)
-    {
-        if (t < PayLoad.T)
-        {
-            PayLoad.T             = t;
-            PayLoad.MaterialIndex = Plane.MaterialIndex;
-            PayLoad.bFrontFace    = true;
-            PayLoad.bFromInside   = false;
-            PayLoad.Position      = Ray.Origin + Ray.Direction * PayLoad.T;
-
-            if (DdotN >= 0.0)
-            {
-                PayLoad.Normal = -PlaneNormal;
-            }
-            else
-            {
-                PayLoad.Normal = PlaneNormal;
-            }
-        }
     }
 }
 
@@ -419,22 +388,21 @@ bool IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray)
 
 bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad)
 {
-    for (uint i = 0; i < uScene.NumQuads; i++)
+    for (uint i = 0; i < uScene.NumBvhNodes; i++)
     {
-        FQuad Quad = Quads[i];
-        HitQuad(Quad, Ray, PayLoad);
-    }
-
-    for (uint i = 0; i < uScene.NumSpheres; i++)
-    {
-        FSphere Sphere = Spheres[i];
-        HitSphere(Sphere, Ray, PayLoad);
-    }
-
-    for (uint i = 0; i < uScene.NumPlanes; i++)
-    {
-        FPlane Plane = Planes[i];
-        HitPlane(Plane, Ray, PayLoad);
+        FBvhNode Node = BvhNodes[i];
+        if (Node.ObjectType == OBJECT_TYPE_SPHERE)
+        {
+            const uint SphereIndex = Node.ObjectIndex;
+            FSphere Sphere = Spheres[SphereIndex];
+            HitSphere(Sphere, Ray, PayLoad);
+        }
+        else if (Node.ObjectType == OBJECT_TYPE_QUAD)
+        {
+            const uint QuadIndex = Node.ObjectIndex;
+            FQuad Quad = Quads[QuadIndex];
+            HitQuad(Quad, Ray, PayLoad);
+        }
     }
 
     for (uint i = 0; i < uScene.NumTriangleMeshes; i++)
@@ -548,26 +516,8 @@ vec3 GetEnvironmentLight(vec3 RayDirection)
     }
 }
 
-void main()
+vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
 {
-    const ivec2 Pixel = ivec2(gl_GlobalInvocationID.xy);
-    const ivec2 Size  = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
-
-    // Jitter the camera each frame
-    uint RandomSeed = InitRandom(uvec2(Pixel), uint(Size.x), uRandom.FrameIndex);
-
-    // vec2 Jitter = Halton23(uRandom.HaltonIndex);
-    // Jitter = (Jitter * 2.0) - vec2(1.0);
-
-    vec2 Jitter = vec2(NextRandom(RandomSeed), NextRandom(RandomSeed)) - 0.5;
-    const vec3 CameraPosition = uCamera.Position.xyz;
-    const vec3 FilmTarget     = CalculateFilmTarget(Pixel, Size, Jitter);
-
-    // Setup the first Ray
-    FRay Ray;
-    Ray.Origin    = CameraPosition;
-    Ray.Direction = normalize(FilmTarget - CameraPosition);
-
     // Start tracing rays
     vec3 RayColor    = vec3(1.0);
     vec3 SampleColor = vec3(0.0);
@@ -685,8 +635,88 @@ void main()
         }
     }
 
-    // Accumulate samples over time
-    vec4 PreviousColor = imageLoad(uPreviousFrame, Pixel);
-    vec3 CurrentColor  = mix(PreviousColor.rgb, SampleColor, 1.0 / float(uRandom.FrameIndex + 1));
-    imageStore(uOutput, Pixel, vec4(CurrentColor, 1.0));
+    return SampleColor;
+}
+
+vec3 GetNormalForRay(in FRay Ray)
+{
+    FRayPayLoad PayLoad;
+    PayLoad.MinT        = 0.0001;
+    PayLoad.MaxT        = 100000.0;
+    PayLoad.T           = PayLoad.MaxT;
+    PayLoad.bFrontFace  = false;
+    PayLoad.bFromInside = false;
+
+    if (TraceRay(Ray, PayLoad))
+    {
+        return PayLoad.Normal;
+    }
+    else
+    {
+        return vec3(0.0, 0.0, 0.0);
+    }
+}
+
+vec3 GetColorForRay_BvhDebug(in FRay Ray)
+{
+    uint NumHits = 0;
+    for (uint i = 0; i < uScene.NumBvhNodes; i++)
+    {
+        FBvhNode Node = BvhNodes[i];
+        if (IntersectRayAABB(Node.AABBMin.xyz, Node.AABBMax.xyz, Ray))
+        {
+            NumHits++;
+        }
+    }
+
+    if (NumHits > 0)
+    {
+        float Color = min(0.1 + (float(NumHits) / float(uScene.NumBvhNodes)), 1.0);
+        return vec3(Color, Color, Color);
+    }
+    else
+    {
+        return vec3(0.0, 0.0, 0.0);
+    }
+}
+
+void main()
+{
+    const ivec2 Pixel = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 Size  = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
+
+    // Jitter the camera each frame
+    uint RandomSeed = InitRandom(uvec2(Pixel), uint(Size.x), uRandom.FrameIndex);
+
+    vec2 Jitter = vec2(NextRandom(RandomSeed), NextRandom(RandomSeed)) - 0.5;
+    const vec3 CameraPosition = uCamera.Position.xyz;
+    const vec3 FilmTarget     = CalculateFilmTarget(Pixel, Size, Jitter);
+
+    // Setup the first Ray
+    FRay Ray;
+    Ray.Origin    = CameraPosition;
+    Ray.Direction = normalize(FilmTarget - CameraPosition);
+
+    if (uScene.ViewMode == VIEW_MODE_RENDER)
+    {
+        // Get Color for this Ray
+        vec3 SampleColor = GetColorForRay(Ray, RandomSeed);
+
+        // Accumulate samples over time
+        vec4 PreviousColor = imageLoad(uPreviousFrame, Pixel);
+        vec3 CurrentColor  = mix(PreviousColor.rgb, SampleColor, 1.0 / float(uRandom.FrameIndex + 1));
+        imageStore(uOutput, Pixel, vec4(CurrentColor, 1.0));
+    }
+    else if (uScene.ViewMode == VIEW_MODE_NORMALS)
+    {
+        // Get Normal for this Ray
+        vec3 HitNormal = GetNormalForRay(Ray);
+        imageStore(uOutput, Pixel, vec4(HitNormal, 1.0));
+    }
+    else if (uScene.ViewMode == VIEW_MODE_TOP_BVH)
+    {
+        // Get Color for this Ray
+        vec3 Color = GetColorForRay_BvhDebug(Ray);
+        imageStore(uOutput, Pixel, vec4(Color, 1.0));
+    }
 }

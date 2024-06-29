@@ -4,22 +4,21 @@
 FScene::FScene()
     : m_Quads()
     , m_Spheres()
-    , m_Planes()
     , m_Materials()
     , m_Settings()
 {
+    m_Settings.ViewMode    = EViewMode::Render;
     m_Settings.Exposure    = 0.5f;
     m_Settings.NumBounces  = 8;
     m_Settings.FieldOfView = 90.0f;
     m_Settings.CameraSpeed = 1.5f;
     
-    m_Quads.reserve(MAX_QUAD);
+    m_Quads.reserve(MAX_QUADS);
     m_Spheres.reserve(MAX_SPHERES);
-    m_Planes.reserve(MAX_PLANES);
     m_Materials.reserve(MAX_MATERIALS);
     m_Triangles.reserve(MAX_TRIANGLES);
-    m_Vertices.reserve(MAX_TRIANGLES * 3);
-    m_TriangleMeshes.reserve(2);
+    m_Vertices.reserve(MAX_VERTICES);
+    m_TriangleMeshes.reserve(MAX_TRIANGLEMESHES);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -156,6 +155,9 @@ void FModelScene::Initialize()
         // padding
         0, 0, 0
     });
+    
+    // Build BVH
+    m_BvhScene.Build(*this);
 }
 
 void FModelScene::Reset()
@@ -432,6 +434,9 @@ void FSphereScene::Initialize()
             }
         }
     }
+    
+    // Build BVH
+    m_BvhScene.Build(*this);
 }
 
 void FSphereScene::Reset()
@@ -680,6 +685,9 @@ void FCornellBoxScene::Initialize()
         // padding
         0, 0, 0
     });
+    
+    // Build BVH
+    m_BvhScene.Build(*this);
 }
 
 void FCornellBoxScene::Reset()

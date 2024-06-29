@@ -1,25 +1,19 @@
 #pragma once
 #include "Core.h"
 
+enum class EObjectType : uint32_t
+{
+    Unknown = 0,
+    Sphere = 1,
+    Quad = 2,
+    TriangleMesh = 3
+};
+
 struct FSphere
 {
     // 0-16
     glm::vec3 Position;
     float     Radius;
-    // 16-20
-    uint32_t  MaterialIndex;
-
-    // Padding
-    uint32_t  Padding0;
-    uint32_t  Padding1;
-    uint32_t  Padding2;
-};
-
-struct FPlane
-{
-    // 0-16
-    glm::vec3 Normal;
-    float     Distance;
     // 16-20
     uint32_t  MaterialIndex;
 
