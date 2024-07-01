@@ -15,8 +15,8 @@ struct FBvhNode
     uint32_t  ObjectIndex;
 
     // Padding
-    uint Padding0;
-    uint Padding1;
+    uint32_t Padding0;
+    uint32_t Padding1;
 };
 
 struct FBvhScene

@@ -313,77 +313,17 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
     }
 }
 
-bool IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray) 
+bool IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray)
 {
-    // Initialize MinT and MaxT to the full range
-    float MinT = (BoxMin.x - Ray.Origin.x) / Ray.Direction.x;
-    float MaxT = (BoxMax.x - Ray.Origin.x) / Ray.Direction.x;
+    vec3 MinT = (BoxMin - Ray.Origin) / Ray.Direction;
+    vec3 MaxT = (BoxMax - Ray.Origin) / Ray.Direction;
 
-    // Swap MinT and MaxT if needed
-    if (MinT > MaxT)
-    {
-        float Temp = MinT;
-        MinT = MaxT;
-        MaxT = Temp;
-    }
+    vec3 T1 = min(MinT, MaxT);
+    vec3 T2 = max(MinT, MaxT);
 
-    float MinTy = (BoxMin.y - Ray.Origin.y) / Ray.Direction.y;
-    float MaxTy = (BoxMax.y - Ray.Origin.y) / Ray.Direction.y;
-
-    // Swap MinTy and MaxTy if needed
-    if (MinTy > MaxTy)
-    {
-        float Temp = MinTy;
-        MinTy = MaxTy;
-        MaxTy = Temp;
-    }
-
-    // Check for overlap in the y-direction
-    if (MinT > MaxTy || MinTy > MaxT)
-    {
-        return false;
-    }
-
-    // Update MinT and MaxT to account for y-axis overlap
-    if (MinTy > MinT)
-    {
-        MinT = MinTy;
-    }
-
-    if (MaxTy < MaxT)
-    {
-        MaxT = MaxTy;
-    }
-
-    float MinTz = (BoxMin.z - Ray.Origin.z) / Ray.Direction.z;
-    float MaxTz = (BoxMax.z - Ray.Origin.z) / Ray.Direction.z;
-
-    // Swap MinTz and MaxTz if needed
-    if (MinTz > MaxTz)
-    {
-        float Temp = MinTz;
-        MinTz = MaxTz;
-        MaxTz = Temp;
-    }
-
-    // Check for overlap in the z-direction
-    if (MinT > MaxTz || MinTz > MaxT)
-    {
-        return false;
-    }
-
-    // Update MinT and MaxT to account for z-axis overlap
-    if (MinTz > MinT)
-    {
-        MinT = MinTz;
-    }
-    if (MaxTz < MaxT)
-    {
-        MaxT = MaxTz;
-    }
-
-    // If we reach this point, there is an intersection
-    return true;
+    float NearT = max(max(T1.x, T1.y), T1.z);
+    float FarT  = min(min(T2.x, T2.y), T2.z);
+    return FarT >= max(NearT, 0.0);
 }
 
 bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad)
