@@ -153,7 +153,7 @@ FAccelerationStructure::FAccelerationStructure()
 
 void FAccelerationStructure::Build(const FMesh& Mesh)
 {
-    FBoundingBoxBuilder BoundingBoxBuilder(2);
+    FBoundingBoxBuilder BoundingBoxBuilder(32);
 
     for (uint32_t i = 0; i < Mesh.m_Indicies.size(); i += 3)
     {

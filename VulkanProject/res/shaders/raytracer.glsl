@@ -649,7 +649,9 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
     PayLoad.bFromInside = false;
 
     // Start go through all the nodes
-    uint NumHits = 0;
+    uint NumBoxTests      = 0;
+    uint NumTriangleTests = 0;
+
     float ClosestT = 100000.0;
     while (StackIndex >= 0)
     {
@@ -658,6 +660,7 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
         StackIndex--;
 
         FBvhNode Node = BvhNodes[NodeIndex];
+        // NumBoxTests++;
 
         // Check if we hit this node
         vec2 HitResult = IntersectRayAABB(Node.AABBMin.xyz, Node.AABBMax.xyz, Ray);
@@ -667,26 +670,16 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
         }
 
         // Ensure that this hit is closer than the previous hit
-        // float MinT = min(HitResult.x, HitResult.y);
-        // if (MinT > ClosestT)
-        // {
-            // continue;
-        // }
-
-        // Update the closest hit
-        // ClosestT = MinT;
-
-        NumHits++;
+        float MinT = min(HitResult.x, HitResult.y);
+        if (MinT > ClosestT)
+        {
+            continue;
+        }
 
         // Check if this is a leafnode
         if (Node.ChildIndex == BVH_ROOT_NODE_INDEX)
         {
             uint LastTriangleIndex = Node.FirstTriangleIndex + Node.NumTriangles;
-            if (LastTriangleIndex > uScene.NumTriangles)
-            {
-                return vec3(1.0, 0.0, 0.0);
-            }
-
             for (uint TriangleIndex = Node.FirstTriangleIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
@@ -694,9 +687,16 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
                 vec3 Position1 = Vertices[Triangle.Index1].Position.xyz;
                 vec3 Position2 = Vertices[Triangle.Index2].Position.xyz;
 
+                NumTriangleTests++;
+
                 if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0))
                 {
-                    return vec3(0.0, 1.0, 0.0);
+                    if (PayLoad.T < ClosestT)
+                    {
+                        ClosestT = PayLoad.T;
+                    }
+
+                    // return vec3(0.0, HitColor, 0.0);
                 }
             }
         }
@@ -707,7 +707,10 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
         }
     }
 
-    return vec3(0.0, 0.0, 0.0);
+    float BoxColor      = (NumBoxTests > 0) ? min((float(NumBoxTests) / float(MaxDepth)), 1.0) : 0.0;
+    float TriangleColor = (NumTriangleTests > 0) ? min((float(NumTriangleTests) / float(MaxDepth)), 1.0) : 0.0;
+    return vec3(BoxColor, TriangleColor, 0.0);
+
     /*if (NumHits > 0)
     {
         float HitColor = min((float(NumHits) / float(MaxDepth)), 1.0);

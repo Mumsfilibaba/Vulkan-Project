@@ -514,6 +514,7 @@ void FRayTracer::OnRenderUI()
                 "Spheres Default",
                 "CornellBox",
                 "Triangles",
+                "Sponza",
                 "Polished Glass Spheres",
                 "Rough Colored Glass Spheres",
                 "Rough Transparent Glass Spheres",
@@ -543,25 +544,32 @@ void FRayTracer::OnRenderUI()
                 else if (currentScene == 2) // Change to Triangles-scene
                 {
                     SAFE_DELETE(m_pScene);
-                    m_pScene = new FModelScene();
+                    m_pScene = new FModelScene(EModelSceneType::Default);
                     m_pScene->Initialize();
                     m_bResetImage = true;
                 }
                 else if (currentScene == 3) // Change to "Polished Glass Sphere"-scene
                 {
                     SAFE_DELETE(m_pScene);
+                    m_pScene = new FModelScene(EModelSceneType::Sponza);
+                    m_pScene->Initialize();
+                    m_bResetImage = true;
+                }
+                else if (currentScene == 4) // Change to "Polished Glass Sphere"-scene
+                {
+                    SAFE_DELETE(m_pScene);
                     m_pScene = new FSphereScene(ESphereSceneType::PolishedGlass);
                     m_pScene->Initialize();
                     m_bResetImage = true;
                 }
-                else if (currentScene == 4) // Change to "Rough Colored Glass Spheres"-scene
+                else if (currentScene == 5) // Change to "Rough Colored Glass Spheres"-scene
                 {
                     SAFE_DELETE(m_pScene);
                     m_pScene = new FSphereScene(ESphereSceneType::ColoredRoughGlass);
                     m_pScene->Initialize();
                     m_bResetImage = true;
                 }
-                else if (currentScene == 5) // Change to "Rough Transparent Glass Spheres"-scene
+                else if (currentScene == 6) // Change to "Rough Transparent Glass Spheres"-scene
                 {
                     SAFE_DELETE(m_pScene);
                     m_pScene = new FSphereScene(ESphereSceneType::RoughGlass);

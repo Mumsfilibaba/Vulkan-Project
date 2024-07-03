@@ -34,23 +34,17 @@ void FModelScene::Initialize()
     
     // Load Model
     FMesh Mesh;
-    Mesh.LoadFromFile("res/models/queen.obj");
+    if (Type == EModelSceneType::Default)
+    {
+        Mesh.LoadFromFile("res/models/queen.obj");
+    }
+    else if (Type == EModelSceneType::Sponza)
+    {
+        Mesh.LoadFromFile("res/models/sponza/sponza.obj");
+    }
 
     // Copy vertices
     m_Vertices = Mesh.m_Positions;
-    
-    // Convert indices to triangle
-    /* for (uint32_t i = 0; i < Mesh.m_Indicies.size(); i += 3)
-    {
-        m_Triangles.push_back(FShaderTriangle
-        {
-            Mesh.m_Indicies[i + 0],
-            Mesh.m_Indicies[i + 1],
-            Mesh.m_Indicies[i + 2],
-            // Padding
-            0
-        });
-    }*/
     
     // Build BVH
     m_AccelerationStructure.Build(Mesh);
@@ -71,19 +65,21 @@ void FModelScene::Initialize()
     });
     
     // Quads
-    
-    // Floor Quad
-    m_Quads.push_back({ glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), 0 });
-    // Front Quad
-    m_Quads.push_back({ glm::vec4(-1.0f, 2.0f, -1.0f, 0.0f), glm::vec4(0.0f, -2.0f, 0.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), 0 });
-    // Roof Quad
-    m_Quads.push_back({ glm::vec4(-1.0f, 2.0f, 1.0f, 0.0f), glm::vec4(0.0f, 0.0f, -2.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), 0 });
-    // Right Quad
-    m_Quads.push_back({ glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f), glm::vec4(0.0f, 2.0f, 0.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), 1 });
-    // Left Quad
-    m_Quads.push_back({ glm::vec4(1.0f, 2.0f, -1.0f, 0.0f), glm::vec4(0.0f, -2.0f, 0.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), 2 });
-    // Light Quad
-    m_Quads.push_back({ glm::vec4(0.5f, 1.999f, 0.2f, 0.0f), glm::vec4(0.0f, 0.0f, -0.4f, 0.0f), glm::vec4(0.4f, 0.0f, 0.0f, 0.0f), 3 });
+    if (Type == EModelSceneType::Default)
+    {
+        // Floor Quad
+        m_Quads.push_back({ glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), 0 });
+        // Front Quad
+        m_Quads.push_back({ glm::vec4(-1.0f, 2.0f, -1.0f, 0.0f), glm::vec4(0.0f, -2.0f, 0.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), 0 });
+        // Roof Quad
+        m_Quads.push_back({ glm::vec4(-1.0f, 2.0f, 1.0f, 0.0f), glm::vec4(0.0f, 0.0f, -2.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), 0 });
+        // Right Quad
+        m_Quads.push_back({ glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f), glm::vec4(0.0f, 2.0f, 0.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), 1 });
+        // Left Quad
+        m_Quads.push_back({ glm::vec4(1.0f, 2.0f, -1.0f, 0.0f), glm::vec4(0.0f, -2.0f, 0.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), 2 });
+        // Light Quad
+        m_Quads.push_back({ glm::vec4(0.5f, 1.999f, 0.2f, 0.0f), glm::vec4(0.0f, 0.0f, -0.4f, 0.0f), glm::vec4(0.4f, 0.0f, 0.0f, 0.0f), 3 });
+    }
     
     // Materials
     m_Materials.push_back(
@@ -167,10 +163,10 @@ void FModelScene::Reset()
 {
     m_Camera.Reset();
     
-    glm::vec3 translation(0.0f, 1.25f, 3.0f);
+    glm::vec3 translation(0.0f, 0.5f, 1.75f);
     m_Camera.Move(translation);
 
-    glm::vec3 rotation(glm::pi<float>() / 16.0f, glm::pi<float>(), 0.0f);
+    glm::vec3 rotation(0.0f, glm::pi<float>(), 0.0f);
     m_Camera.Rotate(rotation);
 }
 

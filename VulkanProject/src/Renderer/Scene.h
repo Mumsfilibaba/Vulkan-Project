@@ -7,10 +7,10 @@
 #define MAX_QUADS 128
 #define MAX_SPHERES 32
 #define MAX_PLANES 32
-#define MAX_TRIANGLES 1024
+#define MAX_TRIANGLES 300000
 #define MAX_VERTICES (MAX_TRIANGLES * 3)
 #define MAX_MATERIALS 32
-#define MAX_BVH_NODES 2048
+#define MAX_BVH_NODES 4096
 #define MAX_TRIANGLEMESHES 3
 
 #define BACKGROUND_TYPE_NONE 0
@@ -60,10 +60,23 @@ struct FScene
     FAccelerationStructure       m_AccelerationStructure;
 };
 
+enum class EModelSceneType
+{
+    Default = 1,
+    Sponza = 2,
+};
+
 struct FModelScene : public FScene
 {
+    FModelScene(EModelSceneType InType)
+        : Type(InType)
+    {
+    }
+    
     virtual void Initialize() override;
     virtual void Reset() override;
+    
+    const EModelSceneType Type;
 };
 
 enum class ESphereSceneType
