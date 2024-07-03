@@ -1,6 +1,14 @@
 #include "Model.h"
 #include <tiny_obj_loader.h>
 
+FModel::FModel()
+    : m_pVertexBuffer(nullptr)
+    , m_pIndexBuffer(nullptr)
+    , m_VertexCount(0)
+    , m_IndexCount(0)
+{
+}
+
 FModel::~FModel()
 {
     SAFE_DELETE(m_pVertexBuffer);
@@ -129,8 +137,8 @@ bool FMesh::LoadFromFile(const std::string& filepath)
         }
     }
     
-    std::vector<FVertexRT> vertices;
-    std::vector<uint32_t>  indices;
+    std::vector<FVertexRT> Vertices;
+    std::vector<uint32_t>  Indices;
     std::unordered_map<FVertexRT, uint32_t, FVertexRTHasher> uniqueVertices = {};
     
     BoundingBoxMin = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -152,8 +160,8 @@ bool FMesh::LoadFromFile(const std::string& filepath)
             
             if (uniqueVertices.count(vertex) == 0)
             {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-                vertices.push_back(vertex);
+                uniqueVertices[vertex] = static_cast<uint32_t>(Vertices.size());
+                Vertices.push_back(vertex);
                 
                 BoundingBoxMin.x = std::min(BoundingBoxMin.x, vertex.Position.x);
                 BoundingBoxMin.y = std::min(BoundingBoxMin.y, vertex.Position.y);
@@ -164,11 +172,11 @@ bool FMesh::LoadFromFile(const std::string& filepath)
                 BoundingBoxMax.z = std::max(BoundingBoxMax.z, vertex.Position.z);
             }
 
-            indices.push_back(uniqueVertices[vertex]);
+            Indices.push_back(uniqueVertices[vertex]);
         }
     }
     
-    m_Positions = std::move(vertices);
-    m_Indicies  = std::move(indices);
+    m_Positions = std::move(Vertices);
+    m_Indicies  = std::move(Indices);
     return true;
 }

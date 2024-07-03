@@ -3,27 +3,27 @@
 
 enum class EObjectType : uint32_t
 {
-    Unknown = 0,
+    RootNode = 0,
     Sphere = 1,
     Quad = 2,
-    TriangleMesh = 3
+    Mesh = 3
 };
 
-struct FSphere
+struct FShaderSphere
 {
     // 0-16
     glm::vec3 Position;
     float     Radius;
     // 16-20
-    uint32_t  MaterialIndex;
+    uint32_t MaterialIndex;
 
     // Padding
-    uint32_t  Padding0;
-    uint32_t  Padding1;
-    uint32_t  Padding2;
+    uint32_t Padding0;
+    uint32_t Padding1;
+    uint32_t Padding2;
 };
 
-struct FQuad
+struct FShaderQuad
 {
     // 0-16
     glm::vec4 Position;
@@ -32,15 +32,15 @@ struct FQuad
     // 32-48
     glm::vec4 Edge1;
     // 48-52
-    uint32_t  MaterialIndex;
+    uint32_t MaterialIndex;
 
     // Padding
-    uint32_t  Padding0;
-    uint32_t  Padding1;
-    uint32_t  Padding2;
+    uint32_t Padding0;
+    uint32_t Padding1;
+    uint32_t Padding2;
 };
 
-struct FTriangle
+struct FShaderTriangle
 {
     // 0-12
     uint32_t Index0;
@@ -51,21 +51,21 @@ struct FTriangle
     uint32_t Padding0;
 };
 
-struct FTriangleMesh
+struct FShaderMesh
 {
     // 0-32
     glm::vec4 BoxMin;
     glm::vec4 BoxMax;
     // 32-44
-    uint32_t  StartTriangle;
-    uint32_t  NumTriangles;
-    uint32_t  MaterialIndex;
+    uint32_t StartTriangle;
+    uint32_t NumTriangles;
+    uint32_t MaterialIndex;
 
     // Padding
-    uint32_t  Padding0;
+    uint32_t Padding0;
 };
 
-struct FMaterial
+struct FShaderMaterial
 {
     // 0-16
     glm::vec4 AlbedoColor;
@@ -76,15 +76,15 @@ struct FMaterial
     // 48-64
     glm::vec4 AbsorbtionColor;
     // 64-80
-    float     SpecularChance;
-    float     SpecularRoughness;
-    float     IncidenceOfRefraction;
-    float     RefractionChance;
+    float SpecularChance;
+    float SpecularRoughness;
+    float IncidenceOfRefraction;
+    float RefractionChance;
     // 80-84
-    float     RefractionRoughness;
+    float RefractionRoughness;
 
     // Padding
-    uint32_t  Padding0;
-    uint32_t  Padding1;
-    uint32_t  Padding2;
+    uint32_t Padding0;
+    uint32_t Padding1;
+    uint32_t Padding2;
 };

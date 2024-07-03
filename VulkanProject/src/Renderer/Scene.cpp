@@ -18,7 +18,7 @@ FScene::FScene()
     m_Materials.reserve(MAX_MATERIALS);
     m_Triangles.reserve(MAX_TRIANGLES);
     m_Vertices.reserve(MAX_VERTICES);
-    m_TriangleMeshes.reserve(MAX_TRIANGLEMESHES);
+    m_Meshes.reserve(MAX_TRIANGLEMESHES);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -40,9 +40,9 @@ void FModelScene::Initialize()
     m_Vertices = Mesh.m_Positions;
     
     // Convert indices to triangle
-    for (uint32_t i = 0; i < Mesh.m_Indicies.size(); i += 3)
+    /* for (uint32_t i = 0; i < Mesh.m_Indicies.size(); i += 3)
     {
-        m_Triangles.push_back(FTriangle
+        m_Triangles.push_back(FShaderTriangle
         {
             Mesh.m_Indicies[i + 0],
             Mesh.m_Indicies[i + 1],
@@ -50,10 +50,16 @@ void FModelScene::Initialize()
             // Padding
             0
         });
-    }
+    }*/
+    
+    // Build BVH
+    m_AccelerationStructure.Build(Mesh);
+    
+    // Build the triangles after
+    m_Triangles = m_AccelerationStructure.m_Triangles;
     
     // Mesh Data
-    m_TriangleMeshes.push_back(
+    m_Meshes.push_back(
     {
         glm::vec4(Mesh.BoundingBoxMin, 0.0f),
         glm::vec4(Mesh.BoundingBoxMax, 0.0f),
@@ -155,9 +161,6 @@ void FModelScene::Initialize()
         // padding
         0, 0, 0
     });
-    
-    // Build BVH
-    m_BvhScene.Build(*this);
 }
 
 void FModelScene::Reset()
@@ -434,9 +437,6 @@ void FSphereScene::Initialize()
             }
         }
     }
-    
-    // Build BVH
-    m_BvhScene.Build(*this);
 }
 
 void FSphereScene::Reset()
@@ -685,9 +685,6 @@ void FCornellBoxScene::Initialize()
         // padding
         0, 0, 0
     });
-    
-    // Build BVH
-    m_BvhScene.Build(*this);
 }
 
 void FCornellBoxScene::Reset()

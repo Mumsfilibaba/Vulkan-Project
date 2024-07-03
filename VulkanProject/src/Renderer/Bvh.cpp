@@ -1,67 +1,211 @@
 #include "Bvh.h"
 #include "Scene.h"
+#include "Model.h"
+#include <queue>
 
-FBvhScene::FBvhScene()
+FBoundingBoxBuilder::FBoundingBoxBuilder(uint32_t InMaxDepth)
+    : BoundingBoxes()
+    , MaxDepth(InMaxDepth)
+{
+    // Allocate root
+    BoundingBoxes.emplace_back();
+}
+
+void FBoundingBoxBuilder::InsertTriangle(const FTriangle& Triangle)
+{
+    // Grow bounding box to include this triangle
+    FBoundingBox& Root = GetRoot();
+    for (int32_t i = 0; i < 3; i++)
+    {
+        Root.GrowAroundPoint(Triangle.Positions[i]);
+    }
+    
+    // Add the triangle
+    Root.Triangles.push_back(Triangles.size());
+    Triangles.push_back(Triangle);
+}
+
+void FBoundingBoxBuilder::BuildHierarchy()
+{
+    // Split bounding box along the longest axix
+    std::queue<uint32_t> Queue;
+    Queue.push(0);
+    
+    uint32_t CurrentDepth = 0;
+    while (CurrentDepth < MaxDepth && !Queue.empty())
+    {
+        size_t NumNodes = Queue.size();
+        for (size_t i = 0; i < NumNodes; i++)
+        {
+            // Get first index to process
+            const size_t CurrentIndex = Queue.front();
+            Queue.pop();
+
+            if (BoundingBoxes[CurrentIndex].Triangles.size() <= 1)
+            {
+                continue;
+            }
+            
+            const glm::vec3 ParentMin   = BoundingBoxes[CurrentIndex].BoxMin;
+            const glm::vec3 ParentMax   = BoundingBoxes[CurrentIndex].BoxMax;
+            const glm::vec3 Lengths     = ParentMax - ParentMin;
+            const uint32_t  LongestAxis = (Lengths.x > Lengths.y) ? ((Lengths.x > Lengths.z) ? 0 : 2) : ((Lengths.y > Lengths.z) ? 1 : 2);
+            const float     NewLength   = Lengths[LongestAxis] / 2.0f;
+            
+            // Generate the new child-index
+            const uint32_t NewIndex = BoundingBoxes.size();
+            BoundingBoxes[CurrentIndex].ChildIndex = NewIndex;
+            Queue.push(NewIndex);
+            Queue.push(NewIndex + 1);
+                        
+            // Create the new nodes
+            BoundingBoxes.emplace_back(ParentMin, ParentMax);
+            BoundingBoxes.emplace_back(ParentMin, ParentMax);
+            
+            FBoundingBox& LeftChild  = BoundingBoxes[NewIndex];
+            FBoundingBox& RightChild = BoundingBoxes[NewIndex + 1];
+            FBoundingBox& Parent     = BoundingBoxes[CurrentIndex];
+
+            // Modify boxes
+            LeftChild.BoxMax[LongestAxis] -= NewLength;
+            RightChild.BoxMin[LongestAxis] += NewLength;
+            
+            // Add triangles to the child-nodes
+            std::vector<uint32_t> TriangleIndices = std::move(Parent.Triangles);
+            for (uint32_t TriangleIndex : TriangleIndices)
+            {
+                // Add to either the right- or left- child
+                FTriangle& Triangle = Triangles[TriangleIndex];
+                if (RightChild.Contains(Triangle.Center))
+                {
+                    RightChild.Triangles.emplace_back(TriangleIndex);
+                }
+                else
+                {
+                    LeftChild.Triangles.emplace_back(TriangleIndex);
+                }
+            }
+            
+            // Grow the new boxes to ensure that all the triangles fully fit inside the boxes
+            for (uint32_t TriangleIndex : LeftChild.Triangles)
+            {
+                FTriangle& Triangle = Triangles[TriangleIndex];
+                for (uint32_t i = 0; i < 3; i++)
+                {
+                    LeftChild.GrowAroundPoint(Triangle.Positions[i]);
+                }
+            }
+            
+            for (uint32_t TriangleIndex : RightChild.Triangles)
+            {
+                FTriangle& Triangle = Triangles[TriangleIndex];
+                for (uint32_t i = 0; i < 3; i++)
+                {
+                    RightChild.GrowAroundPoint(Triangle.Positions[i]);
+                }
+            }
+        }
+                
+        CurrentDepth++;
+    }
+}
+
+void FBoundingBoxBuilder::Finalize()
+{
+    std::vector<FTriangle> NewTriangles;
+    NewTriangles.reserve(Triangles.size());
+    
+    for (FBoundingBox& Box : BoundingBoxes)
+    {
+        // Only process leaf-nodes
+        if (Box.ChildIndex != 0)
+        {
+            continue;
+        }
+        
+        // Avoid boxes without triangles
+        const size_t NumTriangles = Box.Triangles.size();
+        if (!NumTriangles)
+        {
+            continue;
+        }
+        
+        // Setup triangle information
+        Box.NumTriangles       = NumTriangles;
+        Box.FirstTriangleIndex = NewTriangles.size();
+        
+        // Insert trianfles into the new array in the new order
+        for (uint32_t TriangleIndex : Box.Triangles)
+        {
+            NewTriangles.push_back(Triangles[TriangleIndex]);
+        }
+    }
+    
+    // Replace the old triangles with the new ones
+    Triangles = std::move(NewTriangles);
+}
+
+FAccelerationStructure::FAccelerationStructure()
+    : m_Triangles()
+    , m_BoundingBoxes()
 {
 }
 
-void FBvhScene::Build(const FScene& Scene)
+void FAccelerationStructure::Build(const FMesh& Mesh)
 {
-    for (uint32_t QuadIndex = 0; QuadIndex < Scene.m_Quads.size(); QuadIndex++)
+    FBoundingBoxBuilder BoundingBoxBuilder(2);
+
+    for (uint32_t i = 0; i < Mesh.m_Indicies.size(); i += 3)
     {
-        glm::vec3 AABBMin = glm::vec3(std::numeric_limits<float>::max());
-        glm::vec3 AABBMax = glm::vec3(std::numeric_limits<float>::lowest());
-
-        const FQuad& Quad = Scene.m_Quads[QuadIndex];
-        const glm::vec3 p0 = Quad.Position;
-        const glm::vec3 p1 = Quad.Position + Quad.Edge0;
-        const glm::vec3 p2 = Quad.Position + Quad.Edge1;
-        const glm::vec3 p3 = Quad.Position + Quad.Edge0 + Quad.Edge1;
-
-        AABBMin.x = std::min({ AABBMin.x, p0.x, p1.x, p2.x, p3.x });
-        AABBMin.y = std::min({ AABBMin.y, p0.y, p1.y, p2.y, p3.y });
-        AABBMin.z = std::min({ AABBMin.z, p0.z, p1.z, p2.z, p3.z });
-
-        AABBMax.x = std::max({ AABBMax.x, p0.x, p1.x, p2.x, p3.x });
-        AABBMax.y = std::max({ AABBMax.y, p0.y, p1.y, p2.y, p3.y });
-        AABBMax.z = std::max({ AABBMax.z, p0.z, p1.z, p2.z, p3.z });
+        // Set each index for the triangle
+        FTriangle Triangle;
+        Triangle.Indicies[0] = Mesh.m_Indicies[i + 0];
+        Triangle.Indicies[1] = Mesh.m_Indicies[i + 1];
+        Triangle.Indicies[2] = Mesh.m_Indicies[i + 2];
         
-        m_Nodes.push_back(
-        {
-            glm::vec4(AABBMin, 0.0f),
-            glm::vec4(AABBMax, 0.0f),
-            static_cast<uint32_t>(EObjectType::Quad),
-            QuadIndex,
-            // Padding
-            0, 0
-        });
+        Triangle.Positions[0] = Mesh.m_Positions[Triangle.Indicies[0]].Position;
+        Triangle.Positions[1] = Mesh.m_Positions[Triangle.Indicies[1]].Position;
+        Triangle.Positions[2] = Mesh.m_Positions[Triangle.Indicies[2]].Position;
+        
+        // Calculate center of the triangle
+        glm::vec3 HalfPos = (Triangle.Positions[0] + Triangle.Positions[1]) / 2.0f;
+        Triangle.Center = (HalfPos + Triangle.Positions[2]) / 2.0f;
+        
+        // Insert the triangle into the builder
+        BoundingBoxBuilder.InsertTriangle(Triangle);
+    }
+    
+    BoundingBoxBuilder.BuildHierarchy();
+    BoundingBoxBuilder.Finalize();
+    
+    // Convert triangles into shader-compatible structure
+    m_Triangles.reserve(BoundingBoxBuilder.Triangles.size());
+    for (const FTriangle& Triangle : BoundingBoxBuilder.Triangles)
+    {
+        FShaderTriangle& ShaderTriangle = m_Triangles.emplace_back();
+        ShaderTriangle.Index0 = Triangle.Indicies[0];
+        ShaderTriangle.Index1 = Triangle.Indicies[1];
+        ShaderTriangle.Index2 = Triangle.Indicies[2];
     }
 
-    for (uint32_t SphereIndex = 0; SphereIndex < Scene.m_Spheres.size(); SphereIndex++)
+    // Convert bounding-boxes into shader-compatible structure
+    m_BoundingBoxes.reserve(BoundingBoxBuilder.BoundingBoxes.size());
+    for (const FBoundingBox& Box : BoundingBoxBuilder.BoundingBoxes)
     {
-        glm::vec3 AABBMin = glm::vec3(std::numeric_limits<float>::max());
-        glm::vec3 AABBMax = glm::vec3(std::numeric_limits<float>::lowest());
-
-        const FSphere& Sphere = Scene.m_Spheres[SphereIndex];
-        const glm::vec3 min = Sphere.Position - glm::vec3(Sphere.Radius);
-        const glm::vec3 max = Sphere.Position + glm::vec3(Sphere.Radius);
-        
-        AABBMin.x = std::min({ AABBMin.x, min.x, max.x });
-        AABBMin.y = std::min({ AABBMin.y, min.y, max.y });
-        AABBMin.z = std::min({ AABBMin.z, min.z, max.z });
-
-        AABBMax.x = std::max({ AABBMax.x, min.x, max.x });
-        AABBMax.y = std::max({ AABBMax.y, min.y, max.y });
-        AABBMax.z = std::max({ AABBMax.z, min.z, max.z });
-
-        m_Nodes.push_back(
+        if (Box.ChildIndex != 0)
         {
-            glm::vec4(AABBMin, 0.0f),
-            glm::vec4(AABBMax, 0.0f),
-            static_cast<uint32_t>(EObjectType::Sphere),
-            SphereIndex,
-            // Padding
-            0, 0
-        });
+            assert(Box.FirstTriangleIndex == 0);
+            assert(Box.NumTriangles == 0);
+        }
+        
+        FShaderBoundingBox& ShaderBox = m_BoundingBoxes.emplace_back();
+        ShaderBox.BoxMin             = glm::vec4(Box.BoxMin, 0.0f);
+        ShaderBox.BoxMax             = glm::vec4(Box.BoxMax, 0.0f);
+        ShaderBox.ChildIndex         = Box.ChildIndex;
+        ShaderBox.FirstTriangleIndex = Box.FirstTriangleIndex;
+        ShaderBox.NumTriangles       = Box.NumTriangles;
+
+        const uint32_t LastTriangleIndex = ShaderBox.FirstTriangleIndex + ShaderBox.NumTriangles;
+        assert(LastTriangleIndex <= m_Triangles.size());
     }
 }

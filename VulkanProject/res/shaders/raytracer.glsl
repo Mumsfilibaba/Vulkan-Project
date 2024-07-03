@@ -68,13 +68,20 @@ layout(binding = 5) uniform SceneBufferObject
     // 0-16
     uint NumQuads;
     uint NumSpheres;
-    uint NumTriangleMeshes;
+    uint NumMeshes;
     uint NumMaterials;
     // 16-32
     uint NumBvhNodes;
+    uint NumTriangles;
     uint BackgroundType;
     uint NumBounces;
+    // 32-36
     uint ViewMode;
+    
+    // Padding
+    uint Padding0;
+    uint Padding1;
+    uint Padding2;
 } uScene;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -105,9 +112,9 @@ layout(std430, binding = 10) buffer TriangleBuffer
     FTriangle Triangles[];
 };
 
-layout(std430, binding = 11) buffer TriangleMeshBuffer
+layout(std430, binding = 11) buffer MeshBuffer
 {
-    FTriangleMesh TriangleMeshes[];
+    FMesh Meshes[];
 };
 
 layout(std430, binding = 12) buffer BvhBuffer
@@ -244,7 +251,7 @@ void HitSphere(in FSphere Sphere, in FRay Ray, inout FRayPayLoad PayLoad)
     }
 }
 
-void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray, inout FRayPayLoad PayLoad, uint MaterialIndex) 
+bool HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray, inout FRayPayLoad PayLoad, uint MaterialIndex) 
 {
     // Compute the triangle edges
     vec3 Edge1 = Vertex1 - Vertex0;
@@ -257,7 +264,7 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
     // If the determinant is almost zero that means that the Ray is parallell to the triangle and we early return
     if (abs(Determinant) < SIGMA) 
     {
-        return;
+        return false;
     }
 
     // Back-face culling: skip if the dot product is positive (back face)
@@ -266,7 +273,7 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
 #if ENABLE_TRIANGLE_BACK_FACE_CULLING
     if (DdotN > 0.0)
     {
-        return;
+        return false;
     }
 #endif
 
@@ -280,7 +287,7 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
     float u = InvDeterminant * dot(RayOriginToVertex0, DirectionCrossEdge2);
     if (u < 0.0 || u > 1.0) 
     {
-        return;
+        return false;
     }
 
     vec3 RayOriginToVertex0CrossEdge1 = cross(RayOriginToVertex0, Edge1);
@@ -288,7 +295,7 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
     float v = InvDeterminant * dot(Ray.Direction, RayOriginToVertex0CrossEdge1);
     if (v < 0.0 || u + v > 1.0) 
     {
-        return;
+        return false;
     }
 
     // At this stage we can compute t to find out where the intersection point is on the line.
@@ -310,47 +317,36 @@ void HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
             PayLoad.Normal     = -Normal;
             PayLoad.bFrontFace = false;
         }
+
+        return true;
     }
-}
-
-bool IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray)
-{
-    vec3 MinT = (BoxMin - Ray.Origin) / Ray.Direction;
-    vec3 MaxT = (BoxMax - Ray.Origin) / Ray.Direction;
-
-    vec3 T1 = min(MinT, MaxT);
-    vec3 T2 = max(MinT, MaxT);
-
-    float NearT = max(max(T1.x, T1.y), T1.z);
-    float FarT  = min(min(T2.x, T2.y), T2.z);
-    return FarT >= max(NearT, 0.0);
+    else
+    {
+        return false;
+    }
 }
 
 bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad)
 {
-    for (uint i = 0; i < uScene.NumBvhNodes; i++)
+    for (uint i = 0; i < uScene.NumSpheres; i++)
     {
-        FBvhNode Node = BvhNodes[i];
-        if (Node.ObjectType == OBJECT_TYPE_SPHERE)
-        {
-            const uint SphereIndex = Node.ObjectIndex;
-            FSphere Sphere = Spheres[SphereIndex];
-            HitSphere(Sphere, Ray, PayLoad);
-        }
-        else if (Node.ObjectType == OBJECT_TYPE_QUAD)
-        {
-            const uint QuadIndex = Node.ObjectIndex;
-            FQuad Quad = Quads[QuadIndex];
-            HitQuad(Quad, Ray, PayLoad);
-        }
+        FSphere Sphere = Spheres[i];
+        HitSphere(Sphere, Ray, PayLoad);
     }
 
-    for (uint i = 0; i < uScene.NumTriangleMeshes; i++)
+    for (uint i = 0; i < uScene.NumQuads; i++)
     {
-        FTriangleMesh Mesh = TriangleMeshes[i];
+        FQuad Quad = Quads[i];
+        HitQuad(Quad, Ray, PayLoad);
+    }
+
+    for (uint i = 0; i < uScene.NumMeshes; i++)
+    {
+        FMesh Mesh = Meshes[i];
 
         // Only test each triangle if we actually intersect the bounding box
-        if (!IntersectRayAABB(Mesh.BoxMin.xyz, Mesh.BoxMax.xyz, Ray))
+        vec2 HitResult = IntersectRayAABB(Mesh.BoxMin.xyz, Mesh.BoxMax.xyz, Ray);
+        if (HitResult.x < max(HitResult.y, 0.0))
         {
             continue;
         }
@@ -599,25 +595,127 @@ vec3 GetNormalForRay(in FRay Ray)
 
 vec3 GetColorForRay_BvhDebug(in FRay Ray)
 {
-    uint NumHits = 0;
+    /*
+    FRayPayLoad PayLoad;
+    PayLoad.MinT        = 0.0001;
+    PayLoad.MaxT        = 100000.0;
+    PayLoad.T           = PayLoad.MaxT;
+    PayLoad.bFrontFace  = false;
+    PayLoad.bFromInside = false;
+
     for (uint i = 0; i < uScene.NumBvhNodes; i++)
     {
         FBvhNode Node = BvhNodes[i];
-        if (IntersectRayAABB(Node.AABBMin.xyz, Node.AABBMax.xyz, Ray))
+        if (Node.ChildIndex == BVH_ROOT_NODE_INDEX)
         {
-            NumHits++;
+            uint LastTriangleIndex = Node.FirstTriangleIndex + Node.NumTriangles;
+            if (LastTriangleIndex > uScene.NumTriangles)
+            {
+                return vec3(1.0, 0.0, 0.0);
+            }
+
+            for (uint TriangleIndex = Node.FirstTriangleIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
+            {
+                FTriangle Triangle = Triangles[TriangleIndex];
+                vec3 Position0 = Vertices[Triangle.Index0].Position.xyz;
+                vec3 Position1 = Vertices[Triangle.Index1].Position.xyz;
+                vec3 Position2 = Vertices[Triangle.Index2].Position.xyz;
+
+                if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0))
+                {
+                    return vec3(0.0, 1.0, 0.0);
+                }
+            }
         }
     }
 
-    if (NumHits > 0)
+    return vec3(0.0, 0.0, 0.0);
+    */
+
+    // Create a stack for checking all the nodes
+    const uint MaxDepth = 32;
+    uint Stack[MaxDepth];
+
+    // Initialize the stack to visit the rootnode first
+    int StackIndex = 0;
+    Stack[StackIndex] = BVH_ROOT_NODE_INDEX;
+
+    // Payload
+    FRayPayLoad PayLoad;
+    PayLoad.MinT        = 0.0001;
+    PayLoad.MaxT        = 100000.0;
+    PayLoad.T           = PayLoad.MaxT;
+    PayLoad.bFrontFace  = false;
+    PayLoad.bFromInside = false;
+
+    // Start go through all the nodes
+    uint NumHits = 0;
+    float ClosestT = 100000.0;
+    while (StackIndex >= 0)
     {
-        float Color = min(0.1 + (float(NumHits) / float(uScene.NumBvhNodes)), 1.0);
-        return vec3(Color, Color, Color);
+        // Pop the stack
+        const uint NodeIndex = Stack[StackIndex];
+        StackIndex--;
+
+        FBvhNode Node = BvhNodes[NodeIndex];
+
+        // Check if we hit this node
+        vec2 HitResult = IntersectRayAABB(Node.AABBMin.xyz, Node.AABBMax.xyz, Ray);
+        if (HitResult.x < max(HitResult.y, 0.0))
+        {
+            continue;
+        }
+
+        // Ensure that this hit is closer than the previous hit
+        // float MinT = min(HitResult.x, HitResult.y);
+        // if (MinT > ClosestT)
+        // {
+            // continue;
+        // }
+
+        // Update the closest hit
+        // ClosestT = MinT;
+
+        NumHits++;
+
+        // Check if this is a leafnode
+        if (Node.ChildIndex == BVH_ROOT_NODE_INDEX)
+        {
+            uint LastTriangleIndex = Node.FirstTriangleIndex + Node.NumTriangles;
+            if (LastTriangleIndex > uScene.NumTriangles)
+            {
+                return vec3(1.0, 0.0, 0.0);
+            }
+
+            for (uint TriangleIndex = Node.FirstTriangleIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
+            {
+                FTriangle Triangle = Triangles[TriangleIndex];
+                vec3 Position0 = Vertices[Triangle.Index0].Position.xyz;
+                vec3 Position1 = Vertices[Triangle.Index1].Position.xyz;
+                vec3 Position2 = Vertices[Triangle.Index2].Position.xyz;
+
+                if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0))
+                {
+                    return vec3(0.0, 1.0, 0.0);
+                }
+            }
+        }
+        else
+        {
+            Stack[++StackIndex] = Node.ChildIndex;
+            Stack[++StackIndex] = Node.ChildIndex + 1;
+        }
+    }
+
+    return vec3(0.0, 0.0, 0.0);
+    /*if (NumHits > 0)
+    {
+        float HitColor = min((float(NumHits) / float(MaxDepth)), 1.0);
+        return vec3(HitColor, 0.0, 0.0);
     }
     else
     {
-        return vec3(0.0, 0.0, 0.0);
-    }
+    }*/
 }
 
 void main()
@@ -630,7 +728,7 @@ void main()
 
     vec2 Jitter = vec2(NextRandom(RandomSeed), NextRandom(RandomSeed)) - 0.5;
     const vec3 CameraPosition = uCamera.Position.xyz;
-    const vec3 FilmTarget     = CalculateFilmTarget(Pixel, Size, Jitter);
+    const vec3 FilmTarget = CalculateFilmTarget(Pixel, Size, Jitter);
 
     // Setup the first Ray
     FRay Ray;

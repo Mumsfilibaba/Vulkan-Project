@@ -72,7 +72,7 @@ struct FTriangle
     uint Padding0;
 };
 
-struct FTriangleMesh
+struct FMesh
 {
     // 0-32
     vec4 BoxMin;

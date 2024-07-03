@@ -37,7 +37,7 @@ FRayTracer::FRayTracer()
     , m_pSphereBuffer(nullptr)
     , m_pQuadBuffer(nullptr)
     , m_pTriangleBuffer(nullptr)
-    , m_pTriangleMeshesBuffer(nullptr)
+    , m_pMeshBuffer(nullptr)
     , m_pVertexBuffer(nullptr)
     , m_pMaterialBuffer(nullptr)
     , m_pSceneTexture1(nullptr)
@@ -323,14 +323,15 @@ void FRayTracer::Tick(float deltaTime)
     
     // Update Scene
     FSceneBuffer sceneBuffer = {};
-    sceneBuffer.NumQuads          = m_pScene->m_Quads.size();
-    sceneBuffer.NumSpheres        = m_pScene->m_Spheres.size();
-    sceneBuffer.NumMaterials      = m_pScene->m_Materials.size();
-    sceneBuffer.NumTriangleMeshes = m_pScene->m_TriangleMeshes.size();
-    sceneBuffer.NumBvhNodes       = m_pScene->m_BvhScene.m_Nodes.size();
-    sceneBuffer.BackgroundType    = m_pScene->m_Settings.BackgroundType;
-    sceneBuffer.NumBounces        = m_pScene->m_Settings.NumBounces;
-    sceneBuffer.ViewMode          = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
+    sceneBuffer.NumQuads       = m_pScene->m_Quads.size();
+    sceneBuffer.NumSpheres     = m_pScene->m_Spheres.size();
+    sceneBuffer.NumMaterials   = m_pScene->m_Materials.size();
+    sceneBuffer.NumMeshes      = m_pScene->m_Meshes.size();
+    sceneBuffer.NumBvhNodes    = m_pScene->m_AccelerationStructure.m_BoundingBoxes.size();
+    sceneBuffer.NumTriangles   = m_pScene->m_AccelerationStructure.m_Triangles.size();
+    sceneBuffer.BackgroundType = m_pScene->m_Settings.BackgroundType;
+    sceneBuffer.NumBounces     = m_pScene->m_Settings.NumBounces;
+    sceneBuffer.ViewMode       = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
 
     pCurrentCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(FSceneBuffer), &sceneBuffer);
         
@@ -640,7 +641,7 @@ void FRayTracer::OnRenderUI()
         uint32_t imguiID = 0;
         {
             uint32_t index = 1;
-            for (FSphere& sphere : m_pScene->m_Spheres)
+            for (FShaderSphere& sphere : m_pScene->m_Spheres)
             {
                 ImGui::PushID(imguiID++);
 
@@ -661,7 +662,7 @@ void FRayTracer::OnRenderUI()
 
         {
             uint32_t index = 1;
-            for (FQuad& quad : m_pScene->m_Quads)
+            for (FShaderQuad& quad : m_pScene->m_Quads)
             {
                 ImGui::PushID(imguiID++);
 
@@ -686,7 +687,7 @@ void FRayTracer::OnRenderUI()
 
         {
             uint32_t index = 1;
-            for (FTriangleMesh& mesh : m_pScene->m_TriangleMeshes)
+            for (FShaderMesh& mesh : m_pScene->m_Meshes)
             {
                 ImGui::PushID(imguiID++);
 
@@ -717,7 +718,7 @@ void FRayTracer::OnRenderUI()
             };
 
             uint32_t index = 1;
-            for (FMaterial& material : m_pScene->m_Materials)
+            for (FShaderMaterial& material : m_pScene->m_Materials)
             {
                 ImGui::PushID(imguiID++);
                 ImGui::Text("Material %d", index++);
@@ -814,7 +815,7 @@ void FRayTracer::Release()
     SAFE_DELETE(m_pSphereBuffer);
     SAFE_DELETE(m_pVertexBuffer);
     SAFE_DELETE(m_pTriangleBuffer);
-    SAFE_DELETE(m_pTriangleMeshesBuffer);
+    SAFE_DELETE(m_pMeshBuffer);
     SAFE_DELETE(m_pMaterialBuffer);
     SAFE_DELETE(m_pBvhBuffer);
     
@@ -1089,7 +1090,7 @@ void FRayTracer::CreateGlobalBuffers()
     
     // QuadBuffer
     FBufferParams quadBufferParams;
-    quadBufferParams.Size             = sizeof(FQuad) * MAX_QUADS;
+    quadBufferParams.Size             = sizeof(FShaderQuad) * MAX_QUADS;
     quadBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     quadBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1099,7 +1100,7 @@ void FRayTracer::CreateGlobalBuffers()
     
     // SphereBuffer
     FBufferParams sphereBufferParams;
-    sphereBufferParams.Size             = sizeof(FSphere) * MAX_SPHERES;
+    sphereBufferParams.Size             = sizeof(FShaderSphere) * MAX_SPHERES;
     sphereBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     sphereBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1119,7 +1120,7 @@ void FRayTracer::CreateGlobalBuffers()
     
     // TriangleBuffer
     FBufferParams triangleBufferParams;
-    triangleBufferParams.Size             = sizeof(FTriangle) * MAX_TRIANGLES;
+    triangleBufferParams.Size             = sizeof(FShaderTriangle) * MAX_TRIANGLES;
     triangleBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     triangleBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1129,17 +1130,17 @@ void FRayTracer::CreateGlobalBuffers()
     
     // TriangleMeshesBuffer
     FBufferParams triangleMeshBufferParams;
-    triangleMeshBufferParams.Size             = sizeof(FTriangleMesh) * MAX_TRIANGLEMESHES;
+    triangleMeshBufferParams.Size             = sizeof(FShaderMesh) * MAX_TRIANGLEMESHES;
     triangleMeshBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     triangleMeshBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pTriangleMeshesBuffer = FBuffer::Create(m_pDevice, triangleMeshBufferParams, m_pDeviceAllocator);
-    assert(m_pTriangleMeshesBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "TriangleMeshes-Buffer", reinterpret_cast<uint64_t>(m_pTriangleMeshesBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pMeshBuffer = FBuffer::Create(m_pDevice, triangleMeshBufferParams, m_pDeviceAllocator);
+    assert(m_pMeshBuffer != nullptr);
+    SetDebugName(m_pDevice->GetDevice(), "TriangleMeshes-Buffer", reinterpret_cast<uint64_t>(m_pMeshBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
     
     // MaterialBuffer
     FBufferParams materialBufferParams;
-    materialBufferParams.Size             = sizeof(FMaterial) * MAX_MATERIALS;
+    materialBufferParams.Size             = sizeof(FShaderMaterial) * MAX_MATERIALS;
     materialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     materialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1149,7 +1150,7 @@ void FRayTracer::CreateGlobalBuffers()
     
     // BvhBuffer
     FBufferParams bvhBufferParams;
-    bvhBufferParams.Size             = sizeof(FBvhNode) * MAX_BVH_NODES;
+    bvhBufferParams.Size             = sizeof(FShaderBoundingBox) * MAX_BVH_NODES;
     bvhBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     bvhBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1174,7 +1175,7 @@ void FRayTracer::CreateDescriptorSet()
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 9);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 10);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pTriangleMeshesBuffer->GetBuffer(), 11);
+    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 11);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 12);
     
     m_pRayTracingDescriptorSet1 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pRayTracingDescriptorSetLayout);
@@ -1191,7 +1192,7 @@ void FRayTracer::CreateDescriptorSet()
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 9);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 10);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pTriangleMeshesBuffer->GetBuffer(), 11);
+    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 11);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 12);
     
     m_pTonemappingDescriptorSet0 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pTonemappingDescriptorSetLayout);
@@ -1380,14 +1381,14 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
 {
     if (!m_pScene->m_Quads.empty())
     {
-        assert(sizeof(FQuad) * m_pScene->m_Quads.size() < m_pQuadBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pQuadBuffer, 0, sizeof(FQuad) * m_pScene->m_Quads.size(), m_pScene->m_Quads.data());
+        assert(sizeof(FShaderQuad) * m_pScene->m_Quads.size() < m_pQuadBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pQuadBuffer, 0, sizeof(FShaderQuad) * m_pScene->m_Quads.size(), m_pScene->m_Quads.data());
     }
     
     if (!m_pScene->m_Spheres.empty())
     {
-        assert(sizeof(FSphere) * m_pScene->m_Spheres.size() < m_pSphereBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(FSphere) * m_pScene->m_Spheres.size(), m_pScene->m_Spheres.data());
+        assert(sizeof(FShaderSphere) * m_pScene->m_Spheres.size() < m_pSphereBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(FShaderSphere) * m_pScene->m_Spheres.size(), m_pScene->m_Spheres.data());
     }
     
     if (!m_pScene->m_Vertices.empty())
@@ -1398,25 +1399,25 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
     
     if (!m_pScene->m_Triangles.empty())
     {
-        assert(sizeof(FTriangle) * m_pScene->m_Triangles.size() < m_pTriangleBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pTriangleBuffer, 0, sizeof(FTriangle) * m_pScene->m_Triangles.size(), m_pScene->m_Triangles.data());
+        assert(sizeof(FShaderTriangle) * m_pScene->m_Triangles.size() < m_pTriangleBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pTriangleBuffer, 0, sizeof(FShaderTriangle) * m_pScene->m_Triangles.size(), m_pScene->m_Triangles.data());
     }
     
-    if (!m_pScene->m_TriangleMeshes.empty())
+    if (!m_pScene->m_Meshes.empty())
     {
-        assert(sizeof(FTriangleMesh) * m_pScene->m_TriangleMeshes.size() < m_pTriangleMeshesBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pTriangleMeshesBuffer, 0, sizeof(FTriangleMesh) * m_pScene->m_TriangleMeshes.size(), m_pScene->m_TriangleMeshes.data());
+        assert(sizeof(FShaderMesh) * m_pScene->m_Meshes.size() < m_pMeshBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(FShaderMesh) * m_pScene->m_Meshes.size(), m_pScene->m_Meshes.data());
     }
     
     if (!m_pScene->m_Materials.empty())
     {
-        assert(sizeof(FMaterial) * m_pScene->m_Materials.size() < m_pMaterialBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FMaterial) * m_pScene->m_Materials.size(), m_pScene->m_Materials.data());
+        assert(sizeof(FShaderMaterial) * m_pScene->m_Materials.size() < m_pMaterialBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FShaderMaterial) * m_pScene->m_Materials.size(), m_pScene->m_Materials.data());
     }
     
-    if (!m_pScene->m_BvhScene.m_Nodes.empty())
+    if (!m_pScene->m_AccelerationStructure.m_BoundingBoxes.empty())
     {
-        assert(sizeof(FBvhNode) * m_pScene->m_BvhScene.m_Nodes.size() < m_pBvhBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pBvhBuffer, 0, sizeof(FBvhNode) * m_pScene->m_BvhScene.m_Nodes.size(), m_pScene->m_BvhScene.m_Nodes.data());
+        assert(sizeof(FShaderBoundingBox) * m_pScene->m_AccelerationStructure.m_BoundingBoxes.size() < m_pBvhBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pBvhBuffer, 0, sizeof(FShaderBoundingBox) * m_pScene->m_AccelerationStructure.m_BoundingBoxes.size(), m_pScene->m_AccelerationStructure.m_BoundingBoxes.data());
     }
 }

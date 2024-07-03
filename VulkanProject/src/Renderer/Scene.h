@@ -10,7 +10,7 @@
 #define MAX_TRIANGLES 1024
 #define MAX_VERTICES (MAX_TRIANGLES * 3)
 #define MAX_MATERIALS 32
-#define MAX_BVH_NODES 1024
+#define MAX_BVH_NODES 2048
 #define MAX_TRIANGLEMESHES 3
 
 #define BACKGROUND_TYPE_NONE 0
@@ -45,19 +45,19 @@ struct FScene
     FSceneSettings m_Settings;
 
     // Materials
-    std::vector<FMaterial>    m_Materials;
+    std::vector<FShaderMaterial> m_Materials;
     
     // Triangle Mesh Data
-    std::vector<FVertexRT>     m_Vertices;
-    std::vector<FTriangle>     m_Triangles;
-    std::vector<FTriangleMesh> m_TriangleMeshes;
+    std::vector<FVertexRT>       m_Vertices;
+    std::vector<FShaderTriangle> m_Triangles;
+    std::vector<FShaderMesh>     m_Meshes;
     
     // Other primitive data
-    std::vector<FSphere>       m_Spheres;
-    std::vector<FQuad>         m_Quads;
+    std::vector<FShaderSphere>   m_Spheres;
+    std::vector<FShaderQuad>     m_Quads;
 
     // Bvh Container
-    FBvhScene m_BvhScene;
+    FAccelerationStructure       m_AccelerationStructure;
 };
 
 struct FModelScene : public FScene

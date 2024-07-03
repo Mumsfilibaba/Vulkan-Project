@@ -35,13 +35,20 @@ struct FSceneBuffer
     // 0-16
     uint32_t NumQuads = 0;
     uint32_t NumSpheres = 0;
-    uint32_t NumTriangleMeshes = 0;
+    uint32_t NumMeshes = 0;
     uint32_t NumMaterials = 0;
     // 16-32
     uint32_t NumBvhNodes = 0;
+    uint32_t NumTriangles = 0;
     uint32_t BackgroundType = 0;
     uint32_t NumBounces = 4;
+    // 32-36
     uint32_t ViewMode = 0;
+    
+    // Padding
+    uint32_t Padding0;
+    uint32_t Padding1;
+    uint32_t Padding2;
 };
 
 struct FTonemappingBuffer
@@ -113,7 +120,7 @@ private:
     FBuffer* m_pSphereBuffer;
     FBuffer* m_pQuadBuffer;
     FBuffer* m_pTriangleBuffer;
-    FBuffer* m_pTriangleMeshesBuffer;
+    FBuffer* m_pMeshBuffer;
     FBuffer* m_pVertexBuffer;
     FBuffer* m_pMaterialBuffer;
     FBuffer* m_pBvhBuffer;

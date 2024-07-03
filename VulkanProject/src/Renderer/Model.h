@@ -82,6 +82,7 @@ struct FVertexRTHasher
 class FModel
 {
 public:
+    FModel();
     ~FModel();
     
     bool LoadFromFile(const std::string& filepath, FDevice* pDevice, FDeviceMemoryAllocator* pAllocator);
@@ -107,10 +108,17 @@ public:
     }
     
 private:
-    FBuffer* m_pVertexBuffer = nullptr;
-    FBuffer* m_pIndexBuffer = nullptr;
-    uint32_t m_VertexCount = 0;
-    uint32_t m_IndexCount = 0;
+    FBuffer* m_pVertexBuffer;
+    FBuffer* m_pIndexBuffer;
+    uint32_t m_VertexCount;
+    uint32_t m_IndexCount;
+};
+
+struct FTriangle
+{
+    glm::vec3 Center;
+    glm::vec3 Positions[3];
+    uint32_t  Indicies[3];
 };
 
 struct FMesh
@@ -119,7 +127,6 @@ struct FMesh
     
     std::vector<FVertexRT> m_Positions;
     std::vector<uint32_t>  m_Indicies;
-    
-    glm::vec3 BoundingBoxMin;
-    glm::vec3 BoundingBoxMax;
+    glm::vec3              BoundingBoxMin;
+    glm::vec3              BoundingBoxMax;
 };
