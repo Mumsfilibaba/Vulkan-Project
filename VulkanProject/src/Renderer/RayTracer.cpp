@@ -167,7 +167,7 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     }
     
     // Allocator for GPU memory
-    m_pDeviceAllocator = new FDeviceMemoryAllocator(m_pDevice->GetDevice(), m_pDevice->GetPhysicalDevice());
+    m_pDeviceAllocator = new FDeviceMemoryAllocator(m_pDevice);
 }
 
 void FRayTracer::Tick(float deltaTime)
@@ -700,10 +700,6 @@ void FRayTracer::OnRenderUI()
                 ImGui::PushID(imguiID++);
 
                 ImGui::Text("TriangleMesh %d", index++);
-                
-                ImGui::InputInt("Num Triangles", reinterpret_cast<int*>(&mesh.NumTriangles), 1, 100, ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat3("Bounds Min", glm::value_ptr(mesh.BoxMin), "%0.3f", ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat3("Bounds Max", glm::value_ptr(mesh.BoxMax), "%0.3f", ImGuiInputTextFlags_ReadOnly);
                 
                 ImGui::PopID();
                 ImGui::Separator();
@@ -1399,16 +1395,24 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         pCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(FShaderSphere) * m_pScene->m_Spheres.size(), m_pScene->m_Spheres.data());
     }
     
-    if (!m_pScene->m_Vertices.empty())
+    if (m_pScene->m_pVertexBuffer)
     {
-        assert(sizeof(FVertexPosOnly) * m_pScene->m_Vertices.size() < m_pVertexBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pVertexBuffer, 0, sizeof(FVertexPosOnly) * m_pScene->m_Vertices.size(), m_pScene->m_Vertices.data());
+        VkBufferCopy BufferCopy;
+        BufferCopy.size      = m_pScene->m_pVertexBuffer->GetSize();
+        BufferCopy.dstOffset = 0;
+        BufferCopy.srcOffset = 0;
+        
+        pCommandBuffer->CopyBuffer(m_pScene->m_pVertexBuffer->GetBuffer(), m_pVertexBuffer->GetBuffer(), 1, &BufferCopy);
     }
     
-    if (!m_pScene->m_Triangles.empty())
+    if (m_pScene->m_pTriangleBuffer)
     {
-        assert(sizeof(FShaderTriangle) * m_pScene->m_Triangles.size() < m_pTriangleBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pTriangleBuffer, 0, sizeof(FShaderTriangle) * m_pScene->m_Triangles.size(), m_pScene->m_Triangles.data());
+        VkBufferCopy BufferCopy;
+        BufferCopy.size      = m_pScene->m_pTriangleBuffer->GetSize();
+        BufferCopy.dstOffset = 0;
+        BufferCopy.srcOffset = 0;
+        
+        pCommandBuffer->CopyBuffer(m_pScene->m_pTriangleBuffer->GetBuffer(), m_pTriangleBuffer->GetBuffer(), 1, &BufferCopy);
     }
     
     if (!m_pScene->m_Meshes.empty())
@@ -1429,6 +1433,7 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         BufferCopy.size      = m_pScene->m_pBoundingBoxBuffer->GetSize();
         BufferCopy.dstOffset = 0;
         BufferCopy.srcOffset = 0;
+        
         pCommandBuffer->CopyBuffer(m_pScene->m_pBoundingBoxBuffer->GetBuffer(), m_pBvhBuffer->GetBuffer(), 1, &BufferCopy);
     }
 }

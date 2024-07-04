@@ -89,7 +89,7 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& params, 
 }
 
 FBuffer::FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator)
-    : m_pDevice(pDevice)
+    : FDeviceChild(pDevice)
     , m_pAllocator(pAllocator)
     , m_Buffer(VK_NULL_HANDLE)
     , m_DeviceMemory(VK_NULL_HANDLE)
@@ -102,7 +102,7 @@ FBuffer::~FBuffer()
 {
     if (m_Buffer != VK_NULL_HANDLE)
     {
-        vkDestroyBuffer(m_pDevice->GetDevice(), m_Buffer, nullptr);
+        vkDestroyBuffer(GetDevice()->GetDevice(), m_Buffer, nullptr);
         m_Buffer = VK_NULL_HANDLE;
     }
 
@@ -114,12 +114,10 @@ FBuffer::~FBuffer()
     {
         if (m_DeviceMemory != VK_NULL_HANDLE)
         {
-            vkFreeMemory(m_pDevice->GetDevice(), m_DeviceMemory, nullptr);
+            vkFreeMemory(GetDevice()->GetDevice(), m_DeviceMemory, nullptr);
             m_DeviceMemory = VK_NULL_HANDLE;
         }
     }
-    
-    m_pDevice = nullptr;
 }
 
 void* FBuffer::Map()
@@ -131,7 +129,7 @@ void* FBuffer::Map()
     }
     else
     {
-        VkResult result = vkMapMemory(m_pDevice->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
+        VkResult result = vkMapMemory(GetDevice()->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
         if (result != VK_SUCCESS)
         {
             std::cout << "vkMapMemory failed. Error: " << result << "\n";
@@ -154,7 +152,7 @@ void FBuffer::FlushMappedMemoryRange()
         range.offset = 0;
         range.size   = m_Size;
 
-        VkResult result = vkFlushMappedMemoryRanges(m_pDevice->GetDevice(), 1, &range);
+        VkResult result = vkFlushMappedMemoryRanges(GetDevice()->GetDevice(), 1, &range);
         if (result != VK_SUCCESS)
         {
             std::cout << "vkFlushMappedMemoryRanges failed. Error: " << result << "\n";
@@ -167,6 +165,6 @@ void FBuffer::Unmap()
 {
     if (!m_pAllocator)
     {
-        vkUnmapMemory(m_pDevice->GetDevice(), m_DeviceMemory);
+        vkUnmapMemory(GetDevice()->GetDevice(), m_DeviceMemory);
     }
 }

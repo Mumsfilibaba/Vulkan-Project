@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include "DeviceMemoryAllocator.h"
 
 #define VK_CPU_BUFFER_USAGE (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
@@ -14,7 +14,7 @@ struct FBufferParams
     VkBufferUsageFlags    Usage            = 0;
 };
 
-class FBuffer
+class FBuffer : public FDeviceChild
 {
 public:
     static FBuffer* Create(FDevice* pDevice, const FBufferParams& params, FDeviceMemoryAllocator* pAllocator);
@@ -39,7 +39,6 @@ public:
     
 private:
     FDeviceMemoryAllocator* m_pAllocator;
-    FDevice*                m_pDevice;
     VkBuffer                m_Buffer;
     VkDeviceMemory          m_DeviceMemory;
     VkDeviceSize            m_Size;

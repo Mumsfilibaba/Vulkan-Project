@@ -3,7 +3,7 @@
 
 FDescriptorSetLayout* FDescriptorSetLayout::Create(FDevice* pDevice, const FDescriptorSetLayoutParams& params)
 {
-    FDescriptorSetLayout* pDescriptorSetLayout = new FDescriptorSetLayout(pDevice->GetDevice());
+    FDescriptorSetLayout* pDescriptorSetLayout = new FDescriptorSetLayout(pDevice);
     
     VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo;
     ZERO_STRUCT(&descriptorLayoutInfo);
@@ -25,8 +25,8 @@ FDescriptorSetLayout* FDescriptorSetLayout::Create(FDevice* pDevice, const FDesc
     }
 }
 
-FDescriptorSetLayout::FDescriptorSetLayout(VkDevice device)
-    : m_Device(device)
+FDescriptorSetLayout::FDescriptorSetLayout(FDevice* pDevice)
+    : FDeviceChild(pDevice)
     , m_DescriptorSetLayout(VK_NULL_HANDLE)
 {
 }
@@ -35,9 +35,7 @@ FDescriptorSetLayout::~FDescriptorSetLayout()
 {
     if (m_DescriptorSetLayout != VK_NULL_HANDLE)
     {
-        vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
+        vkDestroyDescriptorSetLayout(GetDevice()->GetDevice(), m_DescriptorSetLayout, nullptr);
         m_DescriptorSetLayout = VK_NULL_HANDLE;
     }
-
-    m_Device = VK_NULL_HANDLE;
 }

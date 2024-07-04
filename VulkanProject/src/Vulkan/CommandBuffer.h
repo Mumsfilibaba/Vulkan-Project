@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "Device.h"
 #include "Buffer.h"
 #include "RenderPass.h"
 #include "Framebuffer.h"
@@ -9,25 +9,18 @@
 #include "PipelineLayout.h"
 #include <vulkan/vulkan.h>
 
-enum class ECommandQueueType
-{
-    Graphics = 1,
-    Compute  = 2,
-    Transfer = 3,
-};
-
 struct FCommandBufferParams
 {
     VkCommandBufferLevel Level;
     ECommandQueueType    QueueType;
 };
 
-class FCommandBuffer
+class FCommandBuffer : public FDeviceChild
 {
 public:
     static FCommandBuffer* Create(class FDevice* pDevice, const FCommandBufferParams& params);
 
-    FCommandBuffer(VkDevice device);
+    FCommandBuffer(FDevice* pDevice);
     ~FCommandBuffer();
 
     void Begin(VkCommandBufferUsageFlags flags = 0)
@@ -183,14 +176,14 @@ public:
     
     bool IsFinishedOnGPU() const
     {
-        VkResult result = vkGetFenceStatus(m_Device, m_Fence);
+        VkResult result = vkGetFenceStatus(GetDevice()->GetDevice(), m_Fence);
         return result == VK_NOT_READY;
     }
     
     void WaitForAndResetFences()
     {
-        vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, UINT64_MAX);
-        vkResetFences(m_Device, 1, &m_Fence);
+        vkWaitForFences(GetDevice()->GetDevice(), 1, &m_Fence, VK_TRUE, UINT64_MAX);
+        vkResetFences(GetDevice()->GetDevice(), 1, &m_Fence);
     }
 
     void Reset(VkCommandPoolResetFlags flags = 0)
@@ -199,7 +192,7 @@ public:
         WaitForAndResetFences();
         
         // Avoid using the VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT since we can reuse the memory
-        vkResetCommandPool(m_Device, m_CommandPool, flags);
+        vkResetCommandPool(GetDevice()->GetDevice(), m_CommandPool, flags);
     }
 
     VkFence GetFence() const
@@ -213,7 +206,6 @@ public:
     }
     
 private:
-    VkDevice        m_Device;
     VkFence         m_Fence;
     VkCommandPool   m_CommandPool;
     VkCommandBuffer m_CommandBuffer;

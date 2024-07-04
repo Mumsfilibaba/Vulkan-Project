@@ -1,6 +1,7 @@
 #include "DeviceMemoryAllocator.h"
 #include "Helpers.h"
 #include "MathHelper.h"
+#include "Device.h"
 #include <assert.h>
 
 //#define ALLOCATOR_DEBUG
@@ -9,16 +10,16 @@
 constexpr float mb = 1024.0f * 1024.0f;
 
 FDeviceMemoryPage::FDeviceMemoryPage(VkDevice device, VkPhysicalDevice phyicalDevice, uint32_t id, VkDeviceSize sizeInBytes, uint32_t memoryType, VkMemoryPropertyFlags properties)
-    : m_Device(device),
-    m_PhysicalDevice(phyicalDevice),
-    m_Properties(properties),
-    m_ID(id),
-    m_MemoryType(memoryType),
-    m_SizeInBytes(sizeInBytes),
-    m_BlockCount(0),
-    m_pHead(nullptr),
-    m_pHostMemory(nullptr),
-    m_IsMapped(false)
+    : m_Device(device)
+    , m_PhysicalDevice(phyicalDevice)
+    , m_Properties(properties)
+    , m_ID(id)
+    , m_MemoryType(memoryType)
+    , m_SizeInBytes(sizeInBytes)
+    , m_BlockCount(0)
+    , m_pHead(nullptr)
+    , m_pHostMemory(nullptr)
+    , m_IsMapped(false)
 {
     Init();
 }
@@ -98,7 +99,6 @@ void FDeviceMemoryPage::Init()
         Map();
     }
 }
-
 
 bool FDeviceMemoryPage::Allocate(FDeviceAllocation& allocation, VkDeviceSize sizeInBytes, VkDeviceSize alignment, VkDeviceSize granularity)
 {
@@ -239,7 +239,6 @@ bool FDeviceMemoryPage::Allocate(FDeviceAllocation& allocation, VkDeviceSize siz
     return true;
 }
 
-
 bool FDeviceMemoryPage::IsOnSamePage(VkDeviceSize aOffset, VkDeviceSize aSize, VkDeviceSize bOffset, VkDeviceSize pageSize)
 {
     assert(aOffset + aSize <= bOffset && aSize > 0 && pageSize > 0);
@@ -250,7 +249,6 @@ bool FDeviceMemoryPage::IsOnSamePage(VkDeviceSize aOffset, VkDeviceSize aSize, V
     VkDeviceSize bStartPage = bStart & ~(pageSize - 1);
     return aEndPage == bStartPage;
 }
-
 
 void FDeviceMemoryPage::Map()
 {
@@ -265,7 +263,6 @@ void FDeviceMemoryPage::Map()
     }
 }
 
-
 void FDeviceMemoryPage::Unmap()
 {
     // If mapped -> unmap
@@ -276,7 +273,6 @@ void FDeviceMemoryPage::Unmap()
         m_IsMapped    = false;
     }
 }
-
 
 void FDeviceMemoryPage::Deallocate(FDeviceAllocation& allocation)
 {
@@ -343,27 +339,25 @@ void FDeviceMemoryPage::Deallocate(FDeviceAllocation& allocation)
 
 constexpr size_t numFrames = 3;
 
-FDeviceMemoryAllocator::FDeviceMemoryAllocator(VkDevice device, VkPhysicalDevice physicalDevice)
-    : m_Device(device),
-    m_PhysicalDevice(physicalDevice),
-    m_MaxAllocations(0),
-    m_TotalReserved(0),
-    m_TotalAllocated(0),
-    m_FrameIndex(0),
-    m_Pages(),
-    m_GarbageMemory()
+FDeviceMemoryAllocator::FDeviceMemoryAllocator(FDevice* pDevice)
+    : FDeviceChild(pDevice)
+    , m_MaxAllocations(0)
+    , m_TotalReserved(0)
+    , m_TotalAllocated(0)
+    , m_FrameIndex(0)
+    , m_Pages()
+    , m_GarbageMemory()
 {
     // Resize the number of garbage memory vectors
     m_GarbageMemory.resize(numFrames);
 
     // Setup from properties of the device
     VkPhysicalDeviceProperties properties = {};
-    vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
+    vkGetPhysicalDeviceProperties(pDevice->GetPhysicalDevice(), &properties);
 
     m_MaxAllocations         = properties.limits.maxMemoryAllocationCount;
     m_BufferImageGranularity = properties.limits.bufferImageGranularity;
 }
-
 
 FDeviceMemoryAllocator::~FDeviceMemoryAllocator()
 {
@@ -383,11 +377,10 @@ FDeviceMemoryAllocator::~FDeviceMemoryAllocator()
     std::cout << "Destroyed DeviceAllocator" << std::endl;
 }
 
-
 bool FDeviceMemoryAllocator::Allocate(FDeviceAllocation& allocation, const VkMemoryRequirements& memoryRequirements, VkMemoryPropertyFlags properties)
 {
     m_TotalAllocated += memoryRequirements.size;
-    uint32_t memoryType = FindMemoryType(m_PhysicalDevice, memoryRequirements.memoryTypeBits, properties);
+    uint32_t memoryType = FindMemoryType(GetDevice()->GetPhysicalDevice(), memoryRequirements.memoryTypeBits, properties);
 
     // Try allocating from existing page
     for (auto page : m_Pages)
@@ -415,14 +408,13 @@ bool FDeviceMemoryAllocator::Allocate(FDeviceAllocation& allocation, const VkMem
     m_TotalReserved += bytesToReserve;
 
     // Allocate new page
-    FDeviceMemoryPage* pPage = new FDeviceMemoryPage(m_Device, m_PhysicalDevice, uint32_t(m_Pages.size()), bytesToReserve, memoryType, properties);
+    FDeviceMemoryPage* pPage = new FDeviceMemoryPage(GetDevice()->GetDevice(), GetDevice()->GetPhysicalDevice(), uint32_t(m_Pages.size()), bytesToReserve, memoryType, properties);
     m_Pages.emplace_back(pPage);
 
     std::cout << "Allocated Memory-Page. Allocationcount: ' " << m_Pages.size() << "/" << m_MaxAllocations << "'. Memory-Type=" << memoryType << ". Total Allocated: " << float(m_TotalAllocated) / mb << " MB. Total Reserved " << float(m_TotalReserved) / mb << " MB"<< std::endl;
 
     return pPage->Allocate(allocation, memoryRequirements.size, memoryRequirements.alignment, m_BufferImageGranularity);
 }
-
 
 void FDeviceMemoryAllocator::Deallocate(FDeviceAllocation& allocation)
 {
@@ -439,7 +431,6 @@ void FDeviceMemoryAllocator::Deallocate(FDeviceAllocation& allocation)
     allocation.DeviceMemory       = VK_NULL_HANDLE;
     allocation.pHostMemory        = nullptr;
 }
-
 
 void FDeviceMemoryAllocator::EmptyGarbageMemory()
 {
@@ -466,7 +457,6 @@ void FDeviceMemoryAllocator::EmptyGarbageMemory()
 
         memoryBlocks.clear();
     }
-
 
     //Remove empty pages
     if (m_Pages.size() > 6)

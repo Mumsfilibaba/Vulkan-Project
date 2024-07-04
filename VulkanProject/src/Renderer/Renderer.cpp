@@ -72,7 +72,7 @@ void FRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     }
 
     // Allocator for GPU mem
-    m_pDeviceAllocator = new FDeviceMemoryAllocator(m_pDevice->GetDevice(), m_pDevice->GetPhysicalDevice());
+    m_pDeviceAllocator = new FDeviceMemoryAllocator(pDevice);
 
     m_pModel = new FModel();
     m_pModel->LoadFromFile("res/models/viking_room.obj", m_pDevice, m_pDeviceAllocator);

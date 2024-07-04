@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
 class FRenderPass;
@@ -24,10 +24,10 @@ struct FGraphicsPipelineStateParams
     FShaderModule*   pFragmentShader = nullptr;
 };
 
-class FBasePipeline
+class FBasePipeline : public FDeviceChild
 {
 public:
-    FBasePipeline(VkDevice device);
+    FBasePipeline(FDevice* pDevice);
     ~FBasePipeline();
     
     VkPipeline GetPipeline() const
@@ -36,16 +36,15 @@ public:
     }
     
 protected:
-    VkDevice   m_Device;
     VkPipeline m_Pipeline;
 };
 
 class FGraphicsPipeline : public FBasePipeline
 {
 public:
-    static FGraphicsPipeline* Create(class FDevice* pDevice, const FGraphicsPipelineStateParams& params);
+    static FGraphicsPipeline* Create(FDevice* pDevice, const FGraphicsPipelineStateParams& params);
     
-    FGraphicsPipeline(VkDevice device);
+    FGraphicsPipeline(FDevice* pDevice);
     ~FGraphicsPipeline() = default;
 };
 
@@ -60,6 +59,6 @@ class FComputePipeline : public FBasePipeline
 public:
     static FComputePipeline* Create(class FDevice* pDevice, const FComputePipelineStateParams& params);
     
-    FComputePipeline(VkDevice device);
+    FComputePipeline(FDevice* pDevice);
     ~FComputePipeline() = default;
 };

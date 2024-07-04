@@ -12,7 +12,7 @@ FDescriptorSet* FDescriptorSet::Create(FDevice* pDevice, FDescriptorPool* pDescr
     assert(pDescriptorPool != nullptr);
     assert(pDescriptorSetLayout != nullptr);
     
-    FDescriptorSet* pDescriptorSet = new FDescriptorSet(pDevice->GetDevice(), pDescriptorPool);
+    FDescriptorSet* pDescriptorSet = new FDescriptorSet(pDevice, pDescriptorPool);
     
     VkDescriptorSetAllocateInfo allocateInfo;
     ZERO_STRUCT(&allocateInfo);
@@ -23,7 +23,7 @@ FDescriptorSet* FDescriptorSet::Create(FDevice* pDevice, FDescriptorPool* pDescr
     allocateInfo.pSetLayouts        = &descriptorLayout;
     allocateInfo.descriptorPool     = pDescriptorPool->GetPool();
     
-    VkResult result = vkAllocateDescriptorSets(pDescriptorSet->m_Device, &allocateInfo, &pDescriptorSet->m_DescriptorSet);
+    VkResult result = vkAllocateDescriptorSets(pDevice->GetDevice(), &allocateInfo, &pDescriptorSet->m_DescriptorSet);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkAllocateDescriptorSets failed\n";
@@ -33,23 +33,21 @@ FDescriptorSet* FDescriptorSet::Create(FDevice* pDevice, FDescriptorPool* pDescr
     return pDescriptorSet;
 }
 
-FDescriptorSet::FDescriptorSet(VkDevice device, class FDescriptorPool* pool)
-    : m_Pool(pool)
-    , m_Device(device)
+FDescriptorSet::FDescriptorSet(FDevice* pDevice, FDescriptorPool* pDescriptorPool)
+    : FDeviceChild(pDevice)
+    , m_pDescriptorPool(pDescriptorPool)
     , m_DescriptorSet(VK_NULL_HANDLE)
 {
-    assert(m_Pool != nullptr);
+    assert(m_pDescriptorPool != nullptr);
 }
 
 FDescriptorSet::~FDescriptorSet()
 {
     if (m_DescriptorSet)
     {
-        vkFreeDescriptorSets(m_Device, m_Pool->GetPool(), 1, &m_DescriptorSet);
+        vkFreeDescriptorSets(GetDevice()->GetDevice(), m_pDescriptorPool->GetPool(), 1, &m_DescriptorSet);
         m_DescriptorSet = VK_NULL_HANDLE;
     }
-    
-    m_Device = VK_NULL_HANDLE;
 }
 
 void FDescriptorSet::BindStorageImage(VkImageView imageView, uint32_t binding)
@@ -75,7 +73,7 @@ void FDescriptorSet::BindStorageImage(VkImageView imageView, uint32_t binding)
     descriptorWrite.pImageInfo       = &imageInfo;
     descriptorWrite.pTexelBufferView = nullptr;
     
-    vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+    vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &descriptorWrite, 0, nullptr);
 }
 
 void FDescriptorSet::BindCombinedImageSampler(VkImageView imageView, VkSampler sampler, uint32_t binding)
@@ -102,7 +100,7 @@ void FDescriptorSet::BindCombinedImageSampler(VkImageView imageView, VkSampler s
     descriptorWrite.pImageInfo       = &imageInfo;
     descriptorWrite.pTexelBufferView = nullptr;
     
-    vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+    vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &descriptorWrite, 0, nullptr);
 }
 
 void FDescriptorSet::BindUniformBuffer(VkBuffer buffer, uint32_t binding)
@@ -128,7 +126,7 @@ void FDescriptorSet::BindUniformBuffer(VkBuffer buffer, uint32_t binding)
     descriptorWrite.pImageInfo       = nullptr;
     descriptorWrite.pTexelBufferView = nullptr;
     
-    vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+    vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &descriptorWrite, 0, nullptr);
 }
 
 void FDescriptorSet::BindStorageBuffer(VkBuffer buffer, uint32_t binding)
@@ -154,5 +152,5 @@ void FDescriptorSet::BindStorageBuffer(VkBuffer buffer, uint32_t binding)
     descriptorWrite.pImageInfo       = nullptr;
     descriptorWrite.pTexelBufferView = nullptr;
 
-    vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+    vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &descriptorWrite, 0, nullptr);
 }

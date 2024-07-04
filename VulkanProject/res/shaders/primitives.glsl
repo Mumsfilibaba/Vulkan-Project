@@ -76,16 +76,9 @@ struct FTriangle
 
 struct FMesh
 {
-    // 0-32
-    vec4 BoxMin;
-    vec4 BoxMax;
-    // 32-44
-    uint StartTriangle;
-    uint NumTriangles;
+    // 0-8
+    uint BoundingBoxIndex;
     uint MaterialIndex;
-
-    // Padding
-    uint Padding0;
 };
 
 #endif

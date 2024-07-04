@@ -34,7 +34,7 @@ FSwapchain* FSwapchain::Create(FDevice* pDevice, GLFWwindow* pWindow)
 }
 
 FSwapchain::FSwapchain(FDevice* pDevice, GLFWwindow* pWindow)
-    : m_pDevice(pDevice)
+    : FDeviceChild(pDevice)
     , m_pWindow(pWindow)
     , m_Surface(VK_NULL_HANDLE)
     , m_Swapchain(VK_NULL_HANDLE)
@@ -55,13 +55,13 @@ FSwapchain::~FSwapchain()
     {
         if (frame.ImageSemaphore != VK_NULL_HANDLE)
         {
-            vkDestroySemaphore(m_pDevice->GetDevice(), frame.ImageSemaphore, nullptr);
+            vkDestroySemaphore(GetDevice()->GetDevice(), frame.ImageSemaphore, nullptr);
             frame.ImageSemaphore = VK_NULL_HANDLE;
         }
         
         if (frame.RenderSemaphore != VK_NULL_HANDLE)
         {
-            vkDestroySemaphore(m_pDevice->GetDevice(), frame.RenderSemaphore, nullptr);
+            vkDestroySemaphore(GetDevice()->GetDevice(), frame.RenderSemaphore, nullptr);
             frame.RenderSemaphore = VK_NULL_HANDLE;
         }
     }
@@ -70,14 +70,14 @@ FSwapchain::~FSwapchain()
     
     if (m_Surface != VK_NULL_HANDLE)
     {
-        vkDestroySurfaceKHR(m_pDevice->GetInstance(), m_Surface, nullptr);
+        vkDestroySurfaceKHR(GetDevice()->GetInstance(), m_Surface, nullptr);
         m_Surface = VK_NULL_HANDLE;
     }
 }
 
 bool FSwapchain::CreateSurface()
 {
-    VkResult result = glfwCreateWindowSurface(m_pDevice->GetInstance(), m_pWindow, nullptr, &m_Surface);
+    VkResult result = glfwCreateWindowSurface(GetDevice()->GetInstance(), m_pWindow, nullptr, &m_Surface);
     if (result != VK_SUCCESS)
     {
         std::cout << "glfwCreateWindowSurface failed  with error: " << result << '\n';
@@ -95,7 +95,7 @@ bool FSwapchain::CreateSwapchain()
 
     // Get capabilities and formats that are supported
     VkSurfaceCapabilitiesKHR capabilities = {};
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_pDevice->GetPhysicalDevice(), m_Surface, &capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetDevice()->GetPhysicalDevice(), m_Surface, &capabilities);
     if (capabilities.currentExtent.width != UINT32_MAX && capabilities.currentExtent.height != UINT32_MAX)
     {
         m_Extent = capabilities.currentExtent;
@@ -113,11 +113,11 @@ bool FSwapchain::CreateSwapchain()
     std::vector<VkSurfaceFormatKHR> formats;
 
     uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(m_pDevice->GetPhysicalDevice(), m_Surface, &formatCount, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(GetDevice()->GetPhysicalDevice(), m_Surface, &formatCount, nullptr);
     if (formatCount > 0)
     {
         formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(m_pDevice->GetPhysicalDevice(), m_Surface, &formatCount, formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(GetDevice()->GetPhysicalDevice(), m_Surface, &formatCount, formats.data());
 
         for (const auto& availableFormat : formats)
         {
@@ -139,11 +139,11 @@ bool FSwapchain::CreateSwapchain()
 
 
     uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(m_pDevice->GetPhysicalDevice(), m_Surface, &presentModeCount, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(GetDevice()->GetPhysicalDevice(), m_Surface, &presentModeCount, nullptr);
     if (presentModeCount > 0)
     {
         presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(m_pDevice->GetPhysicalDevice(), m_Surface, &presentModeCount, presentModes.data());
+        vkGetPhysicalDeviceSurfacePresentModesKHR(GetDevice()->GetPhysicalDevice(), m_Surface, &presentModeCount, presentModes.data());
 
         // Choose mailbox if available otherwise fifo
         m_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -187,7 +187,7 @@ bool FSwapchain::CreateSwapchain()
         createInfo.clipped          = VK_TRUE;
         createInfo.oldSwapchain     = VK_NULL_HANDLE;
 
-        VkResult result = vkCreateSwapchainKHR(m_pDevice->GetDevice(), &createInfo, nullptr, &m_Swapchain);
+        VkResult result = vkCreateSwapchainKHR(GetDevice()->GetDevice(), &createInfo, nullptr, &m_Swapchain);
         if (result != VK_SUCCESS)
         {
             std::cout << "vkCreateSwapchainKHR failed. Error: " << result << '\n';
@@ -197,14 +197,14 @@ bool FSwapchain::CreateSwapchain()
 
     // Get the images and create ImageViews
     uint32_t realImageCount = 0;
-    vkGetSwapchainImagesKHR(m_pDevice->GetDevice(), m_Swapchain, &realImageCount, nullptr);
+    vkGetSwapchainImagesKHR(GetDevice()->GetDevice(), m_Swapchain, &realImageCount, nullptr);
     if (realImageCount < m_ImageCount)
     {
         std::cout << "WARNING: Less images than requested in swapchain\n";
     }
 
     std::vector<VkImage> images(realImageCount);
-    vkGetSwapchainImagesKHR(m_pDevice->GetDevice(), m_Swapchain, &realImageCount, images.data());
+    vkGetSwapchainImagesKHR(GetDevice()->GetDevice(), m_Swapchain, &realImageCount, images.data());
 
 
     // Create ImageViews for the BackBuffers
@@ -230,7 +230,7 @@ bool FSwapchain::CreateSwapchain()
             VkImageView imageView = VK_NULL_HANDLE;
             imageViewCreateInfo.image = images[i];
 
-            VkResult result = vkCreateImageView(m_pDevice->GetDevice(), &imageViewCreateInfo, nullptr, &imageView);
+            VkResult result = vkCreateImageView(GetDevice()->GetDevice(), &imageViewCreateInfo, nullptr, &imageView);
             if (result != VK_SUCCESS)
             {
                 std::cout << "vkCreateImageView failed. Error: " << result << '\n';
@@ -272,16 +272,16 @@ bool FSwapchain::CreateSemaphores()
         VkSemaphore imageSemaphore  = VK_NULL_HANDLE;
         VkSemaphore renderSemaphore = VK_NULL_HANDLE;
 
-        if (vkCreateSemaphore(m_pDevice->GetDevice(), &semaphoreInfo, nullptr, &imageSemaphore) != VK_SUCCESS ||
-            vkCreateSemaphore(m_pDevice->GetDevice(), &semaphoreInfo, nullptr, &renderSemaphore) != VK_SUCCESS)
+        if (vkCreateSemaphore(GetDevice()->GetDevice(), &semaphoreInfo, nullptr, &imageSemaphore) != VK_SUCCESS ||
+            vkCreateSemaphore(GetDevice()->GetDevice(), &semaphoreInfo, nullptr, &renderSemaphore) != VK_SUCCESS)
         {
             std::cout << "vkCreateSemaphore failed\n";
             return false;
         }
         else
         {
-            SetDebugName(m_pDevice->GetDevice(), "ImageSemaphore[" + std::to_string(i) + "]", (uint64_t)imageSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
-            SetDebugName(m_pDevice->GetDevice(), "RenderSemaphore[" + std::to_string(i) + "]", (uint64_t)renderSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
+            SetDebugName(GetDevice()->GetDevice(), "ImageSemaphore[" + std::to_string(i) + "]", (uint64_t)imageSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
+            SetDebugName(GetDevice()->GetDevice(), "RenderSemaphore[" + std::to_string(i) + "]", (uint64_t)renderSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
         }
 
         m_FrameData[i].ImageSemaphore  = imageSemaphore;
@@ -294,7 +294,7 @@ bool FSwapchain::CreateSemaphores()
 VkResult FSwapchain::AquireNextImage()
 {
     VkSemaphore signalSemaphore = m_FrameData[m_SemaphoreIndex].ImageSemaphore;
-    return vkAcquireNextImageKHR(m_pDevice->GetDevice(), m_Swapchain, UINT64_MAX, signalSemaphore, VK_NULL_HANDLE, &m_CurrentBufferIndex);
+    return vkAcquireNextImageKHR(GetDevice()->GetDevice(), m_Swapchain, UINT64_MAX, signalSemaphore, VK_NULL_HANDLE, &m_CurrentBufferIndex);
 }
 
 void FSwapchain::WaitForImage()
@@ -312,7 +312,7 @@ void FSwapchain::WaitForImage()
     submitInfo.pWaitSemaphores    = waitSemaphores;
     submitInfo.pWaitDstStageMask  = waitStages;
 
-    VkResult result = vkQueueSubmit(m_pDevice->GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+    VkResult result = vkQueueSubmit(GetDevice()->GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkQueueSubmit failed. Error: " << result << '\n';
@@ -321,7 +321,7 @@ void FSwapchain::WaitForImage()
 
 void FSwapchain::RecreateSwapchain()
 {
-    m_pDevice->WaitForIdle();
+    GetDevice()->WaitForIdle();
 
     ReleaseSwapchainResources();
     CreateSwapchain();
@@ -333,7 +333,7 @@ void FSwapchain::Resize(uint32_t width, uint32_t height)
     {
         // Since we always acquire an image, we need to wait for it
         WaitForImage();
-        m_pDevice->WaitForIdle();
+        GetDevice()->WaitForIdle();
 
         ReleaseSwapchainResources();
         CreateSwapchain();
@@ -357,7 +357,7 @@ VkResult FSwapchain::Present()
     presentInfo.pImageIndices      = &m_CurrentBufferIndex;
     presentInfo.pResults           = nullptr;
 
-    VkResult result = vkQueuePresentKHR(m_pDevice->GetPresentQueue(), &presentInfo);
+    VkResult result = vkQueuePresentKHR(GetDevice()->GetPresentQueue(), &presentInfo);
     if (result == VK_SUCCESS)
     {
         // Acquire next image
@@ -390,7 +390,7 @@ void FSwapchain::ReleaseSwapchainResources()
         frame.BackBuffer = VK_NULL_HANDLE;
         if (frame.BackBufferView != VK_NULL_HANDLE)
         {
-            vkDestroyImageView(m_pDevice->GetDevice(), frame.BackBufferView, nullptr);
+            vkDestroyImageView(GetDevice()->GetDevice(), frame.BackBufferView, nullptr);
             frame.BackBufferView = VK_NULL_HANDLE;
         }
     }
@@ -398,7 +398,7 @@ void FSwapchain::ReleaseSwapchainResources()
     // Destroy swapchain
     if (m_Swapchain != VK_NULL_HANDLE)
     {
-        vkDestroySwapchainKHR(m_pDevice->GetDevice(), m_Swapchain, nullptr);
+        vkDestroySwapchainKHR(GetDevice()->GetDevice(), m_Swapchain, nullptr);
         m_Swapchain = VK_NULL_HANDLE;
     }
 }

@@ -5,8 +5,8 @@
 #include "PipelineLayout.h"
 #include <vector>
 
-FBasePipeline::FBasePipeline(VkDevice device)
-    : m_Device(device)
+FBasePipeline::FBasePipeline(FDevice* pDevice)
+    : FDeviceChild(pDevice)
     , m_Pipeline(VK_NULL_HANDLE)
 {
 }
@@ -15,16 +15,14 @@ FBasePipeline::~FBasePipeline()
 {
     if (m_Pipeline != VK_NULL_HANDLE)
     {
-        vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
+        vkDestroyPipeline(GetDevice()->GetDevice(), m_Pipeline, nullptr);
         m_Pipeline = VK_NULL_HANDLE;
     }
-    
-    m_Device = VK_NULL_HANDLE;
 }
 
 FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPipelineStateParams& params)
 {
-    FGraphicsPipeline* pPipeline = new FGraphicsPipeline(pDevice->GetDevice());
+    FGraphicsPipeline* pPipeline = new FGraphicsPipeline(pDevice);
     assert(params.pVertexShader != nullptr);
     assert(params.pRenderPass != nullptr);
     assert(params.pPipelineLayout != nullptr);
@@ -157,8 +155,8 @@ FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPi
     pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex   = -1;
 
-    VkResult result = vkCreateGraphicsPipelines(pPipeline->m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pPipeline->m_Pipeline);
-    if (result != VK_SUCCESS) 
+    VkResult result = vkCreateGraphicsPipelines(pDevice->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pPipeline->m_Pipeline);
+    if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateGraphicsPipelines failed\n";
         return nullptr;
@@ -171,15 +169,15 @@ FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPi
     return pPipeline;
 }
 
-FGraphicsPipeline::FGraphicsPipeline(VkDevice device)
-    : FBasePipeline(device)
+FGraphicsPipeline::FGraphicsPipeline(FDevice* pDevice)
+    : FBasePipeline(pDevice)
 {
 }
 
 
 FComputePipeline* FComputePipeline::Create(FDevice* pDevice, const FComputePipelineStateParams& params)
 {
-    FComputePipeline* newPipeline = new FComputePipeline(pDevice->GetDevice());
+    FComputePipeline* pNewPipeline = new FComputePipeline(pDevice);
     assert(params.pShader != nullptr);
     assert(params.pPipelineLayout != nullptr);
 
@@ -199,7 +197,7 @@ FComputePipeline* FComputePipeline::Create(FDevice* pDevice, const FComputePipel
     pipelineInfo.layout            = params.pPipelineLayout->GetPipelineLayout();
     pipelineInfo.stage             = shaderStageInfo;
 
-    VkResult result = vkCreateComputePipelines(newPipeline->m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline->m_Pipeline);
+    VkResult result = vkCreateComputePipelines(pDevice->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pNewPipeline->m_Pipeline);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateComputePipelines failed\n";
@@ -210,10 +208,10 @@ FComputePipeline* FComputePipeline::Create(FDevice* pDevice, const FComputePipel
         std::cout << "Created Compute-Pipeline\n";
     }
     
-    return newPipeline;
+    return pNewPipeline;
 }
 
-FComputePipeline::FComputePipeline(VkDevice device)
-    : FBasePipeline(device)
+FComputePipeline::FComputePipeline(FDevice* pDevice)
+    : FBasePipeline(pDevice)
 {
 }

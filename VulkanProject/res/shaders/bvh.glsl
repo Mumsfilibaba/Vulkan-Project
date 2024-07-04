@@ -7,6 +7,7 @@
 #define OBJECT_TYPE_MESH 3
 
 #define BVH_ROOT_NODE_INDEX 0
+#define BVH_MAX_DEPTH 16
 
 struct FBoundingBox
 {

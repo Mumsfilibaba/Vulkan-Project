@@ -3,7 +3,7 @@
 
 FSampler* FSampler::Create(FDevice* pDevice, const FSamplerParams& params)
 {
-    FSampler* pSampler = new FSampler(pDevice->GetDevice());
+    FSampler* pSampler = new FSampler(pDevice);
     
     VkSamplerCreateInfo samplerCreateInfo;
     ZERO_STRUCT(&samplerCreateInfo);
@@ -38,8 +38,8 @@ FSampler* FSampler::Create(FDevice* pDevice, const FSamplerParams& params)
     }
 }
     
-FSampler::FSampler(VkDevice device)
-    : m_Device(device)
+FSampler::FSampler(FDevice* pDevice)
+    : FDeviceChild(pDevice)
     , m_Sampler(VK_NULL_HANDLE)
 {
 }
@@ -48,7 +48,7 @@ FSampler::~FSampler()
 {
     if (m_Sampler != VK_NULL_HANDLE)
     {
-        vkDestroySampler(m_Device, m_Sampler, nullptr);
+        vkDestroySampler(GetDevice()->GetDevice(), m_Sampler, nullptr);
         m_Sampler = VK_NULL_HANDLE;
     }
 }

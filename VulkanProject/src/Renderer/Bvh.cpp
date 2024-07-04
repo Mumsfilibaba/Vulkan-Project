@@ -6,6 +6,7 @@
 FBoundingBoxBuilder::FBoundingBoxBuilder(uint32_t InMaxDepth)
     : BoundingBoxes()
     , MaxDepth(InMaxDepth)
+    , Depth(0)
 {
     // Allocate root
     BoundingBoxes.emplace_back();
@@ -105,9 +106,12 @@ void FBoundingBoxBuilder::BuildHierarchy()
                 }
             }
         }
-                
+        
         CurrentDepth++;
     }
+    
+    // Save the depth for stats
+    Depth = CurrentDepth;
 }
 
 void FBoundingBoxBuilder::Finalize()
@@ -151,9 +155,9 @@ FAccelerationStructure::FAccelerationStructure()
 {
 }
 
-void FAccelerationStructure::Build(const FMesh& Mesh)
+void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
 {
-    FBoundingBoxBuilder BoundingBoxBuilder(32);
+    FBoundingBoxBuilder BoundingBoxBuilder(MaxDepth);
 
     for (uint32_t i = 0; i < Mesh.m_Indicies.size(); i += 3)
     {
@@ -189,6 +193,7 @@ void FAccelerationStructure::Build(const FMesh& Mesh)
     }
 
     // Convert bounding-boxes into shader-compatible structure
+    uint32_t MaxTriangleCount = 0;
     m_BoundingBoxes.reserve(BoundingBoxBuilder.BoundingBoxes.size());
     for (const FBoundingBox& Box : BoundingBoxBuilder.BoundingBoxes)
     {
@@ -208,6 +213,11 @@ void FAccelerationStructure::Build(const FMesh& Mesh)
         {
             const uint32_t LastTriangleIndex = ShaderBox.TriangleOrChildIndex + ShaderBox.NumTriangles;
             assert(LastTriangleIndex <= m_Triangles.size());
+            MaxTriangleCount = std::max(ShaderBox.NumTriangles, MaxTriangleCount);
         }
     }
+    
+    // Setup the stats
+    Stats.Depth                  = BoundingBoxBuilder.Depth;
+    Stats.MaxTrianglesInLeafNode = MaxTriangleCount;
 }

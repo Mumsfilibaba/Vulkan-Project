@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
 class FRenderPass;
@@ -13,12 +13,12 @@ struct FFramebufferParams
     uint32_t     Height          = 0;
 };
 
-class FFramebuffer
+class FFramebuffer : public FDeviceChild
 {
 public:
-    static FFramebuffer* Create(class FDevice* pDevice, const FFramebufferParams& params);
+    static FFramebuffer* Create(FDevice* pDevice, const FFramebufferParams& params);
     
-    FFramebuffer(VkDevice device);
+    FFramebuffer(FDevice* pDevice);
     ~FFramebuffer();
 
     VkExtent2D GetExtent() const
@@ -31,9 +31,7 @@ public:
         return m_Framebuffer;
     }
 
-    
 private:
-    VkDevice      m_Device;
     VkFramebuffer m_Framebuffer;
     uint32_t      m_Width;
     uint32_t      m_Height;

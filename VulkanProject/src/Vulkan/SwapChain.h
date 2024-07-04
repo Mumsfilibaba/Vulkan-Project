@@ -1,11 +1,11 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 #include <vector>
 
 class FDevice;
 
-class FSwapchain
+class FSwapchain : public FDeviceChild
 {
     struct FFrameData
     {
@@ -69,14 +69,11 @@ private:
     bool CreateSurface();
     bool CreateSemaphores();
     bool CreateSwapchain();
-   
     void ReleaseSwapchainResources();
     void RecreateSwapchain();
-    
     VkResult AquireNextImage();
     void     WaitForImage();
 
-    FDevice*                m_pDevice;
     GLFWwindow*             m_pWindow;
     VkSurfaceKHR            m_Surface;
     VkSwapchainKHR          m_Swapchain;

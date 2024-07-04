@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
 class FDevice;
@@ -12,12 +12,12 @@ struct FPipelineLayoutParams
     uint32_t               numPushConstants = 0;
 };
 
-class FPipelineLayout
+class FPipelineLayout : public FDeviceChild
 {
 public:
     static FPipelineLayout* Create(FDevice* pDevice, const FPipelineLayoutParams& params);
 
-    FPipelineLayout(VkDevice device);
+    FPipelineLayout(FDevice* pDevice);
     ~FPipelineLayout();
 
     VkPipelineLayout GetPipelineLayout() const
@@ -26,6 +26,5 @@ public:
     }
 
 private:
-    VkDevice         m_Device;
     VkPipelineLayout m_PipelineLayout;
 };

@@ -7,7 +7,7 @@
 
 FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferParams& params)
 {
-    FCommandBuffer* pCommandBuffer = new FCommandBuffer(pDevice->GetDevice());
+    FCommandBuffer* pCommandBuffer = new FCommandBuffer(pDevice);
     
     VkCommandPoolCreateInfo poolInfo;
     ZERO_STRUCT(&poolInfo);
@@ -15,7 +15,7 @@ FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferPar
     poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.queueFamilyIndex = pDevice->GetQueueFamilyIndex(params.QueueType);
 
-    VkResult result = vkCreateCommandPool(pCommandBuffer->m_Device, &poolInfo, nullptr, &pCommandBuffer->m_CommandPool);
+    VkResult result = vkCreateCommandPool(pDevice->GetDevice(), &poolInfo, nullptr, &pCommandBuffer->m_CommandPool);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateCommandPool failed. Error: " << result << '\n';
@@ -34,8 +34,8 @@ FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferPar
     allocInfo.level              = params.Level;
     allocInfo.commandBufferCount = 1;
 
-    result = vkAllocateCommandBuffers(pCommandBuffer->m_Device, &allocInfo, &pCommandBuffer->m_CommandBuffer);
-    if (result != VK_SUCCESS) 
+    result = vkAllocateCommandBuffers(pDevice->GetDevice(), &allocInfo, &pCommandBuffer->m_CommandBuffer);
+    if (result != VK_SUCCESS)
     {
         std::cout << "vkAllocateCommandBuffers failed. Error: " << result << '\n';
         return nullptr;
@@ -51,7 +51,7 @@ FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferPar
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    result = vkCreateFence(pCommandBuffer->m_Device, &fenceInfo, nullptr, &pCommandBuffer->m_Fence);
+    result = vkCreateFence(pDevice->GetDevice(), &fenceInfo, nullptr, &pCommandBuffer->m_Fence);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateFence failed. Error: " << result << '\n';
@@ -65,8 +65,8 @@ FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferPar
     return pCommandBuffer;
 }
 
-FCommandBuffer::FCommandBuffer(VkDevice device)
-    : m_Device(device)
+FCommandBuffer::FCommandBuffer(FDevice* pDevice)
+    : FDeviceChild(pDevice)
     , m_CommandPool(VK_NULL_HANDLE)
     , m_CommandBuffer(VK_NULL_HANDLE)
     , m_Fence(VK_NULL_HANDLE)
@@ -79,17 +79,15 @@ FCommandBuffer::~FCommandBuffer()
     {
         WaitForAndResetFences();
         
-        vkDestroyFence(m_Device, m_Fence, nullptr);
+        vkDestroyFence(GetDevice()->GetDevice(), m_Fence, nullptr);
         m_Fence = VK_NULL_HANDLE;
     }
 
     if (m_CommandPool != VK_NULL_HANDLE)
     {
-        vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+        vkDestroyCommandPool(GetDevice()->GetDevice(), m_CommandPool, nullptr);
         m_CommandPool = VK_NULL_HANDLE;
     }
-
-    m_Device = VK_NULL_HANDLE;
 }
 
 void FCommandBuffer::TransitionImage(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout)

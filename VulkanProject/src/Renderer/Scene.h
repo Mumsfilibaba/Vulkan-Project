@@ -10,7 +10,7 @@
 #define MAX_TRIANGLES 300000
 #define MAX_VERTICES (MAX_TRIANGLES * 3)
 #define MAX_MATERIALS 32
-#define MAX_BVH_NODES 4096
+#define MAX_BVH_NODES 10000
 #define MAX_TRIANGLEMESHES 3
 
 #define BACKGROUND_TYPE_NONE 0
@@ -51,20 +51,24 @@ struct FScene
     std::vector<FShaderMaterial> m_Materials;
     
     // Triangle Mesh Data
-    std::vector<FVertexPosOnly>  m_Vertices;
-    std::vector<FShaderTriangle> m_Triangles;
-    std::vector<FShaderMesh>     m_Meshes;
+    std::vector<FVertexPosOnly> m_Vertices;
+    std::vector<FShaderMesh>    m_Meshes;
     
     // Other primitive data
-    std::vector<FShaderSphere>   m_Spheres;
-    std::vector<FShaderQuad>     m_Quads;
+    std::vector<FShaderSphere>  m_Spheres;
+    std::vector<FShaderQuad>    m_Quads;
 
     // Bvh Container
-    FAccelerationStructure       m_AccelerationStructure;
+    FAccelerationStructure m_AccelerationStructure;
     
     // CPU Buffers
+    FBuffer* m_pVertexBuffer;
     FBuffer* m_pTriangleBuffer;
     FBuffer* m_pBoundingBoxBuffer;
+    
+    // Debugging
+    FBuffer* m_pMeshVertexBuffer;
+    FBuffer* m_pMeshIndexBuffer;
 };
 
 enum class EModelSceneType

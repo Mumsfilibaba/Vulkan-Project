@@ -4,7 +4,7 @@
 
 FRenderPass* FRenderPass::Create(FDevice* pDevice, const FRenderPassParams& params)
 {
-    FRenderPass* pRenderPass = new FRenderPass(pDevice->GetDevice());
+    FRenderPass* pRenderPass = new FRenderPass(pDevice);
     
     std::vector<VkAttachmentReference>   colorAttachmentRefInfos;
     std::vector<VkAttachmentDescription> attachmentsInfos;
@@ -67,8 +67,8 @@ FRenderPass* FRenderPass::Create(FDevice* pDevice, const FRenderPassParams& para
     renderPassInfo.subpassCount    = 1;
     renderPassInfo.pSubpasses      = &subpass;
 
-    VkResult result = vkCreateRenderPass(pRenderPass->m_Device, &renderPassInfo, nullptr, &pRenderPass->m_RenderPass);
-    if (result != VK_SUCCESS) 
+    VkResult result = vkCreateRenderPass(pDevice->GetDevice(), &renderPassInfo, nullptr, &pRenderPass->m_RenderPass);
+    if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateRenderPass failed\n";
         return nullptr;
@@ -80,8 +80,8 @@ FRenderPass* FRenderPass::Create(FDevice* pDevice, const FRenderPassParams& para
     }
 }
 
-FRenderPass::FRenderPass(VkDevice device)
-    : m_Device(device)
+FRenderPass::FRenderPass(FDevice* pDevice)
+    : FDeviceChild(pDevice)
     , m_RenderPass(VK_NULL_HANDLE)
 {
 }
@@ -90,9 +90,7 @@ FRenderPass::~FRenderPass()
 {
     if (m_RenderPass)
     {
-        vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
+        vkDestroyRenderPass(GetDevice()->GetDevice(), m_RenderPass, nullptr);
         m_RenderPass = VK_NULL_HANDLE;
     }
-
-    m_Device = VK_NULL_HANDLE;
 }

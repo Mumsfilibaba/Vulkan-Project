@@ -69,15 +69,22 @@ struct FBoundingBoxBuilder
     
     std::vector<FTriangle>    Triangles;
     std::vector<FBoundingBox> BoundingBoxes;
-    uint32_t                  MaxDepth;
+    const uint32_t            MaxDepth;
+    uint32_t                  Depth;
 };
 
 struct FAccelerationStructure
 {
     FAccelerationStructure();
     
-    void Build(const FMesh& Mesh);
+    void Build(const FMesh& Mesh, uint32_t MaxDepth);
 
     std::vector<FShaderTriangle>    m_Triangles;
     std::vector<FShaderBoundingBox> m_BoundingBoxes;
+    
+    struct
+    {
+        uint32_t MaxTrianglesInLeafNode;
+        uint32_t Depth;
+    } Stats;
 };

@@ -5,7 +5,7 @@
 
 FShaderModule* FShaderModule::Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint)
 {
-    FShaderModule* pShader = new FShaderModule(pDevice->GetDevice());
+    FShaderModule* pShader = new FShaderModule(pDevice);
     assert(pEntryPoint != nullptr);
     assert(pByteCode != nullptr);
     assert(byteCodeLength != 0);
@@ -69,8 +69,8 @@ FShaderModule* FShaderModule::CreateFromFile(FDevice* pDevice, const char* pEntr
     }
 }
 
-FShaderModule::FShaderModule(VkDevice device)
-    : m_Device(device)
+FShaderModule::FShaderModule(FDevice* pDevice)
+    : FDeviceChild(pDevice)
     , m_Module(VK_NULL_HANDLE)
     , m_pEntryPoint(nullptr)
 {
@@ -80,7 +80,7 @@ FShaderModule::~FShaderModule()
 {
     if (m_Module)
     {
-        vkDestroyShaderModule(m_Device, m_Module, nullptr);
+        vkDestroyShaderModule(GetDevice()->GetDevice(), m_Module, nullptr);
         m_Module = VK_NULL_HANDLE;
     }
 
@@ -89,7 +89,5 @@ FShaderModule::~FShaderModule()
         delete m_pEntryPoint;
         m_pEntryPoint = nullptr;
     }
-
-    m_Device = VK_NULL_HANDLE;
 }
 

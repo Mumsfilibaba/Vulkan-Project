@@ -4,7 +4,7 @@
 
 FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayoutParams& params)
 {
-    FPipelineLayout* pPipelineLayout = new FPipelineLayout(pDevice->GetDevice());
+    FPipelineLayout* pPipelineLayout = new FPipelineLayout(pDevice);
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
     descriptorSetLayouts.reserve(params.numLayouts);
@@ -50,8 +50,8 @@ FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayout
     }
 }
 
-FPipelineLayout::FPipelineLayout(VkDevice device)
-    : m_Device(device)
+FPipelineLayout::FPipelineLayout(FDevice* pDevice)
+    : FDeviceChild(pDevice)
     , m_PipelineLayout(VK_NULL_HANDLE)
 {
 }
@@ -60,9 +60,7 @@ FPipelineLayout::~FPipelineLayout()
 {
     if (m_PipelineLayout != VK_NULL_HANDLE)
     {
-        vkDestroyPipelineLayout(m_Device, m_PipelineLayout, nullptr);
+        vkDestroyPipelineLayout(GetDevice()->GetDevice(), m_PipelineLayout, nullptr);
         m_PipelineLayout = VK_NULL_HANDLE;
     }
-
-    m_Device = VK_NULL_HANDLE;
 }

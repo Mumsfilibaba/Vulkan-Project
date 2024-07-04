@@ -8,8 +8,11 @@ FScene::FScene()
     , m_Spheres()
     , m_Materials()
     , m_Settings()
+    , m_pVertexBuffer(nullptr)
     , m_pTriangleBuffer(nullptr)
     , m_pBoundingBoxBuffer(nullptr)
+    , m_pMeshVertexBuffer(nullptr)
+    , m_pMeshIndexBuffer(nullptr)
 {
     m_Settings.ViewMode    = EViewMode::Render;
     m_Settings.Exposure    = 0.5f;
@@ -20,15 +23,17 @@ FScene::FScene()
     m_Quads.reserve(MAX_QUADS);
     m_Spheres.reserve(MAX_SPHERES);
     m_Materials.reserve(MAX_MATERIALS);
-    m_Triangles.reserve(MAX_TRIANGLES);
     m_Vertices.reserve(MAX_VERTICES);
     m_Meshes.reserve(MAX_TRIANGLEMESHES);
 }
 
 FScene::~FScene()
 {
+    // SAFE_DELETE(m_pVertexBuffer);
     // SAFE_DELETE(m_pTriangleBuffer);
     // SAFE_DELETE(m_BoundingBoxBuffer);
+    // SAFE_DELETE(m_pMeshVertexBuffer);
+    // SAFE_DELETE(m_pMeshIndexBuffer);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -57,34 +62,48 @@ void FModelScene::Initialize()
     m_Vertices = Mesh.m_Positions;
     
     // Build BVH
-    m_AccelerationStructure.Build(Mesh);
+    m_AccelerationStructure.Build(Mesh, 4);
     
-    // Build the triangles after
-    m_Triangles = m_AccelerationStructure.m_Triangles;
+    std::cout << "Depth: " << m_AccelerationStructure.Stats.Depth << "\n";
+    std::cout << "MaxTrianglesInLeafNode: " << m_AccelerationStructure.Stats.MaxTrianglesInLeafNode << "\n";
     
     // Mesh Data
     m_Meshes.push_back(
     {
-        glm::vec4(Mesh.BoundingBoxMin, 0.0f),
-        glm::vec4(Mesh.BoundingBoxMax, 0.0f),
-        0,
-        static_cast<uint32_t>(m_Triangles.size()),
-        4,
-        // Padding
-        0,
+        0, // BoundingBoxIndex
+        4, // MaterialIndex
     });
     
+    // BVH Buffers
     FBufferParams BufferParams;
     BufferParams.Size             = sizeof(FShaderBoundingBox) * m_AccelerationStructure.m_BoundingBoxes.size();
     BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
+    assert(m_AccelerationStructure.m_BoundingBoxes.size() < MAX_BVH_NODES);
     m_pBoundingBoxBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_AccelerationStructure.m_BoundingBoxes.data());
-    assert(m_pBoundingBoxBuffer);
+    assert(m_pBoundingBoxBuffer != nullptr);
     
     BufferParams.Size = sizeof(FShaderTriangle) * m_AccelerationStructure.m_Triangles.size();
     m_pTriangleBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_AccelerationStructure.m_Triangles.data());
-    assert(m_pTriangleBuffer);
+    assert(m_pTriangleBuffer != nullptr);
+    
+    BufferParams.Size = sizeof(FVertexPosOnly) * m_Vertices.size();
+    m_pVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_Vertices.data());
+    assert(m_pVertexBuffer != nullptr);
+    
+    BufferParams.Size             = sizeof(FVertexPosOnly) * Mesh.m_Positions.size();
+    BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    
+    m_pMeshVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.m_Positions.data());
+    assert(m_pMeshVertexBuffer != nullptr);
+    
+    BufferParams.Size  = sizeof(uint32_t) * Mesh.m_Indicies.size();
+    BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    
+    m_pMeshIndexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.m_Indicies.data());
+    assert(m_pMeshIndexBuffer != nullptr);
     
     // Quads
     if (Type == EModelSceneType::Default)

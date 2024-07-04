@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
 struct FQueryParams
@@ -8,12 +8,12 @@ struct FQueryParams
     uint32_t    queryCount;
 };
 
-class FQuery
+class FQuery : public FDeviceChild
 {
 public:
-    static FQuery* Create(class FDevice* pDevice, const FQueryParams& params);
+    static FQuery* Create(FDevice* pDevice, const FQueryParams& params);
     
-    FQuery(VkDevice device);
+    FQuery(FDevice* pDevice);
     ~FQuery();
 
     void Reset(uint32_t firstQuery = 0, uint32_t queryCount = 0);
@@ -26,7 +26,6 @@ public:
     }
 
 private:
-    VkDevice    m_Device;
     VkQueryPool m_QueryPool;
     VkQueryType m_QueryType;
     uint32_t    m_NumQueries;

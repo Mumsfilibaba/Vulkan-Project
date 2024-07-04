@@ -1,13 +1,15 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 
-class FDescriptorSet
+class FDescriptorPool;
+
+class FDescriptorSet : public FDeviceChild
 {
 public:
     // Allocates from pDescriptorPool and uses the layout from pPipeline
-    static FDescriptorSet* Create(class FDevice* pDevice, class FDescriptorPool* pDescriptorPool, class FDescriptorSetLayout* pDescriptorSetLayout);
+    static FDescriptorSet* Create(FDevice* pDevice, FDescriptorPool* pDescriptorPool, class FDescriptorSetLayout* pDescriptorSetLayout);
 
-    FDescriptorSet(VkDevice device, class FDescriptorPool* pool);
+    FDescriptorSet(FDevice* pDevice, FDescriptorPool* pDescriptorPool);
     ~FDescriptorSet();
     
     void BindStorageImage(VkImageView imageView, uint32_t binding);
@@ -21,7 +23,6 @@ public:
     }
     
 private:
-    class FDescriptorPool* m_Pool;
-    VkDevice               m_Device;
-    VkDescriptorSet        m_DescriptorSet;
+    FDescriptorPool* m_pDescriptorPool;
+    VkDescriptorSet  m_DescriptorSet;
 };

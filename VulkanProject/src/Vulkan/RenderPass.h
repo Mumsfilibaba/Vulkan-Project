@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
 struct FRenderPassAttachment
@@ -17,12 +17,12 @@ struct FRenderPassParams
     uint32_t ColorAttachmentCount = 0;
 };
 
-class FRenderPass
+class FRenderPass : public FDeviceChild
 {
 public:
     static FRenderPass* Create(class FDevice* pDevice, const FRenderPassParams& params);
     
-    FRenderPass(VkDevice device);
+    FRenderPass(FDevice* pDevice);
     ~FRenderPass();
 
     VkRenderPass GetRenderPass() const
@@ -31,6 +31,5 @@ public:
     }
     
 private:
-    VkDevice     m_Device;
     VkRenderPass m_RenderPass;
 };

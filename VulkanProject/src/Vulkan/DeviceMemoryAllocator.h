@@ -1,7 +1,6 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include <vulkan/vulkan.h>
-#include <vector>
 
 struct FDeviceMemoryBlock;
 struct FDeviceAllocation;
@@ -72,10 +71,10 @@ private:
     bool                  m_IsMapped;
 };
 
-class FDeviceMemoryAllocator
+class FDeviceMemoryAllocator : public FDeviceChild
 {
 public:
-    FDeviceMemoryAllocator(VkDevice device, VkPhysicalDevice physicalDevice);
+    FDeviceMemoryAllocator(FDevice* pDevice);
     ~FDeviceMemoryAllocator();
 
     bool Allocate(FDeviceAllocation& allocation, const VkMemoryRequirements& memoryRequirements, VkMemoryPropertyFlags properties);
@@ -93,8 +92,6 @@ public:
     }
     
 private:
-    VkDevice                                    m_Device;
-    VkPhysicalDevice                            m_PhysicalDevice;
     VkDeviceSize                                m_BufferImageGranularity;
     std::vector<FDeviceMemoryPage*>             m_Pages;
     std::vector<std::vector<FDeviceAllocation>> m_GarbageMemory;

@@ -1,8 +1,15 @@
 #pragma once
 #include "Core.h"
-#include "CommandBuffer.h"
 
 class FSwapchain;
+class FCommandBuffer;
+
+enum class ECommandQueueType
+{
+    Graphics = 1,
+    Compute  = 2,
+    Transfer = 3,
+};
 
 struct FDeviceParams
 {

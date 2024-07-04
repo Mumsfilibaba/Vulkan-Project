@@ -189,7 +189,7 @@ FTexture* FTexture::CreateWithData(FDevice* pDevice, const FTextureParams& param
 }
 
 FTexture::FTexture(FDevice* pDevice)
-    : m_pDevice(pDevice)
+    : FDeviceChild(pDevice)
     , m_Image(VK_NULL_HANDLE)
     , m_Memory(VK_NULL_HANDLE)
     , m_Format(VK_FORMAT_UNDEFINED)
@@ -200,17 +200,15 @@ FTexture::FTexture(FDevice* pDevice)
 
 FTexture::~FTexture()
 {
-    VkDevice device = m_pDevice->GetDevice();
-
     if (m_Image != VK_NULL_HANDLE)
     {
-        vkDestroyImage(device, m_Image, nullptr);
+        vkDestroyImage(GetDevice()->GetDevice(), m_Image, nullptr);
         m_Image = VK_NULL_HANDLE;
     }
 
     if (m_Memory != VK_NULL_HANDLE)
     {
-        vkFreeMemory(device, m_Memory, nullptr);
+        vkFreeMemory(GetDevice()->GetDevice(), m_Memory, nullptr);
         m_Memory = VK_NULL_HANDLE;
     }
 }

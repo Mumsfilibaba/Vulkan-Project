@@ -4,7 +4,7 @@
 
 FTextureView* FTextureView::Create(FDevice* pDevice, const FTextureViewParams& params)
 {
-    FTextureView* pTextureView = new FTextureView(pDevice->GetDevice());
+    FTextureView* pTextureView = new FTextureView(pDevice);
 
     VkImageViewCreateInfo textureViewCreateInfo = {};
     ZERO_STRUCT(&textureViewCreateInfo);
@@ -31,8 +31,8 @@ FTextureView* FTextureView::Create(FDevice* pDevice, const FTextureViewParams& p
     }
 }
 
-FTextureView::FTextureView(VkDevice device)
-    : m_Device(device)
+FTextureView::FTextureView(FDevice* pDevice)
+    : FDeviceChild(pDevice)
     , m_ImageView(VK_NULL_HANDLE)
 {
 }
@@ -41,9 +41,7 @@ FTextureView::~FTextureView()
 {
     if (m_ImageView != VK_NULL_HANDLE)
     {
-        vkDestroyImageView(m_Device, m_ImageView, nullptr);
+        vkDestroyImageView(GetDevice()->GetDevice(), m_ImageView, nullptr);
         m_ImageView = VK_NULL_HANDLE;
     }
-
-    m_Device = VK_NULL_HANDLE;
 }

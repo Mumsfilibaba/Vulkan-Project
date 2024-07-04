@@ -50,16 +50,9 @@ struct FShaderTriangle
 
 struct FShaderMesh
 {
-    // 0-32
-    glm::vec4 BoxMin;
-    glm::vec4 BoxMax;
-    // 32-44
-    uint32_t StartTriangle;
-    uint32_t NumTriangles;
+    // 0-8
+    uint32_t BoundingBoxIndex;
     uint32_t MaterialIndex;
-
-    // Padding
-    uint32_t Padding0;
 };
 
 struct FShaderMaterial

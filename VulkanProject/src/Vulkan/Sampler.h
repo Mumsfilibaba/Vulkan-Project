@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
 class FDevice;
@@ -22,12 +22,12 @@ struct FSamplerParams
     VkBorderColor        borderColor;
 };
 
-class FSampler
+class FSampler : public FDeviceChild
 {
 public:
     static FSampler* Create(FDevice* pDevice, const FSamplerParams& params);
     
-    FSampler(VkDevice device);
+    FSampler(FDevice* pDevice);
     ~FSampler();
 
     VkSampler GetSampler() const
@@ -36,6 +36,5 @@ public:
     }
 
 private:
-    VkDevice  m_Device;
     VkSampler m_Sampler;
 };

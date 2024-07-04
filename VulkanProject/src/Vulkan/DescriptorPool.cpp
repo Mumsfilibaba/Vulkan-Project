@@ -5,7 +5,7 @@ FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPool
 {
     constexpr uint32_t numPoolSizes = 4;
     
-    FDescriptorPool* pDescriptorPool = new FDescriptorPool(pDevice->GetDevice());
+    FDescriptorPool* pDescriptorPool = new FDescriptorPool(pDevice);
     
     uint32_t numPools = 0;
     VkDescriptorPoolSize poolSizes[numPoolSizes];
@@ -46,7 +46,7 @@ FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPool
     poolInfo.pPoolSizes    = poolSizes;
     poolInfo.maxSets       = params.MaxSets;
     
-    if (vkCreateDescriptorPool(pDescriptorPool->m_Device, &poolInfo, nullptr, &pDescriptorPool->m_Pool) != VK_SUCCESS)
+    if (vkCreateDescriptorPool(pDevice->GetDevice(), &poolInfo, nullptr, &pDescriptorPool->m_Pool) != VK_SUCCESS)
     {
         std::cout << "vkCreateDescriptorPool failed\n";
         return nullptr;
@@ -58,8 +58,8 @@ FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPool
     }
 }
 
-FDescriptorPool::FDescriptorPool(VkDevice device)
-    : m_Device(device)
+FDescriptorPool::FDescriptorPool(FDevice* pDevice)
+    : FDeviceChild(pDevice)
     , m_Pool(VK_NULL_HANDLE)
 {
 }
@@ -68,9 +68,7 @@ FDescriptorPool::~FDescriptorPool()
 {
     if (m_Pool != VK_NULL_HANDLE)
     {
-        vkDestroyDescriptorPool(m_Device, m_Pool, nullptr);
+        vkDestroyDescriptorPool(GetDevice()->GetDevice(), m_Pool, nullptr);
         m_Pool = VK_NULL_HANDLE;
     }
-
-    m_Device = VK_NULL_HANDLE;
 }

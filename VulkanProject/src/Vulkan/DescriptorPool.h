@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 
 struct FDescriptorPoolParams
 {
@@ -10,21 +10,20 @@ struct FDescriptorPoolParams
     uint32_t MaxSets                  = 0;
 };
 
-class FDescriptorPool
+class FDescriptorPool : public FDeviceChild
 {
 public:
-    static FDescriptorPool* Create(class FDevice* pDevice, const FDescriptorPoolParams& params);
+    static FDescriptorPool* Create(FDevice* pDevice, const FDescriptorPoolParams& params);
 
-    FDescriptorPool(VkDevice device);
+    FDescriptorPool(FDevice* pDevice);
     ~FDescriptorPool();
-    
+
     VkDescriptorPool GetPool() const
     {
         return m_Pool;
     }
-        
+
 private:
-    VkDevice              m_Device;
     VkDescriptorPool      m_Pool;
     FDescriptorPoolParams m_Params;
 };

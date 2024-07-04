@@ -1,16 +1,16 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
 class FDevice;
 
-class FShaderModule
+class FShaderModule : public FDeviceChild
 {
 public:
     static FShaderModule* Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint);
     static FShaderModule* CreateFromFile(FDevice* pDevice, const char* pEntryPoint, const char* pFilePath);
     
-    FShaderModule(VkDevice device);
+    FShaderModule(FDevice* pDevice);
     ~FShaderModule();
 
     VkShaderModule GetModule() const
@@ -24,7 +24,6 @@ public:
     }
 
 private:
-    VkDevice       m_Device;
     VkShaderModule m_Module;
     char*          m_pEntryPoint;
 };

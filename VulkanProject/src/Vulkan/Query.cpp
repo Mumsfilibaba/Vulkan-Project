@@ -3,7 +3,7 @@
 
 FQuery* FQuery::Create(class FDevice* pDevice, const FQueryParams& params)
 {
-    FQuery* pQuery = new FQuery(pDevice->GetDevice());
+    FQuery* pQuery = new FQuery(pDevice);
     
     VkQueryPoolCreateInfo createInfo;
     ZERO_STRUCT(&createInfo);
@@ -26,8 +26,8 @@ FQuery* FQuery::Create(class FDevice* pDevice, const FQueryParams& params)
     return pQuery;
 }
     
-FQuery::FQuery(VkDevice device)
-    : m_Device(device)
+FQuery::FQuery(FDevice* pDevice)
+    : FDeviceChild(pDevice)
     , m_QueryPool(VK_NULL_HANDLE)
 {
 }
@@ -36,11 +36,9 @@ FQuery::~FQuery()
 {
     if (m_QueryPool != VK_NULL_HANDLE)
     {
-        vkDestroyQueryPool(m_Device, m_QueryPool, nullptr);
+        vkDestroyQueryPool(GetDevice()->GetDevice(), m_QueryPool, nullptr);
         m_QueryPool = VK_NULL_HANDLE;
     }
-
-    m_Device = VK_NULL_HANDLE;
 }
 
 void FQuery::Reset(uint32_t firstQuery, uint32_t queryCount)
@@ -50,12 +48,12 @@ void FQuery::Reset(uint32_t firstQuery, uint32_t queryCount)
         queryCount = m_NumQueries;
     }
     
-    vkResetQueryPool(m_Device, m_QueryPool, firstQuery, queryCount);
+    vkResetQueryPool(GetDevice()->GetDevice(), m_QueryPool, firstQuery, queryCount);
 }
 
 bool FQuery::GetData(uint32_t firstQuery, uint32_t queryCount, uint64_t dataSize, void* pData, VkDeviceSize stride, VkQueryResultFlags flags)
 {
-    VkResult result = vkGetQueryPoolResults(m_Device, m_QueryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
+    VkResult result = vkGetQueryPoolResults(GetDevice()->GetDevice(), m_QueryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
     if (result != VK_SUCCESS)
     {
         return false;

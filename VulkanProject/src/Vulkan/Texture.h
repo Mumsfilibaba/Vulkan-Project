@@ -1,5 +1,5 @@
 #pragma once
-#include "Core.h"
+#include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
 class FDevice;
@@ -17,7 +17,7 @@ struct FTextureParams
     uint32_t NumArraySlices = 1;
 };
 
-class FTexture
+class FTexture : public FDeviceChild
 {
 public:
     static FTexture* Create(FDevice* pDevice, const FTextureParams& params);
@@ -57,7 +57,6 @@ public:
     }
 
 private:
-    FDevice*       m_pDevice;
     VkImage        m_Image;
     VkDeviceMemory m_Memory;
     VkFormat       m_Format;

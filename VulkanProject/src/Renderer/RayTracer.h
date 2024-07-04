@@ -15,6 +15,9 @@ class FGraphicsPipeline;
 class FRenderPass;
 class FSampler;
 class FCommandBuffer;
+class FComputePipeline;
+class FFramebuffer;
+class FQuery;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Buffer Structs
@@ -94,7 +97,7 @@ private:
     FDescriptorPool*               m_pDescriptorPool;
 
     std::vector<FCommandBuffer*> m_CommandBuffers;
-    std::vector<class FQuery*>   m_TimestampQueries;
+    std::vector<FQuery*>         m_TimestampQueries;
 
     // RayTracing
     std::atomic<FComputePipeline*> m_pRayTracingPipeline;
@@ -110,7 +113,7 @@ private:
     FDescriptorSetLayout* m_pTonemappingDescriptorSetLayout;
     FDescriptorSet*       m_pTonemappingDescriptorSet0;
     FDescriptorSet*       m_pTonemappingDescriptorSet1;
-    class FFramebuffer*   m_pTonemappingFramebuffer;
+    FFramebuffer*         m_pTonemappingFramebuffer;
     
     // Buffers
     FBuffer* m_pCameraBuffer;
