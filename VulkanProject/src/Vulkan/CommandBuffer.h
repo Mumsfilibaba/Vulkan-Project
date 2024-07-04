@@ -18,23 +18,23 @@ struct FCommandBufferParams
 class FCommandBuffer : public FDeviceChild
 {
 public:
-    static FCommandBuffer* Create(class FDevice* pDevice, const FCommandBufferParams& params);
+    static FCommandBuffer* Create(class FDevice* pDevice, const FCommandBufferParams& Params);
 
     FCommandBuffer(FDevice* pDevice);
     ~FCommandBuffer();
 
-    void Begin(VkCommandBufferUsageFlags flags = 0)
+    void Begin(VkCommandBufferUsageFlags Flags = 0)
     {
-        VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.pNext            = nullptr;
-        beginInfo.flags            = flags;
-        beginInfo.pInheritanceInfo = nullptr;
+        VkCommandBufferBeginInfo BeginInfo = {};
+        BeginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        BeginInfo.pNext            = nullptr;
+        BeginInfo.flags            = Flags;
+        BeginInfo.pInheritanceInfo = nullptr;
 
-        VkResult result = vkBeginCommandBuffer(m_CommandBuffer, &beginInfo);
-        if (result != VK_SUCCESS)
+        VkResult Result = vkBeginCommandBuffer(m_CommandBuffer, &BeginInfo);
+        if (Result != VK_SUCCESS)
         {
-            std::cout << "vkBeginCommandBuffer failed. Error: " << result << std::endl;
+            std::cout << "vkBeginCommandBuffer failed. Error: " << Result << std::endl;
         }
     }
 
@@ -167,10 +167,10 @@ public:
 
     void End()
     {
-        VkResult result = vkEndCommandBuffer(m_CommandBuffer);
-        if (result != VK_SUCCESS)
+        VkResult Result = vkEndCommandBuffer(m_CommandBuffer);
+        if (Result != VK_SUCCESS)
         {
-            std::cout << "vkEndCommandBuffer failed. Error: " << result << std::endl;
+            std::cout << "vkEndCommandBuffer failed. Error: " << Result << std::endl;
         }
     }
     

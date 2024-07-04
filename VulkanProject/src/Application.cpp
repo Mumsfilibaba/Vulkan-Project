@@ -4,12 +4,12 @@
 
 extern bool GIsRunning = false;
 
-FApplication* FApplication::AppInstance = nullptr;
+FApplication* FApplication::GAppInstance = nullptr;
 
 FApplication* FApplication::Create()
 {
-    AppInstance = new FApplication();
-    return AppInstance;
+    GAppInstance = new FApplication();
+    return GAppInstance;
 }
 
 FApplication::FApplication()
@@ -51,13 +51,13 @@ bool FApplication::Init()
     }
     
     // Init Vulkan
-    FDeviceParams params;
-    params.pWindow           = m_pWindow;
-    params.bEnableRayTracing = true;
-    params.bEnableValidation = true;
-    params.bVerbose          = false;
+    FDeviceParams DeviceParams;
+    DeviceParams.pWindow           = m_pWindow;
+    DeviceParams.bEnableRayTracing = true;
+    DeviceParams.bEnableValidation = true;
+    DeviceParams.bVerbose          = false;
 
-    m_pDevice = FDevice::Create(params);
+    m_pDevice = FDevice::Create(DeviceParams);
     if (!m_pDevice)
     {
         std::cout << "Failed to init Vulkan\n";
@@ -94,12 +94,12 @@ bool FApplication::CreateWindow()
         // Setup callbacks
         glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow* pWindow)
         {
-            AppInstance->OnWindowClose(pWindow);
+            GAppInstance->OnWindowClose(pWindow);
         });
 
-        glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow* pWindow, int32_t width, int32_t height)
+        glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow* pWindow, int32_t Width, int32_t Height)
         {
-            AppInstance->OnWindowResize(pWindow, width, height);
+            GAppInstance->OnWindowResize(pWindow, Width, Height);
         });
 
         return true;
@@ -110,13 +110,13 @@ bool FApplication::CreateWindow()
     }
 }
 
-void FApplication::OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height)
+void FApplication::OnWindowResize(GLFWwindow* pWindow, uint32_t Width, uint32_t Height)
 {
-    m_Width  = width;
-    m_Height = height;
+    m_Width  = Width;
+    m_Height = Height;
 
     // Resize the swapchain
-    m_pSwapchain->Resize(width, m_Height);
+    m_pSwapchain->Resize(Width, m_Height);
 
     // Ensure that ImGui can create necessary resources for the main window
     GUI::OnSwapchainRecreated();
@@ -135,18 +135,18 @@ void FApplication::OnWindowClose(GLFWwindow* pWindow)
 
 void FApplication::Tick()
 {
-    auto currentTime = std::chrono::system_clock::now();
+    auto CurrentTime = std::chrono::system_clock::now();
     
     // Update events
     glfwPollEvents();
 
-    std::chrono::duration<double> elapsedSeconds = currentTime - m_LastTime;
+    std::chrono::duration<double> ElapsedSeconds = CurrentTime - m_LastTime;
     
     // Update GUI
     GUI::TickImGui();
     
     // Render
-    m_pRenderer->Tick(elapsedSeconds.count());
+    m_pRenderer->Tick(ElapsedSeconds.count());
     
     // Render the renderers UI
     m_pRenderer->OnRenderUI();
@@ -155,13 +155,13 @@ void FApplication::Tick()
     GUI::RenderImGui();
     
     // Present main window
-    VkResult result = m_pSwapchain->Present();
-    if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+    VkResult Result = m_pSwapchain->Present();
+    if (Result == VK_SUBOPTIMAL_KHR || Result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         GUI::OnSwapchainRecreated();
     }
 
-    m_LastTime = currentTime;
+    m_LastTime = CurrentTime;
 }
 
 void FApplication::Release()

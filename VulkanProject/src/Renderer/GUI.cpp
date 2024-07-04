@@ -1923,10 +1923,10 @@ namespace GUI
         ImGui::CreateContext();
 
         // General ImGui config
-        ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
-        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
+        ImGuiIO& UIConfig = ImGui::GetIO();
+        UIConfig.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+        UIConfig.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+        UIConfig.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
 
         // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
         // io.ConfigViewportsNoAutoMerge   = true;
@@ -1942,11 +1942,11 @@ namespace GUI
         ImGui::StyleColorsDark();
 
         // When Viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-        ImGuiStyle& style = ImGui::GetStyle();
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        ImGuiStyle& UIStyle = ImGui::GetStyle();
+        if (UIConfig.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            style.WindowRounding = 0.0f;
-            style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+            UIStyle.WindowRounding = 0.0f;
+            UIStyle.Colors[ImGuiCol_WindowBg].w = 1.0f;
         }
     }
     
@@ -1956,19 +1956,19 @@ namespace GUI
         assert(pBackend != nullptr);
 
         // Setup display size (every frame to accommodate for window resizing)
-        int width;
-        int height;
-        glfwGetWindowSize(pBackend->Window, &width, &height);
+        int Width;
+        int Height;
+        glfwGetWindowSize(pBackend->Window, &Width, &Height);
         
-        int displayWidth;
-        int displayHeight;
-        glfwGetFramebufferSize(pBackend->Window, &displayWidth, &displayHeight);
+        int DisplayWidth;
+        int DisplayHeight;
+        glfwGetFramebufferSize(pBackend->Window, &DisplayWidth, &DisplayHeight);
 
-        ImGuiIO& io = ImGui::GetIO();
-        io.DisplaySize = ImVec2((float)width, (float)height);
-        if (width > 0 && height > 0)
+        ImGuiIO& UIConfig = ImGui::GetIO();
+        UIConfig.DisplaySize = ImVec2((float)Width, (float)Height);
+        if (Width > 0 && Height > 0)
         {
-            io.DisplayFramebufferScale = ImVec2((float)displayWidth / (float)width, (float)displayHeight / (float)height);
+            UIConfig.DisplayFramebufferScale = ImVec2((float)DisplayWidth / (float)Width, (float)DisplayHeight / (float)Height);
         }
         
         if (pBackend->bWantUpdateMonitors)
@@ -1977,9 +1977,9 @@ namespace GUI
         }
 
         // Setup time step
-        double currentTime = glfwGetTime();
-        io.DeltaTime = pBackend->Time > 0.0 ? (float)(currentTime - pBackend->Time) : (float)(1.0f / 60.0f);
-        pBackend->Time = currentTime;
+        double CurrentTime = glfwGetTime();
+        UIConfig.DeltaTime = pBackend->Time > 0.0 ? (float)(CurrentTime - pBackend->Time) : (float)(1.0f / 60.0f);
+        pBackend->Time = CurrentTime;
 
         ImGuiUpdateMouseData();
         ImGuiUpdateMouseCursor();
@@ -2000,8 +2000,8 @@ namespace GUI
         ImGuiRendererRenderWindow(pMainViewport, nullptr);
         
         // Update and Render additional Platform Windows
-        ImGuiIO& io = ImGui::GetIO();
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        ImGuiIO& UIConfig = ImGui::GetIO();
+        if (UIConfig.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
@@ -2034,13 +2034,13 @@ namespace GUI
             glfwDestroyCursor(pBackend->MouseCursors[n]);
         }
 
-        ImGuiIO& io = ImGui::GetIO();
-        io.BackendPlatformName     = nullptr;
-        io.BackendPlatformUserData = nullptr;
+        ImGuiIO& UIConfig = ImGui::GetIO();
+        UIConfig.BackendPlatformName     = nullptr;
+        UIConfig.BackendPlatformUserData = nullptr;
         SAFE_DELETE(pBackend);
 
-        io.BackendRendererName     = nullptr;
-        io.BackendRendererUserData = nullptr;
+        UIConfig.BackendRendererName     = nullptr;
+        UIConfig.BackendRendererUserData = nullptr;
         SAFE_DELETE(pRendererBackend);
         
         // Destroy the context last

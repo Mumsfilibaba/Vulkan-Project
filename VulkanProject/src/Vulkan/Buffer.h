@@ -17,8 +17,8 @@ struct FBufferParams
 class FBuffer : public FDeviceChild
 {
 public:
-    static FBuffer* Create(FDevice* pDevice, const FBufferParams& params, FDeviceMemoryAllocator* pAllocator);
-    static FBuffer* CreateWithData(FDevice* pDevice, const FBufferParams& params, FDeviceMemoryAllocator* pAllocator, const void* pSource);
+    static FBuffer* Create(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator);
+    static FBuffer* CreateWithData(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator, const void* pSource);
 
     FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator);
     ~FBuffer();

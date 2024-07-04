@@ -1,23 +1,24 @@
 #include "Buffer.h"
 #include "Helpers.h"
 #include "Device.h"
+#include "CommandBuffer.h"
 
-FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& params, FDeviceMemoryAllocator* pAllocator)
+FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator)
 {
     FBuffer* pBuffer = new FBuffer(pDevice, pAllocator);
     
-    VkBufferCreateInfo bufferInfo;
-    ZERO_STRUCT(&bufferInfo);
+    VkBufferCreateInfo BufferInfo;
+    ZERO_STRUCT(&BufferInfo);
     
-    bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size        = params.Size;
-    bufferInfo.usage       = params.Usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    BufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    BufferInfo.size        = Params.Size;
+    BufferInfo.usage       = Params.Usage;
+    BufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult result = vkCreateBuffer(pDevice->GetDevice(), &bufferInfo, nullptr, &pBuffer->m_Buffer);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkCreateBuffer(pDevice->GetDevice(), &BufferInfo, nullptr, &pBuffer->m_Buffer);
+    if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateBuffer failed. Error: " << result << "\n";
+        std::cout << "vkCreateBuffer failed. Error: " << Result << "\n";
         return nullptr;
     }
     else
@@ -25,15 +26,15 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& params, FDeviceM
         std::cout << "Created Buffer\n";
     }
 
-    VkMemoryRequirements memoryRequirements = {};
-    vkGetBufferMemoryRequirements(pDevice->GetDevice(), pBuffer->m_Buffer, &memoryRequirements);
+    VkMemoryRequirements MemoryRequirements = {};
+    vkGetBufferMemoryRequirements(pDevice->GetDevice(), pBuffer->m_Buffer, &MemoryRequirements);
     
     if (pAllocator)
     {
-        if (pAllocator->Allocate(pBuffer->m_Allocation, memoryRequirements, params.MemoryProperties))
+        if (pAllocator->Allocate(pBuffer->m_Allocation, MemoryRequirements, Params.MemoryProperties))
         {
             vkBindBufferMemory(pDevice->GetDevice(), pBuffer->m_Buffer, pBuffer->m_Allocation.DeviceMemory, pBuffer->m_Allocation.DeviceMemoryOffset);
-            pBuffer->m_Size = params.Size;
+            pBuffer->m_Size = Params.Size;
         }
         else
         {
@@ -42,35 +43,33 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& params, FDeviceM
     }
     else
     {
-        VkMemoryAllocateInfo allocInfo;
-        ZERO_STRUCT(&allocInfo);
+        VkMemoryAllocateInfo AllocInfo;
+        ZERO_STRUCT(&AllocInfo);
         
-        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize  = memoryRequirements.size;
-        allocInfo.memoryTypeIndex = FindMemoryType(pDevice->GetPhysicalDevice(), memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        AllocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        AllocInfo.allocationSize  = MemoryRequirements.size;
+        AllocInfo.memoryTypeIndex = FindMemoryType(pDevice->GetPhysicalDevice(), MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-        result = vkAllocateMemory(pDevice->GetDevice(), &allocInfo, nullptr, &pBuffer->m_DeviceMemory);
-        if (result != VK_SUCCESS)
+        Result = vkAllocateMemory(pDevice->GetDevice(), &AllocInfo, nullptr, &pBuffer->m_DeviceMemory);
+        if (Result != VK_SUCCESS)
         {
-            std::cout << "vkAllocateMemory failed. Error: " << result << "\n";
+            std::cout << "vkAllocateMemory failed. Error: " << Result << "\n";
         }
         else
         {
             vkBindBufferMemory(pDevice->GetDevice(), pBuffer->m_Buffer, pBuffer->m_DeviceMemory, 0);
-            pBuffer->m_Size = memoryRequirements.size;
+            pBuffer->m_Size = MemoryRequirements.size;
 
-            std::cout << "Allocated " << memoryRequirements.size << " bytes\n";
+            std::cout << "Allocated " << MemoryRequirements.size << " bytes\n";
         }
     }
     
     return pBuffer;
 }
 
-FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& params, FDeviceMemoryAllocator* pAllocator, const void* pSource)
+FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator, const void* pSource)
 {
-    assert(params.MemoryProperties == VK_CPU_BUFFER_USAGE);
-    
-    FBuffer* pBuffer = FBuffer::Create(pDevice, params, pAllocator);
+    FBuffer* pBuffer = FBuffer::Create(pDevice, Params, pAllocator);
     if (!pBuffer)
     {
         return nullptr;
@@ -78,11 +77,57 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& params, 
     
     if (pSource)
     {
-        void* pData = pBuffer->Map();
-        memcpy(pData, pSource, params.Size);
-    
-        pBuffer->FlushMappedMemoryRange();
-        pBuffer->Unmap();
+        if (Params.MemoryProperties == VK_CPU_BUFFER_USAGE)
+        {
+            void* pData = pBuffer->Map();
+            memcpy(pData, pSource, Params.Size);
+        
+            pBuffer->FlushMappedMemoryRange();
+            pBuffer->Unmap();
+        }
+        else
+        {
+            FBufferParams BufferParams = {};
+            BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+            BufferParams.Size             = Params.Size;
+            
+            FBuffer* pUploadBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, pSource);
+            if (!pUploadBuffer)
+            {
+                SAFE_DELETE(pBuffer);
+                return nullptr;
+            }
+            
+            FCommandBufferParams CommandBufferParams = {};
+            CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            CommandBufferParams.QueueType = ECommandQueueType::Graphics;
+            
+            FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
+            if (!pCommandBuffer)
+            {
+                SAFE_DELETE(pUploadBuffer);
+                SAFE_DELETE(pBuffer);
+                return nullptr;
+            }
+            
+            pCommandBuffer->Reset();
+            pCommandBuffer->Begin();
+            
+            VkBufferCopy BufferCopy;
+            BufferCopy.size      = pUploadBuffer->GetSize();
+            BufferCopy.dstOffset = 0;
+            BufferCopy.srcOffset = 0;
+            
+            pCommandBuffer->CopyBuffer(pUploadBuffer->GetBuffer(), pBuffer->GetBuffer(), 1, &BufferCopy);
+            pCommandBuffer->End();
+            
+            pDevice->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
+            pDevice->WaitForIdle();
+            
+            SAFE_DELETE(pUploadBuffer);
+            SAFE_DELETE(pCommandBuffer);
+        }
     }
     
     return pBuffer;

@@ -4,17 +4,17 @@
 namespace Math
 {
     template<typename T>
-    inline T AlignUp(T value, size_t alignment)
+    inline T AlignUp(T Value, size_t Alignment)
     {
-        size_t mask = alignment - 1;
-        return (T)(((size_t)value + mask) & ~mask);
+        const size_t Mask = Alignment - 1;
+        return (T)(((size_t)Value + Mask) & ~Mask);
     }
 
     template<typename T>
-    inline T AlignDown(T value, size_t alignment)
+    inline T AlignDown(T Value, size_t Alignment)
     {
-        size_t mask = alignment - 1;
-        return (T)((size_t)value & ~mask);
+        const size_t Mask = Alignment - 1;
+        return (T)((size_t)Value & ~Mask);
     }
     
     inline float ToDegrees(float Radians)

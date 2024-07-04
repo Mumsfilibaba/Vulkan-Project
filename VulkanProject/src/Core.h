@@ -35,7 +35,7 @@
 
 // Helper Defines
 #define ZERO_MEMORY(dst, size) memset(dst, 0, size)
-#define ZERO_STRUCT(dst)       memset(dst, 0, sizeof(std::remove_pointer_t<decltype(dst)>))
+#define ZERO_STRUCT(dst) memset(dst, 0, sizeof(std::remove_pointer_t<decltype(dst)>))
 
 #define SAFE_DELETE(pObject) \
     if (pObject) \
