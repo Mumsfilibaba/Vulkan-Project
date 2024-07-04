@@ -25,26 +25,23 @@ public:
         return *AppInstance;
     }
     
-    static GLFWwindow* GetWindow()
-    {
-        return AppInstance->m_pWindow;
-    }
-
     FApplication();
     ~FApplication();
 
     bool Init();
-    
     void Tick();
-    
     void Release();
-    
     bool CreateWindow();
     
     void OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height);
     void OnWindowClose(GLFWwindow* pWindow);
 
-    FDevice* GetVulkanContext() const
+    GLFWwindow* GetWindow()
+    {
+        return m_pWindow;
+    }
+
+    FDevice* GetDevice() const
     {
         return m_pDevice;
     }

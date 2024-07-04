@@ -104,7 +104,7 @@ layout(std430, binding = 8) buffer MaterialBuffer
 
 layout(std430, binding = 9) buffer VertexBuffer
 {
-    FVertexRT Vertices[];
+    FVertexPosOnly Vertices[];
 };
 
 layout(std430, binding = 10) buffer TriangleBuffer
@@ -119,7 +119,7 @@ layout(std430, binding = 11) buffer MeshBuffer
 
 layout(std430, binding = 12) buffer BvhBuffer
 {
-    FBvhNode BvhNodes[];
+    FBoundingBox BvhNodes[];
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -357,11 +357,11 @@ bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad)
         for (uint j = StartTriangle; j < EndTriangle; j++)
         {
             FTriangle Triangle = Triangles[j];
-            vec3 Pos0 = Vertices[Triangle.Index0].Position.xyz;
-            vec3 Pos1 = Vertices[Triangle.Index1].Position.xyz;
-            vec3 Pos2 = Vertices[Triangle.Index2].Position.xyz;
+            vec3 Position0 = GetVertexPosition(Vertices[Triangle.Index0]);
+            vec3 Position1 = GetVertexPosition(Vertices[Triangle.Index1]);
+            vec3 Position2 = GetVertexPosition(Vertices[Triangle.Index2]);
 
-            HitTriangle(Pos0, Pos1, Pos2, Ray, PayLoad, Mesh.MaterialIndex);
+            HitTriangle(Position0, Position1, Position2, Ray, PayLoad, Mesh.MaterialIndex);
         }
     }
 
@@ -605,7 +605,7 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
 
     for (uint i = 0; i < uScene.NumBvhNodes; i++)
     {
-        FBvhNode Node = BvhNodes[i];
+        FBoundingBox Node = BvhNodes[i];
         if (Node.ChildIndex == BVH_ROOT_NODE_INDEX)
         {
             uint LastTriangleIndex = Node.FirstTriangleIndex + Node.NumTriangles;
@@ -648,6 +648,8 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
     PayLoad.bFrontFace  = false;
     PayLoad.bFromInside = false;
 
+    vec3 Color = vec3(0.0, 0.0, 0.0);
+
     // Start go through all the nodes
     uint NumBoxTests      = 0;
     uint NumTriangleTests = 0;
@@ -659,11 +661,13 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
         const uint NodeIndex = Stack[StackIndex];
         StackIndex--;
 
-        FBvhNode Node = BvhNodes[NodeIndex];
+        FBoundingBox Node = BvhNodes[NodeIndex];
         // NumBoxTests++;
 
         // Check if we hit this node
-        vec2 HitResult = IntersectRayAABB(Node.AABBMin.xyz, Node.AABBMax.xyz, Ray);
+        vec3 MinAABB = GetBoundingBoxMin(Node);
+        vec3 MaxAABB = GetBoundingBoxMax(Node);
+        vec2 HitResult = IntersectRayAABB(MinAABB, MaxAABB, Ray);
         if (HitResult.x < max(HitResult.y, 0.0))
         {
             continue;
@@ -676,16 +680,16 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
             continue;
         }
 
-        // Check if this is a leafnode
-        if (Node.ChildIndex == BVH_ROOT_NODE_INDEX)
+        // Check if this is a leafnode (could be leafnodes but with 0 triangles)
+        if (Node.NumTriangles > 0)
         {
-            uint LastTriangleIndex = Node.FirstTriangleIndex + Node.NumTriangles;
-            for (uint TriangleIndex = Node.FirstTriangleIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
+            uint LastTriangleIndex = Node.TriangleOrChildIndex + Node.NumTriangles;
+            for (uint TriangleIndex = Node.TriangleOrChildIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
-                vec3 Position0 = Vertices[Triangle.Index0].Position.xyz;
-                vec3 Position1 = Vertices[Triangle.Index1].Position.xyz;
-                vec3 Position2 = Vertices[Triangle.Index2].Position.xyz;
+                vec3 Position0 = GetVertexPosition(Vertices[Triangle.Index0]);
+                vec3 Position1 = GetVertexPosition(Vertices[Triangle.Index1]);
+                vec3 Position2 = GetVertexPosition(Vertices[Triangle.Index2]);
 
                 NumTriangleTests++;
 
@@ -696,29 +700,21 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
                         ClosestT = PayLoad.T;
                     }
 
-                    // return vec3(0.0, HitColor, 0.0);
+                    Color = vec3(0.0, 1.0, 0.0);
                 }
             }
         }
         else
         {
-            Stack[++StackIndex] = Node.ChildIndex;
-            Stack[++StackIndex] = Node.ChildIndex + 1;
+            if (Node.TriangleOrChildIndex != BVH_ROOT_NODE_INDEX)
+            {
+                Stack[++StackIndex] = Node.TriangleOrChildIndex;
+                Stack[++StackIndex] = Node.TriangleOrChildIndex + 1;
+            }
         }
     }
 
-    float BoxColor      = (NumBoxTests > 0) ? min((float(NumBoxTests) / float(MaxDepth)), 1.0) : 0.0;
-    float TriangleColor = (NumTriangleTests > 0) ? min((float(NumTriangleTests) / float(MaxDepth)), 1.0) : 0.0;
-    return vec3(BoxColor, TriangleColor, 0.0);
-
-    /*if (NumHits > 0)
-    {
-        float HitColor = min((float(NumHits) / float(MaxDepth)), 1.0);
-        return vec3(HitColor, 0.0, 0.0);
-    }
-    else
-    {
-    }*/
+    return Color;
 }
 
 void main()

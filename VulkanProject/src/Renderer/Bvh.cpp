@@ -199,13 +199,15 @@ void FAccelerationStructure::Build(const FMesh& Mesh)
         }
         
         FShaderBoundingBox& ShaderBox = m_BoundingBoxes.emplace_back();
-        ShaderBox.BoxMin             = glm::vec4(Box.BoxMin, 0.0f);
-        ShaderBox.BoxMax             = glm::vec4(Box.BoxMax, 0.0f);
-        ShaderBox.ChildIndex         = Box.ChildIndex;
-        ShaderBox.FirstTriangleIndex = Box.FirstTriangleIndex;
-        ShaderBox.NumTriangles       = Box.NumTriangles;
+        ShaderBox.BoxMin               = Box.BoxMin;
+        ShaderBox.BoxMax               = Box.BoxMax;
+        ShaderBox.TriangleOrChildIndex = (Box.NumTriangles == 0) ? Box.ChildIndex : Box.FirstTriangleIndex;
+        ShaderBox.NumTriangles         = Box.NumTriangles;
 
-        const uint32_t LastTriangleIndex = ShaderBox.FirstTriangleIndex + ShaderBox.NumTriangles;
-        assert(LastTriangleIndex <= m_Triangles.size());
+        if (ShaderBox.NumTriangles > 0)
+        {
+            const uint32_t LastTriangleIndex = ShaderBox.TriangleOrChildIndex + ShaderBox.NumTriangles;
+            assert(LastTriangleIndex <= m_Triangles.size());
+        }
     }
 }

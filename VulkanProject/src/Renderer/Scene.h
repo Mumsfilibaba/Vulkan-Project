@@ -17,6 +17,8 @@
 #define BACKGROUND_TYPE_GRADIENT 1
 #define BACKGROUND_TYPE_SKYBOX 2
 
+class FBuffer;
+
 enum class EViewMode : uint32_t
 {
     Render = 0,
@@ -37,6 +39,7 @@ struct FSceneSettings
 struct FScene
 {
     FScene();
+    ~FScene();
 
     virtual void Initialize() {}
     virtual void Reset() {}
@@ -48,7 +51,7 @@ struct FScene
     std::vector<FShaderMaterial> m_Materials;
     
     // Triangle Mesh Data
-    std::vector<FVertexRT>       m_Vertices;
+    std::vector<FVertexPosOnly>  m_Vertices;
     std::vector<FShaderTriangle> m_Triangles;
     std::vector<FShaderMesh>     m_Meshes;
     
@@ -58,6 +61,10 @@ struct FScene
 
     // Bvh Container
     FAccelerationStructure       m_AccelerationStructure;
+    
+    // CPU Buffers
+    FBuffer* m_pTriangleBuffer;
+    FBuffer* m_pBoundingBoxBuffer;
 };
 
 enum class EModelSceneType

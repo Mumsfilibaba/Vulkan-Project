@@ -8,16 +8,11 @@ struct FBoundingBoxBuilder;
 struct FShaderBoundingBox
 {
     // 0-16
-    glm::vec4 BoxMin;
+    glm::vec3 BoxMin;
+    uint32_t  TriangleOrChildIndex = 0;
     // 16-32
-    glm::vec4 BoxMax;
-    // 32-44
-    uint32_t ChildIndex = 0;
-    uint32_t FirstTriangleIndex = 0;
-    uint32_t NumTriangles = 0;
-    
-    // Padding
-    uint32_t Padding0;
+    glm::vec3 BoxMax;
+    uint32_t  NumTriangles = 0;
 };
 
 struct FBoundingBox

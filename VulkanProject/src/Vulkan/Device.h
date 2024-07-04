@@ -34,11 +34,8 @@ public:
     ~FDevice();
 
     void ExecuteGraphics(FCommandBuffer* pCommandBuffer, FSwapchain* pSwapchain, VkPipelineStageFlags* pWaitStages);
-
     void WaitForIdle();
-
     void Destroy();
-
     uint32_t GetQueueFamilyIndex(ECommandQueueType Type);
     
     VkDevice GetDevice() const
@@ -77,7 +74,6 @@ private:
     bool CreateDebugMessenger();
     bool CreateDeviceAndQueues(const FDeviceParams& props);
     bool QueryPhysicalDevice(const FDeviceParams& props);
-
     void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
     FQueueFamilyIndices      GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);

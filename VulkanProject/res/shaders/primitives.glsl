@@ -55,11 +55,16 @@ struct FSphere
     uint Padding2;
 };
 
-struct FVertexRT
+struct FVertexPosOnly
 {
-    // 0-16
-    vec4 Position;
+    // 0-12
+    float Position[3];
 };
+
+vec3 GetVertexPosition(in FVertexPosOnly Vertex)
+{
+    return vec3(Vertex.Position[0], Vertex.Position[1], Vertex.Position[2]);
+}
 
 struct FTriangle
 {
@@ -67,9 +72,6 @@ struct FTriangle
     uint Index0;
     uint Index1;
     uint Index2;
-
-    // Padding
-    uint Padding0;
 };
 
 struct FMesh

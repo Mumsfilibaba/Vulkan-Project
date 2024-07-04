@@ -1,11 +1,15 @@
 #include "Scene.h"
 #include "Model.h"
+#include "Application.h"
+#include "Vulkan/Buffer.h"
 
 FScene::FScene()
     : m_Quads()
     , m_Spheres()
     , m_Materials()
     , m_Settings()
+    , m_pTriangleBuffer(nullptr)
+    , m_pBoundingBoxBuffer(nullptr)
 {
     m_Settings.ViewMode    = EViewMode::Render;
     m_Settings.Exposure    = 0.5f;
@@ -19,6 +23,12 @@ FScene::FScene()
     m_Triangles.reserve(MAX_TRIANGLES);
     m_Vertices.reserve(MAX_VERTICES);
     m_Meshes.reserve(MAX_TRIANGLEMESHES);
+}
+
+FScene::~FScene()
+{
+    // SAFE_DELETE(m_pTriangleBuffer);
+    // SAFE_DELETE(m_BoundingBoxBuffer);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -63,6 +73,18 @@ void FModelScene::Initialize()
         // Padding
         0,
     });
+    
+    FBufferParams BufferParams;
+    BufferParams.Size             = sizeof(FShaderBoundingBox) * m_AccelerationStructure.m_BoundingBoxes.size();
+    BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    
+    m_pBoundingBoxBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_AccelerationStructure.m_BoundingBoxes.data());
+    assert(m_pBoundingBoxBuffer);
+    
+    BufferParams.Size = sizeof(FShaderTriangle) * m_AccelerationStructure.m_Triangles.size();
+    m_pTriangleBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_AccelerationStructure.m_Triangles.data());
+    assert(m_pTriangleBuffer);
     
     // Quads
     if (Type == EModelSceneType::Default)

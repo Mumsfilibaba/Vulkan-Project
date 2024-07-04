@@ -47,6 +47,9 @@ public:
 
     void BeginRenderPass(FRenderPass* pRenderPass, FFramebuffer* pFramebuffer, const VkClearValue* pClearValues, uint32_t clearValuesCount)
     {
+        assert(pRenderPass != nullptr);
+        assert(pFramebuffer != nullptr);
+        
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.pNext             = nullptr;
@@ -77,34 +80,41 @@ public:
     
     void WriteTimestamp(FQuery* pQuery, VkPipelineStageFlagBits pipelineStage, uint32_t queryIndex)
     {
+        assert(pQuery != nullptr);
         vkCmdWriteTimestamp(m_CommandBuffer, pipelineStage, pQuery->GetQueryPool(), queryIndex);
     }
 
     void BindGraphicsPipelineState(FGraphicsPipeline* pPipelineState)
     {
+        assert(pPipelineState != nullptr);
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineState->GetPipeline());
     }
     
     void BindComputePipelineState(FComputePipeline* pPipelineState)
     {
+        assert(pPipelineState != nullptr);
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineState->GetPipeline());
     }
     
     void BindGraphicsDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet)
-    {
+    {        
+        assert(pDescriptorSet != nullptr);
+        assert(pPipelineLayout != nullptr);
         VkDescriptorSet descriptorSet = pDescriptorSet->GetDescriptorSet();
         vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineLayout->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
     }
     
     void BindComputeDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet)
     {
+        assert(pDescriptorSet != nullptr);
+        assert(pPipelineLayout != nullptr);
         VkDescriptorSet descriptorSet = pDescriptorSet->GetDescriptorSet();
         vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineLayout->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
     }
 
     void BindVertexBuffer(FBuffer* pBuffer, VkDeviceSize offset, uint32_t slot)
     {
-        assert(pBuffer);
+        assert(pBuffer != nullptr);
 
         VkBuffer buffer[] = { pBuffer->GetBuffer() };
         VkDeviceSize offsets[] = { offset };
@@ -119,6 +129,7 @@ public:
     
     void PushConstants(FPipelineLayout* pPipelineLayout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pData)
     {
+        assert(pPipelineLayout != nullptr);
         vkCmdPushConstants(m_CommandBuffer, pPipelineLayout->GetPipelineLayout(), stageFlags, offset, size, pData);
     }
     
@@ -126,9 +137,16 @@ public:
     
     void UpdateBuffer(FBuffer* pBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const void* pData)
     {
+        assert(pBuffer != nullptr);
+        assert(dataSize < 65536); // Ensure that we are within the allowed size
         vkCmdUpdateBuffer(m_CommandBuffer, pBuffer->GetBuffer(), dstOffset, dataSize, pData);
     }
     
+    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
+    {
+        vkCmdCopyBuffer(m_CommandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
+    }
+
     void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions)
     {
         vkCmdCopyBufferToImage(m_CommandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);

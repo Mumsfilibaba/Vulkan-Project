@@ -5,11 +5,11 @@ struct FInput
 {
     static bool IsKeyDown(int32_t key)
     {
-        return glfwGetKey(FApplication::GetWindow(), key) == GLFW_PRESS;
+        return glfwGetKey(FApplication::Get().GetWindow(), key) == GLFW_PRESS;
     }
 
     static bool IsKeyUp(int32_t key)
     {
-        return glfwGetKey(FApplication::GetWindow(), key) == GLFW_RELEASE;
+        return glfwGetKey(FApplication::Get().GetWindow(), key) == GLFW_RELEASE;
     }
 };

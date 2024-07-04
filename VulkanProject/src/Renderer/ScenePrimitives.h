@@ -46,9 +46,6 @@ struct FShaderTriangle
     uint32_t Index0;
     uint32_t Index1;
     uint32_t Index2;
-
-    // Padding
-    uint32_t Padding0;
 };
 
 struct FShaderMesh

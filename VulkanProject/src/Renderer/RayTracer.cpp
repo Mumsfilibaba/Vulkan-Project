@@ -1118,7 +1118,7 @@ void FRayTracer::CreateGlobalBuffers()
     
     // VertexBuffer
     FBufferParams vertexBufferParams;
-    vertexBufferParams.Size             = sizeof(FVertexRT) * MAX_VERTICES;
+    vertexBufferParams.Size             = sizeof(FVertexPosOnly) * MAX_VERTICES;
     vertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     vertexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1401,8 +1401,8 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
     
     if (!m_pScene->m_Vertices.empty())
     {
-        assert(sizeof(FVertexRT) * m_pScene->m_Vertices.size() < m_pVertexBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pVertexBuffer, 0, sizeof(FVertexRT) * m_pScene->m_Vertices.size(), m_pScene->m_Vertices.data());
+        assert(sizeof(FVertexPosOnly) * m_pScene->m_Vertices.size() < m_pVertexBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pVertexBuffer, 0, sizeof(FVertexPosOnly) * m_pScene->m_Vertices.size(), m_pScene->m_Vertices.data());
     }
     
     if (!m_pScene->m_Triangles.empty())
@@ -1423,9 +1423,12 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FShaderMaterial) * m_pScene->m_Materials.size(), m_pScene->m_Materials.data());
     }
     
-    if (!m_pScene->m_AccelerationStructure.m_BoundingBoxes.empty())
+    if (m_pScene->m_pBoundingBoxBuffer)
     {
-        assert(sizeof(FShaderBoundingBox) * m_pScene->m_AccelerationStructure.m_BoundingBoxes.size() < m_pBvhBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pBvhBuffer, 0, sizeof(FShaderBoundingBox) * m_pScene->m_AccelerationStructure.m_BoundingBoxes.size(), m_pScene->m_AccelerationStructure.m_BoundingBoxes.data());
+        VkBufferCopy BufferCopy;
+        BufferCopy.size      = m_pScene->m_pBoundingBoxBuffer->GetSize();
+        BufferCopy.dstOffset = 0;
+        BufferCopy.srcOffset = 0;
+        pCommandBuffer->CopyBuffer(m_pScene->m_pBoundingBoxBuffer->GetBuffer(), m_pBvhBuffer->GetBuffer(), 1, &BufferCopy);
     }
 }

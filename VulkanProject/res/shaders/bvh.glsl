@@ -8,20 +8,25 @@
 
 #define BVH_ROOT_NODE_INDEX 0
 
-struct FBvhNode
+struct FBoundingBox
 {
     // 0-16
-    vec4 AABBMin;
+    float MinAABB[3];
+    uint TriangleOrChildIndex;
     // 16-32
-    vec4 AABBMax;
-    // 32-44
-    uint ChildIndex;
-    uint FirstTriangleIndex;
+    float MaxAABB[3];
     uint NumTriangles;
-
-    // Padding
-    uint Padding0;
 };
+
+vec3 GetBoundingBoxMin(in FBoundingBox Node)
+{
+    return vec3(Node.MinAABB[0], Node.MinAABB[1], Node.MinAABB[2]);
+}
+
+vec3 GetBoundingBoxMax(in FBoundingBox Node)
+{
+    return vec3(Node.MaxAABB[0], Node.MaxAABB[1], Node.MaxAABB[2]);
+}
 
 vec2 IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray)
 {

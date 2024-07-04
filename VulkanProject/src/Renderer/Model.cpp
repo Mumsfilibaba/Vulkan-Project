@@ -15,164 +15,166 @@ FModel::~FModel()
     SAFE_DELETE(m_pIndexBuffer);
 }
 
-bool FModel::LoadFromFile(const std::string& filepath, FDevice* pDevice, FDeviceMemoryAllocator* pAllocator)
+bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice, FDeviceMemoryAllocator* pAllocator)
 {
-    tinyobj::attrib_t                attrib;
-    std::vector<tinyobj::shape_t>    shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string                      warning;
-    std::string                      error;
+    tinyobj::attrib_t                Attrib;
+    std::vector<tinyobj::shape_t>    Shapes;
+    std::vector<tinyobj::material_t> Materials;
+    std::string                      Warning;
+    std::string                      Error;
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, filepath.c_str()))
+    if (!tinyobj::LoadObj(&Attrib, &Shapes, &Materials, &Warning, &Error, Filepath.c_str()))
     {
-        std::cout << "Failed to load model '" << filepath << "'" << std::endl;
-        if (!warning.empty())
+        std::cout << "Failed to load model '" << Filepath << "'" << std::endl;
+        if (!Warning.empty())
         {
-            std::cout << "  Warning: " << warning << std::endl;
+            std::cout << "  Warning: " << Warning << std::endl;
         }
-        if (!error.empty())
+        if (!Error.empty())
         {
-            std::cout << "  Error: " << error << std::endl;
+            std::cout << "  Error: " << Error << std::endl;
         }
         
         return false;
     }
     else
     {
-        std::cout << "Loaded model '" << filepath << "'" << std::endl;
-        if (!warning.empty())
+        std::cout << "Loaded model '" << Filepath << "'" << std::endl;
+        if (!Warning.empty())
         {
-            std::cout << "  Warning: " << warning << std::endl;
+            std::cout << "  Warning: " << Warning << std::endl;
         }
     }
     
-    std::vector<FVertex>  vertices;
-    std::vector<uint16_t> indices;
-    std::unordered_map<FVertex, uint16_t, FVertexHasher> uniqueVertices = {};
-    for (const auto& shape : shapes)
+    std::vector<FVertex>  Vertices;
+    std::vector<uint16_t> Indices;
+    std::unordered_map<FVertex, uint16_t, FVertexHasher> UniqueVertices = {};
+    for (const auto& Shape : Shapes)
     {
-        for (const auto& index : shape.mesh.indices)
+        for (const auto& Index : Shape.mesh.indices)
         {
-            FVertex vertex{};
-            vertex.Position =
+            const size_t BaseIndex = 3 * Index.vertex_index;
+            
+            FVertex Vertex{};
+            Vertex.Position =
             {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
+                Attrib.vertices[BaseIndex + 0],
+                Attrib.vertices[BaseIndex + 1],
+                Attrib.vertices[BaseIndex + 2]
             };
 
-            vertex.TexCoord =
+            Vertex.TexCoord =
             {
-                attrib.texcoords[2 * index.texcoord_index + 0],
-                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                Attrib.texcoords[2 * Index.texcoord_index + 0],
+                1.0f - Attrib.texcoords[2 * Index.texcoord_index + 1]
             };
 
-            vertex.Color = { 1.0f, 1.0f, 1.0f };
+            Vertex.Color = { 1.0f, 1.0f, 1.0f };
 
-            if (uniqueVertices.count(vertex) == 0)
+            if (UniqueVertices.count(Vertex) == 0)
             {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-                vertices.push_back(vertex);
+                UniqueVertices[Vertex] = static_cast<uint32_t>(Vertices.size());
+                Vertices.push_back(Vertex);
             }
 
-            indices.push_back(uniqueVertices[vertex]);
+            Indices.push_back(UniqueVertices[Vertex]);
         }
     }
     
-    assert(indices.size() < UINT16_MAX);
+    assert(Indices.size() < UINT16_MAX);
     
-    FBufferParams vertexBufferParams = {};
-    vertexBufferParams.Size             = vertices.size() * sizeof(FVertex);
-    vertexBufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    vertexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    m_pVertexBuffer = FBuffer::Create(pDevice, vertexBufferParams, pAllocator);
+    FBufferParams VertexBufferParams = {};
+    VertexBufferParams.Size             = Vertices.size() * sizeof(FVertex);
+    VertexBufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    VertexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    m_pVertexBuffer = FBuffer::Create(pDevice, VertexBufferParams, pAllocator);
 
     void* pCPUMem = m_pVertexBuffer->Map();
-    memcpy(pCPUMem, vertices.data(), vertexBufferParams.Size);
+    memcpy(pCPUMem, Vertices.data(), VertexBufferParams.Size);
     m_pVertexBuffer->Unmap();
 
-    FBufferParams indexBufferParams = {};
-    indexBufferParams.Size             = indices.size() * sizeof(uint16_t);
-    indexBufferParams.Usage            = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    indexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    m_pIndexBuffer = FBuffer::Create(pDevice, indexBufferParams, pAllocator);
+    FBufferParams IndexBufferParams = {};
+    IndexBufferParams.Size             = Indices.size() * sizeof(uint16_t);
+    IndexBufferParams.Usage            = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    IndexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    m_pIndexBuffer = FBuffer::Create(pDevice, IndexBufferParams, pAllocator);
 
     pCPUMem = m_pIndexBuffer->Map();
-    memcpy(pCPUMem, indices.data(), indexBufferParams.Size);
+    memcpy(pCPUMem, Indices.data(), IndexBufferParams.Size);
     m_pIndexBuffer->Unmap();
     
-    m_VertexCount = vertices.size();
-    m_IndexCount  = indices.size();
+    m_VertexCount = Vertices.size();
+    m_IndexCount  = Indices.size();
     return true;
 }
 
-bool FMesh::LoadFromFile(const std::string& filepath)
+bool FMesh::LoadFromFile(const std::string& Filepath)
 {
-    tinyobj::attrib_t                attrib;
-    std::vector<tinyobj::shape_t>    shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string                      warning;
-    std::string                      error;
+    tinyobj::attrib_t                Attrib;
+    std::vector<tinyobj::shape_t>    Shapes;
+    std::vector<tinyobj::material_t> Materials;
+    std::string                      Warning;
+    std::string                      Error;
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, filepath.c_str()))
+    if (!tinyobj::LoadObj(&Attrib, &Shapes, &Materials, &Warning, &Error, Filepath.c_str()))
     {
-        std::cout << "Failed to load model '" << filepath << "'" << std::endl;
-        if (!warning.empty())
+        std::cout << "Failed to load model '" << Filepath << "'" << std::endl;
+        if (!Warning.empty())
         {
-            std::cout << "  Warning: " << warning << std::endl;
+            std::cout << "  Warning: " << Warning << std::endl;
         }
-        if (!error.empty())
+        if (!Error.empty())
         {
-            std::cout << "  Error: " << error << std::endl;
+            std::cout << "  Error: " << Error << std::endl;
         }
         
         return false;
     }
     else
     {
-        std::cout << "Loaded model '" << filepath << "'" << std::endl;
-        if (!warning.empty())
+        std::cout << "Loaded model '" << Filepath << "'" << std::endl;
+        if (!Warning.empty())
         {
-            std::cout << "  Warning: " << warning << std::endl;
+            std::cout << "  Warning: " << Warning << std::endl;
         }
     }
     
-    std::vector<FVertexRT> Vertices;
-    std::vector<uint32_t>  Indices;
-    std::unordered_map<FVertexRT, uint32_t, FVertexRTHasher> uniqueVertices = {};
+    std::vector<uint32_t>       Indices;
+    std::vector<FVertexPosOnly> Vertices;
+    std::unordered_map<FVertexPosOnly, uint32_t, FVertexPosOnlyHasher> UniqueVertices = {};
     
     BoundingBoxMin = glm::vec3(0.0f, 0.0f, 0.0f);
     BoundingBoxMax = glm::vec3(0.0f, 0.0f, 0.0f);
     
-    for (const auto& shape : shapes)
+    for (const auto& Shape : Shapes)
     {
-        for (const auto& index : shape.mesh.indices)
+        for (const auto& Index : Shape.mesh.indices)
         {
-            FVertexRT vertex;
-            vertex.Position =
+            const size_t BaseIndex = 3 * Index.vertex_index;
+            
+            FVertexPosOnly Vertex;
+            Vertex.Position =
             {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2],
-                // Padding
-                0.0f
+                Attrib.vertices[BaseIndex + 0],
+                Attrib.vertices[BaseIndex + 1],
+                Attrib.vertices[BaseIndex + 2],
             };
             
-            if (uniqueVertices.count(vertex) == 0)
+            if (UniqueVertices.count(Vertex) == 0)
             {
-                uniqueVertices[vertex] = static_cast<uint32_t>(Vertices.size());
-                Vertices.push_back(vertex);
+                UniqueVertices[Vertex] = static_cast<uint32_t>(Vertices.size());
+                Vertices.push_back(Vertex);
                 
-                BoundingBoxMin.x = std::min(BoundingBoxMin.x, vertex.Position.x);
-                BoundingBoxMin.y = std::min(BoundingBoxMin.y, vertex.Position.y);
-                BoundingBoxMin.z = std::min(BoundingBoxMin.z, vertex.Position.z);
+                BoundingBoxMin.x = std::min(BoundingBoxMin.x, Vertex.Position.x);
+                BoundingBoxMin.y = std::min(BoundingBoxMin.y, Vertex.Position.y);
+                BoundingBoxMin.z = std::min(BoundingBoxMin.z, Vertex.Position.z);
                 
-                BoundingBoxMax.x = std::max(BoundingBoxMax.x, vertex.Position.x);
-                BoundingBoxMax.y = std::max(BoundingBoxMax.y, vertex.Position.y);
-                BoundingBoxMax.z = std::max(BoundingBoxMax.z, vertex.Position.z);
+                BoundingBoxMax.x = std::max(BoundingBoxMax.x, Vertex.Position.x);
+                BoundingBoxMax.y = std::max(BoundingBoxMax.y, Vertex.Position.y);
+                BoundingBoxMax.z = std::max(BoundingBoxMax.z, Vertex.Position.z);
             }
 
-            Indices.push_back(uniqueVertices[vertex]);
+            Indices.push_back(UniqueVertices[Vertex]);
         }
     }
     

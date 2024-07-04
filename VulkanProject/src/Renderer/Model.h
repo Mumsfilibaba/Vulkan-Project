@@ -5,48 +5,46 @@
 
 struct FVertex
 {
+    static VkVertexInputBindingDescription GetBindingDescription()
+    {
+        VkVertexInputBindingDescription BindingDescription = {};
+        BindingDescription.binding   = 0;
+        BindingDescription.stride    = sizeof(FVertex);
+        BindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        return BindingDescription;
+    }
+    
+    static VkVertexInputAttributeDescription* GetAttributeDescriptions()
+    {
+        static VkVertexInputAttributeDescription AttributeDescriptions[3];
+        
+        AttributeDescriptions[0].binding  = 0;
+        AttributeDescriptions[0].location = 0;
+        AttributeDescriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
+        AttributeDescriptions[0].offset   = offsetof(FVertex, Position);
+        
+        AttributeDescriptions[1].binding  = 0;
+        AttributeDescriptions[1].location = 1;
+        AttributeDescriptions[1].format   = VK_FORMAT_R32G32_SFLOAT;
+        AttributeDescriptions[1].offset   = offsetof(FVertex, TexCoord);
+        
+        AttributeDescriptions[2].binding  = 0;
+        AttributeDescriptions[2].location = 2;
+        AttributeDescriptions[2].format   = VK_FORMAT_R32G32B32_SFLOAT;
+        AttributeDescriptions[2].offset   = offsetof(FVertex, Color);
+        
+        return AttributeDescriptions;
+    }
+
     glm::vec3 Position;
     glm::vec2 TexCoord;
     glm::vec3 Color;
     
-    bool operator==(const FVertex& other) const
+    bool operator==(const FVertex& Other) const
     {
-        return
-            Position == other.Position &&
-            TexCoord == other.TexCoord &&
-            Color == other.Color;
+        return Position == Other.Position && TexCoord == Other.TexCoord && Color == Other.Color;
     }
 
-    static VkVertexInputBindingDescription GetBindingDescription()
-    {
-        VkVertexInputBindingDescription bindingDescription = {};
-        bindingDescription.binding   = 0;
-        bindingDescription.stride    = sizeof(FVertex);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        return bindingDescription;
-    }
-
-    static VkVertexInputAttributeDescription* GetAttributeDescriptions()
-    {
-        static VkVertexInputAttributeDescription attributeDescriptions[3];
-
-        attributeDescriptions[0].binding    = 0;
-        attributeDescriptions[0].location   = 0;
-        attributeDescriptions[0].format     = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset     = offsetof(FVertex, Position);
-        
-        attributeDescriptions[1].binding    = 0;
-        attributeDescriptions[1].location   = 1;
-        attributeDescriptions[1].format     = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[1].offset     = offsetof(FVertex, TexCoord);
-
-        attributeDescriptions[2].binding    = 0;
-        attributeDescriptions[2].location   = 2;
-        attributeDescriptions[2].format     = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[2].offset     = offsetof(FVertex, Color);
-
-        return attributeDescriptions;
-    }
 };
 
 struct FVertexHasher
@@ -58,26 +56,24 @@ struct FVertexHasher
     }
 };
 
-struct FVertexRT
+struct FVertexPosOnly
 {
-    // TODO: Pack this better
-    glm::vec4 Position;
-    
-    bool operator==(const FVertexRT& other) const
+    bool operator==(const FVertexPosOnly& Other) const
     {
-        return Position == other.Position;
+        return Position == Other.Position;
     }
+
+    glm::vec3 Position;
 };
 
-struct FVertexRTHasher
+struct FVertexPosOnlyHasher
 {
-    size_t operator()(const FVertexRT& vertex) const
+    size_t operator()(const FVertexPosOnly& Vertex) const
     {
         using namespace std;
-        return hash<glm::vec4>()(vertex.Position);
+        return hash<glm::vec3>()(Vertex.Position);
     }
 };
-
 
 class FModel
 {
@@ -125,8 +121,8 @@ struct FMesh
 {
     bool LoadFromFile(const std::string& filepath);
     
-    std::vector<FVertexRT> m_Positions;
-    std::vector<uint32_t>  m_Indicies;
-    glm::vec3              BoundingBoxMin;
-    glm::vec3              BoundingBoxMax;
+    std::vector<uint32_t>       m_Indicies;
+    std::vector<FVertexPosOnly> m_Positions;
+    glm::vec3 BoundingBoxMin;
+    glm::vec3 BoundingBoxMax;
 };
