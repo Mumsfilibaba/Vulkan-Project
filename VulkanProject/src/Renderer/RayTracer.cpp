@@ -267,8 +267,44 @@ void FRayTracer::Tick(float DeltaTime)
     pCurrentCommandBuffer->Begin();
     pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0);
 
-    pCurrentCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
-    pCurrentCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+    // Update CameraBuffer
+    FCameraBuffer CameraBuffer = {};
+    CameraBuffer.Projection         = m_pScene->m_Camera.GetProjectionMatrix();
+    CameraBuffer.View               = m_pScene->m_Camera.GetViewMatrix();
+    CameraBuffer.Position           = glm::vec4(m_pScene->m_Camera.GetPosition(), 0.0f);
+    CameraBuffer.Forward            = glm::vec4(m_pScene->m_Camera.GetForward(), 0.0f);
+    CameraBuffer.FieldOfViewDegrees = Math::ToDegrees(m_pScene->m_Camera.GetFieldOfView());
+    
+    pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(FCameraBuffer), &CameraBuffer);
+
+    // Update RandomBuffer
+    constexpr uint32_t MaxSamples = 16;
+    FRandomBuffer RandomBuffer = {};
+    RandomBuffer.FrameIndex  = m_FrameIndex;
+    RandomBuffer.HaltonIndex = m_FrameIndex % MaxSamples;
+
+    pCurrentCommandBuffer->UpdateBuffer(m_pRandomBuffer, 0, sizeof(FRandomBuffer), &RandomBuffer);
+    
+    // Update global buffers
+    UpdateGlobalBuffers(pCurrentCommandBuffer);
+    
+    // Perform RayTracing
+    PerformRayTracing(pCurrentCommandBuffer);
+    
+    // Tonemapping
+    PerformTonemapping(pCurrentCommandBuffer);
+
+    // End CommandBuffer
+    pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 1);
+    pCurrentCommandBuffer->End();
+
+    m_pDevice->ExecuteGraphics(pCurrentCommandBuffer, nullptr, nullptr);
+}
+
+void FRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
+{
+    pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+    pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 
     if (m_bResetImage)
     {
@@ -285,8 +321,8 @@ void FRayTracer::Tick(float DeltaTime)
         SubresourceRange.baseMipLevel   = 0;
         SubresourceRange.levelCount     = 1;
 
-        pCurrentCommandBuffer->ClearColorImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, &ClearColor, 1, &SubresourceRange);
-        pCurrentCommandBuffer->ClearColorImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, &ClearColor, 1, &SubresourceRange);
+        pCommandBuffer->ClearColorImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, &ClearColor, 1, &SubresourceRange);
+        pCommandBuffer->ClearColorImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, &ClearColor, 1, &SubresourceRange);
 
         m_bResetImage = false;
         m_FrameIndex  = 0;
@@ -296,31 +332,6 @@ void FRayTracer::Tick(float DeltaTime)
         m_FrameIndex++;
     }
 
-    // Update CameraBuffer
-    FCameraBuffer CameraBuffer = {};
-    CameraBuffer.Projection         = m_pScene->m_Camera.GetProjectionMatrix();
-    CameraBuffer.View               = m_pScene->m_Camera.GetViewMatrix();
-    CameraBuffer.Position           = glm::vec4(m_pScene->m_Camera.GetPosition(), 0.0f);
-    CameraBuffer.Forward            = glm::vec4(m_pScene->m_Camera.GetForward(), 0.0f);
-    CameraBuffer.FieldOfViewDegrees = Math::ToDegrees(m_pScene->m_Camera.GetFieldOfView());
-    
-    pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(FCameraBuffer), &CameraBuffer);
-
-    // Update RandomBuffer
-    constexpr uint32_t MaxSamples = 16;
-
-    FRandomBuffer RandomBuffer = {};
-    RandomBuffer.FrameIndex  = m_FrameIndex;
-    RandomBuffer.HaltonIndex = m_FrameIndex % MaxSamples;
-
-    pCurrentCommandBuffer->UpdateBuffer(m_pRandomBuffer, 0, sizeof(FRandomBuffer), &RandomBuffer);
-
-    // Update Tonemapping Settings
-    FTonemappingBuffer TonemappingBuffer = {};
-    TonemappingBuffer.Exposure = m_pScene->m_Settings.Exposure;
-    
-    pCurrentCommandBuffer->UpdateBuffer(m_pTonemappingBuffer, 0, sizeof(FTonemappingBuffer), &TonemappingBuffer);
-    
     // Update Scene
     FSceneBuffer SceneBuffer = {};
     SceneBuffer.NumQuads       = m_pScene->m_Quads.size();
@@ -333,66 +344,67 @@ void FRayTracer::Tick(float DeltaTime)
     SceneBuffer.NumBounces     = m_pScene->m_Settings.NumBounces;
     SceneBuffer.ViewMode       = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
 
-    pCurrentCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(FSceneBuffer), &SceneBuffer);
-        
-    UpdateGlobalBuffers(pCurrentCommandBuffer);
+    pCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(FSceneBuffer), &SceneBuffer);
 
     // Bind pipeline and descriptorSet
-    pCurrentCommandBuffer->BindComputePipelineState(m_pRayTracingPipeline.load());
+    pCommandBuffer->BindComputePipelineState(m_pRayTracingPipeline.load());
     
     const uint64_t Frame = (m_FrameIndex % 2);
     if (Frame == 0)
     {
-        pCurrentCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet0);
+        pCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet0);
     }
     else
     {
-        pCurrentCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet1);
+        pCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet1);
     }
 
     // Dispatch RayTracing
     const uint32_t Threads = 16;
     VkExtent2D DispatchSize = { Math::AlignUp(m_pSceneTexture0->GetWidth(), Threads) / Threads, Math::AlignUp(m_pSceneTexture0->GetHeight(), Threads) / Threads };
-    pCurrentCommandBuffer->Dispatch(DispatchSize.width, DispatchSize.height, 1);
+    pCommandBuffer->Dispatch(DispatchSize.width, DispatchSize.height, 1);
 
-    pCurrentCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    pCurrentCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+}
 
+void FRayTracer::PerformTonemapping(FCommandBuffer* pCommandBuffer)
+{
+    // Update Tonemapping Settings
+    FTonemappingBuffer TonemappingBuffer = {};
+    TonemappingBuffer.Exposure = m_pScene->m_Settings.Exposure;
+    pCommandBuffer->UpdateBuffer(m_pTonemappingBuffer, 0, sizeof(FTonemappingBuffer), &TonemappingBuffer);
+    
     // Begin renderpass
     VkClearValue ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-    pCurrentCommandBuffer->BeginRenderPass(m_pTonemappingRenderPass, m_pTonemappingFramebuffer, &ClearColor, 1);
+    pCommandBuffer->BeginRenderPass(m_pTonemappingRenderPass, m_pTonemappingFramebuffer, &ClearColor, 1);
     
     // Set viewport
     VkViewport Viewport = { 0.0f, 0.0f, float(m_ViewportWidth), float(m_ViewportHeight), 0.0f, 1.0f };
-    pCurrentCommandBuffer->SetViewport(Viewport);
+    pCommandBuffer->SetViewport(Viewport);
     
     VkRect2D scissor = { { 0, 0}, { m_ViewportWidth, m_ViewportHeight } };
-    pCurrentCommandBuffer->SetScissorRect(scissor);
+    pCommandBuffer->SetScissorRect(scissor);
     
     // Bind pipeline
-    pCurrentCommandBuffer->BindGraphicsPipelineState(m_pTonemappingPipeline);
+    pCommandBuffer->BindGraphicsPipelineState(m_pTonemappingPipeline);
 
     // Perform tonemapping
+    const uint64_t Frame = (m_FrameIndex % 2);
     if (Frame == 0)
     {
-        pCurrentCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet0);
+        pCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet0);
     }
     else
     {
-        pCurrentCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet1);
+        pCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet1);
     }
 
     // Draw
-    pCurrentCommandBuffer->DrawInstanced(3, 1, 0, 0);
+    pCommandBuffer->DrawInstanced(3, 1, 0, 0);
     
     // End renderpass
-    pCurrentCommandBuffer->EndRenderPass();
-
-    // End CommandBuffer
-    pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 1);
-    pCurrentCommandBuffer->End();
-
-    m_pDevice->ExecuteGraphics(pCurrentCommandBuffer, nullptr, nullptr);
+    pCommandBuffer->EndRenderPass();
 }
 
 void FRayTracer::OnRenderUI()

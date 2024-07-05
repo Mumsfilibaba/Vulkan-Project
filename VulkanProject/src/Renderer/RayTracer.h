@@ -84,13 +84,16 @@ public:
 private:
     void CreateRayTracingResources();
     void CreateTonemappingResources();
+    void CreateDebugViewResources();
     void CreateGlobalBuffers();
     void CreateDescriptorSet();
     void ReleaseDescriptorSets();
     void CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height);
     void ReloadShader();
     void UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer);
-
+    void PerformRayTracing(FCommandBuffer* pCommandBuffer);
+    void PerformTonemapping(FCommandBuffer* pCommandBuffer);
+    
     FDevice*                       m_pDevice;
     FSwapchain*                    m_pSwapchain;
     FDeviceMemoryAllocator*        m_pDeviceAllocator;
