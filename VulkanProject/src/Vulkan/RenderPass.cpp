@@ -2,73 +2,73 @@
 #include "Device.h"
 #include <vector>
 
-FRenderPass* FRenderPass::Create(FDevice* pDevice, const FRenderPassParams& params)
+FRenderPass* FRenderPass::Create(FDevice* pDevice, const FRenderPassParams& Params)
 {
     FRenderPass* pRenderPass = new FRenderPass(pDevice);
     
-    std::vector<VkAttachmentReference>   colorAttachmentRefInfos;
-    std::vector<VkAttachmentDescription> attachmentsInfos;
+    std::vector<VkAttachmentReference>   ColorAttachmentRefInfos;
+    std::vector<VkAttachmentDescription> AttachmentsInfos;
 
-    VkAttachmentDescription colorAttachment;
-    ZERO_STRUCT(&colorAttachment);
+    VkAttachmentDescription ColorAttachment;
+    ZERO_STRUCT(&ColorAttachment);
     
-    colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    ColorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
+    ColorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    ColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     
-    VkAttachmentReference colorAttachmentRef = {};
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkAttachmentReference ColorAttachmentRef = {};
+    ColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    for (uint32_t i = 0; i < params.ColorAttachmentCount; i++)
+    for (uint32_t i = 0; i < Params.ColorAttachmentCount; i++)
     {
-        colorAttachment.format        = params.pColorAttachments[i].Format;
-        colorAttachment.loadOp        = params.pColorAttachments[i].LoadOp;
-        colorAttachment.storeOp       = params.pColorAttachments[i].StoreOp;
-        colorAttachment.initialLayout = params.pColorAttachments[i].initialLayout;
-        colorAttachment.finalLayout   = params.pColorAttachments[i].finalLayout;
-        attachmentsInfos.push_back(colorAttachment);
+        ColorAttachment.format        = Params.pColorAttachments[i].Format;
+        ColorAttachment.loadOp        = Params.pColorAttachments[i].LoadOp;
+        ColorAttachment.storeOp       = Params.pColorAttachments[i].StoreOp;
+        ColorAttachment.initialLayout = Params.pColorAttachments[i].InitialLayout;
+        ColorAttachment.finalLayout   = Params.pColorAttachments[i].FinalLayout;
+        AttachmentsInfos.push_back(ColorAttachment);
         
-        colorAttachmentRef.attachment = i;
-        colorAttachmentRefInfos.push_back(colorAttachmentRef);
+        ColorAttachmentRef.attachment = i;
+        ColorAttachmentRefInfos.push_back(ColorAttachmentRef);
     }
 
-    VkSubpassDescription subpass;
-    ZERO_STRUCT(&subpass);
+    VkSubpassDescription Subpass;
+    ZERO_STRUCT(&Subpass);
     
-    subpass.inputAttachmentCount    = 0;
-    subpass.pInputAttachments       = nullptr;
-    subpass.pDepthStencilAttachment = nullptr;
-    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount    = uint32_t(colorAttachmentRefInfos.size());
-    subpass.pColorAttachments       = colorAttachmentRefInfos.data();
-    subpass.preserveAttachmentCount = 0;
-    subpass.pPreserveAttachments    = nullptr;
-    subpass.pResolveAttachments     = nullptr;
+    Subpass.inputAttachmentCount    = 0;
+    Subpass.pInputAttachments       = nullptr;
+    Subpass.pDepthStencilAttachment = nullptr;
+    Subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    Subpass.colorAttachmentCount    = uint32_t(ColorAttachmentRefInfos.size());
+    Subpass.pColorAttachments       = ColorAttachmentRefInfos.data();
+    Subpass.preserveAttachmentCount = 0;
+    Subpass.pPreserveAttachments    = nullptr;
+    Subpass.pResolveAttachments     = nullptr;
 
-    VkSubpassDependency dependency;
-    ZERO_STRUCT(&dependency);
+    VkSubpassDependency Dependency;
+    ZERO_STRUCT(&Dependency);
     
-    dependency.dependencyFlags = 0;
-    dependency.srcSubpass      = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass      = 0;
-    dependency.srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask   = 0;
-    dependency.dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    Dependency.dependencyFlags = 0;
+    Dependency.srcSubpass      = VK_SUBPASS_EXTERNAL;
+    Dependency.dstSubpass      = 0;
+    Dependency.srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    Dependency.srcAccessMask   = 0;
+    Dependency.dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    Dependency.dstAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-    VkRenderPassCreateInfo renderPassInfo;
-    ZERO_STRUCT(&renderPassInfo);
+    VkRenderPassCreateInfo RenderPassCreateInfo;
+    ZERO_STRUCT(&RenderPassCreateInfo);
     
-    renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies   = &dependency;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments    = &colorAttachment;
-    renderPassInfo.subpassCount    = 1;
-    renderPassInfo.pSubpasses      = &subpass;
+    RenderPassCreateInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    RenderPassCreateInfo.dependencyCount = 1;
+    RenderPassCreateInfo.pDependencies   = &Dependency;
+    RenderPassCreateInfo.attachmentCount = 1;
+    RenderPassCreateInfo.pAttachments    = &ColorAttachment;
+    RenderPassCreateInfo.subpassCount    = 1;
+    RenderPassCreateInfo.pSubpasses      = &Subpass;
 
-    VkResult result = vkCreateRenderPass(pDevice->GetDevice(), &renderPassInfo, nullptr, &pRenderPass->m_RenderPass);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkCreateRenderPass(pDevice->GetDevice(), &RenderPassCreateInfo, nullptr, &pRenderPass->m_RenderPass);
+    if (Result != VK_SUCCESS)
     {
         std::cout << "vkCreateRenderPass failed\n";
         return nullptr;

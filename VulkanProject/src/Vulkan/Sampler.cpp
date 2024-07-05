@@ -1,32 +1,32 @@
 #include "Sampler.h"
 #include "Device.h"
 
-FSampler* FSampler::Create(FDevice* pDevice, const FSamplerParams& params)
+FSampler* FSampler::Create(FDevice* pDevice, const FSamplerParams& Params)
 {
     FSampler* pSampler = new FSampler(pDevice);
     
-    VkSamplerCreateInfo samplerCreateInfo;
-    ZERO_STRUCT(&samplerCreateInfo);
+    VkSamplerCreateInfo SamplerCreateInfo;
+    ZERO_STRUCT(&SamplerCreateInfo);
 
-    samplerCreateInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerCreateInfo.magFilter               = params.magFilter;
-    samplerCreateInfo.minFilter               = params.minFilter;
-    samplerCreateInfo.mipmapMode              = params.mipmapMode;
-    samplerCreateInfo.addressModeU            = params.addressModeU;
-    samplerCreateInfo.addressModeV            = params.addressModeV;
-    samplerCreateInfo.addressModeW            = params.addressModeW;
-    samplerCreateInfo.mipLodBias              = params.mipLodBias;
-    samplerCreateInfo.anisotropyEnable        = params.anisotropyEnable;
-    samplerCreateInfo.maxAnisotropy           = params.maxAnisotropy;
-    samplerCreateInfo.compareEnable           = params.compareEnable;
-    samplerCreateInfo.compareOp               = params.compareOp;
-    samplerCreateInfo.minLod                  = params.minLod;
-    samplerCreateInfo.maxLod                  = params.maxLod;
-    samplerCreateInfo.borderColor             = params.borderColor;
-    samplerCreateInfo.unnormalizedCoordinates = false;
+    SamplerCreateInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    SamplerCreateInfo.magFilter               = Params.MagFilter;
+    SamplerCreateInfo.minFilter               = Params.MinFilter;
+    SamplerCreateInfo.mipmapMode              = Params.MipmapMode;
+    SamplerCreateInfo.addressModeU            = Params.AddressModeU;
+    SamplerCreateInfo.addressModeV            = Params.AddressModeV;
+    SamplerCreateInfo.addressModeW            = Params.AddressModeW;
+    SamplerCreateInfo.mipLodBias              = Params.MipLodBias;
+    SamplerCreateInfo.anisotropyEnable        = Params.AnisotropyEnable;
+    SamplerCreateInfo.maxAnisotropy           = Params.MaxAnisotropy;
+    SamplerCreateInfo.compareEnable           = Params.CompareEnable;
+    SamplerCreateInfo.compareOp               = Params.CompareOp;
+    SamplerCreateInfo.minLod                  = Params.MinLod;
+    SamplerCreateInfo.maxLod                  = Params.MaxLod;
+    SamplerCreateInfo.borderColor             = Params.BorderColor;
+    SamplerCreateInfo.unnormalizedCoordinates = false;
 
-    VkResult result = vkCreateSampler(pDevice->GetDevice(), &samplerCreateInfo, nullptr, &pSampler->m_Sampler);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkCreateSampler(pDevice->GetDevice(), &SamplerCreateInfo, nullptr, &pSampler->m_Sampler);
+    if (Result != VK_SUCCESS)
     {
         std::cout << "vkCreateSampler failed\n";
         return nullptr;

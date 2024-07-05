@@ -6,14 +6,14 @@
 
 #include <algorithm>
 
-static bool ValidateFormatForUpload(VkFormat format)
+static bool ValidateFormatForUpload(VkFormat Format)
 {
-    return format == VK_FORMAT_R8G8B8A8_UNORM || format == VK_FORMAT_R32G32B32A32_SFLOAT;
+    return Format == VK_FORMAT_R8G8B8A8_UNORM || Format == VK_FORMAT_R32G32B32A32_SFLOAT;
 }
 
-static VkDeviceSize GetNumChannelsFromFormat(VkFormat format)
+static VkDeviceSize GetNumChannelsFromFormat(VkFormat Format)
 {
-    switch(format)
+    switch(Format)
     {
     case VK_FORMAT_R8G8B8A8_UNORM:
     case VK_FORMAT_R32G32B32A32_SFLOAT:
@@ -23,9 +23,9 @@ static VkDeviceSize GetNumChannelsFromFormat(VkFormat format)
     return 0;
 }
 
-static VkDeviceSize GetStrideFromFormat(VkFormat format)
+static VkDeviceSize GetStrideFromFormat(VkFormat Format)
 {
-    switch(format)
+    switch(Format)
     {
     case VK_FORMAT_R8G8B8A8_UNORM:
         return sizeof(char);
@@ -36,78 +36,78 @@ static VkDeviceSize GetStrideFromFormat(VkFormat format)
     return 0;
 }
 
-FTexture* FTexture::Create(FDevice* pDevice, const FTextureParams& params)
+FTexture* FTexture::Create(FDevice* pDevice, const FTextureParams& Params)
 {
     FTexture* pTexture = new FTexture(pDevice);
     
-    VkImageCreateInfo textureCreateInfo = {};
-    ZERO_STRUCT(&textureCreateInfo);
+    VkImageCreateInfo TextureCreateInfo = {};
+    ZERO_STRUCT(&TextureCreateInfo);
     
-    textureCreateInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    textureCreateInfo.flags         = params.Flags;
-    textureCreateInfo.imageType     = pTexture->m_ImageType = params.ImageType;
-    textureCreateInfo.format        = pTexture->m_Format = params.Format;
-    textureCreateInfo.extent.width  = pTexture->m_Width  = params.Width;
-    textureCreateInfo.extent.height = pTexture->m_Height = params.Height;
-    textureCreateInfo.extent.depth  = 1;
-    textureCreateInfo.mipLevels     = 1;
-    textureCreateInfo.arrayLayers   = pTexture->m_NumArraySlices = std::max(params.NumArraySlices, 1u);
-    textureCreateInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
-    textureCreateInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
-    textureCreateInfo.usage         = params.Usage;
-    textureCreateInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
-    textureCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    TextureCreateInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    TextureCreateInfo.flags         = Params.Flags;
+    TextureCreateInfo.imageType     = pTexture->m_ImageType = Params.ImageType;
+    TextureCreateInfo.format        = pTexture->m_Format = Params.Format;
+    TextureCreateInfo.extent.width  = pTexture->m_Width  = Params.Width;
+    TextureCreateInfo.extent.height = pTexture->m_Height = Params.Height;
+    TextureCreateInfo.extent.depth  = 1;
+    TextureCreateInfo.mipLevels     = 1;
+    TextureCreateInfo.arrayLayers   = pTexture->m_NumArraySlices = std::max(Params.NumArraySlices, 1u);
+    TextureCreateInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+    TextureCreateInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
+    TextureCreateInfo.usage         = Params.Usage;
+    TextureCreateInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+    TextureCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     
-    VkResult result = vkCreateImage(pDevice->GetDevice(), &textureCreateInfo, nullptr, &pTexture->m_Image);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkCreateImage(pDevice->GetDevice(), &TextureCreateInfo, nullptr, &pTexture->m_Image);
+    if (Result != VK_SUCCESS)
     {
         std::cout << "vkCreateImage failed\n";
         return nullptr;
     }
     
-    VkMemoryRequirements memoryRequirements;
-    vkGetImageMemoryRequirements(pDevice->GetDevice(), pTexture->m_Image, &memoryRequirements);
+    VkMemoryRequirements MemoryRequirements;
+    vkGetImageMemoryRequirements(pDevice->GetDevice(), pTexture->m_Image, &MemoryRequirements);
     
-    VkMemoryAllocateInfo memoryAllocteInfo = {};
-    ZERO_STRUCT(&memoryAllocteInfo);
+    VkMemoryAllocateInfo MemoryAllocteInfo = {};
+    ZERO_STRUCT(&MemoryAllocteInfo);
     
-    memoryAllocteInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memoryAllocteInfo.allocationSize  = memoryRequirements.size;
-    memoryAllocteInfo.memoryTypeIndex = FindMemoryType(pDevice->GetPhysicalDevice(), memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    MemoryAllocteInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    MemoryAllocteInfo.allocationSize  = MemoryRequirements.size;
+    MemoryAllocteInfo.memoryTypeIndex = FindMemoryType(pDevice->GetPhysicalDevice(), MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     
-    result = vkAllocateMemory(pDevice->GetDevice(), &memoryAllocteInfo, nullptr, &pTexture->m_Memory);
-    if (result != VK_SUCCESS)
+    Result = vkAllocateMemory(pDevice->GetDevice(), &MemoryAllocteInfo, nullptr, &pTexture->m_Memory);
+    if (Result != VK_SUCCESS)
     {
         std::cout << "vkAllocateMemory failed\n";
         return nullptr;
     }
     else
     {
-        std::cout << "Allocated " << memoryRequirements.size << " bytes\n";
+        std::cout << "Allocated " << MemoryRequirements.size << " bytes\n";
     }
 
-    result = vkBindImageMemory(pDevice->GetDevice(), pTexture->m_Image, pTexture->m_Memory, 0);
-    if (result != VK_SUCCESS)
+    Result = vkBindImageMemory(pDevice->GetDevice(), pTexture->m_Image, pTexture->m_Memory, 0);
+    if (Result != VK_SUCCESS)
     {
         std::cout << "vkAllocateMemory failed\n";
         return nullptr;
     }
     else
     {
-        std::cout << "Created image w=" << params.Width << ", h=" << params.Height << "\n";
+        std::cout << "Created image w=" << Params.Width << ", h=" << Params.Height << "\n";
     }
 
     // Transfer image to the expected layout
-    if (params.InitialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
+    if (Params.InitialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
     {
-        FCommandBufferParams commandBufferParams = {};
-        commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        commandBufferParams.QueueType = ECommandQueueType::Graphics;
+        FCommandBufferParams CommandBufferParams = {};
+        CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        CommandBufferParams.QueueType = ECommandQueueType::Graphics;
 
-        FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, commandBufferParams);
+        FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
         pCommandBuffer->Reset();
         pCommandBuffer->Begin();
-        pCommandBuffer->TransitionImage(pTexture->m_Image, VK_IMAGE_LAYOUT_UNDEFINED, params.InitialLayout);
+        pCommandBuffer->TransitionImage(pTexture->m_Image, VK_IMAGE_LAYOUT_UNDEFINED, Params.InitialLayout);
         pCommandBuffer->End();
 
         pDevice->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
@@ -119,41 +119,41 @@ FTexture* FTexture::Create(FDevice* pDevice, const FTextureParams& params)
     return pTexture;
 }
 
-FTexture* FTexture::CreateWithData(FDevice* pDevice, const FTextureParams& params, const void* pSource)
+FTexture* FTexture::CreateWithData(FDevice* pDevice, const FTextureParams& Params, const void* pSource)
 {
-    FTextureParams paramsCopy = params;
-    paramsCopy.Usage         = paramsCopy.Usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    paramsCopy.InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    FTextureParams ParamsCopy = Params;
+    ParamsCopy.Usage         = ParamsCopy.Usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ParamsCopy.InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    FTexture* pTexture = FTexture::Create(pDevice, paramsCopy);
+    FTexture* pTexture = FTexture::Create(pDevice, ParamsCopy);
     if (!pTexture)
     {
         return nullptr;
     }
     
-    assert(ValidateFormatForUpload(params.Format) == true);
+    assert(ValidateFormatForUpload(Params.Format) == true);
     
-    const VkDeviceSize numChannels = GetNumChannelsFromFormat(params.Format);
-    const VkDeviceSize stride      = GetStrideFromFormat(params.Format);
-    const VkDeviceSize uploadSize  = params.Width * params.Height * numChannels * stride;
+    const VkDeviceSize NumChannels = GetNumChannelsFromFormat(Params.Format);
+    const VkDeviceSize Stride      = GetStrideFromFormat(Params.Format);
+    const VkDeviceSize UploadSize  = Params.Width * Params.Height * NumChannels * Stride;
     
-    FBufferParams bufferParams = {};
-    bufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    bufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    bufferParams.Size             = uploadSize;
+    FBufferParams BufferParams = {};
+    BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    BufferParams.Size             = UploadSize;
     
-    FBuffer* pUploadBuffer = FBuffer::CreateWithData(pDevice, bufferParams, nullptr, pSource);
+    FBuffer* pUploadBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, pSource);
     if (!pUploadBuffer)
     {
         SAFE_DELETE(pTexture);
         return nullptr;
     }
     
-    FCommandBufferParams commandBufferParams = {};
-    commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferParams.QueueType = ECommandQueueType::Graphics;
+    FCommandBufferParams CommandBufferParams = {};
+    CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    CommandBufferParams.QueueType = ECommandQueueType::Graphics;
     
-    FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, commandBufferParams);
+    FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
     if (!pCommandBuffer)
     {
         SAFE_DELETE(pUploadBuffer);
@@ -166,17 +166,17 @@ FTexture* FTexture::CreateWithData(FDevice* pDevice, const FTextureParams& param
     
     pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     
-    VkBufferImageCopy region = {};
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.layerCount = 1;
-    region.imageExtent.width           = params.Width;
-    region.imageExtent.height          = params.Height;
-    region.imageExtent.depth           = 1;
+    VkBufferImageCopy BufferImageCopy = {};
+    BufferImageCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    BufferImageCopy.imageSubresource.layerCount = 1;
+    BufferImageCopy.imageExtent.width           = Params.Width;
+    BufferImageCopy.imageExtent.height          = Params.Height;
+    BufferImageCopy.imageExtent.depth           = 1;
     
-    pCommandBuffer->CopyBufferToImage(pUploadBuffer->GetBuffer(), pTexture->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    pCommandBuffer->CopyBufferToImage(pUploadBuffer->GetBuffer(), pTexture->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &BufferImageCopy);
 
-    const VkImageLayout finalLayout = (params.InitialLayout == VK_IMAGE_LAYOUT_UNDEFINED) ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : params.InitialLayout;
-    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, finalLayout);
+    const VkImageLayout FinalLayout = (Params.InitialLayout == VK_IMAGE_LAYOUT_UNDEFINED) ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : Params.InitialLayout;
+    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, FinalLayout);
     
     pCommandBuffer->End();
     

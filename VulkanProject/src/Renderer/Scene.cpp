@@ -59,7 +59,7 @@ void FModelScene::Initialize()
     }
 
     // Copy vertices
-    m_Vertices = Mesh.m_Positions;
+    m_Vertices = Mesh.Positions;
     
     // Build BVH
     m_AccelerationStructure.Build(Mesh, 4);
@@ -92,17 +92,17 @@ void FModelScene::Initialize()
     m_pVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_Vertices.data());
     assert(m_pVertexBuffer != nullptr);
     
-    BufferParams.Size             = sizeof(FVertexPosOnly) * Mesh.m_Positions.size();
+    BufferParams.Size             = sizeof(FVertexPosOnly) * Mesh.Positions.size();
     BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
-    m_pMeshVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.m_Positions.data());
+    m_pMeshVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Positions.data());
     assert(m_pMeshVertexBuffer != nullptr);
     
-    BufferParams.Size  = sizeof(uint32_t) * Mesh.m_Indicies.size();
+    BufferParams.Size  = sizeof(uint32_t) * Mesh.Indicies.size();
     BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
-    m_pMeshIndexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.m_Indicies.data());
+    m_pMeshIndexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Indicies.data());
     assert(m_pMeshIndexBuffer != nullptr);
     
     // Quads
@@ -204,11 +204,11 @@ void FModelScene::Reset()
 {
     m_Camera.Reset();
     
-    glm::vec3 translation(0.0f, 0.5f, 1.75f);
-    m_Camera.Move(translation);
+    glm::vec3 Translation(0.0f, 0.5f, 1.75f);
+    m_Camera.Move(Translation);
 
-    glm::vec3 rotation(0.0f, glm::pi<float>(), 0.0f);
-    m_Camera.Rotate(rotation);
+    glm::vec3 Rotation(0.0f, glm::pi<float>(), 0.0f);
+    m_Camera.Rotate(Rotation);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -299,51 +299,51 @@ void FSphereScene::Initialize()
     }
     else
     {
-        constexpr int32_t numSpheres        = 7;
-        constexpr float sphereRadius        = 2.8f;
-        constexpr float sphereDiameter      = sphereRadius * 2.0f;
-        constexpr float sphereOffset        = 0.2f;
-        constexpr float sphereHalfFootPrint = sphereRadius + sphereOffset;
-        constexpr float sphereFootPrint     = sphereHalfFootPrint * 2.0f;
-        constexpr float width               = sphereFootPrint * numSpheres;
-        constexpr float halfWidth           = width / 2.0f;
+        constexpr int32_t NumSpheres        = 7;
+        constexpr float SphereRadius        = 2.8f;
+        constexpr float SphereDiameter      = SphereRadius * 2.0f;
+        constexpr float SphereOffset        = 0.2f;
+        constexpr float SphereHalfFootPrint = SphereRadius + SphereOffset;
+        constexpr float SphereFootPrint     = SphereHalfFootPrint * 2.0f;
+        constexpr float Width               = SphereFootPrint * NumSpheres;
+        constexpr float HalfWidth           = Width / 2.0f;
         
         // Settings
         m_Settings.BackgroundType = BACKGROUND_TYPE_SKYBOX;
         
         // Roof Quad
-        constexpr float roofPos        = 23.0f;
-        constexpr float roofWidth      = 15.0f;
-        constexpr float roofHalfWidth  = roofWidth / 2.0f;
-        m_Quads.push_back({ glm::vec4(-roofHalfWidth, roofPos, roofHalfWidth, 0.0f), glm::vec4(0.0f, 0.0f, -roofWidth, 0.0f), glm::vec4(roofWidth, 0.0f, 0.0f, 0.0f), 0 });
+        constexpr float RoofPos        = 23.0f;
+        constexpr float RoofWidth      = 15.0f;
+        constexpr float RoofHalfWidth  = RoofWidth / 2.0f;
+        m_Quads.push_back({ glm::vec4(-RoofHalfWidth, RoofPos, RoofHalfWidth, 0.0f), glm::vec4(0.0f, 0.0f, -RoofWidth, 0.0f), glm::vec4(RoofWidth, 0.0f, 0.0f, 0.0f), 0 });
 
         // Light Quad
-        constexpr float lightPos       = roofPos - 0.1f;
-        constexpr float lightWidth     = 10.0f;
-        constexpr float lightHalfWidth = lightWidth / 2.0;
-        m_Quads.push_back({ glm::vec4(-lightHalfWidth, lightPos, lightHalfWidth, 0.0f), glm::vec4(0.0f, 0.0f, -lightWidth, 0.0f), glm::vec4(lightWidth, 0.0f, 0.0f, 0.0f), 2 });
+        constexpr float LightPos       = RoofPos - 0.1f;
+        constexpr float LightWidth     = 10.0f;
+        constexpr float LightHalfWidth = LightWidth / 2.0;
+        m_Quads.push_back({ glm::vec4(-LightHalfWidth, LightPos, LightHalfWidth, 0.0f), glm::vec4(0.0f, 0.0f, -LightWidth, 0.0f), glm::vec4(LightWidth, 0.0f, 0.0f, 0.0f), 2 });
         
         // Floor Quad
-        constexpr float floorWidth     = width + (sphereFootPrint * 2.0f);
-        constexpr float floorHalfWidth = floorWidth / 2.0f;
-        constexpr float floorDepth     = sphereFootPrint + sphereRadius;
-        constexpr float floorHalfDepth = floorDepth / 2.0f;
-        m_Quads.push_back({ glm::vec4(-floorHalfWidth, -2.0f, -floorHalfDepth, 0.0f), glm::vec4(0.0f, 0.0f, floorDepth, 0.0f), glm::vec4(floorWidth, 0.0f, 0.0f, 0.0f), 0 });
+        constexpr float FloorWidth     = Width + (SphereFootPrint * 2.0f);
+        constexpr float FloorHalfWidth = FloorWidth / 2.0f;
+        constexpr float FloorDepth     = SphereFootPrint + SphereRadius;
+        constexpr float FloorHalfDepth = FloorDepth / 2.0f;
+        m_Quads.push_back({ glm::vec4(-FloorHalfWidth, -2.0f, -FloorHalfDepth, 0.0f), glm::vec4(0.0f, 0.0f, FloorDepth, 0.0f), glm::vec4(FloorWidth, 0.0f, 0.0f, 0.0f), 0 });
         
         // Wall Quad
     #if 1
-        constexpr uint32_t numQuads = 100;
-        constexpr float totalWidth = floorWidth;
-        constexpr float quadWidth  = totalWidth / numQuads;
-        for (uint32_t i = 0; i < numQuads; i++)
+        constexpr uint32_t NumQuads = 100;
+        constexpr float TotalWidth = FloorWidth;
+        constexpr float QuadWidth  = TotalWidth / NumQuads;
+        for (uint32_t i = 0; i < NumQuads; i++)
         {
-            const uint32_t materialIndex = i % 2;
+            const uint32_t MaterialIndex = i % 2;
             m_Quads.push_back(
             {
-                glm::vec4(-floorHalfWidth + (quadWidth * static_cast<float>(i)), 9.0f, -floorDepth, 0.0f),
+                glm::vec4(-FloorHalfWidth + (QuadWidth * static_cast<float>(i)), 9.0f, -FloorDepth, 0.0f),
                 glm::vec4(0.0f, -9.0, 0.0f, 0.0f),
-                glm::vec4(quadWidth, 0.0f, 0.0f, 0.0f),
-                materialIndex
+                glm::vec4(QuadWidth, 0.0f, 0.0f, 0.0f),
+                MaterialIndex
             });
         }
         
@@ -398,23 +398,23 @@ void FSphereScene::Initialize()
         });
         
         // Spheres
-        const uint32_t startMaterialIndex = static_cast<uint32_t>(m_Materials.size());
-        for (int32_t i = 0; i < numSpheres; i++)
+        const uint32_t StartMaterialIndex = static_cast<uint32_t>(m_Materials.size());
+        for (int32_t i = 0; i < NumSpheres; i++)
         {
-            const float SphereStartPos = -(sphereHalfFootPrint - halfWidth);
+            const float SphereStartPos = -(SphereHalfFootPrint - HalfWidth);
             m_Spheres.push_back(
             {
-                glm::vec3(SphereStartPos - (static_cast<float>(i) * sphereFootPrint), sphereRadius + sphereOffset, 0.0f),
-                sphereRadius,
-                startMaterialIndex + static_cast<uint32_t>(i)
+                glm::vec3(SphereStartPos - (static_cast<float>(i) * SphereFootPrint), SphereRadius + SphereOffset, 0.0f),
+                SphereRadius,
+                StartMaterialIndex + static_cast<uint32_t>(i)
             });
         }
         
         if (Type == ESphereSceneType::PolishedGlass)
         {
-            for (int32_t i = 0; i < numSpheres; i++)
+            for (int32_t i = 0; i < NumSpheres; i++)
             {
-                const float incidenceOfRefraction = 1.0f + 0.5f * float(i) / float(numSpheres - 1);
+                const float IncidenceOfRefraction = 1.0f + 0.5f * float(i) / float(NumSpheres - 1);
                 m_Materials.push_back(
                 {
                     glm::vec4(0.9f, 0.25f, 0.25f, 1.0f),
@@ -423,7 +423,7 @@ void FSphereScene::Initialize()
                     glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
                     0.02f,
                     0.0f,
-                    incidenceOfRefraction,
+                    IncidenceOfRefraction,
                     1.0f,
                     0.0f,
                     // padding
@@ -433,9 +433,9 @@ void FSphereScene::Initialize()
         }
         else if (Type == ESphereSceneType::ColoredRoughGlass)
         {
-            for (int32_t i = 0; i < numSpheres; i++)
+            for (int32_t i = 0; i < NumSpheres; i++)
             {
-                const float roughness = float(i) / float(numSpheres - 1) * 0.5f;
+                const float Roughness = float(i) / float(NumSpheres - 1) * 0.5f;
                 m_Materials.push_back(
                 {
                     glm::vec4(0.9f, 0.25f, 0.25f, 1.0f),
@@ -443,10 +443,10 @@ void FSphereScene::Initialize()
                     glm::vec4(0.8f, 0.8f, 0.8f, 1.0f),
                     glm::vec4(0.0f, 0.5f, 1.0f, 1.0f),
                     0.02f,
-                    roughness,
+                    Roughness,
                     1.1f,
                     1.0f,
-                    roughness,
+                    Roughness,
                     // padding
                     0, 0, 0
                 });
@@ -454,9 +454,9 @@ void FSphereScene::Initialize()
         }
         else if (Type == ESphereSceneType::RoughGlass)
         {
-            for (int32_t i = 0; i < numSpheres; i++)
+            for (int32_t i = 0; i < NumSpheres; i++)
             {
-                const float roughness = float(i) / float(numSpheres - 1) * 0.5f;
+                const float Roughness = float(i) / float(NumSpheres - 1) * 0.5f;
                 m_Materials.push_back(
                 {
                     glm::vec4(0.9f, 0.25f, 0.25f, 1.0f),
@@ -464,10 +464,10 @@ void FSphereScene::Initialize()
                     glm::vec4(0.8f, 0.8f, 0.8f, 1.0f),
                     glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
                     0.02f,
-                    roughness,
+                    Roughness,
                     1.1f,
                     1.0f,
-                    roughness,
+                    Roughness,
                     // padding
                     0, 0, 0
                 });
@@ -482,21 +482,21 @@ void FSphereScene::Reset()
 
     if (Type == ESphereSceneType::Default)
     {
-        glm::vec3 translation(0.0f, 1.0f, 0.75f);
-        m_Camera.Move(translation);
+        glm::vec3 Translation(0.0f, 1.0f, 0.75f);
+        m_Camera.Move(Translation);
         
-        glm::vec3 rotation(glm::pi<float>() / 4.0f, 0.0f, 0.0f);
-        m_Camera.Rotate(rotation);
+        glm::vec3 Rotation(glm::pi<float>() / 4.0f, 0.0f, 0.0f);
+        m_Camera.Rotate(Rotation);
     }
     else
     {
         m_Settings.CameraSpeed = 10.0f;
         
-        glm::vec3 translation(0.0f, 8.0f, 24.0f);
-        m_Camera.Move(translation);
+        glm::vec3 Translation(0.0f, 8.0f, 24.0f);
+        m_Camera.Move(Translation);
 
-        glm::vec3 rotation(0.0f, glm::pi<float>(), 0.0f);
-        m_Camera.Rotate(rotation);
+        glm::vec3 Rotation(0.0f, glm::pi<float>(), 0.0f);
+        m_Camera.Rotate(Rotation);
     }
 }
 
@@ -728,9 +728,9 @@ void FCornellBoxScene::Reset()
 {
     m_Camera.Reset();
 
-    glm::vec3 translation(0.0f, 3.5f, 5.0f);
-    m_Camera.Move(translation);
+    glm::vec3 Translation(0.0f, 3.5f, 5.0f);
+    m_Camera.Move(Translation);
 
-    glm::vec3 rotation(glm::pi<float>() / 8.0f, glm::pi<float>(), 0.0f);
-    m_Camera.Rotate(rotation);
+    glm::vec3 Rotation(glm::pi<float>() / 8.0f, glm::pi<float>(), 0.0f);
+    m_Camera.Rotate(Rotation);
 }

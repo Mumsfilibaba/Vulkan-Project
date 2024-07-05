@@ -5,13 +5,13 @@
 struct FDescriptorSetLayoutParams
 {
     VkDescriptorSetLayoutBinding* pBindings = nullptr;
-    uint32_t numBindings = 0;
+    uint32_t NumBindings = 0;
 };
 
 class FDescriptorSetLayout : public FDeviceChild
 {
 public:
-    static FDescriptorSetLayout* Create(FDevice* pDevice, const FDescriptorSetLayoutParams& params);
+    static FDescriptorSetLayout* Create(FDevice* pDevice, const FDescriptorSetLayoutParams& Params);
 
     FDescriptorSetLayout(FDevice* pDevice);
     ~FDescriptorSetLayout();

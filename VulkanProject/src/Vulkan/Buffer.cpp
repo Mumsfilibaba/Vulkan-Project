@@ -7,15 +7,15 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceM
 {
     FBuffer* pBuffer = new FBuffer(pDevice, pAllocator);
     
-    VkBufferCreateInfo BufferInfo;
-    ZERO_STRUCT(&BufferInfo);
+    VkBufferCreateInfo BufferCreateInfo;
+    ZERO_STRUCT(&BufferCreateInfo);
     
-    BufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    BufferInfo.size        = Params.Size;
-    BufferInfo.usage       = Params.Usage;
-    BufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    BufferCreateInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    BufferCreateInfo.size        = Params.Size;
+    BufferCreateInfo.usage       = Params.Usage;
+    BufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult Result = vkCreateBuffer(pDevice->GetDevice(), &BufferInfo, nullptr, &pBuffer->m_Buffer);
+    VkResult Result = vkCreateBuffer(pDevice->GetDevice(), &BufferCreateInfo, nullptr, &pBuffer->m_Buffer);
     if (Result != VK_SUCCESS)
     {
         std::cout << "vkCreateBuffer failed. Error: " << Result << "\n";
@@ -174,10 +174,10 @@ void* FBuffer::Map()
     }
     else
     {
-        VkResult result = vkMapMemory(GetDevice()->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
-        if (result != VK_SUCCESS)
+        VkResult Result = vkMapMemory(GetDevice()->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
+        if (Result != VK_SUCCESS)
         {
-            std::cout << "vkMapMemory failed. Error: " << result << "\n";
+            std::cout << "vkMapMemory failed. Error: " << Result << "\n";
             assert(false);
         }
     }
@@ -189,18 +189,18 @@ void FBuffer::FlushMappedMemoryRange()
 {
     if (!m_pAllocator)
     {
-        VkMappedMemoryRange range = {};
-        ZERO_STRUCT(&range);
+        VkMappedMemoryRange Range = {};
+        ZERO_STRUCT(&Range);
 
-        range.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        range.memory = m_DeviceMemory;
-        range.offset = 0;
-        range.size   = m_Size;
+        Range.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        Range.memory = m_DeviceMemory;
+        Range.offset = 0;
+        Range.size   = m_Size;
 
-        VkResult result = vkFlushMappedMemoryRanges(GetDevice()->GetDevice(), 1, &range);
-        if (result != VK_SUCCESS)
+        VkResult Result = vkFlushMappedMemoryRanges(GetDevice()->GetDevice(), 1, &Range);
+        if (Result != VK_SUCCESS)
         {
-            std::cout << "vkFlushMappedMemoryRanges failed. Error: " << result << "\n";
+            std::cout << "vkFlushMappedMemoryRanges failed. Error: " << Result << "\n";
             assert(false);
         }
     }

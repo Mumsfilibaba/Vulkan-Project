@@ -11,8 +11,8 @@ public:
     static bool InitLoader(FDevice* pDevice);
     static void ReleaseLoader();
 
-    static FTextureResource* LoadFromFile(FDevice* pDevice, const char* filepath);
-    static FTextureResource* LoadCubeMapFromPanoramaFile(FDevice* pDevice, const char* filepath);
+    static FTextureResource* LoadFromFile(FDevice* pDevice, const char* Filepath);
+    static FTextureResource* LoadCubeMapFromPanoramaFile(FDevice* pDevice, const char* Filepath);
     
     FTextureResource(FDevice* pDevice);
     ~FTextureResource();

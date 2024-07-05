@@ -13,7 +13,7 @@ struct FDescriptorPoolParams
 class FDescriptorPool : public FDeviceChild
 {
 public:
-    static FDescriptorPool* Create(FDevice* pDevice, const FDescriptorPoolParams& params);
+    static FDescriptorPool* Create(FDevice* pDevice, const FDescriptorPoolParams& Params);
 
     FDescriptorPool(FDevice* pDevice);
     ~FDescriptorPool();

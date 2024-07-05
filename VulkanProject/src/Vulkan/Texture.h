@@ -11,7 +11,7 @@ struct FTextureParams
     VkImageCreateFlags Flags         = 0;
     VkImageType        ImageType     = VK_IMAGE_TYPE_2D;
     VkImageLayout      InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    
+
     uint32_t Width          = 0;
     uint32_t Height         = 0;
     uint32_t NumArraySlices = 1;
@@ -20,8 +20,8 @@ struct FTextureParams
 class FTexture : public FDeviceChild
 {
 public:
-    static FTexture* Create(FDevice* pDevice, const FTextureParams& params);
-    static FTexture* CreateWithData(FDevice* pDevice, const FTextureParams& params, const void* pSource);
+    static FTexture* Create(FDevice* pDevice, const FTextureParams& Params);
+    static FTexture* CreateWithData(FDevice* pDevice, const FTextureParams& Params, const void* pSource);
 
     FTexture(FDevice* pDevice);
     ~FTexture();

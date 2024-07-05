@@ -7,7 +7,7 @@ class FDevice;
 class FShaderModule : public FDeviceChild
 {
 public:
-    static FShaderModule* Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint);
+    static FShaderModule* Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t ByteCodeLength, const char* pEntryPoint);
     static FShaderModule* CreateFromFile(FDevice* pDevice, const char* pEntryPoint, const char* pFilePath);
     
     FShaderModule(FDevice* pDevice);

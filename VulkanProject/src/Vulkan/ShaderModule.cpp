@@ -3,30 +3,30 @@
 #include <fstream>
 #include <iostream>
 
-FShaderModule* FShaderModule::Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t byteCodeLength, const char* pEntryPoint)
+FShaderModule* FShaderModule::Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t ByteCodeLength, const char* pEntryPoint)
 {
     FShaderModule* pShader = new FShaderModule(pDevice);
     assert(pEntryPoint != nullptr);
     assert(pByteCode != nullptr);
-    assert(byteCodeLength != 0);
+    assert(ByteCodeLength != 0);
 
-    VkShaderModuleCreateInfo createInfo;
-    ZERO_STRUCT(&createInfo);
+    VkShaderModuleCreateInfo ShaderModuleCreateInfo;
+    ZERO_STRUCT(&ShaderModuleCreateInfo);
     
-    createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = byteCodeLength;
-    createInfo.pCode    = pByteCode;
+    ShaderModuleCreateInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    ShaderModuleCreateInfo.codeSize = ByteCodeLength;
+    ShaderModuleCreateInfo.pCode    = pByteCode;
 
-    VkResult result = vkCreateShaderModule(pDevice->GetDevice(), &createInfo, nullptr, &pShader->m_Module);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkCreateShaderModule(pDevice->GetDevice(), &ShaderModuleCreateInfo, nullptr, &pShader->m_Module);
+    if (Result != VK_SUCCESS)
     {
         std::cout << "vkCreateShaderModule failed\n";
         return nullptr;
     }
     else
     {
-        const size_t len = strlen(pEntryPoint);
-        pShader->m_pEntryPoint = new char[len + 1];
+        const size_t Length = strlen(pEntryPoint);
+        pShader->m_pEntryPoint = new char[Length + 1];
         strcpy(pShader->m_pEntryPoint, pEntryPoint);
 
         std::cout << "Created ShaderModule\n";
@@ -42,29 +42,29 @@ FShaderModule* FShaderModule::CreateFromFile(FDevice* pDevice, const char* pEntr
         return nullptr;
     }
 
-    std::string filepath = std::string(pFilePath);
-    std::ifstream file(filepath, std::ios::ate | std::ios::binary);
-    if (file.is_open()) 
+    std::string Filepath = std::string(pFilePath);
+    std::ifstream FileStream(Filepath, std::ios::ate | std::ios::binary);
+    if (FileStream.is_open()) 
     {
-        size_t fileSize = (size_t)file.tellg();
+        size_t fileSize = (size_t)FileStream.tellg();
         std::vector<char> buffer(fileSize);
 
-        file.seekg(0);
-        file.read(buffer.data(), fileSize);
-        file.close();
+        FileStream.seekg(0);
+        FileStream.read(buffer.data(), fileSize);
+        FileStream.close();
                 
-        FShaderModule* newShader = FShaderModule::Create(pDevice, reinterpret_cast<const uint32_t*>(buffer.data()), buffer.size(), pEntryPoint);
-        if (!newShader)
+        FShaderModule* pShader = FShaderModule::Create(pDevice, reinterpret_cast<const uint32_t*>(buffer.data()), buffer.size(), pEntryPoint);
+        if (!pShader)
         {
             return nullptr;
         }
         
-        std::cout << "Loaded Shader '" << filepath << "'\n";
-        return newShader;
+        std::cout << "Loaded Shader '" << Filepath << "'\n";
+        return pShader;
     }
     else
     {
-        std::cout << "Failed to open file '" << filepath << "'\n";
+        std::cout << "Failed to open file '" << Filepath << "'\n";
         return nullptr;
     }
 }

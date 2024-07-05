@@ -2,34 +2,34 @@
 #include "Core.h"
 #include "Extensions.h"
 
-inline void SetDebugName(VkDevice device, const std::string& name, uint64_t vulkanHandle, VkObjectType type)
+inline void SetDebugName(VkDevice Device, const std::string& Name, uint64_t Handle, VkObjectType ObjectType)
 {
     if (FExtensions::vkSetDebugUtilsObjectNameEXT)
     {
-        VkDebugUtilsObjectNameInfoEXT info;
-        ZERO_STRUCT(&info);
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
         
-        info.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-        info.objectType   = type;
-        info.pObjectName  = name.c_str();
-        info.objectHandle = vulkanHandle;
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = ObjectType;
+        DebugNameInfo.pObjectName  = Name.c_str();
+        DebugNameInfo.objectHandle = Handle;
 
-        VkResult result = FExtensions::vkSetDebugUtilsObjectNameEXT(device, &info);
-        if (result != VK_SUCCESS)
+        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(Device, &DebugNameInfo);
+        if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << info.pObjectName << "'.Error: " << result << std::endl;
+            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
         }
     }
 }
 
-inline uint32_t FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
+inline uint32_t FindMemoryType(VkPhysicalDevice PhysicalDevice, uint32_t TypeFilter, VkMemoryPropertyFlags Properties)
 {
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+    VkPhysicalDeviceMemoryProperties MemoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &MemoryProperties);
 
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) 
+    for (uint32_t i = 0; i < MemoryProperties.memoryTypeCount; i++) 
     {
-        if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        if (TypeFilter & (1 << i) && (MemoryProperties.memoryTypes[i].propertyFlags & Properties) == Properties)
         {
             return i;
         }

@@ -16,7 +16,7 @@ struct FFramebufferParams
 class FFramebuffer : public FDeviceChild
 {
 public:
-    static FFramebuffer* Create(FDevice* pDevice, const FFramebufferParams& params);
+    static FFramebuffer* Create(FDevice* pDevice, const FFramebufferParams& Params);
     
     FFramebuffer(FDevice* pDevice);
     ~FFramebuffer();

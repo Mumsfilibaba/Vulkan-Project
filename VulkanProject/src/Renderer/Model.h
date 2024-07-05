@@ -119,10 +119,10 @@ struct FTriangle
 
 struct FMesh
 {
-    bool LoadFromFile(const std::string& filepath);
+    bool LoadFromFile(const std::string& Filepath);
     
-    std::vector<uint32_t>       m_Indicies;
-    std::vector<FVertexPosOnly> m_Positions;
+    std::vector<uint32_t>       Indicies;
+    std::vector<FVertexPosOnly> Positions;
     glm::vec3 BoundingBoxMin;
     glm::vec3 BoundingBoxMax;
 };

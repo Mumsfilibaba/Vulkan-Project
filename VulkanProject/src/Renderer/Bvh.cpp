@@ -159,17 +159,17 @@ void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
 {
     FBoundingBoxBuilder BoundingBoxBuilder(MaxDepth);
 
-    for (uint32_t i = 0; i < Mesh.m_Indicies.size(); i += 3)
+    for (uint32_t i = 0; i < Mesh.Indicies.size(); i += 3)
     {
         // Set each index for the triangle
         FTriangle Triangle;
-        Triangle.Indicies[0] = Mesh.m_Indicies[i + 0];
-        Triangle.Indicies[1] = Mesh.m_Indicies[i + 1];
-        Triangle.Indicies[2] = Mesh.m_Indicies[i + 2];
+        Triangle.Indicies[0] = Mesh.Indicies[i + 0];
+        Triangle.Indicies[1] = Mesh.Indicies[i + 1];
+        Triangle.Indicies[2] = Mesh.Indicies[i + 2];
         
-        Triangle.Positions[0] = Mesh.m_Positions[Triangle.Indicies[0]].Position;
-        Triangle.Positions[1] = Mesh.m_Positions[Triangle.Indicies[1]].Position;
-        Triangle.Positions[2] = Mesh.m_Positions[Triangle.Indicies[2]].Position;
+        Triangle.Positions[0] = Mesh.Positions[Triangle.Indicies[0]].Position;
+        Triangle.Positions[1] = Mesh.Positions[Triangle.Indicies[1]].Position;
+        Triangle.Positions[2] = Mesh.Positions[Triangle.Indicies[2]].Position;
         
         // Calculate center of the triangle
         glm::vec3 HalfPos = (Triangle.Positions[0] + Triangle.Positions[1]) / 2.0f;

@@ -12,10 +12,10 @@ public:
     FDescriptorSet(FDevice* pDevice, FDescriptorPool* pDescriptorPool);
     ~FDescriptorSet();
     
-    void BindStorageImage(VkImageView imageView, uint32_t binding);
-    void BindCombinedImageSampler(VkImageView imageView, VkSampler sampler, uint32_t binding);
-    void BindUniformBuffer(VkBuffer buffer, uint32_t binding);
-    void BindStorageBuffer(VkBuffer buffer, uint32_t binding);
+    void BindStorageImage(VkImageView ImageView, uint32_t Binding);
+    void BindCombinedImageSampler(VkImageView ImageView, VkSampler Sampler, uint32_t Binding);
+    void BindUniformBuffer(VkBuffer Buffer, uint32_t Binding);
+    void BindStorageBuffer(VkBuffer Buffer, uint32_t Binding);
     
     VkDescriptorSet GetDescriptorSet() const
     {

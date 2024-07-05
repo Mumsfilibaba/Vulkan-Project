@@ -6,26 +6,26 @@ class FDevice;
 
 struct FSamplerParams
 {
-    VkFilter             magFilter;
-    VkFilter             minFilter;
-    VkSamplerMipmapMode  mipmapMode;
-    VkSamplerAddressMode addressModeU;
-    VkSamplerAddressMode addressModeV;
-    VkSamplerAddressMode addressModeW;
-    float                mipLodBias;
-    VkBool32             anisotropyEnable;
-    float                maxAnisotropy;
-    VkBool32             compareEnable;
-    VkCompareOp          compareOp;
-    float                minLod;
-    float                maxLod;
-    VkBorderColor        borderColor;
+    VkFilter             MagFilter;
+    VkFilter             MinFilter;
+    VkSamplerMipmapMode  MipmapMode;
+    VkSamplerAddressMode AddressModeU;
+    VkSamplerAddressMode AddressModeV;
+    VkSamplerAddressMode AddressModeW;
+    float                MipLodBias;
+    VkBool32             AnisotropyEnable;
+    float                MaxAnisotropy;
+    VkBool32             CompareEnable;
+    VkCompareOp          CompareOp;
+    float                MinLod;
+    float                MaxLod;
+    VkBorderColor        BorderColor;
 };
 
 class FSampler : public FDeviceChild
 {
 public:
-    static FSampler* Create(FDevice* pDevice, const FSamplerParams& params);
+    static FSampler* Create(FDevice* pDevice, const FSamplerParams& Params);
     
     FSampler(FDevice* pDevice);
     ~FSampler();

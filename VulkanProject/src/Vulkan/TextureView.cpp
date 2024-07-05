@@ -2,23 +2,23 @@
 #include "Device.h"
 #include "Texture.h"
 
-FTextureView* FTextureView::Create(FDevice* pDevice, const FTextureViewParams& params)
+FTextureView* FTextureView::Create(FDevice* pDevice, const FTextureViewParams& Params)
 {
     FTextureView* pTextureView = new FTextureView(pDevice);
 
-    VkImageViewCreateInfo textureViewCreateInfo = {};
-    ZERO_STRUCT(&textureViewCreateInfo);
+    VkImageViewCreateInfo TextureViewCreateInfo = {};
+    ZERO_STRUCT(&TextureViewCreateInfo);
     
-    textureViewCreateInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    textureViewCreateInfo.image                           = params.pTexture->GetImage();
-    textureViewCreateInfo.viewType                        = pTextureView->m_ViewType = params.ViewType;
-    textureViewCreateInfo.format                          = params.pTexture->GetFormat();
-    textureViewCreateInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-    textureViewCreateInfo.subresourceRange.levelCount     = 1;
-    textureViewCreateInfo.subresourceRange.baseArrayLayer = params.BaseArraySlice;
-    textureViewCreateInfo.subresourceRange.layerCount     = params.NumArraySlices;
+    TextureViewCreateInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    TextureViewCreateInfo.image                           = Params.pTexture->GetImage();
+    TextureViewCreateInfo.viewType                        = pTextureView->m_ViewType = Params.ViewType;
+    TextureViewCreateInfo.format                          = Params.pTexture->GetFormat();
+    TextureViewCreateInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    TextureViewCreateInfo.subresourceRange.levelCount     = 1;
+    TextureViewCreateInfo.subresourceRange.baseArrayLayer = Params.BaseArraySlice;
+    TextureViewCreateInfo.subresourceRange.layerCount     = Params.NumArraySlices;
 
-    VkResult result = vkCreateImageView(pDevice->GetDevice(), &textureViewCreateInfo, nullptr, &pTextureView->m_ImageView);
+    VkResult result = vkCreateImageView(pDevice->GetDevice(), &TextureViewCreateInfo, nullptr, &pTextureView->m_ImageView);
     if (result != VK_SUCCESS)
     {
         std::cout << "vkCreateImageView failed\n";

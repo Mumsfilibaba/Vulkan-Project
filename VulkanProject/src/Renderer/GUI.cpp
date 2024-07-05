@@ -1156,14 +1156,14 @@ namespace GUI
             attributeDesc[2].format   = VK_FORMAT_R8G8B8A8_UNORM;
             attributeDesc[2].offset   = IM_OFFSETOF(ImDrawVert, col);
             
-            graphicsPipelineStateParams.attributeDescriptionCount = 3;
+            graphicsPipelineStateParams.AttributeDescriptionCount = 3;
             graphicsPipelineStateParams.pAttributeDescriptions    = attributeDesc;
             
-            graphicsPipelineStateParams.bindingDescriptionCount = 1;
+            graphicsPipelineStateParams.BindingDescriptionCount = 1;
             graphicsPipelineStateParams.pBindingDescriptions    = bindingDesc;
             
-            graphicsPipelineStateParams.cullMode     = VK_CULL_MODE_NONE;
-            graphicsPipelineStateParams.frontFace    = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+            graphicsPipelineStateParams.CullMode     = VK_CULL_MODE_NONE;
+            graphicsPipelineStateParams.FrontFace    = VK_FRONT_FACE_COUNTER_CLOCKWISE;
             graphicsPipelineStateParams.bBlendEnable = true;
             
             pRendererBackend->pPipeline = FGraphicsPipeline::Create(pRendererBackend->pDevice, graphicsPipelineStateParams);
@@ -1179,15 +1179,15 @@ namespace GUI
         {
             // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
             FSamplerParams samplerParams = {};
-            samplerParams.magFilter     = VK_FILTER_LINEAR;
-            samplerParams.minFilter     = VK_FILTER_LINEAR;
-            samplerParams.mipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            samplerParams.addressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.addressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.addressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.minLod        = -1000;
-            samplerParams.maxLod        = 1000;
-            samplerParams.maxAnisotropy = 1.0f;
+            samplerParams.MagFilter     = VK_FILTER_LINEAR;
+            samplerParams.MinFilter     = VK_FILTER_LINEAR;
+            samplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            samplerParams.AddressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerParams.AddressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerParams.AddressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerParams.MinLod        = -1000;
+            samplerParams.MaxLod        = 1000;
+            samplerParams.MaxAnisotropy = 1.0f;
             
             pRendererBackend->pFontSampler = FSampler::Create(pRendererBackend->pDevice, samplerParams);
             assert(pRendererBackend->pFontSampler != nullptr);
@@ -1197,15 +1197,15 @@ namespace GUI
         if (!pRendererBackend->pImageSampler)
         {
             FSamplerParams samplerParams = {};
-            samplerParams.magFilter     = VK_FILTER_NEAREST;
-            samplerParams.minFilter     = VK_FILTER_NEAREST;
-            samplerParams.mipmapMode    = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            samplerParams.addressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.addressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.addressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.minLod        = 0;
-            samplerParams.maxLod        = 1000;
-            samplerParams.maxAnisotropy = 1.0f;
+            samplerParams.MagFilter     = VK_FILTER_NEAREST;
+            samplerParams.MinFilter     = VK_FILTER_NEAREST;
+            samplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            samplerParams.AddressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerParams.AddressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerParams.AddressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerParams.MinLod        = 0;
+            samplerParams.MaxLod        = 1000;
+            samplerParams.MaxAnisotropy = 1.0f;
             
             pRendererBackend->pImageSampler = FSampler::Create(pRendererBackend->pDevice, samplerParams);
             assert(pRendererBackend->pImageSampler != nullptr);

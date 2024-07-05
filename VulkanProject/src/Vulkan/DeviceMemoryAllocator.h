@@ -31,11 +31,11 @@ struct FDeviceAllocation
 class FDeviceMemoryPage
 {
 public:
-    FDeviceMemoryPage(VkDevice device, VkPhysicalDevice physicalDevice, const uint32_t id, VkDeviceSize sizeInBytes, uint32_t memoryType, VkMemoryPropertyFlags properties);
+    FDeviceMemoryPage(VkDevice Device, VkPhysicalDevice PhysicalDevice, const uint32_t Id, VkDeviceSize SizeInBytes, uint32_t MemoryType, VkMemoryPropertyFlags Properties);
     ~FDeviceMemoryPage();
 
-    bool Allocate(FDeviceAllocation& allocation, VkDeviceSize sizeInBytes, VkDeviceSize alignment, VkDeviceSize granularity);
-    void Deallocate(FDeviceAllocation& allocation);
+    bool Allocate(FDeviceAllocation& Allocation, VkDeviceSize SizeInBytes, VkDeviceSize Slignment, VkDeviceSize Granularity);
+    void Deallocate(FDeviceAllocation& Allocation);
 
     bool IsEmpty() const
     {
@@ -53,7 +53,7 @@ public:
     }
     
 private:
-    bool IsOnSamePage(VkDeviceSize aOffset, VkDeviceSize aSize, VkDeviceSize bOffset, VkDeviceSize pageSize);
+    bool IsOnSamePage(VkDeviceSize OffsetA, VkDeviceSize SizeA, VkDeviceSize OffsetB, VkDeviceSize PageSize);
     void Init();
     void Map();
     void Unmap();
@@ -77,8 +77,8 @@ public:
     FDeviceMemoryAllocator(FDevice* pDevice);
     ~FDeviceMemoryAllocator();
 
-    bool Allocate(FDeviceAllocation& allocation, const VkMemoryRequirements& memoryRequirements, VkMemoryPropertyFlags properties);
-    void Deallocate(FDeviceAllocation& allocation);
+    bool Allocate(FDeviceAllocation& Allocation, const VkMemoryRequirements& MemoryRequirements, VkMemoryPropertyFlags Properties);
+    void Deallocate(FDeviceAllocation& Allocation);
     void EmptyGarbageMemory();
 
     uint64_t GetTotalReserved() const

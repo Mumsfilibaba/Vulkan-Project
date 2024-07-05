@@ -1,19 +1,19 @@
 #include "DescriptorSetLayout.h"
 #include "Device.h"
 
-FDescriptorSetLayout* FDescriptorSetLayout::Create(FDevice* pDevice, const FDescriptorSetLayoutParams& params)
+FDescriptorSetLayout* FDescriptorSetLayout::Create(FDevice* pDevice, const FDescriptorSetLayoutParams& Params)
 {
     FDescriptorSetLayout* pDescriptorSetLayout = new FDescriptorSetLayout(pDevice);
     
-    VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo;
-    ZERO_STRUCT(&descriptorLayoutInfo);
+    VkDescriptorSetLayoutCreateInfo DescriptorLayoutCreateInfo;
+    ZERO_STRUCT(&DescriptorLayoutCreateInfo);
     
-    descriptorLayoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptorLayoutInfo.bindingCount = params.numBindings;
-    descriptorLayoutInfo.pBindings    = params.pBindings;
+    DescriptorLayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    DescriptorLayoutCreateInfo.bindingCount = Params.NumBindings;
+    DescriptorLayoutCreateInfo.pBindings    = Params.pBindings;
 
-    VkResult result = vkCreateDescriptorSetLayout(pDevice->GetDevice(), &descriptorLayoutInfo, nullptr, &pDescriptorSetLayout->m_DescriptorSetLayout);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkCreateDescriptorSetLayout(pDevice->GetDevice(), &DescriptorLayoutCreateInfo, nullptr, &pDescriptorSetLayout->m_DescriptorSetLayout);
+    if (Result != VK_SUCCESS)
     {
         std::cout << "vkCreatePipelineLayout failed\n";
         return nullptr;

@@ -2,43 +2,43 @@
 #include "Device.h"
 #include "DescriptorSetLayout.h"
 
-FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayoutParams& params)
+FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayoutParams& Params)
 {
     FPipelineLayout* pPipelineLayout = new FPipelineLayout(pDevice);
 
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-    descriptorSetLayouts.reserve(params.numLayouts);
+    std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
+    DescriptorSetLayouts.reserve(Params.numLayouts);
 
-    for (uint32_t i = 0; i < params.numLayouts; i++)
+    for (uint32_t i = 0; i < Params.numLayouts; i++)
     {
-        descriptorSetLayouts.push_back(params.ppLayouts[i]->GetDescriptorSetLayout());
+        DescriptorSetLayouts.push_back(Params.ppLayouts[i]->GetDescriptorSetLayout());
     }
 
-    VkPushConstantRange pushConstants[1] = {};
-    pushConstants[0].stageFlags = VK_SHADER_STAGE_ALL;
-    pushConstants[0].offset     = sizeof(uint32_t) * 0;
-    pushConstants[0].size       = sizeof(uint32_t) * params.numPushConstants;
+    VkPushConstantRange PushConstantRanges[1] = {};
+    PushConstantRanges[0].stageFlags = VK_SHADER_STAGE_ALL;
+    PushConstantRanges[0].offset     = sizeof(uint32_t) * 0;
+    PushConstantRanges[0].size       = sizeof(uint32_t) * Params.numPushConstants;
     
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo;
-    ZERO_STRUCT(&pipelineLayoutInfo);
+    VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo;
+    ZERO_STRUCT(&PipelineLayoutCreateInfo);
     
-    pipelineLayoutInfo.sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
-    pipelineLayoutInfo.pSetLayouts    = descriptorSetLayouts.data();
+    PipelineLayoutCreateInfo.sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    PipelineLayoutCreateInfo.setLayoutCount = DescriptorSetLayouts.size();
+    PipelineLayoutCreateInfo.pSetLayouts    = DescriptorSetLayouts.data();
     
-    if (params.numPushConstants > 0)
+    if (Params.numPushConstants > 0)
     {
-        pipelineLayoutInfo.pushConstantRangeCount = 1;
-        pipelineLayoutInfo.pPushConstantRanges    = pushConstants;
+        PipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+        PipelineLayoutCreateInfo.pPushConstantRanges    = PushConstantRanges;
     }
     else
     {
-        pipelineLayoutInfo.pushConstantRangeCount = 0;
-        pipelineLayoutInfo.pPushConstantRanges    = nullptr;
+        PipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+        PipelineLayoutCreateInfo.pPushConstantRanges    = nullptr;
     }
 
-    VkResult result = vkCreatePipelineLayout(pDevice->GetDevice(), &pipelineLayoutInfo, nullptr, &pPipelineLayout->m_PipelineLayout);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkCreatePipelineLayout(pDevice->GetDevice(), &PipelineLayoutCreateInfo, nullptr, &pPipelineLayout->m_PipelineLayout);
+    if (Result != VK_SUCCESS)
     {
         std::cout << "vkCreatePipelineLayout failed\n";
         return nullptr;

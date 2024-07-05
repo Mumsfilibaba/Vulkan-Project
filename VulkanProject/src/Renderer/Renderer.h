@@ -10,14 +10,11 @@ public:
     ~FRenderer() = default;
     
     virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override;
-    
     virtual void Release() override;
-    
-    virtual void Tick(float deltaTime) override;
+    virtual void Tick(float DeltaTime) override;
     
     virtual void OnRenderUI() {}
-    
-    virtual void OnWindowResize(uint32_t width, uint32_t height) override;
+    virtual void OnWindowResize(uint32_t Width, uint32_t Height) override;
     
 private:
     void CreateFramebuffers();

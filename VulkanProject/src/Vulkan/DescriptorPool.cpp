@@ -1,52 +1,52 @@
 #include "DescriptorPool.h"
 #include "Device.h"
 
-FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPoolParams& params)
+FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPoolParams& Params)
 {
-    constexpr uint32_t numPoolSizes = 4;
+    constexpr uint32_t NumPoolSizes = 4;
     
     FDescriptorPool* pDescriptorPool = new FDescriptorPool(pDevice);
     
-    uint32_t numPools = 0;
-    VkDescriptorPoolSize poolSizes[numPoolSizes];
-    if (params.NumUniformBuffers > 0)
+    uint32_t NumPools = 0;
+    VkDescriptorPoolSize PoolSizes[NumPoolSizes];
+    if (Params.NumUniformBuffers > 0)
     {
-        poolSizes[numPools].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[numPools].descriptorCount = params.NumUniformBuffers;
-        numPools++;
+        PoolSizes[NumPools].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        PoolSizes[NumPools].descriptorCount = Params.NumUniformBuffers;
+        NumPools++;
     }
     
-    if (params.NumStorageImages > 0)
+    if (Params.NumStorageImages > 0)
     {
-        poolSizes[numPools].type            = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        poolSizes[numPools].descriptorCount = params.NumStorageImages;
-        numPools++;
+        PoolSizes[NumPools].type            = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        PoolSizes[NumPools].descriptorCount = Params.NumStorageImages;
+        NumPools++;
     }
     
-    if (params.NumCombinedImageSamplers > 0)
+    if (Params.NumCombinedImageSamplers > 0)
     {
-        poolSizes[numPools].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[numPools].descriptorCount = params.NumCombinedImageSamplers;
-        numPools++;
+        PoolSizes[NumPools].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        PoolSizes[NumPools].descriptorCount = Params.NumCombinedImageSamplers;
+        NumPools++;
     }
 
-    if (params.NumStorageBuffers > 0)
+    if (Params.NumStorageBuffers > 0)
     {
-        poolSizes[numPools].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        poolSizes[numPools].descriptorCount = params.NumStorageBuffers;
-        numPools++;
+        PoolSizes[NumPools].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        PoolSizes[NumPools].descriptorCount = Params.NumStorageBuffers;
+        NumPools++;
     }
     
-    VkDescriptorPoolCreateInfo poolInfo;
-    ZERO_STRUCT(&poolInfo);
+    VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo;
+    ZERO_STRUCT(&DescriptorPoolCreateInfo);
     
-    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    poolInfo.poolSizeCount = numPools;
-    poolInfo.pPoolSizes    = poolSizes;
-    poolInfo.maxSets       = params.MaxSets;
+    DescriptorPoolCreateInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    DescriptorPoolCreateInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    DescriptorPoolCreateInfo.poolSizeCount = NumPools;
+    DescriptorPoolCreateInfo.pPoolSizes    = PoolSizes;
+    DescriptorPoolCreateInfo.maxSets       = Params.MaxSets;
     
-    if (vkCreateDescriptorPool(pDevice->GetDevice(), &poolInfo, nullptr, &pDescriptorPool->m_Pool) != VK_SUCCESS)
+    if (vkCreateDescriptorPool(pDevice->GetDevice(), &DescriptorPoolCreateInfo, nullptr, &pDescriptorPool->m_Pool) != VK_SUCCESS)
     {
         std::cout << "vkCreateDescriptorPool failed\n";
         return nullptr;

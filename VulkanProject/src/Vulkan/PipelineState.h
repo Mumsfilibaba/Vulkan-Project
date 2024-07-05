@@ -9,19 +9,17 @@ class FPipelineLayout;
 struct FGraphicsPipelineStateParams
 {
     VkVertexInputAttributeDescription* pAttributeDescriptions    = nullptr;
-    uint32_t                           attributeDescriptionCount = 0;
+    uint32_t                           AttributeDescriptionCount = 0;
     VkVertexInputBindingDescription*   pBindingDescriptions      = nullptr;
-    uint32_t                           bindingDescriptionCount   = 0;
+    uint32_t                           BindingDescriptionCount   = 0;
 
-    VkCullModeFlagBits cullMode  = VK_CULL_MODE_BACK_BIT;
-    VkFrontFace        frontFace = VK_FRONT_FACE_CLOCKWISE;
-    
-    bool bBlendEnable = false;
-    
-    FRenderPass*     pRenderPass     = nullptr;
-    FPipelineLayout* pPipelineLayout = nullptr;
-    FShaderModule*   pVertexShader   = nullptr;
-    FShaderModule*   pFragmentShader = nullptr;
+    VkCullModeFlagBits CullMode        = VK_CULL_MODE_BACK_BIT;
+    VkFrontFace        FrontFace       = VK_FRONT_FACE_CLOCKWISE;
+    bool               bBlendEnable    = false;
+    FRenderPass*       pRenderPass     = nullptr;
+    FPipelineLayout*   pPipelineLayout = nullptr;
+    FShaderModule*     pVertexShader   = nullptr;
+    FShaderModule*     pFragmentShader = nullptr;
 };
 
 class FBasePipeline : public FDeviceChild
@@ -42,7 +40,7 @@ protected:
 class FGraphicsPipeline : public FBasePipeline
 {
 public:
-    static FGraphicsPipeline* Create(FDevice* pDevice, const FGraphicsPipelineStateParams& params);
+    static FGraphicsPipeline* Create(FDevice* pDevice, const FGraphicsPipelineStateParams& Params);
     
     FGraphicsPipeline(FDevice* pDevice);
     ~FGraphicsPipeline() = default;

@@ -9,9 +9,9 @@
 #include "DescriptorPool.h"
 #include "Swapchain.h"
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void*) 
+static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void*) 
 {
-    if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+    if (MessageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
         std::cout << "Validation layer: " << pCallbackData->pMessage << "\n";
     }
@@ -19,10 +19,10 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSev
     return VK_FALSE;
 }
 
-FDevice* FDevice::Create(const FDeviceParams& params)
+FDevice* FDevice::Create(const FDeviceParams& Params)
 {
     FDevice* pDevice = new FDevice();
-    return pDevice->Init(params) ? pDevice : nullptr;
+    return pDevice->Init(Params) ? pDevice : nullptr;
 }
 
 FDevice::FDevice()
@@ -80,57 +80,57 @@ uint32_t FDevice::GetQueueFamilyIndex(ECommandQueueType Type)
 
 void FDevice::ExecuteGraphics(FCommandBuffer* pCommandBuffer, FSwapchain* pSwapchain, VkPipelineStageFlags* pWaitStages)
 {
-    VkSubmitInfo submitInfo;
-    ZERO_STRUCT(&submitInfo);
+    VkSubmitInfo SubmitInfo;
+    ZERO_STRUCT(&SubmitInfo);
 
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[1]   = {};
-    VkSemaphore signalSemaphores[1] = {};
+    VkSemaphore WaitSemaphores[1]   = {};
+    VkSemaphore SignalSemaphores[1] = {};
     if (pSwapchain)
     {
         assert(pWaitStages != nullptr);
 
-        signalSemaphores[0] = pSwapchain->GetRenderSemaphore();
-        waitSemaphores[0]   = pSwapchain->GetImageSemaphore();
+        SignalSemaphores[0] = pSwapchain->GetRenderSemaphore();
+        WaitSemaphores[0]   = pSwapchain->GetImageSemaphore();
         
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores    = signalSemaphores;
-        submitInfo.waitSemaphoreCount   = 1;
-        submitInfo.pWaitSemaphores      = waitSemaphores;
-        submitInfo.pWaitDstStageMask    = pWaitStages;
+        SubmitInfo.signalSemaphoreCount = 1;
+        SubmitInfo.pSignalSemaphores    = SignalSemaphores;
+        SubmitInfo.waitSemaphoreCount   = 1;
+        SubmitInfo.pWaitSemaphores      = WaitSemaphores;
+        SubmitInfo.pWaitDstStageMask    = pWaitStages;
     }
     else
     {
-        submitInfo.waitSemaphoreCount   = 0;
-        submitInfo.pWaitSemaphores      = nullptr;
-        submitInfo.pWaitDstStageMask    = nullptr;
-        submitInfo.signalSemaphoreCount = 0;
-        submitInfo.pSignalSemaphores    = nullptr;
+        SubmitInfo.waitSemaphoreCount   = 0;
+        SubmitInfo.pWaitSemaphores      = nullptr;
+        SubmitInfo.pWaitDstStageMask    = nullptr;
+        SubmitInfo.signalSemaphoreCount = 0;
+        SubmitInfo.pSignalSemaphores    = nullptr;
     }
 
     // Calling execute with nullptr CommandBuffer results in waiting for the current semaphore
     // This seems to be the only way of handling this
-    VkFence fence = VK_NULL_HANDLE;
-    VkCommandBuffer commandBuffers[1] = {};
+    VkFence Fence = VK_NULL_HANDLE;
+    VkCommandBuffer CommandBuffers[1] = {};
     if (pCommandBuffer)
     {
-        fence = pCommandBuffer->GetFence();
+        Fence = pCommandBuffer->GetFence();
 
-        commandBuffers[0] = pCommandBuffer->GetCommandBuffer();
-        submitInfo.pCommandBuffers    = commandBuffers;
-        submitInfo.commandBufferCount = 1;
+        CommandBuffers[0] = pCommandBuffer->GetCommandBuffer();
+        SubmitInfo.pCommandBuffers    = CommandBuffers;
+        SubmitInfo.commandBufferCount = 1;
     }
     else
     {
-        submitInfo.pCommandBuffers    = nullptr;
-        submitInfo.commandBufferCount = 0;
+        SubmitInfo.pCommandBuffers    = nullptr;
+        SubmitInfo.commandBufferCount = 0;
     }
 
-    VkResult result = vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, fence);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkQueueSubmit(m_GraphicsQueue, 1, &SubmitInfo, Fence);
+    if (Result != VK_SUCCESS)
     {
-        std::cout << "vkQueueSubmit failed. Error: " << result << '\n';
+        std::cout << "vkQueueSubmit failed. Error: " << Result << '\n';
     }
 }
 
@@ -144,10 +144,10 @@ void FDevice::Destroy()
     delete this;
 }
 
-bool FDevice::Init(const FDeviceParams& params)
+bool FDevice::Init(const FDeviceParams& Params)
 {
-    m_bValidationEnabled = params.bEnableValidation;
-    if (CreateInstance(params))
+    m_bValidationEnabled = Params.bEnableValidation;
+    if (CreateInstance(Params))
     {
         std::cout << "Created Vulkan Instance\n";
     }
@@ -168,7 +168,7 @@ bool FDevice::Init(const FDeviceParams& params)
         }
     }
 
-    if (QueryPhysicalDevice(params))
+    if (QueryPhysicalDevice(Params))
     {
         std::cout << "Queried physical device: " << m_DeviceProperties.deviceName << '\n';
     }
@@ -177,7 +177,7 @@ bool FDevice::Init(const FDeviceParams& params)
         return false;
     }
 
-    if (CreateDeviceAndQueues(params))
+    if (CreateDeviceAndQueues(Params))
     {
         std::cout << "Created Vulkan Device\n";
     }
@@ -189,30 +189,30 @@ bool FDevice::Init(const FDeviceParams& params)
     return true;
 }
 
-bool FDevice::CreateInstance(const FDeviceParams& params)
+bool FDevice::CreateInstance(const FDeviceParams& Params)
 {
-    VkApplicationInfo appInfo;
-    ZERO_STRUCT(&appInfo);
+    VkApplicationInfo ApplicationInfo;
+    ZERO_STRUCT(&ApplicationInfo);
     
-    appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName   = "PathTracer";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName        = "PathTracer";
-    appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion         = VK_API_VERSION_1_2;
+    ApplicationInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    ApplicationInfo.pApplicationName   = "PathTracer";
+    ApplicationInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    ApplicationInfo.pEngineName        = "PathTracer";
+    ApplicationInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
+    ApplicationInfo.apiVersion         = VK_API_VERSION_1_2;
 
     // Enable GLFW extensions
-    std::vector<const char*> instanceExtensions;
+    std::vector<const char*> InstanceExtensions;
 
-    uint32_t requiredInstanceExtensionCount = 0;
-    const char** ppRequiredInstanceExtension = glfwGetRequiredInstanceExtensions(&requiredInstanceExtensionCount);
-    if (requiredInstanceExtensionCount > 0)
+    uint32_t RequiredInstanceExtensionCount = 0;
+    const char** ppRequiredInstanceExtension = glfwGetRequiredInstanceExtensions(&RequiredInstanceExtensionCount);
+    if (RequiredInstanceExtensionCount > 0)
     {
         std::cout << "Required instance extensions:\n";
-        for (uint32_t i = 0; i < requiredInstanceExtensionCount; i++)
+        for (uint32_t i = 0; i < RequiredInstanceExtensionCount; i++)
         {
             std::cout << "   " << ppRequiredInstanceExtension[i] << '\n';
-            instanceExtensions.push_back(ppRequiredInstanceExtension[i]);
+            InstanceExtensions.push_back(ppRequiredInstanceExtension[i]);
         }
     }
     else
@@ -221,91 +221,91 @@ bool FDevice::CreateInstance(const FDeviceParams& params)
     }
 
     //Setup instance
-    VkInstanceCreateInfo instanceCreateInfo;
-    ZERO_STRUCT(&instanceCreateInfo);
+    VkInstanceCreateInfo InstanceCreateInfo;
+    ZERO_STRUCT(&InstanceCreateInfo);
     
-    instanceCreateInfo.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instanceCreateInfo.pApplicationInfo = &appInfo;
+    InstanceCreateInfo.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    InstanceCreateInfo.pApplicationInfo = &ApplicationInfo;
 
     // This extension is needed for MoltenVK, but not supported by RenderDoc, so let's not enable it on other platforms
 #if PLATFORM_MAC
-    instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    InstanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    InstanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
 
     if (m_bValidationEnabled)
     {
-        instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        InstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
     //Validate extensions
-    uint32_t instanceExtensionCount;
-    vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr);
-    std::vector<VkExtensionProperties> instanceExtensionProperties(instanceExtensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, instanceExtensionProperties.data());
+    uint32_t InstanceExtensionCount;
+    vkEnumerateInstanceExtensionProperties(nullptr, &InstanceExtensionCount, nullptr);
+    std::vector<VkExtensionProperties> InstanceExtensionProperties(InstanceExtensionCount);
+    vkEnumerateInstanceExtensionProperties(nullptr, &InstanceExtensionCount, InstanceExtensionProperties.data());
 
-    if (params.bVerbose)
+    if (Params.bVerbose)
     {
         std::cout << "Available instance extensions:\n";
-        for (VkExtensionProperties extension : instanceExtensionProperties)
+        for (VkExtensionProperties Extension : InstanceExtensionProperties)
         {
-            std::cout << "   " << extension.extensionName << '\n';
+            std::cout << "   " << Extension.extensionName << '\n';
         }
     }
 
     std::cout << "Enabled instance extensions:\n";
-    for (const char* pEnabledExtension : instanceExtensions)
+    for (const char* pEnabledExtension : InstanceExtensions)
     {
         std::cout << "   " << pEnabledExtension << '\n';
 
-        bool extensionFound = false;
-        for (VkExtensionProperties extension : instanceExtensionProperties)
+        bool bExtensionFound = false;
+        for (VkExtensionProperties Extension : InstanceExtensionProperties)
         {
-            if (strcmp(extension.extensionName, pEnabledExtension) == 0)
+            if (strcmp(Extension.extensionName, pEnabledExtension) == 0)
             {
-                extensionFound = true;
+                bExtensionFound = true;
                 break;
             }
         }
 
-        if (!extensionFound)
+        if (!bExtensionFound)
         {
             std::cout << "Extension '" << pEnabledExtension << "' not present\n";
         }
     }
 
-    instanceCreateInfo.enabledExtensionCount   = (uint32_t)instanceExtensions.size();
-    instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.data();
+    InstanceCreateInfo.enabledExtensionCount   = (uint32_t)InstanceExtensions.size();
+    InstanceCreateInfo.ppEnabledExtensionNames = InstanceExtensions.data();
 
     //Setup validation layer
-    VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo;
-    ZERO_STRUCT(&debugMessengerCreateInfo);
+    VkDebugUtilsMessengerCreateInfoEXT DebugMessengerCreateInfo;
+    ZERO_STRUCT(&DebugMessengerCreateInfo);
     
     if (m_bValidationEnabled)
     {
-        const char* validationLayerName = "VK_LAYER_KHRONOS_validation";
-        uint32_t instanceLayerCount;
-        vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr);
-        std::vector<VkLayerProperties> instanceLayerProperties(instanceLayerCount);
-        vkEnumerateInstanceLayerProperties(&instanceLayerCount, instanceLayerProperties.data());
+        const char* ValidationLayerName = "VK_LAYER_KHRONOS_validation";
+        uint32_t InstanceLayerCount;
+        vkEnumerateInstanceLayerProperties(&InstanceLayerCount, nullptr);
+        std::vector<VkLayerProperties> InstanceLayerProperties(InstanceLayerCount);
+        vkEnumerateInstanceLayerProperties(&InstanceLayerCount, InstanceLayerProperties.data());
 
-        bool validationLayerPresent = false;
-        for (VkLayerProperties layer : instanceLayerProperties)
+        bool bValidationLayerPresent = false;
+        for (VkLayerProperties Layer : InstanceLayerProperties)
         {
-            if (strcmp(layer.layerName, validationLayerName) == 0)
+            if (strcmp(Layer.layerName, ValidationLayerName) == 0)
             {
-                validationLayerPresent = true;
+                bValidationLayerPresent = true;
                 break;
             }
         }
 
-        if (validationLayerPresent)
+        if (bValidationLayerPresent)
         {
-            PopulateDebugMessengerCreateInfo(debugMessengerCreateInfo);
-            instanceCreateInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugMessengerCreateInfo;
+            PopulateDebugMessengerCreateInfo(DebugMessengerCreateInfo);
+            InstanceCreateInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&DebugMessengerCreateInfo;
 
-            instanceCreateInfo.ppEnabledLayerNames = &validationLayerName;
-            instanceCreateInfo.enabledLayerCount = 1;
+            InstanceCreateInfo.ppEnabledLayerNames = &ValidationLayerName;
+            InstanceCreateInfo.enabledLayerCount = 1;
         }
         else
         {
@@ -313,8 +313,8 @@ bool FDevice::CreateInstance(const FDeviceParams& params)
         }
     }
 
-    VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_Instance);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkCreateInstance(&InstanceCreateInfo, nullptr, &m_Instance);
+    if (Result != VK_SUCCESS)
     {
         std::cout << "vkCreateInstance failed\n";
         return false;
@@ -345,13 +345,13 @@ bool FDevice::CreateDebugMessenger()
 {
     if (FExtensions::vkCreateDebugUtilsMessengerEXT)
     {
-        VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
-        PopulateDebugMessengerCreateInfo(createInfo);
+        VkDebugUtilsMessengerCreateInfoEXT CreateInfo = {};
+        PopulateDebugMessengerCreateInfo(CreateInfo);
 
-        VkResult result = FExtensions::vkCreateDebugUtilsMessengerEXT(m_Instance, &createInfo, nullptr, &m_DebugMessenger);
-        if (result != VK_SUCCESS)
+        VkResult Result = FExtensions::vkCreateDebugUtilsMessengerEXT(m_Instance, &CreateInfo, nullptr, &m_DebugMessenger);
+        if (Result != VK_SUCCESS)
         {
-            std::cout << "vkCreateDebugUtilsMessengerEXT failed. Error: " << result << '\n';
+            std::cout << "vkCreateDebugUtilsMessengerEXT failed. Error: " << Result << '\n';
         }
         else
         {
@@ -362,7 +362,7 @@ bool FDevice::CreateDebugMessenger()
     return false;
 }
 
-bool FDevice::CreateDeviceAndQueues(const FDeviceParams& params)
+bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
 {
     m_QueueFamilyIndices = GetQueueFamilyIndices(m_PhysicalDevice);
 
@@ -381,10 +381,10 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& params)
         std::cout << "    Timestamps NOT Supported\n";
     }
 
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    const float defaultQueuePriority = 0.0f;
+    std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
+    const float DefaultQueuePriority = 0.0f;
 
-    std::set<uint32_t> uniqueQueueFamilies =
+    std::set<uint32_t> UniqueQueueFamilies =
     {
         m_QueueFamilyIndices.Graphics,
         m_QueueFamilyIndices.Compute,
@@ -392,55 +392,55 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& params)
         m_QueueFamilyIndices.Transfer
     };
 
-    for (int32_t queueFamiliy : uniqueQueueFamilies)
+    for (int32_t QueueFamiliy : UniqueQueueFamilies)
     {
-        VkDeviceQueueCreateInfo queueInfo = {};
-        queueInfo.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueInfo.pNext            = nullptr;
-        queueInfo.flags            = 0;
-        queueInfo.pQueuePriorities = &defaultQueuePriority;
-        queueInfo.queueFamilyIndex = queueFamiliy;
-        queueInfo.queueCount       = 1;
+        VkDeviceQueueCreateInfo QueueInfo = {};
+        QueueInfo.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        QueueInfo.pNext            = nullptr;
+        QueueInfo.flags            = 0;
+        QueueInfo.pQueuePriorities = &DefaultQueuePriority;
+        QueueInfo.queueFamilyIndex = QueueFamiliy;
+        QueueInfo.queueCount       = 1;
 
-        queueCreateInfos.push_back(queueInfo);
+        QueueCreateInfos.push_back(QueueInfo);
     }
 
     // Get device extensions
-    uint32_t deviceExtensionCount;
-    vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &deviceExtensionCount, nullptr);
-    std::vector<VkExtensionProperties> availableDeviceExtension(deviceExtensionCount);
-    vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &deviceExtensionCount, availableDeviceExtension.data());
+    uint32_t DeviceExtensionCount;
+    vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &DeviceExtensionCount, nullptr);
+    std::vector<VkExtensionProperties> AvailableDeviceExtension(DeviceExtensionCount);
+    vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &DeviceExtensionCount, AvailableDeviceExtension.data());
 
     bool bEnableDeviceSubset = false;
-    for (VkExtensionProperties extension : availableDeviceExtension)
+    for (VkExtensionProperties Extension : AvailableDeviceExtension)
     {
-        if (strcmp(extension.extensionName, "VK_KHR_portability_subset") == 0)
+        if (strcmp(Extension.extensionName, "VK_KHR_portability_subset") == 0)
         {
             bEnableDeviceSubset = true;
         }
     }
     
-    if (params.bVerbose)
+    if (Params.bVerbose)
     {
         std::cout << "Available device extensions:\n";
-        for (VkExtensionProperties extension : availableDeviceExtension)
+        for (VkExtensionProperties Extension : AvailableDeviceExtension)
         {
-            std::cout << "   " << extension.extensionName << '\n';
+            std::cout << "   " << Extension.extensionName << '\n';
         }
     }
 
     
     // Enable device extensions
-    std::vector<const char*> deviceExtensions = GetRequiredDeviceExtensions();
+    std::vector<const char*> DeviceExtensions = GetRequiredDeviceExtensions();
     if (bEnableDeviceSubset)
     {
-        deviceExtensions.push_back("VK_KHR_portability_subset");
+        DeviceExtensions.push_back("VK_KHR_portability_subset");
     }
     
-    if (params.bEnableRayTracing)
+    if (Params.bEnableRayTracing)
     {
-        deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
-        deviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
+        DeviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+        DeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
         m_bRayTracingEnabled = true;
     }
 
@@ -450,35 +450,35 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& params)
     m_EnabledDeviceFeatures.pNext = &m_HostQueryFeatures;
 
     // Create the logical device
-    VkDeviceCreateInfo deviceCreateInfo;
-    ZERO_STRUCT(&deviceCreateInfo);
+    VkDeviceCreateInfo DeviceCreateInfo;
+    ZERO_STRUCT(&DeviceCreateInfo);
     
-    deviceCreateInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.pNext                = &m_EnabledDeviceFeatures;
-    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceCreateInfo.pQueueCreateInfos    = queueCreateInfos.data();
+    DeviceCreateInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    DeviceCreateInfo.pNext                = &m_EnabledDeviceFeatures;
+    DeviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(QueueCreateInfos.size());
+    DeviceCreateInfo.pQueueCreateInfos    = QueueCreateInfos.data();
 
     // Verify extensions
-    if (deviceExtensions.size() > 0)
+    if (DeviceExtensions.size() > 0)
     {
         std::cout << "Enabled device extensions:\n";
-        for (auto it = deviceExtensions.begin(); it != deviceExtensions.end();)
+        for (auto it = DeviceExtensions.begin(); it != DeviceExtensions.end();)
         {
-            bool extensionFound = false;
-            for (VkExtensionProperties extension : availableDeviceExtension)
+            bool bExtensionFound = false;
+            for (VkExtensionProperties extension : AvailableDeviceExtension)
             {
                 if (strcmp(extension.extensionName, (*it)) == 0)
                 {
-                    extensionFound = true;
+                    bExtensionFound = true;
                     break;
                 }
             }
 
             // Warning that extension is not present, and do not try and activate it
-            if (!extensionFound)
+            if (!bExtensionFound)
             {
                 std::cout << "WARNING: Extension '" << (*it) << "' not present\n";
-                it = deviceExtensions.erase(it);
+                it = DeviceExtensions.erase(it);
             }
             else
             {
@@ -487,12 +487,12 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& params)
             }
         }
 
-        deviceCreateInfo.enabledExtensionCount   = (uint32_t)deviceExtensions.size();
-        deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
+        DeviceCreateInfo.enabledExtensionCount   = (uint32_t)DeviceExtensions.size();
+        DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.data();
     }
 
-    VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceCreateInfo, nullptr, &m_Device);
-    if (result == VK_SUCCESS)
+    VkResult Result = vkCreateDevice(m_PhysicalDevice, &DeviceCreateInfo, nullptr, &m_Device);
+    if (Result == VK_SUCCESS)
     {
         vkGetDeviceQueue(m_Device, m_QueueFamilyIndices.Graphics, 0, &m_GraphicsQueue);
         vkGetDeviceQueue(m_Device, m_QueueFamilyIndices.Presentation, 0, &m_PresentationQueue);
@@ -506,105 +506,105 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& params)
     }
 }
 
-void FDevice::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
+void FDevice::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& CreateInfo)
 {
-    ZERO_STRUCT(&createInfo);
+    ZERO_STRUCT(&CreateInfo);
     
-    createInfo.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    createInfo.pfnUserCallback = VulkanDebugCallback;
+    CreateInfo.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    CreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    CreateInfo.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    CreateInfo.pfnUserCallback = VulkanDebugCallback;
 }
 
-bool FDevice::QueryPhysicalDevice(const FDeviceParams& params)
+bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
 {
     // Enumerate devices
-    uint32_t gpuCount = 0;
-    VkResult result = vkEnumeratePhysicalDevices(m_Instance, &gpuCount, nullptr);
+    uint32_t GpuCount = 0;
+    VkResult Result = vkEnumeratePhysicalDevices(m_Instance, &GpuCount, nullptr);
 
-    std::vector<VkPhysicalDevice> physicalDevices(gpuCount);
-    result = vkEnumeratePhysicalDevices(m_Instance, &gpuCount, physicalDevices.data());
-    if (result != VK_SUCCESS || gpuCount < 1) 
+    std::vector<VkPhysicalDevice> PhysicalDevices(GpuCount);
+    Result = vkEnumeratePhysicalDevices(m_Instance, &GpuCount, PhysicalDevices.data());
+    if (Result != VK_SUCCESS || GpuCount < 1) 
     {
-        std::cerr << "vkEnumeratePhysicalDevices failed. Error: " << result << '\n';
+        std::cerr << "vkEnumeratePhysicalDevices failed. Error: " << Result << '\n';
         return false;
     }
 
     // Start with the first one in case we do not find any suitable
-    m_PhysicalDevice = physicalDevices[0];
+    m_PhysicalDevice = PhysicalDevices[0];
 
     // GPU selection
     std::cout << "Available GPUs\n";
-    for (VkPhysicalDevice physicalDevice : physicalDevices)
+    for (VkPhysicalDevice PhysicalDevice : PhysicalDevices)
     {
-        VkPhysicalDeviceProperties physicalDeviceProperties;
-        vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+        VkPhysicalDeviceProperties PhysicalDeviceProperties;
+        vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
         
-        std::cout << "   " << physicalDeviceProperties.deviceName << '\n';
+        std::cout << "   " << PhysicalDeviceProperties.deviceName << '\n';
 
-        VkPhysicalDeviceFeatures physicalDeviceFeatures;
-        vkGetPhysicalDeviceFeatures(physicalDevice, &physicalDeviceFeatures);
+        VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
+        vkGetPhysicalDeviceFeatures(PhysicalDevice, &PhysicalDeviceFeatures);
 
         // Check for adapter features
-        if (!physicalDeviceFeatures.samplerAnisotropy)
+        if (!PhysicalDeviceFeatures.samplerAnisotropy)
         {
             std::cout << "Anisotropic filtering is not supported by adapter\n";
             continue;
         }
 
         // Find indices for queue-families
-        FQueueFamilyIndices indices = GetQueueFamilyIndices(physicalDevice);
-        if (!indices.IsValid())
+        FQueueFamilyIndices Indices = GetQueueFamilyIndices(PhysicalDevice);
+        if (!Indices.IsValid())
         {
             std::cout << "Failed to find a suitable queue-families\n";
             return false;
         }
 
         // Check if required extension for device is supported
-        std::vector<const char*> deviceExtensions = GetRequiredDeviceExtensions();
+        std::vector<const char*> DeviceExtensions = GetRequiredDeviceExtensions();
 
-        uint32_t deviceExtensionCount;
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &deviceExtensionCount, nullptr);
-        std::vector<VkExtensionProperties> availableDeviceExtension(deviceExtensionCount);
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &deviceExtensionCount, availableDeviceExtension.data());
+        uint32_t DeviceExtensionCount;
+        vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionCount, nullptr);
+        std::vector<VkExtensionProperties> AvailableDeviceExtension(DeviceExtensionCount);
+        vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionCount, AvailableDeviceExtension.data());
         
-        if (params.bVerbose)
+        if (Params.bVerbose)
         {
             std::cout << "      Available extensions:\n";
-            for (const auto& extension : availableDeviceExtension)
+            for (const auto& Extension : AvailableDeviceExtension)
             {
-                std::cout << "         " << extension.extensionName << '\n';
+                std::cout << "         " << Extension.extensionName << '\n';
             }
         }
         
-        bool extensionsFound = false;
-        for (const auto& extensionName : deviceExtensions)
+        bool bExtensionsFound = false;
+        for (const auto& ExtensionName : DeviceExtensions)
         {
-            extensionsFound = false;
-            for (const auto& extension : availableDeviceExtension)
+            bExtensionsFound = false;
+            for (const auto& Extension : AvailableDeviceExtension)
             {
-                if (strcmp(extension.extensionName, extensionName) == 0)
+                if (strcmp(Extension.extensionName, ExtensionName) == 0)
                 {
-                    extensionsFound = true;
+                    bExtensionsFound = true;
                     break;
                 }
             }
             
-            if (!extensionsFound)
+            if (!bExtensionsFound)
             {
-                std::cout << extensionName << " is not supported\n";
+                std::cout << ExtensionName << " is not supported\n";
             }
         }
 
-        if (extensionsFound)
+        if (bExtensionsFound)
         {
             // If we came this far we have found a suitable adapter
-            m_PhysicalDevice = physicalDevice;
+            m_PhysicalDevice = PhysicalDevice;
             break;
         }
         else
         {
-            std::cout << "Some extensions were not supported on '" << physicalDeviceProperties.deviceName << "'\n";
+            std::cout << "Some extensions were not supported on '" << PhysicalDeviceProperties.deviceName << "'\n";
         }
     }
     
@@ -623,33 +623,33 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& params)
 }
 
 // Helper function
-static uint32_t GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const std::vector<VkQueueFamilyProperties>& queueFamilies)
+static uint32_t GetQueueFamilyIndex(VkQueueFlagBits QueueFlags, const std::vector<VkQueueFamilyProperties>& QueueFamilies)
 {
-    if (queueFlags & VK_QUEUE_COMPUTE_BIT)
+    if (QueueFlags & VK_QUEUE_COMPUTE_BIT)
     {
-        for (uint32_t i = 0; i < uint32_t(queueFamilies.size()); i++)
+        for (uint32_t i = 0; i < uint32_t(QueueFamilies.size()); i++)
         {
-            if ((queueFamilies[i].queueFlags & queueFlags) && ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
+            if ((QueueFamilies[i].queueFlags & QueueFlags) && ((QueueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
             {
                 return i;
             }
         }
     }
 
-    if (queueFlags & VK_QUEUE_TRANSFER_BIT)
+    if (QueueFlags & VK_QUEUE_TRANSFER_BIT)
     {
-        for (uint32_t i = 0; i < uint32_t(queueFamilies.size()); i++)
+        for (uint32_t i = 0; i < uint32_t(QueueFamilies.size()); i++)
         {
-            if ((queueFamilies[i].queueFlags & queueFlags) && ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) && ((queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
+            if ((QueueFamilies[i].queueFlags & QueueFlags) && ((QueueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) && ((QueueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
             {
                 return i;
             }
         }
     }
 
-    for (uint32_t i = 0; i < uint32_t(queueFamilies.size()); i++)
+    for (uint32_t i = 0; i < uint32_t(QueueFamilies.size()); i++)
     {
-        if (queueFamilies[i].queueFlags & queueFlags)
+        if (QueueFamilies[i].queueFlags & QueueFlags)
         {
             return i;
         }
@@ -658,27 +658,27 @@ static uint32_t GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const std::vecto
     return UINT32_MAX;
 }
 
-FQueueFamilyIndices FDevice::GetQueueFamilyIndices(VkPhysicalDevice physicalDevice)
+FQueueFamilyIndices FDevice::GetQueueFamilyIndices(VkPhysicalDevice PhysicalDevice)
 {
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+    uint32_t QueueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, nullptr);
 
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+    std::vector<VkQueueFamilyProperties> QueueFamilies(QueueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, QueueFamilies.data());
 
-    FQueueFamilyIndices indices = {};
-    indices.Compute  = ::GetQueueFamilyIndex(VK_QUEUE_COMPUTE_BIT, queueFamilies);
-    indices.Transfer = ::GetQueueFamilyIndex(VK_QUEUE_TRANSFER_BIT, queueFamilies);
-    indices.Graphics = ::GetQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, queueFamilies);
+    FQueueFamilyIndices Indices = {};
+    Indices.Compute  = ::GetQueueFamilyIndex(VK_QUEUE_COMPUTE_BIT, QueueFamilies);
+    Indices.Transfer = ::GetQueueFamilyIndex(VK_QUEUE_TRANSFER_BIT, QueueFamilies);
+    Indices.Graphics = ::GetQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, QueueFamilies);
     
     // TODO: Do not just assume that graphics support presentation, check this
-    indices.Presentation = indices.Graphics;
-    return indices;
+    Indices.Presentation = Indices.Graphics;
+    return Indices;
 }
 
 std::vector<const char*> FDevice::GetRequiredDeviceExtensions()
 {
-    std::vector<const char*> deviceExtensions;
-    deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    return deviceExtensions;
+    std::vector<const char*> DeviceExtensions;
+    DeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    return DeviceExtensions;
 }

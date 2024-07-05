@@ -1,21 +1,21 @@
 #include "Query.h"
 #include "Device.h"
 
-FQuery* FQuery::Create(class FDevice* pDevice, const FQueryParams& params)
+FQuery* FQuery::Create(class FDevice* pDevice, const FQueryParams& Params)
 {
     FQuery* pQuery = new FQuery(pDevice);
     
-    VkQueryPoolCreateInfo createInfo;
-    ZERO_STRUCT(&createInfo);
+    VkQueryPoolCreateInfo QueryCreateInfo;
+    ZERO_STRUCT(&QueryCreateInfo);
     
-    createInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-    createInfo.queryType  = pQuery->m_QueryType  = params.queryType;
-    createInfo.queryCount = pQuery->m_NumQueries = params.queryCount;
+    QueryCreateInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    QueryCreateInfo.queryType  = pQuery->m_QueryType  = Params.QueryType;
+    QueryCreateInfo.queryCount = pQuery->m_NumQueries = Params.QueryCount;
     
-    VkResult result = vkCreateQueryPool(pDevice->GetDevice(), &createInfo, nullptr, &pQuery->m_QueryPool);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkCreateQueryPool(pDevice->GetDevice(), &QueryCreateInfo, nullptr, &pQuery->m_QueryPool);
+    if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateQueryPool failed. Error: " << result << '\n';
+        std::cout << "vkCreateQueryPool failed. Error: " << Result << '\n';
         return nullptr;
     }
     else
@@ -41,20 +41,20 @@ FQuery::~FQuery()
     }
 }
 
-void FQuery::Reset(uint32_t firstQuery, uint32_t queryCount)
+void FQuery::Reset(uint32_t FirstQuery, uint32_t QueryCount)
 {
-    if (!queryCount)
+    if (!QueryCount)
     {
-        queryCount = m_NumQueries;
+        QueryCount = m_NumQueries;
     }
     
-    vkResetQueryPool(GetDevice()->GetDevice(), m_QueryPool, firstQuery, queryCount);
+    vkResetQueryPool(GetDevice()->GetDevice(), m_QueryPool, FirstQuery, QueryCount);
 }
 
-bool FQuery::GetData(uint32_t firstQuery, uint32_t queryCount, uint64_t dataSize, void* pData, VkDeviceSize stride, VkQueryResultFlags flags)
+bool FQuery::GetData(uint32_t FirstQuery, uint32_t QueryCount, uint64_t DataSize, void* pData, VkDeviceSize Stride, VkQueryResultFlags Flags)
 {
-    VkResult result = vkGetQueryPoolResults(GetDevice()->GetDevice(), m_QueryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkGetQueryPoolResults(GetDevice()->GetDevice(), m_QueryPool, FirstQuery, QueryCount, DataSize, pData, Stride, Flags);
+    if (Result != VK_SUCCESS)
     {
         return false;
     }

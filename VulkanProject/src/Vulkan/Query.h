@@ -4,21 +4,20 @@
 
 struct FQueryParams
 {
-    VkQueryType queryType;
-    uint32_t    queryCount;
+    VkQueryType QueryType;
+    uint32_t    QueryCount;
 };
 
 class FQuery : public FDeviceChild
 {
 public:
-    static FQuery* Create(FDevice* pDevice, const FQueryParams& params);
+    static FQuery* Create(FDevice* pDevice, const FQueryParams& Params);
     
     FQuery(FDevice* pDevice);
     ~FQuery();
 
-    void Reset(uint32_t firstQuery = 0, uint32_t queryCount = 0);
-    
-    bool GetData(uint32_t firstQuery, uint32_t queryCount, uint64_t dataSize, void* pData, VkDeviceSize stride, VkQueryResultFlags flags);
+    void Reset(uint32_t FirstQuery = 0, uint32_t QueryCount = 0);
+    bool GetData(uint32_t FirstQuery, uint32_t QueryCount, uint64_t DataSize, void* pData, VkDeviceSize Stride, VkQueryResultFlags Flags);
     
     VkQueryPool GetQueryPool() const
     {

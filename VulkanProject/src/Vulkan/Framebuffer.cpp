@@ -2,25 +2,25 @@
 #include "RenderPass.h"
 #include "Device.h"
 
-FFramebuffer* FFramebuffer::Create(FDevice* pDevice, const FFramebufferParams& params)
+FFramebuffer* FFramebuffer::Create(FDevice* pDevice, const FFramebufferParams& Params)
 {
     FFramebuffer* pFramebuffer = new FFramebuffer(pDevice);
     
-    assert(params.pRenderPass != nullptr);
+    assert(Params.pRenderPass != nullptr);
 
-    VkFramebufferCreateInfo framebufferInfo;
-    ZERO_STRUCT(&framebufferInfo);
+    VkFramebufferCreateInfo FramebufferCreateInfo;
+    ZERO_STRUCT(&FramebufferCreateInfo);
     
-    framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass      = params.pRenderPass->GetRenderPass();
-    framebufferInfo.attachmentCount = params.AttachMentCount;
-    framebufferInfo.pAttachments    = params.pAttachMents;
-    framebufferInfo.width           = params.Width;
-    framebufferInfo.height          = params.Height;
-    framebufferInfo.layers          = 1;
+    FramebufferCreateInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    FramebufferCreateInfo.renderPass      = Params.pRenderPass->GetRenderPass();
+    FramebufferCreateInfo.attachmentCount = Params.AttachMentCount;
+    FramebufferCreateInfo.pAttachments    = Params.pAttachMents;
+    FramebufferCreateInfo.width           = Params.Width;
+    FramebufferCreateInfo.height          = Params.Height;
+    FramebufferCreateInfo.layers          = 1;
 
-    VkResult result = vkCreateFramebuffer(pDevice->GetDevice(), &framebufferInfo, nullptr, &pFramebuffer->m_Framebuffer);
-    if (result != VK_SUCCESS)
+    VkResult Result = vkCreateFramebuffer(pDevice->GetDevice(), &FramebufferCreateInfo, nullptr, &pFramebuffer->m_Framebuffer);
+    if (Result != VK_SUCCESS)
     {
         std::cout << "vkCreateFramebuffer failed\n";
         return nullptr;
@@ -29,8 +29,8 @@ FFramebuffer* FFramebuffer::Create(FDevice* pDevice, const FFramebufferParams& p
     {
         std::cout << "Created Framebuffer\n";
 
-        pFramebuffer->m_Width  = params.Width;
-        pFramebuffer->m_Height = params.Height;
+        pFramebuffer->m_Width  = Params.Width;
+        pFramebuffer->m_Height = Params.Height;
     }
     
     return pFramebuffer;

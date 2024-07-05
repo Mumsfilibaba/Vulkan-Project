@@ -21,8 +21,7 @@ public:
     FSwapchain(FDevice* pDevice, GLFWwindow* pWindow);
     ~FSwapchain();
 
-    void Resize(uint32_t width, uint32_t height);
-
+    void Resize(uint32_t Width, uint32_t Height);
     VkResult Present();
 
     VkSemaphore GetImageSemaphore() const
@@ -72,7 +71,7 @@ private:
     void ReleaseSwapchainResources();
     void RecreateSwapchain();
     VkResult AquireNextImage();
-    void     WaitForImage();
+    void WaitForImage();
 
     GLFWwindow*             m_pWindow;
     VkSurfaceKHR            m_Surface;

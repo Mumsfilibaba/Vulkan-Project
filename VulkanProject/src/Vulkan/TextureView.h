@@ -16,7 +16,7 @@ struct FTextureViewParams
 class FTextureView : public FDeviceChild
 {
 public:
-    static FTextureView* Create(FDevice* pDevice, const FTextureViewParams& params);
+    static FTextureView* Create(FDevice* pDevice, const FTextureViewParams& Params);
 
     FTextureView(FDevice* pDevice);
     ~FTextureView();

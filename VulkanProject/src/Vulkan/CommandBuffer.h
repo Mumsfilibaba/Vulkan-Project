@@ -38,43 +38,43 @@ public:
         }
     }
 
-    void BeginRenderPass(FRenderPass* pRenderPass, FFramebuffer* pFramebuffer, const VkClearValue* pClearValues, uint32_t clearValuesCount)
+    void BeginRenderPass(FRenderPass* pRenderPass, FFramebuffer* pFramebuffer, const VkClearValue* pClearValues, uint32_t ClearValuesCount)
     {
         assert(pRenderPass != nullptr);
         assert(pFramebuffer != nullptr);
         
-        VkRenderPassBeginInfo renderPassInfo = {};
-        renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.pNext             = nullptr;
-        renderPassInfo.renderPass        = pRenderPass->GetRenderPass();
-        renderPassInfo.framebuffer       = pFramebuffer->GetFramebuffer();
-        renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = pFramebuffer->GetExtent();
-        renderPassInfo.pClearValues      = pClearValues;
-        renderPassInfo.clearValueCount   = clearValuesCount;
+        VkRenderPassBeginInfo RenderPassInfo = {};
+        RenderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        RenderPassInfo.pNext             = nullptr;
+        RenderPassInfo.renderPass        = pRenderPass->GetRenderPass();
+        RenderPassInfo.framebuffer       = pFramebuffer->GetFramebuffer();
+        RenderPassInfo.renderArea.offset = { 0, 0 };
+        RenderPassInfo.renderArea.extent = pFramebuffer->GetExtent();
+        RenderPassInfo.pClearValues      = pClearValues;
+        RenderPassInfo.clearValueCount   = ClearValuesCount;
         
-        vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(m_CommandBuffer, &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
-    void ClearColorImage(VkImage image, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
+    void ClearColorImage(VkImage Image, VkImageLayout ImageLayout, const VkClearColorValue* pColor, uint32_t RangeCount, const VkImageSubresourceRange* pRanges)
     {
-        vkCmdClearColorImage(m_CommandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+        vkCmdClearColorImage(m_CommandBuffer, Image, ImageLayout, pColor, RangeCount, pRanges);
     }
 
-    void SetViewport(const VkViewport& viewport)
+    void SetViewport(const VkViewport& Viewport)
     {
-        vkCmdSetViewport(m_CommandBuffer, 0, 1, &viewport);
+        vkCmdSetViewport(m_CommandBuffer, 0, 1, &Viewport);
     }
 
-    void SetScissorRect(const VkRect2D& scissor)
+    void SetScissorRect(const VkRect2D& Scissor)
     {
-        vkCmdSetScissor(m_CommandBuffer, 0, 1, &scissor);
+        vkCmdSetScissor(m_CommandBuffer, 0, 1, &Scissor);
     }
     
-    void WriteTimestamp(FQuery* pQuery, VkPipelineStageFlagBits pipelineStage, uint32_t queryIndex)
+    void WriteTimestamp(FQuery* pQuery, VkPipelineStageFlagBits PipelineStage, uint32_t QueryIndex)
     {
         assert(pQuery != nullptr);
-        vkCmdWriteTimestamp(m_CommandBuffer, pipelineStage, pQuery->GetQueryPool(), queryIndex);
+        vkCmdWriteTimestamp(m_CommandBuffer, PipelineStage, pQuery->GetQueryPool(), QueryIndex);
     }
 
     void BindGraphicsPipelineState(FGraphicsPipeline* pPipelineState)
@@ -93,71 +93,71 @@ public:
     {        
         assert(pDescriptorSet != nullptr);
         assert(pPipelineLayout != nullptr);
-        VkDescriptorSet descriptorSet = pDescriptorSet->GetDescriptorSet();
-        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineLayout->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+        VkDescriptorSet DescriptorSet = pDescriptorSet->GetDescriptorSet();
+        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineLayout->GetPipelineLayout(), 0, 1, &DescriptorSet, 0, nullptr);
     }
     
     void BindComputeDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet)
     {
         assert(pDescriptorSet != nullptr);
         assert(pPipelineLayout != nullptr);
-        VkDescriptorSet descriptorSet = pDescriptorSet->GetDescriptorSet();
-        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineLayout->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+        VkDescriptorSet DescriptorSet = pDescriptorSet->GetDescriptorSet();
+        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineLayout->GetPipelineLayout(), 0, 1, &DescriptorSet, 0, nullptr);
     }
 
-    void BindVertexBuffer(FBuffer* pBuffer, VkDeviceSize offset, uint32_t slot)
+    void BindVertexBuffer(FBuffer* pBuffer, VkDeviceSize Offset, uint32_t Slot)
     {
         assert(pBuffer != nullptr);
 
-        VkBuffer buffer[] = { pBuffer->GetBuffer() };
-        VkDeviceSize offsets[] = { offset };
-        vkCmdBindVertexBuffers(m_CommandBuffer, slot, 1, buffer, offsets);
+        VkBuffer Buffer[] = { pBuffer->GetBuffer() };
+        VkDeviceSize Offsets[] = { Offset };
+        vkCmdBindVertexBuffers(m_CommandBuffer, Slot, 1, Buffer, Offsets);
     }
 
-    void BindIndexBuffer(FBuffer* pBuffer, VkDeviceSize offset, VkIndexType indexType)
+    void BindIndexBuffer(FBuffer* pBuffer, VkDeviceSize Offset, VkIndexType IndexType)
     {
         assert(pBuffer != nullptr);
-        vkCmdBindIndexBuffer(m_CommandBuffer, pBuffer->GetBuffer(), offset, indexType);
+        vkCmdBindIndexBuffer(m_CommandBuffer, pBuffer->GetBuffer(), Offset, IndexType);
     }
     
-    void PushConstants(FPipelineLayout* pPipelineLayout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pData)
+    void PushConstants(FPipelineLayout* pPipelineLayout, VkShaderStageFlags StageFlags, uint32_t Offset, uint32_t Size, const void* pData)
     {
         assert(pPipelineLayout != nullptr);
-        vkCmdPushConstants(m_CommandBuffer, pPipelineLayout->GetPipelineLayout(), stageFlags, offset, size, pData);
+        vkCmdPushConstants(m_CommandBuffer, pPipelineLayout->GetPipelineLayout(), StageFlags, Offset, Size, pData);
     }
     
     void TransitionImage(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
     
-    void UpdateBuffer(FBuffer* pBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const void* pData)
+    void UpdateBuffer(FBuffer* pBuffer, VkDeviceSize DstOffset, VkDeviceSize DataSize, const void* pData)
     {
         assert(pBuffer != nullptr);
-        assert(dataSize < 65536); // Ensure that we are within the allowed size
-        vkCmdUpdateBuffer(m_CommandBuffer, pBuffer->GetBuffer(), dstOffset, dataSize, pData);
+        assert(DataSize < 65536); // Ensure that we are within the allowed Size
+        vkCmdUpdateBuffer(m_CommandBuffer, pBuffer->GetBuffer(), DstOffset, DataSize, pData);
     }
     
-    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
+    void CopyBuffer(VkBuffer SrcBuffer, VkBuffer DstBuffer, uint32_t RegionCount, const VkBufferCopy* pRegions)
     {
-        vkCmdCopyBuffer(m_CommandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
+        vkCmdCopyBuffer(m_CommandBuffer, SrcBuffer, DstBuffer, RegionCount, pRegions);
     }
 
-    void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions)
+    void CopyBufferToImage(VkBuffer SrcBuffer, VkImage DstImage, VkImageLayout DstImageLayout, uint32_t RegionCount, const VkBufferImageCopy* pRegions)
     {
-        vkCmdCopyBufferToImage(m_CommandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
+        vkCmdCopyBufferToImage(m_CommandBuffer, SrcBuffer, DstImage, DstImageLayout, RegionCount, pRegions);
     }
 
-    void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+    void DrawInstanced(uint32_t VertexCount, uint32_t InstanceCount, uint32_t FirstVertex, uint32_t FirstInstance)
     {
-        vkCmdDraw(m_CommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+        vkCmdDraw(m_CommandBuffer, VertexCount, InstanceCount, FirstVertex, FirstInstance);
     }
 
-    void DrawIndexInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
+    void DrawIndexInstanced(uint32_t IndexCount, uint32_t InstanceCount, uint32_t FirstIndex, uint32_t VertexOffset, uint32_t FirstInstance)
     {
-        vkCmdDrawIndexed(m_CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+        vkCmdDrawIndexed(m_CommandBuffer, IndexCount, InstanceCount, FirstIndex, VertexOffset, FirstInstance);
     }
     
-    void Dispatch(uint32_t threadGroupsX, uint32_t threadGroupsY, uint32_t threadGroupsZ)
+    void Dispatch(uint32_t ThreadGroupsX, uint32_t ThreadGroupsY, uint32_t ThreadGroupsZ)
     {
-        vkCmdDispatch(m_CommandBuffer, threadGroupsX, threadGroupsY, threadGroupsZ);
+        vkCmdDispatch(m_CommandBuffer, ThreadGroupsX, ThreadGroupsY, ThreadGroupsZ);
     }
 
     void EndRenderPass()
@@ -176,8 +176,8 @@ public:
     
     bool IsFinishedOnGPU() const
     {
-        VkResult result = vkGetFenceStatus(GetDevice()->GetDevice(), m_Fence);
-        return result == VK_NOT_READY;
+        VkResult Result = vkGetFenceStatus(GetDevice()->GetDevice(), m_Fence);
+        return Result == VK_NOT_READY;
     }
     
     void WaitForAndResetFences()
@@ -186,13 +186,13 @@ public:
         vkResetFences(GetDevice()->GetDevice(), 1, &m_Fence);
     }
 
-    void Reset(VkCommandPoolResetFlags flags = 0)
+    void Reset(VkCommandPoolResetFlags Flags = 0)
     {
         // Wait for GPU to finish with this CommandBuffer and then reset it
         WaitForAndResetFences();
         
         // Avoid using the VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT since we can reuse the memory
-        vkResetCommandPool(GetDevice()->GetDevice(), m_CommandPool, flags);
+        vkResetCommandPool(GetDevice()->GetDevice(), m_CommandPool, Flags);
     }
 
     VkFence GetFence() const
