@@ -943,7 +943,7 @@ void FRayTracer::CreateRayTracingResources()
 
     FDescriptorSetLayoutParams RayTracingDescriptorSetLayoutParams;
     RayTracingDescriptorSetLayoutParams.pBindings   = RayTracingBindings;
-    RayTracingDescriptorSetLayoutParams.numBindings = NumRayTracingBindings;
+    RayTracingDescriptorSetLayoutParams.NumBindings = NumRayTracingBindings;
 
     m_pRayTracingDescriptorSetLayout = FDescriptorSetLayout::Create(m_pDevice, RayTracingDescriptorSetLayoutParams);
     assert(m_pRayTracingDescriptorSetLayout != nullptr);
@@ -992,7 +992,7 @@ void FRayTracer::CreateTonemappingResources()
     
     FDescriptorSetLayoutParams TonemappingDescriptorSetLayoutParams;
     TonemappingDescriptorSetLayoutParams.pBindings   = TonemappingBindings;
-    TonemappingDescriptorSetLayoutParams.numBindings = NumTonemappingBindings;
+    TonemappingDescriptorSetLayoutParams.NumBindings = NumTonemappingBindings;
 
     m_pTonemappingDescriptorSetLayout = FDescriptorSetLayout::Create(m_pDevice, TonemappingDescriptorSetLayoutParams);
     assert(m_pTonemappingDescriptorSetLayout != nullptr);

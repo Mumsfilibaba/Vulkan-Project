@@ -37,7 +37,7 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
 
     FDescriptorSetLayoutParams DescriptorSetLayoutParams;
     DescriptorSetLayoutParams.pBindings   = Bindings;
-    DescriptorSetLayoutParams.numBindings = NumBindings;
+    DescriptorSetLayoutParams.NumBindings = NumBindings;
 
     s_pCubeMapGenDescriptorSetLayout = FDescriptorSetLayout::Create(pDevice, DescriptorSetLayoutParams);
     if (!s_pCubeMapGenDescriptorSetLayout)

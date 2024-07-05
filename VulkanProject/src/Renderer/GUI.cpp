@@ -1220,7 +1220,7 @@ namespace GUI
             binding[0].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
             
             FDescriptorSetLayoutParams descriptorSetLayoutParams = {};
-            descriptorSetLayoutParams.numBindings = 1;
+            descriptorSetLayoutParams.NumBindings = 1;
             descriptorSetLayoutParams.pBindings   = binding;
             
             pRendererBackend->pDescriptorSetLayout = FDescriptorSetLayout::Create(pRendererBackend->pDevice, descriptorSetLayoutParams);
