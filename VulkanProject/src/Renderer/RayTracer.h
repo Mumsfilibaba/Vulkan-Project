@@ -93,6 +93,7 @@ private:
     void UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer);
     void PerformRayTracing(FCommandBuffer* pCommandBuffer);
     void PerformTonemapping(FCommandBuffer* pCommandBuffer);
+    void PerformDebugPass(FCommandBuffer* pCommandBuffer);
     
     FDevice*                       m_pDevice;
     FSwapchain*                    m_pSwapchain;
@@ -117,6 +118,15 @@ private:
     FDescriptorSet*       m_pTonemappingDescriptorSet0;
     FDescriptorSet*       m_pTonemappingDescriptorSet1;
     FFramebuffer*         m_pTonemappingFramebuffer;
+    
+    // DebugPass
+    FGraphicsPipeline*    m_pDebugPipeline;
+    FRenderPass*          m_pDebugRenderPass;
+    FPipelineLayout*      m_pDebugPipelineLayout;
+    FDescriptorSetLayout* m_pDebugDescriptorSetLayout;
+    FDescriptorSet*       m_pDebugDescriptorSet0;
+    FDescriptorSet*       m_pDebugDescriptorSet1;
+    FFramebuffer*         m_pDebugFramebuffer;
     
     // Buffers
     FBuffer* m_pCameraBuffer;

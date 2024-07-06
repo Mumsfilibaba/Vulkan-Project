@@ -24,6 +24,7 @@ enum class EViewMode : uint32_t
     Render = 0,
     Normals = 1,
     TopBVH = 2,
+    Debug = 3,
 };
 
 struct FSceneSettings
@@ -52,6 +53,7 @@ struct FScene
     
     // Triangle Mesh Data
     std::vector<FVertexPosOnly> m_Vertices;
+    std::vector<uint32_t>       m_Indicies;
     std::vector<FShaderMesh>    m_Meshes;
     
     // Other primitive data

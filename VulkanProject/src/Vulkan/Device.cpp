@@ -220,7 +220,7 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
         return false;
     }
 
-    //Setup instance
+    // Setup instance
     VkInstanceCreateInfo InstanceCreateInfo;
     ZERO_STRUCT(&InstanceCreateInfo);
     
@@ -238,7 +238,7 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
         InstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-    //Validate extensions
+    // Validate extensions
     uint32_t InstanceExtensionCount;
     vkEnumerateInstanceExtensionProperties(nullptr, &InstanceExtensionCount, nullptr);
     std::vector<VkExtensionProperties> InstanceExtensionProperties(InstanceExtensionCount);
@@ -277,7 +277,7 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
     InstanceCreateInfo.enabledExtensionCount   = (uint32_t)InstanceExtensions.size();
     InstanceCreateInfo.ppEnabledExtensionNames = InstanceExtensions.data();
 
-    //Setup validation layer
+    // Setup validation layer
     VkDebugUtilsMessengerCreateInfoEXT DebugMessengerCreateInfo;
     ZERO_STRUCT(&DebugMessengerCreateInfo);
     
@@ -320,7 +320,7 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
         return false;
     }
     
-    //Get instance functions
+    // Get instance functions
     FExtensions::vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT");
     if (!FExtensions::vkSetDebugUtilsObjectNameEXT)
     {
@@ -680,5 +680,6 @@ std::vector<const char*> FDevice::GetRequiredDeviceExtensions()
 {
     std::vector<const char*> DeviceExtensions;
     DeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    DeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
     return DeviceExtensions;
 }

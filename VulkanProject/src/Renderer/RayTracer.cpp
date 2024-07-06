@@ -119,17 +119,18 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     // RenderPasses
     CreateRayTracingResources();
     CreateTonemappingResources();
+    CreateDebugViewResources();
     
     // Create all buffers
     CreateGlobalBuffers();
     
     // Create DescriptorPool
     FDescriptorPoolParams DescriptorPoolParams;
-    DescriptorPoolParams.NumUniformBuffers        = 32;
-    DescriptorPoolParams.NumStorageImages         = 32;
-    DescriptorPoolParams.NumStorageBuffers        = 32;
-    DescriptorPoolParams.NumCombinedImageSamplers = 32;
-    DescriptorPoolParams.MaxSets                  = 4;
+    DescriptorPoolParams.NumUniformBuffers        = 128;
+    DescriptorPoolParams.NumStorageImages         = 128;
+    DescriptorPoolParams.NumStorageBuffers        = 128;
+    DescriptorPoolParams.NumCombinedImageSamplers = 128;
+    DescriptorPoolParams.MaxSets                  = 16;
     
     m_pDescriptorPool = FDescriptorPool::Create(m_pDevice, DescriptorPoolParams);
     assert(m_pDescriptorPool != nullptr);
@@ -288,11 +289,19 @@ void FRayTracer::Tick(float DeltaTime)
     // Update global buffers
     UpdateGlobalBuffers(pCurrentCommandBuffer);
     
-    // Perform RayTracing
-    PerformRayTracing(pCurrentCommandBuffer);
-    
-    // Tonemapping
-    PerformTonemapping(pCurrentCommandBuffer);
+    if (m_pScene->m_Settings.ViewMode != EViewMode::Debug)
+    {
+        // Perform RayTracing
+        PerformRayTracing(pCurrentCommandBuffer);
+        
+        // Tonemapping
+        PerformTonemapping(pCurrentCommandBuffer);
+    }
+    else
+    {
+        // Rasterize triangle models and display the BVH
+        PerformDebugPass(pCurrentCommandBuffer);
+    }
 
     // End CommandBuffer
     pCurrentCommandBuffer->WriteTimestamp(pCurrentTimestampQuery, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 1);
@@ -407,6 +416,63 @@ void FRayTracer::PerformTonemapping(FCommandBuffer* pCommandBuffer)
     pCommandBuffer->EndRenderPass();
 }
 
+void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
+{
+    if (!m_pScene->m_pMeshVertexBuffer || !m_pScene->m_pMeshIndexBuffer)
+    {
+        // Begin renderpass (Only clear the image when the buffers are invalid)
+        VkClearValue ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+        pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, &ClearColor, 1);
+        
+        // End renderpass
+        pCommandBuffer->EndRenderPass();
+        return;
+    }
+    
+    // Begin renderpass
+    VkClearValue ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+    pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, &ClearColor, 1);
+    
+    // Set viewport
+    VkViewport Viewport;
+    Viewport.width    =  static_cast<float>(m_ViewportWidth);
+    Viewport.height   =  -static_cast<float>(m_ViewportHeight);
+    Viewport.minDepth =  0.0f;
+    Viewport.maxDepth =  1.0f;
+    Viewport.x        =  0.0f;
+    Viewport.y        =  static_cast<float>(m_ViewportHeight);
+    
+    pCommandBuffer->SetViewport(Viewport);
+    
+    VkRect2D scissor = { { 0, 0}, { m_ViewportWidth, m_ViewportHeight } };
+    pCommandBuffer->SetScissorRect(scissor);
+    
+    // Bind pipeline
+    pCommandBuffer->BindGraphicsPipelineState(m_pDebugPipeline);
+
+    // Bind DescriptorSets
+    const uint64_t Frame = (m_FrameIndex % 2);
+    if (Frame == 0)
+    {
+        pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0);
+    }
+    else
+    {
+        pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1);
+    }
+    
+    // Set Vertex- and IndexBuffer
+    pCommandBuffer->BindVertexBuffer(m_pScene->m_pMeshVertexBuffer, 0, 0);
+    pCommandBuffer->BindIndexBuffer(m_pScene->m_pMeshIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+    // Draw
+    const size_t IndexCount = m_pScene->m_Indicies.size();
+    pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
+    
+    // End renderpass
+    pCommandBuffer->EndRenderPass();
+}
+
 void FRayTracer::OnRenderUI()
 {
     // Setup DockSpace
@@ -480,7 +546,8 @@ void FRayTracer::OnRenderUI()
             {
                 "Render",
                 "Normals",
-                "TopBVH"
+                "TopBVH",
+                "Debug"
             };
 
             static int CurrentViewMode = static_cast<int>(m_pScene->m_Settings.ViewMode);
@@ -501,6 +568,10 @@ void FRayTracer::OnRenderUI()
                 else if (CurrentViewMode == 2)
                 {
                     m_pScene->m_Settings.ViewMode = EViewMode::TopBVH;
+                }
+                else if (CurrentViewMode == 3)
+                {
+                    m_pScene->m_Settings.ViewMode = EViewMode::Debug;
                 }
                 
                 PrevViewMode = CurrentViewMode;
@@ -982,6 +1053,70 @@ void FRayTracer::CreateRayTracingResources()
     delete pComputeShader;
 }
 
+void FRayTracer::CreateDebugViewResources()
+{
+    // Create DebugView DescriptorSetLayout
+    constexpr uint32_t NumDebugPassBindings = 1;
+    VkDescriptorSetLayoutBinding DebugPassBindings[NumDebugPassBindings];
+
+    // Camera Buffer
+    DebugPassBindings[0].binding            = 0;
+    DebugPassBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    DebugPassBindings[0].descriptorCount    = 1;
+    DebugPassBindings[0].stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+    DebugPassBindings[0].pImmutableSamplers = nullptr;
+    
+    FDescriptorSetLayoutParams DebugPassDescriptorSetLayoutParams;
+    DebugPassDescriptorSetLayoutParams.pBindings   = DebugPassBindings;
+    DebugPassDescriptorSetLayoutParams.NumBindings = NumDebugPassBindings;
+
+    m_pDebugDescriptorSetLayout = FDescriptorSetLayout::Create(m_pDevice, DebugPassDescriptorSetLayoutParams);
+    assert(m_pDebugDescriptorSetLayout != nullptr);
+
+    // Create DebugPass PipelineLayout
+    FPipelineLayoutParams DebugPassPipelineLayoutParams;
+    DebugPassPipelineLayoutParams.ppLayouts  = &m_pDebugDescriptorSetLayout;
+    DebugPassPipelineLayoutParams.numLayouts = 1;
+    
+    m_pDebugPipelineLayout = FPipelineLayout::Create(m_pDevice, DebugPassPipelineLayoutParams);
+    assert(m_pDebugPipelineLayout != nullptr);
+    
+    // PipelineState, RenderPass and Shaders
+    FShaderModule* pVertex = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/vertex.spv");
+    assert(pVertex != nullptr);
+    
+    FShaderModule* pFragment = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/fragment.spv");
+    assert(pFragment != nullptr);
+    
+    FRenderPassAttachment Attachments[1];
+    Attachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
+    Attachments[0].InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    Attachments[0].FinalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    
+    FRenderPassParams RenderPassParams = {};
+    RenderPassParams.ColorAttachmentCount = 1;
+    RenderPassParams.pColorAttachments    = Attachments;
+    
+    m_pDebugRenderPass = FRenderPass::Create(m_pDevice, RenderPassParams);
+    assert(m_pDebugRenderPass != nullptr);
+    
+    FGraphicsPipelineStateParams DebugPassPipelineParams = {};
+    DebugPassPipelineParams.pBindingDescriptions      = FVertexPosOnly::GetBindingDescription();
+    DebugPassPipelineParams.BindingDescriptionCount   = 1;
+    DebugPassPipelineParams.pAttributeDescriptions    = FVertexPosOnly::GetAttributeDescriptions();
+    DebugPassPipelineParams.AttributeDescriptionCount = 1;
+    DebugPassPipelineParams.pVertexShader             = pVertex;
+    DebugPassPipelineParams.pFragmentShader           = pFragment;
+    DebugPassPipelineParams.pRenderPass               = m_pDebugRenderPass;
+    DebugPassPipelineParams.pPipelineLayout           = m_pDebugPipelineLayout;
+    
+    m_pDebugPipeline = FGraphicsPipeline::Create(m_pDevice, DebugPassPipelineParams);
+    assert(m_pDebugPipeline != nullptr);
+    
+    delete pVertex;
+    delete pFragment;
+}
+
 void FRayTracer::CreateTonemappingResources()
 {
     // Create Tonemapping DescriptorSetLayout
@@ -995,7 +1130,7 @@ void FRayTracer::CreateTonemappingResources()
     TonemappingBindings[0].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
     TonemappingBindings[0].pImmutableSamplers = nullptr;
 
-    // Accumulation image
+    // Settings Buffer
     TonemappingBindings[1].binding            = 1;
     TonemappingBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     TonemappingBindings[1].descriptorCount    = 1;
@@ -1009,7 +1144,7 @@ void FRayTracer::CreateTonemappingResources()
     m_pTonemappingDescriptorSetLayout = FDescriptorSetLayout::Create(m_pDevice, TonemappingDescriptorSetLayoutParams);
     assert(m_pTonemappingDescriptorSetLayout != nullptr);
 
-    // Create RayTracing PipelineLayout
+    // Create Tonemapping PipelineLayout
     FPipelineLayoutParams ToneMappingPipelineLayoutParams;
     ToneMappingPipelineLayoutParams.ppLayouts  = &m_pTonemappingDescriptorSetLayout;
     ToneMappingPipelineLayoutParams.numLayouts = 1;
@@ -1168,6 +1303,7 @@ void FRayTracer::CreateGlobalBuffers()
 
 void FRayTracer::CreateDescriptorSet()
 {
+    // RayTracing Pass
     m_pRayTracingDescriptorSet0 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pRayTracingDescriptorSetLayout);
     assert(m_pRayTracingDescriptorSet0 != nullptr);
 
@@ -1202,6 +1338,7 @@ void FRayTracer::CreateDescriptorSet()
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 11);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 12);
     
+    // Tonemapping Pass
     m_pTonemappingDescriptorSet0 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pTonemappingDescriptorSetLayout);
     assert(m_pTonemappingDescriptorSet0 != nullptr);
 
@@ -1213,6 +1350,17 @@ void FRayTracer::CreateDescriptorSet()
 
     m_pTonemappingDescriptorSet1->BindCombinedImageSampler(m_pSceneTextureView1->GetImageView(), m_pTonemapSampler->GetSampler(), 0);
     m_pTonemappingDescriptorSet1->BindUniformBuffer(m_pTonemappingBuffer->GetBuffer(), 1);
+    
+    // Debug Pass
+    m_pDebugDescriptorSet0 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pDebugDescriptorSetLayout);
+    assert(m_pDebugDescriptorSet0 != nullptr);
+
+    m_pDebugDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
+    
+    m_pDebugDescriptorSet1 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pDebugDescriptorSetLayout);
+    assert(m_pDebugDescriptorSet1 != nullptr);
+
+    m_pDebugDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
 }
 
 void FRayTracer::ReleaseDescriptorSets()
@@ -1221,6 +1369,8 @@ void FRayTracer::ReleaseDescriptorSets()
     SAFE_DELETE(m_pRayTracingDescriptorSet1);
     SAFE_DELETE(m_pTonemappingDescriptorSet0);
     SAFE_DELETE(m_pTonemappingDescriptorSet1);
+    SAFE_DELETE(m_pDebugDescriptorSet0);
+    SAFE_DELETE(m_pDebugDescriptorSet1);
     SAFE_DELETE(m_pOutputTextureDescriptorSet);
 }
 
@@ -1308,13 +1458,20 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     // Create Framebuffer for the tonemap stage
     VkImageView ImageView = m_pOutputTextureView->GetImageView();
     FFramebufferParams FramebufferParams = {};
-    FramebufferParams.AttachMentCount = 1;
+    FramebufferParams.AttachmentCount = 1;
     FramebufferParams.Width           = m_ViewportWidth;
     FramebufferParams.Height          = m_ViewportHeight;
     FramebufferParams.pRenderPass     = m_pTonemappingRenderPass;
     FramebufferParams.pAttachMents    = &ImageView;
 
     m_pTonemappingFramebuffer = FFramebuffer::Create(m_pDevice, FramebufferParams);
+    
+    // Create Framebuffer for the tonemap stage
+    FramebufferParams.AttachmentCount = 1;
+    FramebufferParams.pRenderPass     = m_pDebugRenderPass;
+    FramebufferParams.pAttachMents    = &ImageView;
+
+    m_pDebugFramebuffer = FFramebuffer::Create(m_pDevice, FramebufferParams);
     
     // UI DescriptorSet
     m_pOutputTextureDescriptorSet = GUI::AllocateTextureID(m_pOutputTextureView);

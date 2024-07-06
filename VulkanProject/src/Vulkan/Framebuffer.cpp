@@ -13,7 +13,7 @@ FFramebuffer* FFramebuffer::Create(FDevice* pDevice, const FFramebufferParams& P
     
     FramebufferCreateInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     FramebufferCreateInfo.renderPass      = Params.pRenderPass->GetRenderPass();
-    FramebufferCreateInfo.attachmentCount = Params.AttachMentCount;
+    FramebufferCreateInfo.attachmentCount = Params.AttachmentCount;
     FramebufferCreateInfo.pAttachments    = Params.pAttachMents;
     FramebufferCreateInfo.width           = Params.Width;
     FramebufferCreateInfo.height          = Params.Height;

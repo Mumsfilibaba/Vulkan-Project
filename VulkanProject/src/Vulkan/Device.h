@@ -82,9 +82,8 @@ private:
     bool CreateDeviceAndQueues(const FDeviceParams& props);
     bool QueryPhysicalDevice(const FDeviceParams& props);
     void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-
-    FQueueFamilyIndices      GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
     std::vector<const char*> GetRequiredDeviceExtensions();
+    FQueueFamilyIndices GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
     
     VkInstance               m_Instance;
     VkDebugUtilsMessengerEXT m_DebugMessenger;

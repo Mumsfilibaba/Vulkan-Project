@@ -1304,7 +1304,7 @@ namespace GUI
         // Create Framebuffers
         FFramebufferParams framebufferParams = {};
         framebufferParams.pRenderPass     = pViewportData->pRenderPass;
-        framebufferParams.AttachMentCount = 1;
+        framebufferParams.AttachmentCount = 1;
         framebufferParams.Width           = extent.width;
         framebufferParams.Height          = extent.height;
         

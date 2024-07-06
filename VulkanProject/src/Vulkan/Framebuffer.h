@@ -8,7 +8,7 @@ struct FFramebufferParams
 {
     FRenderPass* pRenderPass     = nullptr;
     VkImageView* pAttachMents    = nullptr;
-    uint32_t     AttachMentCount = 0;
+    uint32_t     AttachmentCount = 0;
     uint32_t     Width           = 0;
     uint32_t     Height          = 0;
 };

@@ -5,13 +5,15 @@
 
 struct FVertex
 {
-    static VkVertexInputBindingDescription GetBindingDescription()
+    static VkVertexInputBindingDescription* GetBindingDescription()
     {
-        VkVertexInputBindingDescription BindingDescription = {};
-        BindingDescription.binding   = 0;
-        BindingDescription.stride    = sizeof(FVertex);
-        BindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        return BindingDescription;
+        static VkVertexInputBindingDescription BindingDescriptions[1];
+        
+        BindingDescriptions[0].binding   = 0;
+        BindingDescriptions[0].stride    = sizeof(FVertex);
+        BindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        
+        return BindingDescriptions;
     }
     
     static VkVertexInputAttributeDescription* GetAttributeDescriptions()
@@ -36,15 +38,14 @@ struct FVertex
         return AttributeDescriptions;
     }
 
-    glm::vec3 Position;
-    glm::vec2 TexCoord;
-    glm::vec3 Color;
-    
     bool operator==(const FVertex& Other) const
     {
         return Position == Other.Position && TexCoord == Other.TexCoord && Color == Other.Color;
     }
-
+    
+    glm::vec3 Position;
+    glm::vec2 TexCoord;
+    glm::vec3 Color;
 };
 
 struct FVertexHasher
@@ -58,6 +59,29 @@ struct FVertexHasher
 
 struct FVertexPosOnly
 {
+    static VkVertexInputBindingDescription* GetBindingDescription()
+    {
+        static VkVertexInputBindingDescription BindingDescriptions[1];
+        
+        BindingDescriptions[0].binding   = 0;
+        BindingDescriptions[0].stride    = sizeof(FVertexPosOnly);
+        BindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        
+        return BindingDescriptions;
+    }
+    
+    static VkVertexInputAttributeDescription* GetAttributeDescriptions()
+    {
+        static VkVertexInputAttributeDescription AttributeDescriptions[1];
+        
+        AttributeDescriptions[0].binding  = 0;
+        AttributeDescriptions[0].location = 0;
+        AttributeDescriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
+        AttributeDescriptions[0].offset   = offsetof(FVertexPosOnly, Position);
+
+        return AttributeDescriptions;
+    }
+    
     bool operator==(const FVertexPosOnly& Other) const
     {
         return Position == Other.Position;

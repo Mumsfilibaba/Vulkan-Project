@@ -40,10 +40,8 @@ void FRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     RenderPassParams.pColorAttachments    = Attachments;
     m_pRenderPass = FRenderPass::Create(m_pDevice, RenderPassParams);
 
-    VkVertexInputBindingDescription BindingDescription = FVertex::GetBindingDescription();
-
     FGraphicsPipelineStateParams PipelineParams = {};
-    PipelineParams.pBindingDescriptions      = &BindingDescription;
+    PipelineParams.pBindingDescriptions      = FVertex::GetBindingDescription();
     PipelineParams.BindingDescriptionCount   = 1;
     PipelineParams.pAttributeDescriptions    = FVertex::GetAttributeDescriptions();
     PipelineParams.AttributeDescriptionCount = 3;
@@ -170,7 +168,7 @@ void FRenderer::CreateFramebuffers()
     VkExtent2D Extent = m_pSwapchain->GetExtent();
     
     FFramebufferParams FramebufferParams = {};
-    FramebufferParams.AttachMentCount   = 1;
+    FramebufferParams.AttachmentCount   = 1;
     FramebufferParams.Width             = Extent.width;
     FramebufferParams.Height            = Extent.height;
     FramebufferParams.pRenderPass       = m_pRenderPass;

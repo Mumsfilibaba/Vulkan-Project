@@ -60,6 +60,7 @@ void FModelScene::Initialize()
 
     // Copy vertices
     m_Vertices = Mesh.Positions;
+    m_Indicies = Mesh.Indicies;
     
     // Build BVH
     m_AccelerationStructure.Build(Mesh, 4);
