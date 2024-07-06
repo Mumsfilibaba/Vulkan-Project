@@ -7,11 +7,16 @@ struct FCameraBuffer
     glm::mat4 Projection;
     // 64-128
     glm::mat4 View;
-    // 128-160
+    // 128-192
+    glm::mat4 InverseProjection;
+    // 192-256
+    glm::mat4 InverseView;
+    // 256-288
     glm::vec4 Position;
     glm::vec4 Forward;
-    // 160-164
+    // 288-292
     float FieldOfViewDegrees;
+
     // Padding
     uint32_t Padding0;
     uint32_t Padding1;
@@ -72,6 +77,16 @@ public:
     const glm::mat4& GetProjectionMatrix() const
     {
         return m_Projection;
+    }
+    
+    glm::mat4 GetInverseViewMatrix() const
+    {
+        return glm::inverse(m_View);
+    }
+    
+    glm::mat4 GetInverseProjectionMatrix() const
+    {
+        return glm::inverse(m_Projection);
     }
     
     glm::mat4 GetMatrix() const

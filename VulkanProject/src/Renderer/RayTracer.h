@@ -145,9 +145,11 @@ private:
     FTexture*       m_pSceneTexture0;
     FTexture*       m_pSceneTexture1;
     FTexture*       m_pOutputTexture;
+    FTexture*       m_pDepthBufferTexture;
     FTextureView*   m_pSceneTextureView0;
     FTextureView*   m_pSceneTextureView1;
     FTextureView*   m_pOutputTextureView;
+    FTextureView*   m_pDepthBufferTextureView;
     FDescriptorSet* m_pOutputTextureDescriptorSet;
 
     // Skybox

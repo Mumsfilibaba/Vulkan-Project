@@ -40,10 +40,14 @@ layout(binding = 3) uniform CameraBufferObject
     mat4 Projection;
     // 64-128
     mat4 View;
-    // 128-160
+    // 128-192
+    mat4 InverseProjection;
+    // 192-256
+    mat4 InverseView;
+    // 256-288
     vec4 Position;
     vec4 Forward;
-    // 160-164
+    // 288-292
     float FieldOfViewDegrees;
 
     // Padding
@@ -444,26 +448,22 @@ float FresnelReflectAmount(float N1, float N2, vec3 Normal, vec3 Incident, float
 
 vec3 CalculateFilmTarget(ivec2 Pixel, ivec2 Size, vec2 Jitter)
 {
-    vec3 CameraPosition = uCamera.Position.xyz;
-    vec3 CamForward     = normalize(uCamera.Forward.xyz);
+    // Transform pixel coordinates to normalized device coordinates (NDC)
+    vec2 FilmUV = (vec2(Pixel) + Jitter) / vec2(Size);
+    FilmUV   = FilmUV * 2.0 - 1.0;  // NDC coordinates range from -1 to 1
+    FilmUV.y = -FilmUV.y;
+
+    // Convert NDC to clip space (homogeneous coordinates)
+    vec4 ClipSpacePos = vec4(FilmUV, -1.0, 1.0);  // Near plane (z = -1 in NDC)
+
+    // Use inverse projection to get view space coordinates
+    vec4 ViewSpacePos = uCamera.InverseProjection * ClipSpacePos;
+    ViewSpacePos /= ViewSpacePos.w;
+
+    // Use inverse view matrix to get world space coordinates
+    vec4 WorldSpacePos = uCamera.InverseView * ViewSpacePos;
     
-    vec3 CamUp = vec3(0.0, 1.0, 0.0);
-    CamUp = normalize(CamUp - dot(CamUp, CamForward) * CamForward);
-    vec3 CamRight = normalize(cross(CamUp, CamForward));
-
-    float AspectRatio  = float(Size.x) / float(Size.y);
-    float FieldOfView  = clamp(uCamera.FieldOfViewDegrees, 30.0, 120.0);
-    float FilmDistance = 1.0 / tan(FieldOfView * 0.5 * PI / 180.0); 
-    vec3  FilmCenter   = CameraPosition + (CamForward * FilmDistance);
-
-    vec2 FilmUV = (vec2(Pixel) + Jitter) / vec2(Size.xy);
-    FilmUV.y = 1.0 - FilmUV.y;
-    FilmUV   = FilmUV * 2.0;
-
-    vec2 FilmCorner = vec2(-1.0, -1.0);
-    vec2 FilmCoord  = FilmCorner + FilmUV;
-    FilmCoord.x = FilmCoord.x * AspectRatio;
-    return FilmCenter + (CamRight * FilmCoord.x) + (CamUp * FilmCoord.y);
+    return WorldSpacePos.xyz;
 }
 
 vec3 GetEnvironmentLight(vec3 RayDirection)

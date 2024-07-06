@@ -15,6 +15,7 @@ struct FRenderPassParams
 {
     FRenderPassAttachment* pColorAttachments = nullptr;
     uint32_t ColorAttachmentCount = 0;
+    FRenderPassAttachment* pDepthAttachment = nullptr;
 };
 
 class FRenderPass : public FDeviceChild

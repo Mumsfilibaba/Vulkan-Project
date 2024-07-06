@@ -9,10 +9,14 @@ layout(binding = 0) uniform CameraBufferObject
     mat4 Projection;
     // 64-128
     mat4 View;
-    // 128-160
+    // 128-192
+    mat4 InverseProjection;
+    // 192-256
+    mat4 InverseView;
+    // 256-288
     vec4 Position;
     vec4 Forward;
-    // 160-164
+    // 288-292
     float FieldOfViewDegrees;
 
     // Padding

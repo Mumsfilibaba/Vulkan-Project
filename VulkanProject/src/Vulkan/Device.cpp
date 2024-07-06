@@ -13,7 +13,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSev
 {
     if (MessageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        std::cout << "Validation layer: " << pCallbackData->pMessage << "\n";
+        std::cout << "[Vulkan] " << pCallbackData->pMessage << "\n";
     }
     
     return VK_FALSE;

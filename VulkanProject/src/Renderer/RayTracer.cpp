@@ -272,6 +272,8 @@ void FRayTracer::Tick(float DeltaTime)
     FCameraBuffer CameraBuffer = {};
     CameraBuffer.Projection         = m_pScene->m_Camera.GetProjectionMatrix();
     CameraBuffer.View               = m_pScene->m_Camera.GetViewMatrix();
+    CameraBuffer.InverseView        = m_pScene->m_Camera.GetInverseViewMatrix();
+    CameraBuffer.InverseProjection  = m_pScene->m_Camera.GetInverseProjectionMatrix();
     CameraBuffer.Position           = glm::vec4(m_pScene->m_Camera.GetPosition(), 0.0f);
     CameraBuffer.Forward            = glm::vec4(m_pScene->m_Camera.GetForward(), 0.0f);
     CameraBuffer.FieldOfViewDegrees = Math::ToDegrees(m_pScene->m_Camera.GetFieldOfView());
@@ -418,11 +420,15 @@ void FRayTracer::PerformTonemapping(FCommandBuffer* pCommandBuffer)
 
 void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
 {
+    // Define clear colors
+    VkClearValue ClearColor[2];
+    ClearColor[0].color        = { 0.0f, 0.0f, 0.0f, 1.0f };
+    ClearColor[1].depthStencil = { 0.0f, 0 };
+
     if (!m_pScene->m_pMeshVertexBuffer || !m_pScene->m_pMeshIndexBuffer)
     {
         // Begin renderpass (Only clear the image when the buffers are invalid)
-        VkClearValue ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-        pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, &ClearColor, 1);
+        pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, ClearColor, 2);
         
         // End renderpass
         pCommandBuffer->EndRenderPass();
@@ -430,8 +436,7 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
     }
     
     // Begin renderpass
-    VkClearValue ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-    pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, &ClearColor, 1);
+    pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, ClearColor, 2);
     
     // Set viewport
     VkViewport Viewport;
@@ -911,14 +916,22 @@ void FRayTracer::Release()
     SAFE_DELETE(m_pTonemappingPipelineLayout);
     SAFE_DELETE(m_pTonemappingDescriptorSetLayout);
 
+    SAFE_DELETE(m_pDebugPipeline);
+    SAFE_DELETE(m_pDebugRenderPass);
+    SAFE_DELETE(m_pDebugPipelineLayout);
+    SAFE_DELETE(m_pDebugDescriptorSetLayout);
+
     SAFE_DELETE(m_pSceneTexture1);
     SAFE_DELETE(m_pSceneTextureView1);
     SAFE_DELETE(m_pSceneTexture0);
     SAFE_DELETE(m_pSceneTextureView0);
     SAFE_DELETE(m_pOutputTexture);
     SAFE_DELETE(m_pOutputTextureView);
+    SAFE_DELETE(m_pDepthBufferTexture);
+    SAFE_DELETE(m_pDepthBufferTextureView);
     SAFE_DELETE(m_pTonemappingFramebuffer);
-
+    SAFE_DELETE(m_pDebugFramebuffer);
+    
     SAFE_DELETE(m_pDescriptorPool);
     SAFE_DELETE(m_pDeviceAllocator);
 }
@@ -1088,14 +1101,20 @@ void FRayTracer::CreateDebugViewResources()
     FShaderModule* pFragment = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/fragment.spv");
     assert(pFragment != nullptr);
     
-    FRenderPassAttachment Attachments[1];
-    Attachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
-    Attachments[0].InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    Attachments[0].FinalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    FRenderPassAttachment ColorAttachments[1];
+    ColorAttachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
+    ColorAttachments[0].InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    ColorAttachments[0].FinalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    
+    FRenderPassAttachment DepthAttachment[1];
+    DepthAttachment[0].Format        = VK_FORMAT_D24_UNORM_S8_UINT;
+    DepthAttachment[0].InitialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    DepthAttachment[0].FinalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     
     FRenderPassParams RenderPassParams = {};
+    RenderPassParams.pColorAttachments    = ColorAttachments;
     RenderPassParams.ColorAttachmentCount = 1;
-    RenderPassParams.pColorAttachments    = Attachments;
+    RenderPassParams.pDepthAttachment     = DepthAttachment;
     
     m_pDebugRenderPass = FRenderPass::Create(m_pDevice, RenderPassParams);
     assert(m_pDebugRenderPass != nullptr);
@@ -1391,7 +1410,10 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
         SAFE_DELETE(m_pSceneTextureView1);
         SAFE_DELETE(m_pOutputTexture);
         SAFE_DELETE(m_pOutputTextureView);
+        SAFE_DELETE(m_pDepthBufferTexture);
+        SAFE_DELETE(m_pDepthBufferTextureView);
         SAFE_DELETE(m_pTonemappingFramebuffer);
+        SAFE_DELETE(m_pDebugFramebuffer);
         
         ReleaseDescriptorSets();
     }
@@ -1455,8 +1477,31 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
         SetDebugName(m_pDevice->GetDevice(), "OutputTextureView", reinterpret_cast<uint64_t>(m_pOutputTextureView->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
     }
     
+    // Create depth-buffer texture for the viewport
+    FTextureParams DepthBufferParams = {};
+    DepthBufferParams.Format        = VK_FORMAT_D24_UNORM_S8_UINT;
+    DepthBufferParams.ImageType     = VK_IMAGE_TYPE_2D;
+    DepthBufferParams.Width         = m_ViewportWidth  = Width;
+    DepthBufferParams.Height        = m_ViewportHeight = Height;
+    DepthBufferParams.Usage         = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    DepthBufferParams.InitialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    
+    m_pDepthBufferTexture = FTexture::Create(m_pDevice, DepthBufferParams);
+    assert(m_pDepthBufferTexture != nullptr);
+    SetDebugName(m_pDevice->GetDevice(), "DepthBuffer", reinterpret_cast<uint64_t>(m_pDepthBufferTexture->GetImage()), VK_OBJECT_TYPE_IMAGE);
+    
+    {
+        FTextureViewParams TextureViewParams = {};
+        TextureViewParams.pTexture = m_pDepthBufferTexture;
+        
+        m_pDepthBufferTextureView = FTextureView::Create(m_pDevice, TextureViewParams);
+        assert(m_pDepthBufferTextureView != nullptr);
+        SetDebugName(m_pDevice->GetDevice(), "DepthBufferView", reinterpret_cast<uint64_t>(m_pDepthBufferTextureView->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
+    }
+    
     // Create Framebuffer for the tonemap stage
     VkImageView ImageView = m_pOutputTextureView->GetImageView();
+    
     FFramebufferParams FramebufferParams = {};
     FramebufferParams.AttachmentCount = 1;
     FramebufferParams.Width           = m_ViewportWidth;
@@ -1467,9 +1512,15 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     m_pTonemappingFramebuffer = FFramebuffer::Create(m_pDevice, FramebufferParams);
     
     // Create Framebuffer for the tonemap stage
-    FramebufferParams.AttachmentCount = 1;
+    VkImageView DebugPassImageViews[] =
+    {
+        m_pOutputTextureView->GetImageView(),
+        m_pDepthBufferTextureView->GetImageView()
+    };
+    
+    FramebufferParams.AttachmentCount = 2;
     FramebufferParams.pRenderPass     = m_pDebugRenderPass;
-    FramebufferParams.pAttachMents    = &ImageView;
+    FramebufferParams.pAttachMents    = DebugPassImageViews;
 
     m_pDebugFramebuffer = FFramebuffer::Create(m_pDevice, FramebufferParams);
     
