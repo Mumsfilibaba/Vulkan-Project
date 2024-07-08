@@ -8,14 +8,14 @@ class FDescriptorSetLayout;
 struct FPipelineLayoutParams
 {
     FDescriptorSetLayout** ppLayouts        = nullptr;
-    uint32_t               numLayouts       = 0;
-    uint32_t               numPushConstants = 0;
+    uint32_t               NumLayouts       = 0;
+    uint32_t               NumPushConstants = 0;
 };
 
 class FPipelineLayout : public FDeviceChild
 {
 public:
-    static FPipelineLayout* Create(FDevice* pDevice, const FPipelineLayoutParams& params);
+    static FPipelineLayout* Create(FDevice* pDevice, const FPipelineLayoutParams& Params);
 
     FPipelineLayout(FDevice* pDevice);
     ~FPipelineLayout();

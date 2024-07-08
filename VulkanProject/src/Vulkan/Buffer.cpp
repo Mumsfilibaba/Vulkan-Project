@@ -81,7 +81,6 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& Params, 
         {
             void* pData = pBuffer->Map();
             memcpy(pData, pSource, Params.Size);
-        
             pBuffer->FlushMappedMemoryRange();
             pBuffer->Unmap();
         }

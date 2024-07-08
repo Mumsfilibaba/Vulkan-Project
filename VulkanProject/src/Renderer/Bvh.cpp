@@ -8,22 +8,6 @@ FBoundingBoxBuilder::FBoundingBoxBuilder(uint32_t InMaxDepth)
     , MaxDepth(InMaxDepth)
     , Depth(0)
 {
-    // Allocate root
-    BoundingBoxes.emplace_back();
-}
-
-void FBoundingBoxBuilder::InsertTriangle(const FTriangle& Triangle)
-{
-    // Grow bounding box to include this triangle
-    FBoundingBox& Root = GetRoot();
-    for (int32_t i = 0; i < 3; i++)
-    {
-        Root.GrowAroundPoint(Triangle.Positions[i]);
-    }
-    
-    // Add the triangle
-    Root.Triangles.push_back(Triangles.size());
-    Triangles.push_back(Triangle);
 }
 
 void FBoundingBoxBuilder::BuildHierarchy()
@@ -32,9 +16,21 @@ void FBoundingBoxBuilder::BuildHierarchy()
     std::queue<uint32_t> Queue;
     Queue.push(0);
     
+    DepthIndicies =
+    {
+        { 0, 1 }
+    };
+    
     uint32_t CurrentDepth = 0;
     while (CurrentDepth < MaxDepth && !Queue.empty())
     {
+        std::cout << "Depth: " << CurrentDepth << "\n";
+        
+        // Store the start index for this depth
+        std::pair<size_t, size_t>& Indicies = DepthIndicies.emplace_back();
+        Indicies.first = BoundingBoxes.size();
+        
+        // Go through all the nodes
         size_t NumNodes = Queue.size();
         for (size_t i = 0; i < NumNodes; i++)
         {
@@ -42,16 +38,58 @@ void FBoundingBoxBuilder::BuildHierarchy()
             const size_t CurrentIndex = Queue.front();
             Queue.pop();
 
-            if (BoundingBoxes[CurrentIndex].Triangles.size() <= 1)
+            if (BoundingBoxes[CurrentIndex].Triangles.size() < 3)
             {
                 continue;
             }
             
-            const glm::vec3 ParentMin   = BoundingBoxes[CurrentIndex].BoxMin;
-            const glm::vec3 ParentMax   = BoundingBoxes[CurrentIndex].BoxMax;
-            const glm::vec3 Lengths     = ParentMax - ParentMin;
-            const uint32_t  LongestAxis = (Lengths.x > Lengths.y) ? ((Lengths.x > Lengths.z) ? 0 : 2) : ((Lengths.y > Lengths.z) ? 1 : 2);
-            const float     NewLength   = Lengths[LongestAxis] / 2.0f;
+            const glm::vec3 ParentMin = BoundingBoxes[CurrentIndex].BoxMin;
+            const glm::vec3 ParentMax = BoundingBoxes[CurrentIndex].BoxMax;
+            const glm::vec3 Extent    = ParentMax - ParentMin;
+            
+            std::cout << "Box[" << CurrentIndex << "] NumTris: " << BoundingBoxes[CurrentIndex].Triangles.size() << ", Extent: " << Extent.x << ", " << Extent.y << ", " << Extent.z << "\n";
+            
+            uint32_t Axis = 0;
+            if (Extent.y > Extent.x)
+            {
+                Axis = 1;
+            }
+            if (Extent.z > Extent[Axis])
+            {
+                Axis = 2;
+            }
+            
+            const float SplitPosition = BoundingBoxes[CurrentIndex].BoxMin[Axis] + Extent[Axis] * 0.5f;
+
+            // Add triangles to the child-nodes
+            const std::vector<uint32_t>& TriangleIndices = BoundingBoxes[CurrentIndex].Triangles;
+            std::vector<uint32_t> LeftIndicies;
+            std::vector<uint32_t> RightIndicies;
+            for (uint32_t TriangleIndex : TriangleIndices)
+            {
+                // Add to either the right- or left- child
+                FTriangle& Triangle = Triangles[TriangleIndex];
+                if (Triangle.Center[Axis] < SplitPosition)
+                {
+                    LeftIndicies.emplace_back(TriangleIndex);
+                }
+                else
+                {
+                    RightIndicies.emplace_back(TriangleIndex);
+                }
+            }
+            
+            // Ensure all the triangles are assigned a single time
+            assert(TriangleIndices.size() == LeftIndicies.size() + RightIndicies.size());
+            
+            // Abort if one child gets zero triangles
+            if (LeftIndicies.size() == 0 || RightIndicies.size() == 0)
+            {
+                continue;
+            }
+            
+            // Delete the old triangles
+            BoundingBoxes[CurrentIndex].Triangles.clear();
             
             // Generate the new child-index
             const uint32_t NewIndex = BoundingBoxes.size();
@@ -60,53 +98,22 @@ void FBoundingBoxBuilder::BuildHierarchy()
             Queue.push(NewIndex + 1);
                         
             // Create the new nodes
-            BoundingBoxes.emplace_back(ParentMin, ParentMax);
-            BoundingBoxes.emplace_back(ParentMin, ParentMax);
+            BoundingBoxes.emplace_back();
+            BoundingBoxes.emplace_back();
             
-            FBoundingBox& LeftChild  = BoundingBoxes[NewIndex];
-            FBoundingBox& RightChild = BoundingBoxes[NewIndex + 1];
-            FBoundingBox& Parent     = BoundingBoxes[CurrentIndex];
-
-            // Modify boxes
-            LeftChild.BoxMax[LongestAxis] -= NewLength;
-            RightChild.BoxMin[LongestAxis] += NewLength;
-            
-            // Add triangles to the child-nodes
-            std::vector<uint32_t> TriangleIndices = std::move(Parent.Triangles);
-            for (uint32_t TriangleIndex : TriangleIndices)
-            {
-                // Add to either the right- or left- child
-                FTriangle& Triangle = Triangles[TriangleIndex];
-                if (RightChild.Contains(Triangle.Center))
-                {
-                    RightChild.Triangles.emplace_back(TriangleIndex);
-                }
-                else
-                {
-                    LeftChild.Triangles.emplace_back(TriangleIndex);
-                }
-            }
+            // Assign the triangle indices
+            BoundingBoxes[NewIndex].Triangles = std::move(LeftIndicies);
+            BoundingBoxes[NewIndex + 1].Triangles = std::move(RightIndicies);
             
             // Grow the new boxes to ensure that all the triangles fully fit inside the boxes
-            for (uint32_t TriangleIndex : LeftChild.Triangles)
-            {
-                FTriangle& Triangle = Triangles[TriangleIndex];
-                for (uint32_t i = 0; i < 3; i++)
-                {
-                    LeftChild.GrowAroundPoint(Triangle.Positions[i]);
-                }
-            }
-            
-            for (uint32_t TriangleIndex : RightChild.Triangles)
-            {
-                FTriangle& Triangle = Triangles[TriangleIndex];
-                for (uint32_t i = 0; i < 3; i++)
-                {
-                    RightChild.GrowAroundPoint(Triangle.Positions[i]);
-                }
-            }
+            RecalculateBounds(BoundingBoxes[NewIndex]);
+            RecalculateBounds(BoundingBoxes[NewIndex + 1]);
         }
         
+        // Store the end index for this depth
+        Indicies.second = BoundingBoxes.size();
+        
+        // Move to next depth
         CurrentDepth++;
     }
     
@@ -149,6 +156,26 @@ void FBoundingBoxBuilder::Finalize()
     Triangles = std::move(NewTriangles);
 }
 
+void FBoundingBoxBuilder::RecalculateBounds(FBoundingBox& BoundingBox)
+{
+    glm::vec3 BoxMin = glm::vec3(std::numeric_limits<float>::max());
+    glm::vec3 BoxMax = glm::vec3(std::numeric_limits<float>::lowest());
+    
+    for (uint32_t TriangleIndex : BoundingBox.Triangles)
+    {
+        FTriangle& Triangle = Triangles[TriangleIndex];
+        BoxMin = glm::min(BoxMin, Triangle.Positions[0]);
+        BoxMin = glm::min(BoxMin, Triangle.Positions[1]);
+        BoxMin = glm::min(BoxMin, Triangle.Positions[2]);
+        BoxMax = glm::max(BoxMax, Triangle.Positions[0]);
+        BoxMax = glm::max(BoxMax, Triangle.Positions[1]);
+        BoxMax = glm::max(BoxMax, Triangle.Positions[2]);
+    }
+    
+    BoundingBox.BoxMin = BoxMin;
+    BoundingBox.BoxMax = BoxMax;
+}
+
 FAccelerationStructure::FAccelerationStructure()
     : m_Triangles()
     , m_BoundingBoxes()
@@ -158,7 +185,8 @@ FAccelerationStructure::FAccelerationStructure()
 void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
 {
     FBoundingBoxBuilder BoundingBoxBuilder(MaxDepth);
-
+    
+    // Create all triangles
     for (uint32_t i = 0; i < Mesh.Indicies.size(); i += 3)
     {
         // Set each index for the triangle
@@ -172,13 +200,22 @@ void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
         Triangle.Positions[2] = Mesh.Positions[Triangle.Indicies[2]].Position;
         
         // Calculate center of the triangle
-        glm::vec3 HalfPos = (Triangle.Positions[0] + Triangle.Positions[1]) / 2.0f;
-        Triangle.Center = (HalfPos + Triangle.Positions[2]) / 2.0f;
+        Triangle.Center = (Triangle.Positions[0] + Triangle.Positions[1] + Triangle.Positions[2]) / 3.0f;
         
         // Insert the triangle into the builder
-        BoundingBoxBuilder.InsertTriangle(Triangle);
+        BoundingBoxBuilder.Triangles.push_back(Triangle);
     }
     
+    // Create root-node and insert all triangles into it
+    BoundingBoxBuilder.BoundingBoxes.emplace_back();
+    for (size_t i = 0; i < BoundingBoxBuilder.Triangles.size(); i++)
+    {
+        BoundingBoxBuilder.BoundingBoxes[0].Triangles.push_back(i);
+    }
+    
+    BoundingBoxBuilder.RecalculateBounds(BoundingBoxBuilder.BoundingBoxes[0]);
+    
+    // Subdivide and build all the bounding boxes
     BoundingBoxBuilder.BuildHierarchy();
     BoundingBoxBuilder.Finalize();
     
@@ -218,6 +255,9 @@ void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
     }
     
     // Setup the stats
-    Stats.Depth                  = BoundingBoxBuilder.Depth;
+    Stats.Depth = BoundingBoxBuilder.Depth;
     Stats.MaxTrianglesInLeafNode = MaxTriangleCount;
+    
+    // Store the depth-indices
+    m_DepthIndicies = BoundingBoxBuilder.DepthIndicies;
 }

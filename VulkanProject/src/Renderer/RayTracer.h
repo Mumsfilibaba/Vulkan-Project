@@ -121,12 +121,17 @@ private:
     
     // DebugPass
     FGraphicsPipeline*    m_pDebugPipeline;
+    FGraphicsPipeline*    m_pDebugPipelineWireframe;
+    FGraphicsPipeline*    m_pDebugAABBPipeline;
     FRenderPass*          m_pDebugRenderPass;
     FPipelineLayout*      m_pDebugPipelineLayout;
+    FPipelineLayout*      m_pDebugAABBPipelineLayout;
     FDescriptorSetLayout* m_pDebugDescriptorSetLayout;
     FDescriptorSet*       m_pDebugDescriptorSet0;
     FDescriptorSet*       m_pDebugDescriptorSet1;
     FFramebuffer*         m_pDebugFramebuffer;
+    size_t                m_AABBIndexCount;
+    int32_t               m_DebugDepth;
     
     // Buffers
     FBuffer* m_pCameraBuffer;
@@ -140,6 +145,9 @@ private:
     FBuffer* m_pVertexBuffer;
     FBuffer* m_pMaterialBuffer;
     FBuffer* m_pBvhBuffer;
+    
+    FBuffer* m_pAABBVertexBuffer;
+    FBuffer* m_pAABBIndexBuffer;
 
     // SceneTexture
     FTexture*       m_pSceneTexture0;

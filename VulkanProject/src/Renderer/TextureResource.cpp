@@ -50,8 +50,8 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
     // Create PipelineLayout
     FPipelineLayoutParams PipelineLayoutParams;
     PipelineLayoutParams.ppLayouts        = &s_pCubeMapGenDescriptorSetLayout;
-    PipelineLayoutParams.numLayouts       = 1;
-    PipelineLayoutParams.numPushConstants = 1;
+    PipelineLayoutParams.NumLayouts       = 1;
+    PipelineLayoutParams.NumPushConstants = 1;
     
     s_pCubeMapGenPipelineLayout = FPipelineLayout::Create(pDevice, PipelineLayoutParams);
     if (!s_pCubeMapGenPipelineLayout)

@@ -20,10 +20,12 @@ if not defined VK_SDK_PATH (
 :: Build paths to glslc.exe and shader files using environment variables
 set GLSLC_PATH=%VULKAN_SDK_PATH%\Bin\glslc.exe
 
-%GLSLC_PATH% -fshader-stage=vertex   shaders/vertex.glsl       -o shaders/vertex.spv
-%GLSLC_PATH% -fshader-stage=vertex   shaders/fullscreenVS.glsl -o shaders/fullscreenVS.spv
-%GLSLC_PATH% -fshader-stage=fragment shaders/fragment.glsl     -o shaders/fragment.spv
-%GLSLC_PATH% -fshader-stage=fragment shaders/tonemap.glsl      -o shaders/tonemap.spv
-%GLSLC_PATH% -fshader-stage=compute  shaders/raytracer.glsl    -o shaders/raytracer.spv
-%GLSLC_PATH% -fshader-stage=compute  shaders/cubemapgen.glsl   -o shaders/cubemapgen.spv
+%GLSLC_PATH% -fshader-stage=vertex   -O shaders/vertex.glsl        -o shaders/vertex.spv
+%GLSLC_PATH% -fshader-stage=vertex   -O shaders/aabb_debug_vs.glsl -o shaders/aabb_debug_vs.spv
+%GLSLC_PATH% -fshader-stage=fragment -O shaders/aabb_debug_fs.glsl -o shaders/aabb_debug_fs.spv
+%GLSLC_PATH% -fshader-stage=vertex   -O shaders/fullscreenVS.glsl  -o shaders/fullscreenVS.spv
+%GLSLC_PATH% -fshader-stage=fragment -O shaders/fragment.glsl      -o shaders/fragment.spv
+%GLSLC_PATH% -fshader-stage=fragment -O shaders/tonemap.glsl       -o shaders/tonemap.spv
+%GLSLC_PATH% -fshader-stage=compute  -O shaders/raytracer.glsl     -o shaders/raytracer.spv
+%GLSLC_PATH% -fshader-stage=compute  -O shaders/cubemapgen.glsl    -o shaders/cubemapgen.spv
 :: pause

@@ -21,29 +21,10 @@ struct FBoundingBox
         : BoxMin(std::numeric_limits<float>::max())
         , BoxMax(std::numeric_limits<float>::lowest())
         , Triangles()
-        , ChildIndex(0)
-    {
-    }
-    
-    FBoundingBox(const glm::vec3& InBoxMin, const glm::vec3& InBoxMax)
-        : BoxMin(InBoxMin)
-        , BoxMax(InBoxMax)
-        , Triangles()
         , FirstTriangleIndex(0)
         , NumTriangles(0)
         , ChildIndex(0)
     {
-    }
-    
-    void GrowAroundPoint(const glm::vec3& Point)
-    {
-        BoxMin = glm::min(Point, BoxMin);
-        BoxMax = glm::max(Point, BoxMax);
-    }
-    
-    bool Contains(const glm::vec3& Point) const
-    {
-        return glm::all(glm::greaterThanEqual(Point, BoxMin)) && glm::all(glm::lessThan(Point, BoxMax));
     }
     
     glm::vec3             BoxMin;
@@ -58,19 +39,15 @@ struct FBoundingBoxBuilder
 {
     FBoundingBoxBuilder(uint32_t InMaxDepth);
     
-    void InsertTriangle(const FTriangle& Triangle);
     void BuildHierarchy();
     void Finalize();
+    void RecalculateBounds(FBoundingBox& BoundingBox);
     
-    FBoundingBox& GetRoot()
-    {
-        return BoundingBoxes[0];
-    }
-    
-    std::vector<FTriangle>    Triangles;
-    std::vector<FBoundingBox> BoundingBoxes;
-    const uint32_t            MaxDepth;
-    uint32_t                  Depth;
+    std::vector<FTriangle>                 Triangles;
+    std::vector<FBoundingBox>              BoundingBoxes;
+    const uint32_t                         MaxDepth;
+    uint32_t                               Depth;
+    std::vector<std::pair<size_t, size_t>> DepthIndicies;
 };
 
 struct FAccelerationStructure
@@ -79,8 +56,9 @@ struct FAccelerationStructure
     
     void Build(const FMesh& Mesh, uint32_t MaxDepth);
 
-    std::vector<FShaderTriangle>    m_Triangles;
-    std::vector<FShaderBoundingBox> m_BoundingBoxes;
+    std::vector<FShaderTriangle>           m_Triangles;
+    std::vector<FShaderBoundingBox>        m_BoundingBoxes;
+    std::vector<std::pair<size_t, size_t>> m_DepthIndicies;
     
     struct
     {

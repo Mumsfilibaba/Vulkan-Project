@@ -26,6 +26,24 @@ FRayTracer::FRayTracer()
     , m_pRayTracingPipeline()
     , m_pRayTracingPipelineLayout(nullptr)
     , m_pRayTracingDescriptorSetLayout(nullptr)
+    , m_pTonemappingPipeline(nullptr)
+    , m_pTonemappingRenderPass(nullptr)
+    , m_pTonemappingPipelineLayout(nullptr)
+    , m_pTonemappingDescriptorSetLayout(nullptr)
+    , m_pTonemappingDescriptorSet0(nullptr)
+    , m_pTonemappingDescriptorSet1(nullptr)
+    , m_pTonemappingFramebuffer(nullptr)
+    , m_pDebugPipeline(nullptr)
+    , m_pDebugPipelineWireframe(nullptr)
+    , m_pDebugAABBPipeline(nullptr)
+    , m_pDebugRenderPass(nullptr)
+    , m_pDebugPipelineLayout(nullptr)
+    , m_pDebugAABBPipelineLayout(nullptr)
+    , m_pDebugDescriptorSetLayout(nullptr)
+    , m_pDebugDescriptorSet0(nullptr)
+    , m_pDebugDescriptorSet1(nullptr)
+    , m_pDebugFramebuffer(nullptr)
+    , m_DebugDepth(0)
     , m_pDeviceAllocator(nullptr)
     , m_pDescriptorPool(nullptr)
     , m_pRayTracingDescriptorSet0(nullptr)
@@ -40,6 +58,9 @@ FRayTracer::FRayTracer()
     , m_pMeshBuffer(nullptr)
     , m_pVertexBuffer(nullptr)
     , m_pMaterialBuffer(nullptr)
+    , m_pBvhBuffer(nullptr)
+    , m_pAABBVertexBuffer(nullptr)
+    , m_pAABBIndexBuffer(nullptr)
     , m_pSceneTexture1(nullptr)
     , m_pSceneTextureView1(nullptr)
     , m_pSceneTexture0(nullptr)
@@ -241,7 +262,7 @@ void FRayTracer::Tick(float DeltaTime)
     }
 
     // Update
-    m_pScene->m_Camera.Update(m_pScene->m_Settings.FieldOfView, m_pSceneTexture0->GetWidth(), m_pSceneTexture0->GetHeight(), 0.1f, 100.0f);
+    m_pScene->m_Camera.Update(m_pScene->m_Settings.FieldOfView, m_pSceneTexture0->GetWidth(), m_pSceneTexture0->GetHeight(), 0.01f, 10000.0f);
 
     // Draw
     uint32_t FrameIndex = m_pSwapchain->GetCurrentBackBufferIndex();
@@ -423,7 +444,7 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
     // Define clear colors
     VkClearValue ClearColor[2];
     ClearColor[0].color        = { 0.0f, 0.0f, 0.0f, 1.0f };
-    ClearColor[1].depthStencil = { 0.0f, 0 };
+    ClearColor[1].depthStencil = { 1.0f, 0 };
 
     if (!m_pScene->m_pMeshVertexBuffer || !m_pScene->m_pMeshIndexBuffer)
     {
@@ -452,27 +473,119 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
     VkRect2D scissor = { { 0, 0}, { m_ViewportWidth, m_ViewportHeight } };
     pCommandBuffer->SetScissorRect(scissor);
     
-    // Bind pipeline
-    pCommandBuffer->BindGraphicsPipelineState(m_pDebugPipeline);
+    // Draw Mesh
+    {
+        pCommandBuffer->BindGraphicsPipelineState(m_pDebugPipeline);
+        
+        const glm::vec4 Color = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
+        pCommandBuffer->PushConstants(m_pDebugPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::vec4), glm::value_ptr(Color));
+        
+        // Bind DescriptorSets
+        const uint64_t Frame = (m_FrameIndex % 2);
+        if (Frame == 0)
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0);
+        }
+        else
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1);
+        }
+        
+        // Set Vertex- and IndexBuffer
+        pCommandBuffer->BindVertexBuffer(m_pScene->m_pMeshVertexBuffer, 0, 0);
+        pCommandBuffer->BindIndexBuffer(m_pScene->m_pMeshIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-    // Bind DescriptorSets
-    const uint64_t Frame = (m_FrameIndex % 2);
-    if (Frame == 0)
-    {
-        pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0);
-    }
-    else
-    {
-        pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1);
+        // Draw
+        const size_t IndexCount = m_pScene->m_Indicies.size();
+        pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
     }
     
-    // Set Vertex- and IndexBuffer
-    pCommandBuffer->BindVertexBuffer(m_pScene->m_pMeshVertexBuffer, 0, 0);
-    pCommandBuffer->BindIndexBuffer(m_pScene->m_pMeshIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    // Draw Wireframe
+    {
+        pCommandBuffer->BindGraphicsPipelineState(m_pDebugPipelineWireframe);
 
-    // Draw
-    const size_t IndexCount = m_pScene->m_Indicies.size();
-    pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
+        const glm::vec4 Color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+        pCommandBuffer->PushConstants(m_pDebugPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::vec4), glm::value_ptr(Color));
+        
+        // Bind DescriptorSets
+        const uint64_t Frame = (m_FrameIndex % 2);
+        if (Frame == 0)
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0);
+        }
+        else
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1);
+        }
+        
+        // Set Vertex- and IndexBuffer
+        pCommandBuffer->BindVertexBuffer(m_pScene->m_pMeshVertexBuffer, 0, 0);
+        pCommandBuffer->BindIndexBuffer(m_pScene->m_pMeshIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        // Draw
+        const size_t IndexCount = m_pScene->m_Indicies.size();
+        pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
+    }
+    
+    // Draw the bounding boxes
+    {
+        pCommandBuffer->BindGraphicsPipelineState(m_pDebugAABBPipeline);
+        
+        // Bind DescriptorSets
+        const uint64_t Frame = (m_FrameIndex % 2);
+        if (Frame == 0)
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet0);
+        }
+        else
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet1);
+        }
+        
+        pCommandBuffer->BindVertexBuffer(m_pAABBVertexBuffer, 0, 0);
+        pCommandBuffer->BindIndexBuffer(m_pAABBIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        
+        std::pair<size_t, size_t> Indicies = m_pScene->m_AccelerationStructure.m_DepthIndicies[m_DebugDepth];
+        Indicies.second = std::min(Indicies.second, m_pScene->m_AccelerationStructure.m_BoundingBoxes.size());
+        
+        struct FAABBDebugData
+        {
+            glm::mat4 TransformMatrix;
+            glm::vec4 Color;
+        } DebugData;
+        
+        DebugData.Color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+        
+        for (size_t i = 0; i < Indicies.first; i++)
+        {
+            const FShaderBoundingBox& BoundingBox = m_pScene->m_AccelerationStructure.m_BoundingBoxes[i];
+            glm::vec3 Scale    = BoundingBox.BoxMax - BoundingBox.BoxMin;
+            glm::vec3 Position = BoundingBox.BoxMin + (Scale * 0.5f);
+            
+            DebugData.TransformMatrix = glm::identity<glm::mat4>();
+            DebugData.TransformMatrix = glm::translate(DebugData.TransformMatrix, Position);
+            DebugData.TransformMatrix = glm::scale(DebugData.TransformMatrix, Scale);
+            
+            pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FAABBDebugData), &DebugData);
+            pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, 1, 0, 0, 0);
+        }
+        
+        DebugData.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+        
+        for (size_t i = Indicies.first; i < Indicies.second; i++)
+        {
+            const FShaderBoundingBox& BoundingBox = m_pScene->m_AccelerationStructure.m_BoundingBoxes[i];
+            glm::vec3 Scale    = BoundingBox.BoxMax - BoundingBox.BoxMin;
+            glm::vec3 Position = BoundingBox.BoxMin + (Scale * 0.5f);
+            
+            DebugData.TransformMatrix = glm::identity<glm::mat4>();
+            DebugData.TransformMatrix = glm::translate(DebugData.TransformMatrix, Position);
+            DebugData.TransformMatrix = glm::scale(DebugData.TransformMatrix, Scale);
+            
+            pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FAABBDebugData), &DebugData);
+            pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, 1, 0, 0, 0);
+        }
+    }
     
     // End renderpass
     pCommandBuffer->EndRenderPass();
@@ -581,6 +694,11 @@ void FRayTracer::OnRenderUI()
                 
                 PrevViewMode = CurrentViewMode;
                 m_bResetImage = true;
+            }
+            
+            if (CurrentViewMode == 3)
+            {
+                ImGui::DragInt("Debug Depth", &m_DebugDepth, 1, 0, m_pScene->m_AccelerationStructure.Stats.Depth, "%d", ImGuiSliderFlags_AlwaysClamp);
             }
         }
         
@@ -1047,7 +1165,7 @@ void FRayTracer::CreateRayTracingResources()
     // Create RayTracing PipelineLayout
     FPipelineLayoutParams RayTracingPipelineLayoutParams;
     RayTracingPipelineLayoutParams.ppLayouts  = &m_pRayTracingDescriptorSetLayout;
-    RayTracingPipelineLayoutParams.numLayouts = 1;
+    RayTracingPipelineLayoutParams.NumLayouts = 1;
 
     m_pRayTracingPipelineLayout = FPipelineLayout::Create(m_pDevice, RayTracingPipelineLayoutParams);
     assert(m_pRayTracingPipelineLayout != nullptr);
@@ -1088,18 +1206,30 @@ void FRayTracer::CreateDebugViewResources()
 
     // Create DebugPass PipelineLayout
     FPipelineLayoutParams DebugPassPipelineLayoutParams;
-    DebugPassPipelineLayoutParams.ppLayouts  = &m_pDebugDescriptorSetLayout;
-    DebugPassPipelineLayoutParams.numLayouts = 1;
+    DebugPassPipelineLayoutParams.ppLayouts        = &m_pDebugDescriptorSetLayout;
+    DebugPassPipelineLayoutParams.NumLayouts       = 1;
+    DebugPassPipelineLayoutParams.NumPushConstants = 4;
     
     m_pDebugPipelineLayout = FPipelineLayout::Create(m_pDevice, DebugPassPipelineLayoutParams);
     assert(m_pDebugPipelineLayout != nullptr);
+    
+    DebugPassPipelineLayoutParams.NumPushConstants = 20;
+    
+    m_pDebugAABBPipelineLayout = FPipelineLayout::Create(m_pDevice, DebugPassPipelineLayoutParams);
+    assert(m_pDebugAABBPipelineLayout != nullptr);
     
     // PipelineState, RenderPass and Shaders
     FShaderModule* pVertex = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/vertex.spv");
     assert(pVertex != nullptr);
     
+    FShaderModule* pAABBVertex = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/aabb_debug_vs.spv");
+    assert(pAABBVertex != nullptr);
+    
     FShaderModule* pFragment = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/fragment.spv");
     assert(pFragment != nullptr);
+    
+    FShaderModule* pAABBFragment = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/aabb_debug_fs.spv");
+    assert(pAABBFragment != nullptr);
     
     FRenderPassAttachment ColorAttachments[1];
     ColorAttachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
@@ -1128,12 +1258,77 @@ void FRayTracer::CreateDebugViewResources()
     DebugPassPipelineParams.pFragmentShader           = pFragment;
     DebugPassPipelineParams.pRenderPass               = m_pDebugRenderPass;
     DebugPassPipelineParams.pPipelineLayout           = m_pDebugPipelineLayout;
+    DebugPassPipelineParams.bDepthEnable              = true;
     
     m_pDebugPipeline = FGraphicsPipeline::Create(m_pDevice, DebugPassPipelineParams);
     assert(m_pDebugPipeline != nullptr);
     
+    DebugPassPipelineParams.PolygonMode = VK_POLYGON_MODE_LINE;
+    
+    m_pDebugPipelineWireframe = FGraphicsPipeline::Create(m_pDevice, DebugPassPipelineParams);
+    assert(m_pDebugPipelineWireframe != nullptr);
+    
+    DebugPassPipelineParams.pBindingDescriptions      = FVertexPosOnly::GetBindingDescription();
+    DebugPassPipelineParams.BindingDescriptionCount   = 1;
+    DebugPassPipelineParams.pAttributeDescriptions    = FVertexPosOnly::GetAttributeDescriptions();
+    DebugPassPipelineParams.AttributeDescriptionCount = 1;
+    DebugPassPipelineParams.pVertexShader             = pAABBVertex;
+    DebugPassPipelineParams.pFragmentShader           = pAABBFragment;
+    DebugPassPipelineParams.pRenderPass               = m_pDebugRenderPass;
+    DebugPassPipelineParams.pPipelineLayout           = m_pDebugAABBPipelineLayout;
+    DebugPassPipelineParams.Topology                  = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    DebugPassPipelineParams.bDepthEnable              = true;
+    
+    m_pDebugAABBPipeline = FGraphicsPipeline::Create(m_pDevice, DebugPassPipelineParams);
+    assert(m_pDebugAABBPipeline != nullptr);
+    
     delete pVertex;
+    delete pAABBVertex;
     delete pFragment;
+    
+    std::array<glm::vec3, 8> AABBVertices =
+    {
+        glm::vec3(-0.5f, -0.5f,  0.5f),
+        glm::vec3( 0.5f, -0.5f,  0.5f),
+        glm::vec3(-0.5f,  0.5f,  0.5f),
+        glm::vec3( 0.5f,  0.5f,  0.5f),
+        glm::vec3( 0.5f, -0.5f, -0.5f),
+        glm::vec3(-0.5f, -0.5f, -0.5f),
+        glm::vec3( 0.5f,  0.5f, -0.5f),
+        glm::vec3(-0.5f,  0.5f, -0.5f)
+    };
+
+    std::array<uint32_t, 24> AABBIndices =
+    {
+        0, 1,
+        1, 3,
+        3, 2,
+        2, 0,
+        1, 4,
+        3, 6,
+        6, 4,
+        4, 5,
+        5, 7,
+        7, 6,
+        0, 5,
+        2, 7,
+    };
+    
+    // BVH Buffers
+    FBufferParams BufferParams;
+    BufferParams.Size             = sizeof(glm::vec3) * AABBVertices.size();
+    BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    
+    m_pAABBVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, AABBVertices.data());
+    assert(m_pAABBVertexBuffer != nullptr);
+    
+    BufferParams.Size  = sizeof(uint32_t) * AABBIndices.size();
+    BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    m_AABBIndexCount = AABBIndices.size();
+    
+    m_pAABBIndexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, AABBIndices.data());
+    assert(m_pAABBIndexBuffer != nullptr);
 }
 
 void FRayTracer::CreateTonemappingResources()
@@ -1166,7 +1361,7 @@ void FRayTracer::CreateTonemappingResources()
     // Create Tonemapping PipelineLayout
     FPipelineLayoutParams ToneMappingPipelineLayoutParams;
     ToneMappingPipelineLayoutParams.ppLayouts  = &m_pTonemappingDescriptorSetLayout;
-    ToneMappingPipelineLayoutParams.numLayouts = 1;
+    ToneMappingPipelineLayoutParams.NumLayouts = 1;
     
     m_pTonemappingPipelineLayout = FPipelineLayout::Create(m_pDevice, ToneMappingPipelineLayoutParams);
     assert(m_pTonemappingPipelineLayout != nullptr);

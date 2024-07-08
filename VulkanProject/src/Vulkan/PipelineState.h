@@ -12,14 +12,16 @@ struct FGraphicsPipelineStateParams
     uint32_t                           AttributeDescriptionCount = 0;
     VkVertexInputBindingDescription*   pBindingDescriptions      = nullptr;
     uint32_t                           BindingDescriptionCount   = 0;
-
-    VkCullModeFlagBits CullMode        = VK_CULL_MODE_BACK_BIT;
-    VkFrontFace        FrontFace       = VK_FRONT_FACE_CLOCKWISE;
-    bool               bBlendEnable    = false;
-    FRenderPass*       pRenderPass     = nullptr;
-    FPipelineLayout*   pPipelineLayout = nullptr;
-    FShaderModule*     pVertexShader   = nullptr;
-    FShaderModule*     pFragmentShader = nullptr;
+    VkCullModeFlagBits  CullMode        = VK_CULL_MODE_BACK_BIT;
+    VkFrontFace         FrontFace       = VK_FRONT_FACE_CLOCKWISE;
+    VkPrimitiveTopology Topology        = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    VkPolygonMode       PolygonMode     = VK_POLYGON_MODE_FILL;
+    bool                bBlendEnable    = false;
+    bool                bDepthEnable    = false;
+    FRenderPass*        pRenderPass     = nullptr;
+    FPipelineLayout*    pPipelineLayout = nullptr;
+    FShaderModule*      pVertexShader   = nullptr;
+    FShaderModule*      pFragmentShader = nullptr;
 };
 
 class FBasePipeline : public FDeviceChild

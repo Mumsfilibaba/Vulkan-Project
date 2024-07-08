@@ -25,7 +25,13 @@ layout(binding = 0) uniform CameraBufferObject
     uint Padding2;
 } uCamera;
 
-void main()
+layout(push_constant, std430) uniform PushConstant
 {
-    gl_Position = uCamera.Projection * uCamera.View * vec4(inPosition, 1.0);
+    mat4 TransformMatrix;
+    vec4 Color;
+} Constants;
+
+void main() 
+{
+    gl_Position = uCamera.Projection * uCamera.View * Constants.TransformMatrix * vec4(inPosition, 1.0);
 }

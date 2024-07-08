@@ -1250,8 +1250,8 @@ namespace GUI
         {
             FPipelineLayoutParams pipelineLayoutParams = {};
             pipelineLayoutParams.ppLayouts        = &pRendererBackend->pDescriptorSetLayout;
-            pipelineLayoutParams.numLayouts       = 1;
-            pipelineLayoutParams.numPushConstants = 4;
+            pipelineLayoutParams.NumLayouts       = 1;
+            pipelineLayoutParams.NumPushConstants = 4;
             
             pRendererBackend->pPipelineLayout = FPipelineLayout::Create(pRendererBackend->pDevice, pipelineLayoutParams);
             assert(pRendererBackend->pPipelineLayout != nullptr);

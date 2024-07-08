@@ -62,7 +62,7 @@ FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPi
     ZERO_STRUCT(&InputAssemblyCreateInfo);
     
     InputAssemblyCreateInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    InputAssemblyCreateInfo.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    InputAssemblyCreateInfo.topology               = Params.Topology;
     InputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
 
     VkPipelineViewportStateCreateInfo ViewportStateCreateInfo;
@@ -78,7 +78,7 @@ FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPi
     RasterizerCreateInfo.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     RasterizerCreateInfo.depthClampEnable        = VK_FALSE;
     RasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
-    RasterizerCreateInfo.polygonMode             = VK_POLYGON_MODE_FILL;
+    RasterizerCreateInfo.polygonMode             = Params.PolygonMode;
     RasterizerCreateInfo.lineWidth               = 1.0f;
     RasterizerCreateInfo.cullMode                = Params.CullMode;
     RasterizerCreateInfo.frontFace               = Params.FrontFace;
@@ -135,9 +135,20 @@ FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPi
 
     assert(Params.pRenderPass != nullptr);
 
+    VkPipelineDepthStencilStateCreateInfo DepthStencilCreateInfo;
+    ZERO_STRUCT(&DepthStencilCreateInfo);
+    
+    DepthStencilCreateInfo.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    DepthStencilCreateInfo.depthTestEnable       = VK_TRUE;
+    DepthStencilCreateInfo.depthWriteEnable      = VK_TRUE;
+    DepthStencilCreateInfo.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
+    DepthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+    DepthStencilCreateInfo.stencilTestEnable     = VK_FALSE;
+
+    // Add the depth stencil state to the pipeline creation info
     VkGraphicsPipelineCreateInfo PipelineCreateInfo;
     ZERO_STRUCT(&PipelineCreateInfo);
-    
+
     PipelineCreateInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     PipelineCreateInfo.stageCount          = uint32_t(ShaderStages.size());
     PipelineCreateInfo.pStages             = ShaderStages.data();
@@ -146,7 +157,7 @@ FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPi
     PipelineCreateInfo.pViewportState      = &ViewportStateCreateInfo;
     PipelineCreateInfo.pRasterizationState = &RasterizerCreateInfo;
     PipelineCreateInfo.pMultisampleState   = &MultisamplingCreateInfo;
-    PipelineCreateInfo.pDepthStencilState  = nullptr;
+    PipelineCreateInfo.pDepthStencilState  = Params.bDepthEnable ? &DepthStencilCreateInfo : nullptr;
     PipelineCreateInfo.pColorBlendState    = &ColorBlendingCreateInfo;
     PipelineCreateInfo.pDynamicState       = &DynamicStateInfoCreateInfo;
     PipelineCreateInfo.renderPass          = Params.pRenderPass->GetRenderPass();

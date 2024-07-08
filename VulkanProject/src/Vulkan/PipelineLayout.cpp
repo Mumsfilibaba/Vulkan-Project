@@ -7,9 +7,9 @@ FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayout
     FPipelineLayout* pPipelineLayout = new FPipelineLayout(pDevice);
 
     std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
-    DescriptorSetLayouts.reserve(Params.numLayouts);
+    DescriptorSetLayouts.reserve(Params.NumLayouts);
 
-    for (uint32_t i = 0; i < Params.numLayouts; i++)
+    for (uint32_t i = 0; i < Params.NumLayouts; i++)
     {
         DescriptorSetLayouts.push_back(Params.ppLayouts[i]->GetDescriptorSetLayout());
     }
@@ -17,7 +17,7 @@ FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayout
     VkPushConstantRange PushConstantRanges[1] = {};
     PushConstantRanges[0].stageFlags = VK_SHADER_STAGE_ALL;
     PushConstantRanges[0].offset     = sizeof(uint32_t) * 0;
-    PushConstantRanges[0].size       = sizeof(uint32_t) * Params.numPushConstants;
+    PushConstantRanges[0].size       = sizeof(uint32_t) * Params.NumPushConstants;
     
     VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo;
     ZERO_STRUCT(&PipelineLayoutCreateInfo);
@@ -26,7 +26,7 @@ FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayout
     PipelineLayoutCreateInfo.setLayoutCount = DescriptorSetLayouts.size();
     PipelineLayoutCreateInfo.pSetLayouts    = DescriptorSetLayouts.data();
     
-    if (Params.numPushConstants > 0)
+    if (Params.NumPushConstants > 0)
     {
         PipelineLayoutCreateInfo.pushConstantRangeCount = 1;
         PipelineLayoutCreateInfo.pPushConstantRanges    = PushConstantRanges;

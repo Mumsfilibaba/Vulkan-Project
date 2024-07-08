@@ -52,10 +52,12 @@ void FModelScene::Initialize()
     if (Type == EModelSceneType::Default)
     {
         Mesh.LoadFromFile("res/models/queen.obj");
+        m_Settings.CameraSpeed = 1.5f;
     }
     else if (Type == EModelSceneType::Sponza)
     {
         Mesh.LoadFromFile("res/models/sponza/sponza.obj");
+        m_Settings.CameraSpeed = 150.0f;
     }
 
     // Copy vertices
@@ -63,10 +65,11 @@ void FModelScene::Initialize()
     m_Indicies = Mesh.Indicies;
     
     // Build BVH
-    m_AccelerationStructure.Build(Mesh, 4);
+    m_AccelerationStructure.Build(Mesh, 32);
     
     std::cout << "Depth: " << m_AccelerationStructure.Stats.Depth << "\n";
     std::cout << "MaxTrianglesInLeafNode: " << m_AccelerationStructure.Stats.MaxTrianglesInLeafNode << "\n";
+    std::cout << "Num BoundingBoxes: " << m_AccelerationStructure.m_BoundingBoxes.size() << "\n";
     
     // Mesh Data
     m_Meshes.push_back(
