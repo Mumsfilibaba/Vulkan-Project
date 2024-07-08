@@ -47,7 +47,7 @@ struct FBoundingBoxBuilder
     std::vector<FBoundingBox>              BoundingBoxes;
     const uint32_t                         MaxDepth;
     uint32_t                               Depth;
-    std::vector<std::pair<size_t, size_t>> DepthIndicies;
+    std::vector<std::pair<size_t, size_t>> DepthDebugIndicies;
 };
 
 struct FAccelerationStructure
