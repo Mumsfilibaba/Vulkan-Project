@@ -5,6 +5,7 @@
 
 #define SAH_PER_TRIANGLE 0
 #define SAH_OPTIMIZED 1
+#define SAH_NUM_SPLITS 200
 
 FBoundingBoxBuilder::FBoundingBoxBuilder(uint32_t InMaxDepth)
     : BoundingBoxes()
@@ -50,7 +51,7 @@ void FBoundingBoxBuilder::BuildHierarchy()
             float   BestCost  = std::numeric_limits<float>::max();
             
         #if SAH_OPTIMIZED
-            const size_t NumSplits = 1000;
+            const size_t NumSplits = SAH_NUM_SPLITS;
             const glm::vec3 Extent = BoundingBoxes[CurrentIndex].BoxMax - BoundingBoxes[CurrentIndex].BoxMin;
         #endif
             
