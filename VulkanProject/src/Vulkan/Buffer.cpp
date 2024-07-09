@@ -6,7 +6,8 @@
 FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator)
 {
     FBuffer* pBuffer = new FBuffer(pDevice, pAllocator);
-    
+    assert(Params.Size > 0);
+
     VkBufferCreateInfo BufferCreateInfo;
     ZERO_STRUCT(&BufferCreateInfo);
     

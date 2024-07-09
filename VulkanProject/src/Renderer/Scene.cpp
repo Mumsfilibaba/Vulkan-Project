@@ -51,12 +51,12 @@ void FModelScene::Initialize()
     FMesh Mesh;
     if (Type == EModelSceneType::Default)
     {
-        Mesh.LoadFromFile("res/models/queen.obj");
+        Mesh.LoadFromFile(RESOURCE_PATH"/models/queen.obj");
         m_Settings.CameraSpeed = 1.5f;
     }
     else if (Type == EModelSceneType::Sponza)
     {
-        Mesh.LoadFromFile("res/models/sponza/sponza.obj");
+        Mesh.LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj");
         m_Settings.CameraSpeed = 150.0f;
     }
 
@@ -98,13 +98,13 @@ void FModelScene::Initialize()
     
     BufferParams.Size             = sizeof(FVertexPosOnly) * Mesh.Positions.size();
     BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
     m_pMeshVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Positions.data());
     assert(m_pMeshVertexBuffer != nullptr);
     
     BufferParams.Size  = sizeof(uint32_t) * Mesh.Indicies.size();
-    BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
     m_pMeshIndexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Indicies.data());
     assert(m_pMeshIndexBuffer != nullptr);

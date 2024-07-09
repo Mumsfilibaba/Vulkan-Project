@@ -446,7 +446,7 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
     ClearColor[0].color        = { 0.0f, 0.0f, 0.0f, 1.0f };
     ClearColor[1].depthStencil = { 1.0f, 0 };
 
-    if (!m_pScene->m_pMeshVertexBuffer || !m_pScene->m_pMeshIndexBuffer)
+    if (!m_pScene->m_pMeshVertexBuffer || !m_pScene->m_pMeshIndexBuffer)
     {
         // Begin renderpass (Only clear the image when the buffers are invalid)
         pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, ClearColor, 2);
@@ -1339,13 +1339,13 @@ void FRayTracer::CreateDebugViewResources()
     FBufferParams BufferParams;
     BufferParams.Size             = sizeof(glm::vec3) * AABBVertices.size();
     BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
     m_pAABBVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, AABBVertices.data());
     assert(m_pAABBVertexBuffer != nullptr);
     
     BufferParams.Size  = sizeof(uint32_t) * AABBIndices.size();
-    BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     m_AABBIndexCount = AABBIndices.size();
     
     m_pAABBIndexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, AABBIndices.data());
