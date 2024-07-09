@@ -54,7 +54,7 @@ bool FApplication::Init()
     FDeviceParams DeviceParams;
     DeviceParams.pWindow           = m_pWindow;
     DeviceParams.bEnableRayTracing = true;
-    DeviceParams.bEnableValidation = true;
+    DeviceParams.bEnableValidation = false;
     DeviceParams.bVerbose          = false;
 
     m_pDevice = FDevice::Create(DeviceParams);

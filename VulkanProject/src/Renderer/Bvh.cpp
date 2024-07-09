@@ -3,6 +3,9 @@
 #include "Model.h"
 #include <queue>
 
+#define SAH_PER_TRIANGLE 0
+#define SAH_OPTIMIZED 1
+
 FBoundingBoxBuilder::FBoundingBoxBuilder(uint32_t InMaxDepth)
     : BoundingBoxes()
     , MaxDepth(InMaxDepth)
@@ -24,8 +27,6 @@ void FBoundingBoxBuilder::BuildHierarchy()
     uint32_t CurrentDepth = 0;
     while (CurrentDepth < MaxDepth && !Queue.empty())
     {
-        std::cout << "Depth: " << CurrentDepth << "\n";
-        
         // Store the start index for this depth
         std::pair<size_t, size_t>& DebugIndicies = DepthDebugIndicies.emplace_back();
         DebugIndicies.first = BoundingBoxes.size();
@@ -47,24 +48,40 @@ void FBoundingBoxBuilder::BuildHierarchy()
             float   BestSplit = 0.0f;
             int32_t BestAxis  = -1;
             float   BestCost  = std::numeric_limits<float>::max();
-                
+            
+        #if SAH_OPTIMIZED
+            const size_t NumSplits = 1000;
+            const glm::vec3 Extent = BoundingBoxes[CurrentIndex].BoxMax - BoundingBoxes[CurrentIndex].BoxMin;
+        #endif
+            
             const std::vector<uint32_t>& TriangleIndices = BoundingBoxes[CurrentIndex].Triangles;
             for (size_t Axis = 0; Axis < 3; Axis++)
             {
-                size_t Index = 0;
+            #if SAH_PER_TRIANGLE
                 for (uint32_t TriangleIndex : TriangleIndices)
                 {
-                    float Cost = EvaluateCost(CurrentIndex, Axis, Triangles[TriangleIndex].Center[Axis]);
+                    const float Cost = EvaluateCost(CurrentIndex, Axis, Triangles[TriangleIndex].Center[Axis]);
                     if (Cost < BestCost)
                     {
                         BestAxis  = Axis;
                         BestSplit = Triangles[TriangleIndex].Center[Axis];
                         BestCost  = Cost;
                     }
-                    
-                    Index++;
-                    std::cout << Index << "\n";
                 }
+            #elif SAH_OPTIMIZED
+                const float PerSplitDistance = Extent[Axis] / static_cast<float>(NumSplits);
+                for (size_t i = 0; i < NumSplits; i++)
+                {
+                    const float SplitPos = BoundingBoxes[CurrentIndex].BoxMin[Axis] + (static_cast<float>(i) * PerSplitDistance);
+                    const float Cost = EvaluateCost(CurrentIndex, Axis, SplitPos);
+                    if (Cost < BestCost)
+                    {
+                        BestAxis  = Axis;
+                        BestSplit = SplitPos;
+                        BestCost  = Cost;
+                    }
+                }
+            #endif
             }
             
             // Add triangles to the child-nodes
