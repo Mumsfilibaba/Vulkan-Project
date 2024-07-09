@@ -29,7 +29,7 @@ vec3 GetBoundingBoxMax(in FBoundingBox Node)
     return vec3(Node.MaxAABB[0], Node.MaxAABB[1], Node.MaxAABB[2]);
 }
 
-vec2 IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray)
+vec2 IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad PayLoad)
 {
     vec3 MinT = (BoxMin - Ray.Origin) / Ray.Direction;
     vec3 MaxT = (BoxMax - Ray.Origin) / Ray.Direction;
@@ -42,9 +42,9 @@ vec2 IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray)
     return vec2(FarT, NearT);
 }
 
-vec2 IntersectRayAABB(in FBoundingBox Node, in FRay Ray)
+vec2 IntersectRayAABB(in FBoundingBox Node, in FRay Ray, FRayPayLoad PayLoad)
 {
-    return IntersectRayAABB(GetBoundingBoxMin(Node), GetBoundingBoxMax(Node), Ray);
+    return IntersectRayAABB(GetBoundingBoxMin(Node), GetBoundingBoxMax(Node), Ray, PayLoad);
 }
 
 #endif
