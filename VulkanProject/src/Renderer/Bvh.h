@@ -15,6 +15,30 @@ struct FShaderBoundingBox
     uint32_t  NumTriangles = 0;
 };
 
+struct FAABB
+{
+    FAABB()
+        : Min(std::numeric_limits<float>::max())
+        , Max(std::numeric_limits<float>::lowest())
+    {
+    }
+    
+    void FitAroundPoint(const glm::vec3& Point)
+    {
+        Min = glm::min(Min, Point);
+        Max = glm::max(Max, Point);
+    }
+    
+    float GetArea() const
+    {
+        const glm::vec3 Extent = Max - Min;
+        return Extent.x * Extent.y + Extent.y * Extent.z + Extent.z * Extent.x;
+    }
+    
+    glm::vec3 Min;
+    glm::vec3 Max;
+};
+
 struct FBoundingBox
 {
     FBoundingBox()
@@ -41,7 +65,8 @@ struct FBoundingBoxBuilder
     
     void BuildHierarchy();
     void Finalize();
-    void RecalculateBounds(FBoundingBox& BoundingBox);
+    void RecalculateBounds(size_t VolumeIndex);
+    float EvaluateCost(size_t VolumeIndex, size_t AxisIndex, float SplitPos);
     
     std::vector<FTriangle>                 Triangles;
     std::vector<FBoundingBox>              BoundingBoxes;

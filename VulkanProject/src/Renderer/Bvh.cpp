@@ -43,30 +43,38 @@ void FBoundingBoxBuilder::BuildHierarchy()
                 continue;
             }
             
-            const glm::vec3 Extent = BoundingBoxes[CurrentIndex].BoxMax - BoundingBoxes[CurrentIndex].BoxMin;
-            
-            uint32_t Axis = 0;
-            if (Extent.y > Extent.x)
-            {
-                Axis = 1;
-            }
-            if (Extent.z > Extent[Axis])
-            {
-                Axis = 2;
-            }
-            
-            const float SplitPosition = BoundingBoxes[CurrentIndex].BoxMin[Axis] + (Extent[Axis] * 0.5f);
-
-            // Add triangles to the child-nodes
+            // Go through each axis and find the best cost
+            float   BestSplit = 0.0f;
+            int32_t BestAxis  = -1;
+            float   BestCost  = std::numeric_limits<float>::max();
+                
             const std::vector<uint32_t>& TriangleIndices = BoundingBoxes[CurrentIndex].Triangles;
+            for (size_t Axis = 0; Axis < 3; Axis++)
+            {
+                size_t Index = 0;
+                for (uint32_t TriangleIndex : TriangleIndices)
+                {
+                    float Cost = EvaluateCost(CurrentIndex, Axis, Triangles[TriangleIndex].Center[Axis]);
+                    if (Cost < BestCost)
+                    {
+                        BestAxis  = Axis;
+                        BestSplit = Triangles[TriangleIndex].Center[Axis];
+                        BestCost  = Cost;
+                    }
+                    
+                    Index++;
+                    std::cout << Index << "\n";
+                }
+            }
             
+            // Add triangles to the child-nodes
             std::vector<uint32_t> LeftIndicies;
             std::vector<uint32_t> RightIndicies;
             for (uint32_t TriangleIndex : TriangleIndices)
             {
                 // Add to either the right- or left- child
                 FTriangle& Triangle = Triangles[TriangleIndex];
-                if (Triangle.Center[Axis] < SplitPosition)
+                if (Triangle.Center[BestAxis] < BestSplit)
                 {
                     LeftIndicies.emplace_back(TriangleIndex);
                 }
@@ -99,12 +107,12 @@ void FBoundingBoxBuilder::BuildHierarchy()
             BoundingBoxes.emplace_back();
             
             // Assign the triangle indices
-            BoundingBoxes[NewIndex].Triangles     = std::move(LeftIndicies);
+            BoundingBoxes[NewIndex].Triangles = std::move(LeftIndicies);
             BoundingBoxes[NewIndex + 1].Triangles = std::move(RightIndicies);
             
             // Grow the new boxes to ensure that all the triangles fully fit inside the boxes
-            RecalculateBounds(BoundingBoxes[NewIndex]);
-            RecalculateBounds(BoundingBoxes[NewIndex + 1]);
+            RecalculateBounds(NewIndex);
+            RecalculateBounds(NewIndex + 1);
         }
         
         // Store the end index for this depth
@@ -153,11 +161,12 @@ void FBoundingBoxBuilder::Finalize()
     Triangles = std::move(NewTriangles);
 }
 
-void FBoundingBoxBuilder::RecalculateBounds(FBoundingBox& BoundingBox)
+void FBoundingBoxBuilder::RecalculateBounds(size_t VolumeIndex)
 {
     glm::vec3 BoxMin = glm::vec3(std::numeric_limits<float>::max());
     glm::vec3 BoxMax = glm::vec3(std::numeric_limits<float>::lowest());
     
+    FBoundingBox& BoundingBox = BoundingBoxes[VolumeIndex];
     for (uint32_t TriangleIndex : BoundingBox.Triangles)
     {
         FTriangle& Triangle = Triangles[TriangleIndex];
@@ -172,6 +181,37 @@ void FBoundingBoxBuilder::RecalculateBounds(FBoundingBox& BoundingBox)
     
     BoundingBox.BoxMin = BoxMin;
     BoundingBox.BoxMax = BoxMax;
+}
+
+float FBoundingBoxBuilder::EvaluateCost(size_t VolumeIndex, size_t AxisIndex, float SplitPos)
+{
+    FAABB LeftBox;
+    FAABB RightBox;
+    size_t LeftCount  = 0;
+    size_t RightCount = 0;
+    
+    FBoundingBox& BoundingBox = BoundingBoxes[VolumeIndex];
+    for (uint32_t TriangleIndex : BoundingBox.Triangles)
+    {
+        FTriangle& Triangle = Triangles[TriangleIndex];
+        if (Triangle.Center[AxisIndex] < SplitPos)
+        {
+            LeftBox.FitAroundPoint(Triangle.Positions[0]);
+            LeftBox.FitAroundPoint(Triangle.Positions[1]);
+            LeftBox.FitAroundPoint(Triangle.Positions[2]);
+            LeftCount++;
+        }
+        else
+        {
+            RightBox.FitAroundPoint(Triangle.Positions[0]);
+            RightBox.FitAroundPoint(Triangle.Positions[1]);
+            RightBox.FitAroundPoint(Triangle.Positions[2]);
+            RightCount++;
+        }
+    }
+    
+    const float Cost = LeftCount * LeftBox.GetArea() + RightCount * RightBox.GetArea();
+    return Cost > 0 ? Cost : std::numeric_limits<float>::max();
 }
 
 FAccelerationStructure::FAccelerationStructure()
@@ -211,7 +251,7 @@ void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
         BoundingBoxBuilder.BoundingBoxes[0].Triangles.push_back(i);
     }
     
-    BoundingBoxBuilder.RecalculateBounds(BoundingBoxBuilder.BoundingBoxes[0]);
+    BoundingBoxBuilder.RecalculateBounds(0);
     
     // Subdivide and build all the bounding boxes
     BoundingBoxBuilder.BuildHierarchy();
