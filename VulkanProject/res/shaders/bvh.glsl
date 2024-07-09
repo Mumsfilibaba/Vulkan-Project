@@ -41,7 +41,7 @@ float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad 
     float NearT = max(max(T1.x, T1.y), T1.z);
     float FarT  = min(min(T2.x, T2.y), T2.z);
 
-    if (FarT >= NearT)
+    if (FarT >= NearT && NearT < PayLoad.T)
     {
         return NearT;
     }

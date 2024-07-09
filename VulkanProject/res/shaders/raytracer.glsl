@@ -356,13 +356,6 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
             continue;
         }
 
-        // Ensure that this hit is closer than the previous hit
-        float MinT = Dist;
-        if (MinT > PayLoad.T)
-        {
-            continue;
-        }
-
         // Check if this is a leafnode (could be leafnodes but with 0 triangles)
         if (Node.NumTriangles > 0)
         {
@@ -661,7 +654,6 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
     uint NumBoxTests      = 0;
     uint NumTriangleTests = 0;
 
-    float ClosestT = 100000.0;
     while (StackIndex >= 0)
     {
         // Pop the stack
@@ -674,13 +666,6 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
         // Check if we hit this node
         float Dist = IntersectRayAABB(Node, Ray, PayLoad);
         if (Dist == LARGE_NUMBER)
-        {
-            continue;
-        }
-
-        // Ensure that this hit is closer than the previous hit
-        float MinT = Dist;
-        if (MinT > ClosestT)
         {
             continue;
         }
@@ -700,11 +685,6 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
 
                 if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0))
                 {
-                    if (PayLoad.T < ClosestT)
-                    {
-                        ClosestT = PayLoad.T;
-                    }
-
                     Color = normalize(PayLoad.Normal);
                 }
             }
