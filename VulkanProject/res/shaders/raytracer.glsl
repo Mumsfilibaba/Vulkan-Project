@@ -271,16 +271,6 @@ bool HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
         return false;
     }
 
-    // Back-face culling: skip if the dot product is positive (back face)
-    vec3 Normal = normalize(cross(Edge1, Edge2));
-    float DdotN = dot(Ray.Direction, Normal);
-#if ENABLE_TRIANGLE_BACK_FACE_CULLING
-    if (DdotN > 0.0)
-    {
-        return false;
-    }
-#endif
-
     // Calculate the inverse determinant
     float InvDeterminant = 1.0 / Determinant;
 
@@ -311,6 +301,8 @@ bool HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
         PayLoad.Position      = Ray.Origin + t * Ray.Direction;
         PayLoad.bFromInside   = false;
 
+        vec3 Normal = normalize(cross(Edge1, Edge2));
+        float DdotN = dot(Ray.Direction, Normal);
         if (DdotN < 0.0) 
         {
             PayLoad.Normal     = Normal;
