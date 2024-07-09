@@ -3,6 +3,7 @@
 
 #define PI 3.14159265358979
 #define TWO_PI 6.28318530717958
+#define LARGE_NUMBER 1e30f
 
 vec3 RealReflect(vec3 v, vec3 n) 
 {
