@@ -349,10 +349,8 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
 
         // Check if we hit this node
         FBoundingBox Node = BvhNodes[NodeIndex];
-        vec3 MinAABB = GetBoundingBoxMin(Node);
-        vec3 MaxAABB = GetBoundingBoxMax(Node);
 
-        vec2 HitResult = IntersectRayAABB(MinAABB, MaxAABB, Ray);
+        vec2 HitResult = IntersectRayAABB(Node, Ray);
         if (HitResult.x < max(HitResult.y, 0.0))
         {
             continue;
@@ -674,9 +672,7 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
         // NumBoxTests++;
 
         // Check if we hit this node
-        vec3 MinAABB = GetBoundingBoxMin(Node);
-        vec3 MaxAABB = GetBoundingBoxMax(Node);
-        vec2 HitResult = IntersectRayAABB(MinAABB, MaxAABB, Ray);
+        vec2 HitResult = IntersectRayAABB(Node, Ray);
         if (HitResult.x < max(HitResult.y, 0.0))
         {
             continue;

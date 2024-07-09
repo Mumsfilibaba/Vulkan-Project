@@ -42,4 +42,9 @@ vec2 IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray)
     return vec2(FarT, NearT);
 }
 
+vec2 IntersectRayAABB(in FBoundingBox Node, in FRay Ray)
+{
+    return IntersectRayAABB(GetBoundingBoxMin(Node), GetBoundingBoxMax(Node), Ray);
+}
+
 #endif
