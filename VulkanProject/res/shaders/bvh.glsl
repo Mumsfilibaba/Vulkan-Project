@@ -1,5 +1,6 @@
 #ifndef BVH_GLSL
 #define BVH_GLSL
+#include "math.glsl"
 
 #define OBJECT_TYPE_UNKNOWN 0
 #define OBJECT_TYPE_SPHERE 1
@@ -29,7 +30,7 @@ vec3 GetBoundingBoxMax(in FBoundingBox Node)
     return vec3(Node.MaxAABB[0], Node.MaxAABB[1], Node.MaxAABB[2]);
 }
 
-vec2 IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad PayLoad)
+float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad PayLoad)
 {
     vec3 MinT = (BoxMin - Ray.Origin) / Ray.Direction;
     vec3 MaxT = (BoxMax - Ray.Origin) / Ray.Direction;
@@ -39,10 +40,18 @@ vec2 IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad P
 
     float NearT = max(max(T1.x, T1.y), T1.z);
     float FarT  = min(min(T2.x, T2.y), T2.z);
-    return vec2(FarT, NearT);
+
+    if (FarT >= NearT)
+    {
+        return NearT;
+    }
+    else
+    {
+        return LARGE_NUMBER;
+    }
 }
 
-vec2 IntersectRayAABB(in FBoundingBox Node, in FRay Ray, FRayPayLoad PayLoad)
+float IntersectRayAABB(in FBoundingBox Node, in FRay Ray, FRayPayLoad PayLoad)
 {
     return IntersectRayAABB(GetBoundingBoxMin(Node), GetBoundingBoxMax(Node), Ray, PayLoad);
 }

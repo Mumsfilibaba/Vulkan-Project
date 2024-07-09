@@ -350,14 +350,14 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
         // Check if we hit this node
         FBoundingBox Node = BvhNodes[NodeIndex];
 
-        vec2 HitResult = IntersectRayAABB(Node, Ray, PayLoad);
-        if (HitResult.x < HitResult.y)
+        float Dist = IntersectRayAABB(Node, Ray, PayLoad);
+        if (Dist == LARGE_NUMBER)
         {
             continue;
         }
 
         // Ensure that this hit is closer than the previous hit
-        float MinT = min(HitResult.x, HitResult.y);
+        float MinT = Dist;
         if (MinT > PayLoad.T)
         {
             continue;
@@ -672,14 +672,14 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
         // NumBoxTests++;
 
         // Check if we hit this node
-        vec2 HitResult = IntersectRayAABB(Node, Ray, PayLoad);
-        if (HitResult.x < HitResult.y)
+        float Dist = IntersectRayAABB(Node, Ray, PayLoad);
+        if (Dist == LARGE_NUMBER)
         {
             continue;
         }
 
         // Ensure that this hit is closer than the previous hit
-        float MinT = min(HitResult.x, HitResult.y);
+        float MinT = Dist;
         if (MinT > ClosestT)
         {
             continue;
