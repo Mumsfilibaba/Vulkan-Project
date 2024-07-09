@@ -351,7 +351,7 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
         FBoundingBox Node = BvhNodes[NodeIndex];
 
         vec2 HitResult = IntersectRayAABB(Node, Ray, PayLoad);
-        if (HitResult.x < max(HitResult.y, 0.0))
+        if (HitResult.x < HitResult.y)
         {
             continue;
         }
@@ -673,7 +673,7 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
 
         // Check if we hit this node
         vec2 HitResult = IntersectRayAABB(Node, Ray, PayLoad);
-        if (HitResult.x < max(HitResult.y, 0.0))
+        if (HitResult.x < HitResult.y)
         {
             continue;
         }
