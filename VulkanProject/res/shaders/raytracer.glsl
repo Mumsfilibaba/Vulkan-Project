@@ -3,6 +3,7 @@
 #include "random.glsl"
 #include "math.glsl"
 #include "primitives.glsl"
+#include "utilities.glsl"
 #include "ray.glsl"
 #include "bvh.glsl"
 
@@ -341,14 +342,6 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
 
         // Check if we hit this node
         FBoundingBox Node = BvhNodes[NodeIndex];
-
-        float Dist = IntersectRayAABB(Node, Ray, PayLoad);
-        if (Dist == LARGE_NUMBER)
-        {
-            continue;
-        }
-
-        // Check if this is a leafnode (could be leafnodes but with 0 triangles)
         if (Node.NumTriangles > 0)
         {
             uint LastTriangleIndex = Node.TriangleOrChildIndex + Node.NumTriangles;
@@ -366,8 +359,30 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
         {
             if (Node.TriangleOrChildIndex != BVH_ROOT_NODE_INDEX)
             {
-                Stack[++StackIndex] = Node.TriangleOrChildIndex;
-                Stack[++StackIndex] = Node.TriangleOrChildIndex + 1;
+                // Child indicies
+                uint ChildIndex1 = Node.TriangleOrChildIndex;
+                uint ChildIndex2 = Node.TriangleOrChildIndex + 1;
+
+                // Check intersection of child nodes
+                float Dist1 = IntersectRayAABB(BvhNodes[ChildIndex1], Ray, PayLoad);
+                float Dist2 = IntersectRayAABB(BvhNodes[ChildIndex2], Ray, PayLoad);
+
+                // Ensure 1 is the closest
+                if (Dist1 > Dist2)
+                {
+                    Swap(ChildIndex1, ChildIndex2);
+                    Swap(Dist1, Dist2);
+                }
+
+                if (Dist1 != LARGE_NUMBER)
+                {
+                    Stack[++StackIndex] = ChildIndex1;
+
+                    if (Dist2 != LARGE_NUMBER)
+                    {
+                        Stack[++StackIndex] = ChildIndex2;
+                    }
+                }
             }
         }
     }
@@ -589,8 +604,9 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
         #endif
 
             // Setup the next Ray
-            Ray.Origin    = RayPosition;
-            Ray.Direction = RayDirection;
+            Ray.Origin       = RayPosition;
+            Ray.Direction    = RayDirection;
+            Ray.InvDirection = 1.0 / Ray.Direction;
         }
         else
         {
@@ -652,17 +668,8 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
         const uint NodeIndex = Stack[StackIndex];
         StackIndex--;
 
-        FBoundingBox Node = BvhNodes[NodeIndex];
-        // NumBoxTests++;
-
         // Check if we hit this node
-        float Dist = IntersectRayAABB(Node, Ray, PayLoad);
-        if (Dist == LARGE_NUMBER)
-        {
-            continue;
-        }
-
-        // Check if this is a leafnode (could be leafnodes but with 0 triangles)
+        FBoundingBox Node = BvhNodes[NodeIndex];
         if (Node.NumTriangles > 0)
         {
             uint LastTriangleIndex = Node.TriangleOrChildIndex + Node.NumTriangles;
@@ -673,11 +680,9 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
                 vec3 Position1 = GetVertexPosition(Vertices[Triangle.Index1]);
                 vec3 Position2 = GetVertexPosition(Vertices[Triangle.Index2]);
 
-                NumTriangleTests++;
-
                 if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0))
                 {
-                    Color = normalize(PayLoad.Normal);
+                    Color = PayLoad.Normal;
                 }
             }
         }
@@ -685,8 +690,30 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
         {
             if (Node.TriangleOrChildIndex != BVH_ROOT_NODE_INDEX)
             {
-                Stack[++StackIndex] = Node.TriangleOrChildIndex;
-                Stack[++StackIndex] = Node.TriangleOrChildIndex + 1;
+                // Child indicies
+                uint ChildIndex1 = Node.TriangleOrChildIndex;
+                uint ChildIndex2 = Node.TriangleOrChildIndex + 1;
+
+                // Check intersection of child nodes
+                float Dist1 = IntersectRayAABB(BvhNodes[ChildIndex1], Ray, PayLoad);
+                float Dist2 = IntersectRayAABB(BvhNodes[ChildIndex2], Ray, PayLoad);
+
+                // Ensure 1 is the closest
+                if (Dist1 > Dist2)
+                {
+                    Swap(ChildIndex1, ChildIndex2);
+                    Swap(Dist1, Dist2);
+                }
+
+                if (Dist1 != LARGE_NUMBER)
+                {
+                    Stack[++StackIndex] = ChildIndex1;
+
+                    if (Dist2 != LARGE_NUMBER)
+                    {
+                        Stack[++StackIndex] = ChildIndex2;
+                    }
+                }
             }
         }
     }
@@ -708,8 +735,9 @@ void main()
 
     // Setup the first Ray
     FRay Ray;
-    Ray.Origin    = CameraPosition;
-    Ray.Direction = normalize(FilmTarget - CameraPosition);
+    Ray.Origin       = CameraPosition;
+    Ray.Direction    = normalize(FilmTarget - CameraPosition);
+    Ray.InvDirection = 1.0 / Ray.Direction;
 
     if (uScene.ViewMode == VIEW_MODE_RENDER)
     {

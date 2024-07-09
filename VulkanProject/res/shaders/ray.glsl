@@ -5,6 +5,7 @@ struct FRay
 {
     vec3 Origin;
     vec3 Direction;
+    vec3 InvDirection;
 };
 
 struct FRayPayLoad

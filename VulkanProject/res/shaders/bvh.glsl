@@ -32,8 +32,8 @@ vec3 GetBoundingBoxMax(in FBoundingBox Node)
 
 float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad PayLoad)
 {
-    vec3 MinT = (BoxMin - Ray.Origin) / Ray.Direction;
-    vec3 MaxT = (BoxMax - Ray.Origin) / Ray.Direction;
+    vec3 MinT = (BoxMin - Ray.Origin) * Ray.InvDirection;
+    vec3 MaxT = (BoxMax - Ray.Origin) * Ray.InvDirection;
 
     vec3 T1 = min(MinT, MaxT);
     vec3 T2 = max(MinT, MaxT);
