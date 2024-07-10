@@ -254,7 +254,7 @@ void HitSphere(in FSphere Sphere, in FRay Ray, inout FRayPayLoad PayLoad)
     }
 }
 
-bool HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray, inout FRayPayLoad PayLoad, uint MaterialIndex) 
+bool HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray, inout FRayPayLoad PayLoad) 
 {
     // Compute the triangle edges
     vec3 Edge1 = Vertex1 - Vertex0;
@@ -323,11 +323,11 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
             for (uint TriangleIndex = Node.TriangleOrChildIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
-                vec3 Position0 = Vertices[Triangle.Index0].xyz; // vec3(Vertices[Triangle.Index0].Position[0], Vertices[Triangle.Index0].Position[1], Vertices[Triangle.Index0].Position[2]);
-                vec3 Position1 = Vertices[Triangle.Index1].xyz; // vec3(Vertices[Triangle.Index1].Position[0], Vertices[Triangle.Index1].Position[1], Vertices[Triangle.Index1].Position[2]);
-                vec3 Position2 = Vertices[Triangle.Index2].xyz; // vec3(Vertices[Triangle.Index2].Position[0], Vertices[Triangle.Index2].Position[1], Vertices[Triangle.Index2].Position[2]);
+                vec3 Position0 = Vertices[Triangle.Index0].xyz;
+                vec3 Position1 = Vertices[Triangle.Index1].xyz;
+                vec3 Position2 = Vertices[Triangle.Index2].xyz;
 
-                if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0))
+                if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad))
                 {
                     LastTriangleHitIndex = int(TriangleIndex);
                 }
@@ -365,9 +365,9 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
     if (LastTriangleHitIndex >= 0)
     {
         FTriangle Triangle = Triangles[LastTriangleHitIndex];
-        vec3 Position0 = Vertices[Triangle.Index0].xyz; //vec3(Vertices[Triangle.Index0].Position[0], Vertices[Triangle.Index0].Position[1], Vertices[Triangle.Index0].Position[2]);
-        vec3 Position1 = Vertices[Triangle.Index1].xyz; //vec3(Vertices[Triangle.Index1].Position[0], Vertices[Triangle.Index1].Position[1], Vertices[Triangle.Index1].Position[2]);
-        vec3 Position2 = Vertices[Triangle.Index2].xyz; //vec3(Vertices[Triangle.Index2].Position[0], Vertices[Triangle.Index2].Position[1], Vertices[Triangle.Index2].Position[2]);
+        vec3 Position0 = Vertices[Triangle.Index0].xyz;
+        vec3 Position1 = Vertices[Triangle.Index1].xyz;
+        vec3 Position2 = Vertices[Triangle.Index2].xyz;
 
         vec3 Edge1 = Position1 - Position0;
         vec3 Edge2 = Position2 - Position0;
@@ -676,11 +676,11 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
             for (uint TriangleIndex = Node.TriangleOrChildIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
-                vec3 Position0 = Vertices[Triangle.Index0].xyz; //vec3(Vertices[Triangle.Index0].Position[0], Vertices[Triangle.Index0].Position[1], Vertices[Triangle.Index0].Position[2]);
-                vec3 Position1 = Vertices[Triangle.Index1].xyz; //vec3(Vertices[Triangle.Index1].Position[0], Vertices[Triangle.Index1].Position[1], Vertices[Triangle.Index1].Position[2]);
-                vec3 Position2 = Vertices[Triangle.Index2].xyz; //vec3(Vertices[Triangle.Index2].Position[0], Vertices[Triangle.Index2].Position[1], Vertices[Triangle.Index2].Position[2]);
+                vec3 Position0 = Vertices[Triangle.Index0].xyz;
+                vec3 Position1 = Vertices[Triangle.Index1].xyz;
+                vec3 Position2 = Vertices[Triangle.Index2].xyz;
 
-                HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0);
+                HitTriangle(Position0, Position1, Position2, Ray, PayLoad);
                 NumTriangleTests++;
             }
         }
