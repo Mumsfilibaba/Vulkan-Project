@@ -202,6 +202,12 @@ void FModelScene::Initialize()
         // padding
         0, 0, 0
     });
+    
+    // Add a light
+    if (Type == EModelSceneType::Sponza)
+    {
+        m_Spheres.push_back({ glm::vec3(1125.0f, 225.0f, -450.0f), 50.0f, 3 });
+    }
 }
 
 void FModelScene::Reset()

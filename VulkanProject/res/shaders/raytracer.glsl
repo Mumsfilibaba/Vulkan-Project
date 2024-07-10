@@ -130,14 +130,6 @@ layout(std430, binding = 12) buffer BvhBuffer
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Code
 
-vec3 HemisphereSampleUniform(float u, float v) 
-{
-    float phi      = v * 2.0 * PI;
-    float cosTheta = 1.0 - u;
-    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-    return normalize(vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta));
-}
-
 bool IsAlmostZero(vec3 Value)
 {
     return Value.x <= SIGMA && Value.y <= SIGMA && Value.z <= SIGMA; 
@@ -235,7 +227,7 @@ void HitSphere(in FSphere Sphere, in FRay Ray, inout FRayPayLoad PayLoad)
     {
         // Calculate the second intersection point (farther point)
         t = (-b + sqrtDiscriminant) / a;
-        bFromInside = true;
+        bFromInside = true; 
 
         // Check if the second intersection point is within the valid range
         if (t <= PayLoad.MinT || t >= PayLoad.MaxT)
@@ -247,12 +239,12 @@ void HitSphere(in FSphere Sphere, in FRay Ray, inout FRayPayLoad PayLoad)
     // If this intersection point is closer than the previous hit, update the payload
     if (t <= PayLoad.T)
     {
-        PayLoad.T = t;
+        PayLoad.T             = t;
         PayLoad.MaterialIndex = Sphere.MaterialIndex;
-        PayLoad.Position = Ray.Origin + Ray.Direction * PayLoad.T;
-        PayLoad.bFromInside = bFromInside;
-        PayLoad.bFrontFace = !bFromInside; // front face if ray hits from outside
-        PayLoad.Normal = normalize((PayLoad.Position - SpherePos) / SphereRadius) * (bFromInside ? -1.0 : 1.0);
+        PayLoad.Position      = Ray.Origin + Ray.Direction * PayLoad.T;
+        PayLoad.bFromInside   = bFromInside;
+        PayLoad.bFrontFace    = !bFromInside; // front face if ray hits from outside
+        PayLoad.Normal        = normalize((PayLoad.Position - SpherePos) / SphereRadius) * (bFromInside ? -1.0 : 1.0);
     }
 }
 
@@ -261,60 +253,36 @@ bool HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
     // Compute the triangle edges
     vec3 Edge1 = Vertex1 - Vertex0;
     vec3 Edge2 = Vertex2 - Vertex0;
+    vec3 DirectionCrossEdge2 = cross(Ray.Direction, Edge2);
 
-    // Compute the determinant between the 
-    vec3  DirectionCrossEdge2 = cross(Ray.Direction, Edge2);
     float Determinant = dot(Edge1, DirectionCrossEdge2);
-
-    // If the determinant is almost zero that means that the Ray is parallell to the triangle and we early return
     if (abs(Determinant) < SIGMA) 
     {
         return false;
     }
 
-    // Calculate the inverse determinant
-    float InvDeterminant = 1.0 / Determinant;
-
-    // Calculate vector from Ray origin to vertex0
     vec3 RayOriginToVertex0 = Ray.Origin - Vertex0;
 
-    // If u is outside the range [0, 1], the intersection point is outside the triangle
-    float u = InvDeterminant * dot(RayOriginToVertex0, DirectionCrossEdge2);
-    if (u < 0.0 || u > 1.0) 
+    float RecipDeterminant = 1.0 / Determinant;
+    float U = RecipDeterminant * dot(RayOriginToVertex0, DirectionCrossEdge2);
+    if (U < 0.0 || U > 1.0) 
     {
         return false;
     }
 
     vec3 RayOriginToVertex0CrossEdge1 = cross(RayOriginToVertex0, Edge1);
 
-    float v = InvDeterminant * dot(Ray.Direction, RayOriginToVertex0CrossEdge1);
-    if (v < 0.0 || u + v > 1.0) 
+    float V = RecipDeterminant * dot(Ray.Direction, RayOriginToVertex0CrossEdge1);
+    if (V < 0.0 || U + V > 1.0) 
     {
         return false;
     }
 
     // At this stage we can compute t to find out where the intersection point is on the line.
-    float t = InvDeterminant * dot(Edge2, RayOriginToVertex0CrossEdge1);
-    if (t > PayLoad.MinT && t < PayLoad.MaxT && t < PayLoad.T) 
+    float T = RecipDeterminant * dot(Edge2, RayOriginToVertex0CrossEdge1);
+    if (T > PayLoad.MinT && T < PayLoad.MaxT && T < PayLoad.T) 
     {
-        PayLoad.T             = t;
-        PayLoad.MaterialIndex = MaterialIndex;
-        PayLoad.Position      = Ray.Origin + t * Ray.Direction;
-        PayLoad.bFromInside   = false;
-
-        vec3 Normal = normalize(cross(Edge1, Edge2));
-        float DdotN = dot(Ray.Direction, Normal);
-        if (DdotN < 0.0) 
-        {
-            PayLoad.Normal     = Normal;
-            PayLoad.bFrontFace = true;
-        }
-        else
-        {
-            PayLoad.Normal     = -Normal;
-            PayLoad.bFrontFace = false;
-        }
-
+        PayLoad.T = T;
         return true;
     }
     else
@@ -334,6 +302,7 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
     Stack[StackIndex] = RootBoxIndex;
 
     // Start traversing the bounding boxes
+    int LastTriangleHitIndex = -1;
     while (StackIndex >= 0)
     {
         // Pop the stack
@@ -352,7 +321,10 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
                 vec3 Position1 = GetVertexPosition(Vertices[Triangle.Index1]);
                 vec3 Position2 = GetVertexPosition(Vertices[Triangle.Index2]);
 
-                HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0);
+                if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0))
+                {
+                    LastTriangleHitIndex = int(TriangleIndex);
+                }
             }
         }
         else
@@ -384,6 +356,34 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
                     }
                 }
             }
+        }
+    }
+
+    if (LastTriangleHitIndex >= 0)
+    {
+        FTriangle Triangle = Triangles[LastTriangleHitIndex];
+        vec3 Position0 = GetVertexPosition(Vertices[Triangle.Index0]);
+        vec3 Position1 = GetVertexPosition(Vertices[Triangle.Index1]);
+        vec3 Position2 = GetVertexPosition(Vertices[Triangle.Index2]);
+
+        vec3 Edge1 = Position1 - Position0;
+        vec3 Edge2 = Position2 - Position0;
+
+        PayLoad.MaterialIndex = MaterialIndex;
+        PayLoad.Position      = Ray.Origin + PayLoad.T * Ray.Direction;
+        PayLoad.bFromInside   = false;
+
+        vec3 Normal = normalize(cross(Edge1, Edge2));
+        float DdotN = dot(Ray.Direction, Normal);
+        if (DdotN < 0.0)
+        {
+            PayLoad.Normal     = Normal;
+            PayLoad.bFrontFace = true;
+        }
+        else
+        {
+            PayLoad.Normal     = -Normal;
+            PayLoad.bFrontFace = false;
         }
     }
 }
