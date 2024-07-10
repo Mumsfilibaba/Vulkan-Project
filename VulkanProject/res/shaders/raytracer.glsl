@@ -23,7 +23,6 @@
 #define SKYBOX_MULTIPLIER 1.0
 
 #define ENABLE_QUAD_BACK_FACE_CULLING 1
-#define ENABLE_TRIANGLE_BACK_FACE_CULLING 0
 #define ENABLE_RUSSIAN_ROULETTE 1
 
 layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1) in;
@@ -109,7 +108,7 @@ layout(std430, binding = 8) buffer MaterialBuffer
 
 layout(std430, binding = 9) buffer VertexBuffer
 {
-    FVertexPosOnly Vertices[];
+    vec4 Vertices[];
 };
 
 layout(std430, binding = 10) buffer TriangleBuffer
@@ -126,6 +125,13 @@ layout(std430, binding = 12) buffer BvhBuffer
 {
     FBoundingBox BvhNodes[];
 };
+
+float IntersectRayAABB(in uint NodeIndex, in FRay Ray, FRayPayLoad PayLoad)
+{
+    vec3 BoxMin = vec3(BvhNodes[NodeIndex].MinAABB[0], BvhNodes[NodeIndex].MinAABB[1], BvhNodes[NodeIndex].MinAABB[2]);
+    vec3 BoxMax = vec3(BvhNodes[NodeIndex].MaxAABB[0], BvhNodes[NodeIndex].MaxAABB[1], BvhNodes[NodeIndex].MaxAABB[2]);
+    return IntersectRayAABB(BoxMin, BoxMax, Ray, PayLoad);
+}
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Code
@@ -317,9 +323,9 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
             for (uint TriangleIndex = Node.TriangleOrChildIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
-                vec3 Position0 = GetVertexPosition(Vertices[Triangle.Index0]);
-                vec3 Position1 = GetVertexPosition(Vertices[Triangle.Index1]);
-                vec3 Position2 = GetVertexPosition(Vertices[Triangle.Index2]);
+                vec3 Position0 = Vertices[Triangle.Index0].xyz; // vec3(Vertices[Triangle.Index0].Position[0], Vertices[Triangle.Index0].Position[1], Vertices[Triangle.Index0].Position[2]);
+                vec3 Position1 = Vertices[Triangle.Index1].xyz; // vec3(Vertices[Triangle.Index1].Position[0], Vertices[Triangle.Index1].Position[1], Vertices[Triangle.Index1].Position[2]);
+                vec3 Position2 = Vertices[Triangle.Index2].xyz; // vec3(Vertices[Triangle.Index2].Position[0], Vertices[Triangle.Index2].Position[1], Vertices[Triangle.Index2].Position[2]);
 
                 if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0))
                 {
@@ -329,32 +335,29 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
         }
         else
         {
-            if (Node.TriangleOrChildIndex != BVH_ROOT_NODE_INDEX)
+            uint ChildIndex1 = Node.TriangleOrChildIndex;
+            uint ChildIndex2 = Node.TriangleOrChildIndex + 1;
+
+            // Check intersection of child nodes
+            float Dist1 = IntersectRayAABB(ChildIndex1, Ray, PayLoad);
+            float Dist2 = IntersectRayAABB(ChildIndex2, Ray, PayLoad);
+
+            // Ensure 1 is the closest
+            if (Dist1 > Dist2)
             {
-                // Child indicies
-                uint ChildIndex1 = Node.TriangleOrChildIndex;
-                uint ChildIndex2 = Node.TriangleOrChildIndex + 1;
-
-                // Check intersection of child nodes
-                float Dist1 = IntersectRayAABB(BvhNodes[ChildIndex1], Ray, PayLoad);
-                float Dist2 = IntersectRayAABB(BvhNodes[ChildIndex2], Ray, PayLoad);
-
-                // Ensure 1 is the closest
-                if (Dist1 > Dist2)
-                {
-                    Swap(ChildIndex1, ChildIndex2);
-                    Swap(Dist1, Dist2);
-                }
-
                 if (Dist1 != LARGE_NUMBER)
-                {
                     Stack[++StackIndex] = ChildIndex1;
 
-                    if (Dist2 != LARGE_NUMBER)
-                    {
-                        Stack[++StackIndex] = ChildIndex2;
-                    }
-                }
+                if (Dist2 != LARGE_NUMBER)
+                    Stack[++StackIndex] = ChildIndex2;
+            }
+            else
+            {
+                if (Dist2 != LARGE_NUMBER)
+                    Stack[++StackIndex] = ChildIndex2;
+
+                if (Dist1 != LARGE_NUMBER)
+                    Stack[++StackIndex] = ChildIndex1;
             }
         }
     }
@@ -362,9 +365,9 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
     if (LastTriangleHitIndex >= 0)
     {
         FTriangle Triangle = Triangles[LastTriangleHitIndex];
-        vec3 Position0 = GetVertexPosition(Vertices[Triangle.Index0]);
-        vec3 Position1 = GetVertexPosition(Vertices[Triangle.Index1]);
-        vec3 Position2 = GetVertexPosition(Vertices[Triangle.Index2]);
+        vec3 Position0 = Vertices[Triangle.Index0].xyz; //vec3(Vertices[Triangle.Index0].Position[0], Vertices[Triangle.Index0].Position[1], Vertices[Triangle.Index0].Position[2]);
+        vec3 Position1 = Vertices[Triangle.Index1].xyz; //vec3(Vertices[Triangle.Index1].Position[0], Vertices[Triangle.Index1].Position[1], Vertices[Triangle.Index1].Position[2]);
+        vec3 Position2 = Vertices[Triangle.Index2].xyz; //vec3(Vertices[Triangle.Index2].Position[0], Vertices[Triangle.Index2].Position[1], Vertices[Triangle.Index2].Position[2]);
 
         vec3 Edge1 = Position1 - Position0;
         vec3 Edge2 = Position2 - Position0;
@@ -656,12 +659,9 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
     PayLoad.bFrontFace  = false;
     PayLoad.bFromInside = false;
 
-    vec3 Color = vec3(0.0, 0.0, 0.0);
-
     // Start go through all the nodes
     uint NumBoxTests      = 0;
     uint NumTriangleTests = 0;
-
     while (StackIndex >= 0)
     {
         // Pop the stack
@@ -676,49 +676,47 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
             for (uint TriangleIndex = Node.TriangleOrChildIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
-                vec3 Position0 = GetVertexPosition(Vertices[Triangle.Index0]);
-                vec3 Position1 = GetVertexPosition(Vertices[Triangle.Index1]);
-                vec3 Position2 = GetVertexPosition(Vertices[Triangle.Index2]);
+                vec3 Position0 = Vertices[Triangle.Index0].xyz; //vec3(Vertices[Triangle.Index0].Position[0], Vertices[Triangle.Index0].Position[1], Vertices[Triangle.Index0].Position[2]);
+                vec3 Position1 = Vertices[Triangle.Index1].xyz; //vec3(Vertices[Triangle.Index1].Position[0], Vertices[Triangle.Index1].Position[1], Vertices[Triangle.Index1].Position[2]);
+                vec3 Position2 = Vertices[Triangle.Index2].xyz; //vec3(Vertices[Triangle.Index2].Position[0], Vertices[Triangle.Index2].Position[1], Vertices[Triangle.Index2].Position[2]);
 
-                if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0))
-                {
-                    Color = PayLoad.Normal;
-                }
+                HitTriangle(Position0, Position1, Position2, Ray, PayLoad, 0);
+                NumTriangleTests++;
             }
         }
         else
         {
-            if (Node.TriangleOrChildIndex != BVH_ROOT_NODE_INDEX)
+            uint ChildIndex1 = Node.TriangleOrChildIndex;
+            uint ChildIndex2 = Node.TriangleOrChildIndex + 1;
+
+            // Check intersection of child nodes
+            float Dist1 = IntersectRayAABB(ChildIndex1, Ray, PayLoad);
+            float Dist2 = IntersectRayAABB(ChildIndex2, Ray, PayLoad);
+            NumBoxTests += 2;
+
+            // Ensure 1 is the closest
+            if (Dist1 > Dist2)
             {
-                // Child indicies
-                uint ChildIndex1 = Node.TriangleOrChildIndex;
-                uint ChildIndex2 = Node.TriangleOrChildIndex + 1;
-
-                // Check intersection of child nodes
-                float Dist1 = IntersectRayAABB(BvhNodes[ChildIndex1], Ray, PayLoad);
-                float Dist2 = IntersectRayAABB(BvhNodes[ChildIndex2], Ray, PayLoad);
-
-                // Ensure 1 is the closest
-                if (Dist1 > Dist2)
-                {
-                    Swap(ChildIndex1, ChildIndex2);
-                    Swap(Dist1, Dist2);
-                }
-
                 if (Dist1 != LARGE_NUMBER)
-                {
                     Stack[++StackIndex] = ChildIndex1;
 
-                    if (Dist2 != LARGE_NUMBER)
-                    {
-                        Stack[++StackIndex] = ChildIndex2;
-                    }
-                }
+                if (Dist2 != LARGE_NUMBER)
+                    Stack[++StackIndex] = ChildIndex2;
+            }
+            else
+            {
+                if (Dist2 != LARGE_NUMBER)
+                    Stack[++StackIndex] = ChildIndex2;
+
+                if (Dist1 != LARGE_NUMBER)
+                    Stack[++StackIndex] = ChildIndex1;
             }
         }
     }
 
-    return Color;
+    vec3 BoxTestColor      = vec3(float(NumBoxTests)) / 50.0;
+    vec3 TriangleTestColor = vec3(float(NumTriangleTests)) / 50.0;
+    return BoxTestColor;
 }
 
 void main()

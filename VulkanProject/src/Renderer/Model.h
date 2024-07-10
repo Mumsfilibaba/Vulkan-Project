@@ -87,7 +87,7 @@ struct FVertexPosOnly
         return Position == Other.Position;
     }
 
-    glm::vec3 Position;
+    glm::vec4 Position;
 };
 
 struct FVertexPosOnlyHasher

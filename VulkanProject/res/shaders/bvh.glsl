@@ -20,16 +20,6 @@ struct FBoundingBox
     uint NumTriangles;
 };
 
-vec3 GetBoundingBoxMin(in FBoundingBox Node)
-{
-    return vec3(Node.MinAABB[0], Node.MinAABB[1], Node.MinAABB[2]);
-}
-
-vec3 GetBoundingBoxMax(in FBoundingBox Node)
-{
-    return vec3(Node.MaxAABB[0], Node.MaxAABB[1], Node.MaxAABB[2]);
-}
-
 float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad PayLoad)
 {
     vec3 MinT = (BoxMin - Ray.Origin) * Ray.InvDirection;
@@ -41,7 +31,7 @@ float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad 
     float NearT = max(max(T1.x, T1.y), T1.z);
     float FarT  = min(min(T2.x, T2.y), T2.z);
 
-    if (FarT >= NearT && NearT < PayLoad.T)
+    if (FarT >= NearT && NearT < PayLoad.T && FarT >= PayLoad.MinT)
     {
         return NearT;
     }
@@ -49,11 +39,6 @@ float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad 
     {
         return LARGE_NUMBER;
     }
-}
-
-float IntersectRayAABB(in FBoundingBox Node, in FRay Ray, FRayPayLoad PayLoad)
-{
-    return IntersectRayAABB(GetBoundingBoxMin(Node), GetBoundingBoxMax(Node), Ray, PayLoad);
 }
 
 #endif

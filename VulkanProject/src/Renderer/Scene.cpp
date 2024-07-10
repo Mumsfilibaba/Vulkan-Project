@@ -110,6 +110,7 @@ void FModelScene::Initialize()
     assert(m_pMeshIndexBuffer != nullptr);
     
     // Quads
+#if 1
     if (Type == EModelSceneType::Default)
     {
         // Floor Quad
@@ -125,6 +126,7 @@ void FModelScene::Initialize()
         // Light Quad
         m_Quads.push_back({ glm::vec4(0.5f, 1.999f, 0.2f, 0.0f), glm::vec4(0.0f, 0.0f, -0.4f, 0.0f), glm::vec4(0.4f, 0.0f, 0.0f, 0.0f), 3 });
     }
+#endif
     
     // Materials
     m_Materials.push_back(
@@ -202,12 +204,6 @@ void FModelScene::Initialize()
         // padding
         0, 0, 0
     });
-    
-    // Add a light
-    if (Type == EModelSceneType::Sponza)
-    {
-        m_Spheres.push_back({ glm::vec3(1125.0f, 225.0f, -450.0f), 50.0f, 3 });
-    }
 }
 
 void FModelScene::Reset()

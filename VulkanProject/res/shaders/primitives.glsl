@@ -58,13 +58,8 @@ struct FSphere
 struct FVertexPosOnly
 {
     // 0-12
-    float Position[3];
+    vec3 Position;
 };
-
-vec3 GetVertexPosition(in FVertexPosOnly Vertex)
-{
-    return vec3(Vertex.Position[0], Vertex.Position[1], Vertex.Position[2]);
-}
 
 struct FTriangle
 {

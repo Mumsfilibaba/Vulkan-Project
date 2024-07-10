@@ -158,6 +158,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
                 Attrib.vertices[BaseIndex + 0],
                 Attrib.vertices[BaseIndex + 1],
                 Attrib.vertices[BaseIndex + 2],
+                0.0f
             };
             
             if (UniqueVertices.count(Vertex) == 0)
