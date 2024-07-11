@@ -128,8 +128,8 @@ layout(std430, binding = 12) buffer BvhBuffer
 
 float IntersectRayAABB(in uint NodeIndex, in FRay Ray)
 {
-    vec3 BoxMin = vec3(BvhNodes[NodeIndex].BoxMin[0], BvhNodes[NodeIndex].BoxMin[1], BvhNodes[NodeIndex].BoxMin[2]);
-    vec3 BoxMax = vec3(BvhNodes[NodeIndex].BoxMax[0], BvhNodes[NodeIndex].BoxMax[1], BvhNodes[NodeIndex].BoxMax[2]);
+    vec3 BoxMin = BvhNodes[NodeIndex].BoxMinAndIndex.xyz;
+    vec3 BoxMax = BvhNodes[NodeIndex].BoxMaxAndNumTriangles.xyz;
     return IntersectRayAABB(BoxMin, BoxMax, Ray);
 }
 
@@ -317,10 +317,10 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
 
         // Check if we hit this node
         FBoundingBox Node = BvhNodes[NodeIndex];
-        if (Node.NumTriangles > 0)
+        if (uint(Node.BoxMaxAndNumTriangles.w) > 0)
         {
-            uint LastTriangleIndex = Node.TriangleOrChildIndex + Node.NumTriangles;
-            for (uint TriangleIndex = Node.TriangleOrChildIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
+            uint LastTriangleIndex = uint(Node.BoxMinAndIndex.w) + uint(Node.BoxMaxAndNumTriangles.w);
+            for (uint TriangleIndex = uint(Node.BoxMinAndIndex.w); TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
                 vec3 Position0 = Vertices[Triangle.Index0].xyz;
@@ -335,8 +335,8 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
         }
         else
         {
-            uint ChildIndex1 = Node.TriangleOrChildIndex;
-            uint ChildIndex2 = Node.TriangleOrChildIndex + 1;
+            uint ChildIndex1 = uint(Node.BoxMinAndIndex.w);
+            uint ChildIndex2 = uint(Node.BoxMinAndIndex.w) + 1;
 
             // Check intersection of child nodes
             float Dist1 = IntersectRayAABB(ChildIndex1, Ray);
@@ -661,10 +661,10 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
 
         // Check if we hit this node
         FBoundingBox Node = BvhNodes[NodeIndex];
-        if (Node.NumTriangles > 0)
+        if (uint(Node.BoxMaxAndNumTriangles.w) > 0)
         {
-            uint LastTriangleIndex = Node.TriangleOrChildIndex + Node.NumTriangles;
-            for (uint TriangleIndex = Node.TriangleOrChildIndex; TriangleIndex < LastTriangleIndex; TriangleIndex++)
+            uint LastTriangleIndex = uint(Node.BoxMinAndIndex.w) + uint(Node.BoxMaxAndNumTriangles.w);
+            for (uint TriangleIndex = uint(Node.BoxMinAndIndex.w); TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
                 vec3 Position0 = Vertices[Triangle.Index0].xyz;
@@ -677,8 +677,8 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
         }
         else
         {
-            uint ChildIndex1 = Node.TriangleOrChildIndex;
-            uint ChildIndex2 = Node.TriangleOrChildIndex + 1;
+            uint ChildIndex1 = uint(Node.BoxMinAndIndex.w);
+            uint ChildIndex2 = uint(Node.BoxMinAndIndex.w) + 1;
 
             // Check intersection of child nodes
             float Dist1 = IntersectRayAABB(ChildIndex1, Ray);

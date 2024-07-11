@@ -306,7 +306,7 @@ void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
         {
             const uint32_t LastTriangleIndex = ShaderBox.TriangleOrChildIndex + ShaderBox.NumTriangles;
             assert(LastTriangleIndex <= m_Triangles.size());
-            MaxTriangleCount = std::max(ShaderBox.NumTriangles, MaxTriangleCount);
+            MaxTriangleCount = std::max(static_cast<uint32_t>(ShaderBox.NumTriangles), MaxTriangleCount);
         }
     }
     

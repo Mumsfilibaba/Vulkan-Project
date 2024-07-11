@@ -13,11 +13,9 @@
 struct FBoundingBox
 {
     // 0-16
-    float BoxMin[3];
-    uint TriangleOrChildIndex;
+    vec4 BoxMinAndIndex;
     // 16-32
-    float BoxMax[3];
-    uint NumTriangles;
+    vec4 BoxMaxAndNumTriangles;
 };
 
 float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray)
