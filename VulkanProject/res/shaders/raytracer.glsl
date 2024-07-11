@@ -128,8 +128,8 @@ layout(std430, binding = 12) buffer BvhBuffer
 
 float IntersectRayAABB(in uint NodeIndex, in FRay Ray)
 {
-    vec3 BoxMin = vec3(BvhNodes[NodeIndex].MinAABB[0], BvhNodes[NodeIndex].MinAABB[1], BvhNodes[NodeIndex].MinAABB[2]);
-    vec3 BoxMax = vec3(BvhNodes[NodeIndex].MaxAABB[0], BvhNodes[NodeIndex].MaxAABB[1], BvhNodes[NodeIndex].MaxAABB[2]);
+    vec3 BoxMin = vec3(BvhNodes[NodeIndex].BoxMin[0], BvhNodes[NodeIndex].BoxMin[1], BvhNodes[NodeIndex].BoxMin[2]);
+    vec3 BoxMax = vec3(BvhNodes[NodeIndex].BoxMax[0], BvhNodes[NodeIndex].BoxMax[1], BvhNodes[NodeIndex].BoxMax[2]);
     return IntersectRayAABB(BoxMin, BoxMax, Ray);
 }
 
@@ -409,14 +409,7 @@ bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad)
         HitMesh(Mesh.BoundingBoxIndex, Ray, PayLoad, Mesh.MaterialIndex);
     }
 
-    if (PayLoad.T < PayLoad.MaxT)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return PayLoad.T < PayLoad.MaxT;
 }
 
 float FresnelReflectAmount(float N1, float N2, vec3 Normal, vec3 Incident, float F0, float F90)
@@ -690,6 +683,7 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
             // Check intersection of child nodes
             float Dist1 = IntersectRayAABB(ChildIndex1, Ray);
             float Dist2 = IntersectRayAABB(ChildIndex2, Ray);
+            NumBoxTests += 2;
 
             // Ensure 1 is the closest
             if (Dist1 > Dist2)

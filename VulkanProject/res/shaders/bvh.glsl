@@ -13,10 +13,10 @@
 struct FBoundingBox
 {
     // 0-16
-    float MinAABB[3];
+    float BoxMin[3];
     uint TriangleOrChildIndex;
     // 16-32
-    float MaxAABB[3];
+    float BoxMax[3];
     uint NumTriangles;
 };
 
