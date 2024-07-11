@@ -20,7 +20,7 @@ struct FBoundingBox
     uint NumTriangles;
 };
 
-float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad PayLoad)
+float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray)
 {
     vec3 MinT = (BoxMin - Ray.Origin) * Ray.InvDirection;
     vec3 MaxT = (BoxMax - Ray.Origin) * Ray.InvDirection;
@@ -28,17 +28,11 @@ float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray, FRayPayLoad 
     vec3 T1 = min(MinT, MaxT);
     vec3 T2 = max(MinT, MaxT);
 
-    float NearT = max(max(T1.x, T1.y), T1.z);
-    float FarT  = min(min(T2.x, T2.y), T2.z);
+    float DistFar  = min(min(T2.x, T2.y), T2.z);
+    float DistNear = max(max(T1.x, T1.y), T1.z);
 
-    if (FarT >= NearT && NearT < PayLoad.T && FarT >= PayLoad.MinT)
-    {
-        return NearT;
-    }
-    else
-    {
-        return LARGE_NUMBER;
-    }
+    const bool bDidHit = DistFar >= DistNear && DistFar >= 0.0;
+    return bDidHit ? DistNear : LARGE_NUMBER;
 }
 
 #endif

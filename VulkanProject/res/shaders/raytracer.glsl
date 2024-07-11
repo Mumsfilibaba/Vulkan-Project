@@ -126,11 +126,11 @@ layout(std430, binding = 12) buffer BvhBuffer
     FBoundingBox BvhNodes[];
 };
 
-float IntersectRayAABB(in uint NodeIndex, in FRay Ray, FRayPayLoad PayLoad)
+float IntersectRayAABB(in uint NodeIndex, in FRay Ray)
 {
     vec3 BoxMin = vec3(BvhNodes[NodeIndex].MinAABB[0], BvhNodes[NodeIndex].MinAABB[1], BvhNodes[NodeIndex].MinAABB[2]);
     vec3 BoxMax = vec3(BvhNodes[NodeIndex].MaxAABB[0], BvhNodes[NodeIndex].MaxAABB[1], BvhNodes[NodeIndex].MaxAABB[2]);
-    return IntersectRayAABB(BoxMin, BoxMax, Ray, PayLoad);
+    return IntersectRayAABB(BoxMin, BoxMax, Ray);
 }
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -339,24 +339,22 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
             uint ChildIndex2 = Node.TriangleOrChildIndex + 1;
 
             // Check intersection of child nodes
-            float Dist1 = IntersectRayAABB(ChildIndex1, Ray, PayLoad);
-            float Dist2 = IntersectRayAABB(ChildIndex2, Ray, PayLoad);
+            float Dist1 = IntersectRayAABB(ChildIndex1, Ray);
+            float Dist2 = IntersectRayAABB(ChildIndex2, Ray);
 
             // Ensure 1 is the closest
             if (Dist1 > Dist2)
             {
-                if (Dist1 != LARGE_NUMBER)
+                if (Dist1 < PayLoad.T)
                     Stack[++StackIndex] = ChildIndex1;
-
-                if (Dist2 != LARGE_NUMBER)
+                if (Dist2 < PayLoad.T)
                     Stack[++StackIndex] = ChildIndex2;
             }
             else
             {
-                if (Dist2 != LARGE_NUMBER)
+                if (Dist2 < PayLoad.T)
                     Stack[++StackIndex] = ChildIndex2;
-
-                if (Dist1 != LARGE_NUMBER)
+                if (Dist1 < PayLoad.T)
                     Stack[++StackIndex] = ChildIndex1;
             }
         }
@@ -690,25 +688,22 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
             uint ChildIndex2 = Node.TriangleOrChildIndex + 1;
 
             // Check intersection of child nodes
-            float Dist1 = IntersectRayAABB(ChildIndex1, Ray, PayLoad);
-            float Dist2 = IntersectRayAABB(ChildIndex2, Ray, PayLoad);
-            NumBoxTests += 2;
+            float Dist1 = IntersectRayAABB(ChildIndex1, Ray);
+            float Dist2 = IntersectRayAABB(ChildIndex2, Ray);
 
             // Ensure 1 is the closest
             if (Dist1 > Dist2)
             {
-                if (Dist1 != LARGE_NUMBER)
+                if (Dist1 < PayLoad.T)
                     Stack[++StackIndex] = ChildIndex1;
-
-                if (Dist2 != LARGE_NUMBER)
+                if (Dist2 < PayLoad.T)
                     Stack[++StackIndex] = ChildIndex2;
             }
             else
             {
-                if (Dist2 != LARGE_NUMBER)
+                if (Dist2 < PayLoad.T)
                     Stack[++StackIndex] = ChildIndex2;
-
-                if (Dist1 != LARGE_NUMBER)
+                if (Dist1 < PayLoad.T)
                     Stack[++StackIndex] = ChildIndex1;
             }
         }
