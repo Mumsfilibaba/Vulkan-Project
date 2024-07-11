@@ -69,8 +69,6 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice, FDevice
                 1.0f - Attrib.texcoords[2 * Index.texcoord_index + 1]
             };
 
-            Vertex.Color = { 1.0f, 1.0f, 1.0f };
-
             if (UniqueVertices.count(Vertex) == 0)
             {
                 UniqueVertices[Vertex] = static_cast<uint32_t>(Vertices.size());
@@ -141,45 +139,47 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     
     std::vector<uint32_t>       NewIndices;
     std::vector<FVertexPosOnly> NewVertices;
-    std::unordered_map<FVertexPosOnly, uint32_t, FVertexPosOnlyHasher> UniqueVertices = {};
-    
-    BoundingBoxMin = glm::vec3(0.0f, 0.0f, 0.0f);
-    BoundingBoxMax = glm::vec3(0.0f, 0.0f, 0.0f);
-    
+    std::vector<FVertexEx>      NewVerticesEx;
+        
+    std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices;
     for (const auto& Shape : Shapes)
     {
         for (const auto& Index : Shape.mesh.indices)
         {
-            const size_t BaseIndex = 3 * Index.vertex_index;
+            const size_t BasePositionIndex = 3 * Index.vertex_index;
             
-            FVertexPosOnly Vertex;
+            FVertex Vertex;
             Vertex.Position =
             {
-                Attrib.vertices[BaseIndex + 0],
-                Attrib.vertices[BaseIndex + 1],
-                Attrib.vertices[BaseIndex + 2],
-                0.0f
+                Attrib.vertices[BasePositionIndex + 0],
+                Attrib.vertices[BasePositionIndex + 1],
+                Attrib.vertices[BasePositionIndex + 2],
+            };
+            
+            const size_t BaseNormalIndex = 3 * Index.normal_index;
+            
+            Vertex.Normal =
+            {
+                Attrib.normals[BaseNormalIndex + 0],
+                Attrib.normals[BaseNormalIndex + 1],
+                Attrib.normals[BaseNormalIndex + 2],
             };
             
             if (UniqueVertices.count(Vertex) == 0)
             {
                 UniqueVertices[Vertex] = static_cast<uint32_t>(NewVertices.size());
-                NewVertices.push_back(Vertex);
                 
-                BoundingBoxMin.x = std::min(BoundingBoxMin.x, Vertex.Position.x);
-                BoundingBoxMin.y = std::min(BoundingBoxMin.y, Vertex.Position.y);
-                BoundingBoxMin.z = std::min(BoundingBoxMin.z, Vertex.Position.z);
-                
-                BoundingBoxMax.x = std::max(BoundingBoxMax.x, Vertex.Position.x);
-                BoundingBoxMax.y = std::max(BoundingBoxMax.y, Vertex.Position.y);
-                BoundingBoxMax.z = std::max(BoundingBoxMax.z, Vertex.Position.z);
+                // Convert this massive vertex into the two "lighter" vertices
+                NewVertices.push_back({ glm::vec4(Vertex.Position, 0.0f) });
+                NewVerticesEx.push_back({ glm::vec4(Vertex.Normal, 0.0f) });
             }
 
             NewIndices.push_back(UniqueVertices[Vertex]);
         }
     }
     
-    Positions = std::move(NewVertices);
-    Indicies  = std::move(NewIndices);
+    Vertices   = std::move(NewVertices);
+    VerticesEx = std::move(NewVerticesEx);
+    Indicies   = std::move(NewIndices);
     return true;
 }

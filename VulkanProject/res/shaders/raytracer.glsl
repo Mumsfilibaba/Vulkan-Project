@@ -108,20 +108,25 @@ layout(std430, binding = 8) buffer MaterialBuffer
 
 layout(std430, binding = 9) buffer VertexBuffer
 {
-    vec4 Vertices[];
+    FVertex Vertices[];
 };
 
-layout(std430, binding = 10) buffer TriangleBuffer
+layout(std430, binding = 10) buffer VertexExBuffer
+{
+    FVertexEx VerticesEx[];
+};
+
+layout(std430, binding = 11) buffer TriangleBuffer
 {
     FTriangle Triangles[];
 };
 
-layout(std430, binding = 11) buffer MeshBuffer
+layout(std430, binding = 12) buffer MeshBuffer
 {
     FMesh Meshes[];
 };
 
-layout(std430, binding = 12) buffer BvhBuffer
+layout(std430, binding = 13) buffer BvhBuffer
 {
     FBoundingBox BvhNodes[];
 };
@@ -289,6 +294,7 @@ bool HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray,
     if (T > PayLoad.MinT && T < PayLoad.MaxT && T < PayLoad.T) 
     {
         PayLoad.T = T;
+        PayLoad.BaryCentrics = vec3(U, V, 1.0 - (U + V));
         return true;
     }
     else
@@ -323,12 +329,17 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
             for (uint TriangleIndex = floatBitsToUint(Node.BoxMinAndIndex.w); TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
-                vec3 Position0 = Vertices[Triangle.Index0].xyz;
-                vec3 Position1 = Vertices[Triangle.Index1].xyz;
-                vec3 Position2 = Vertices[Triangle.Index2].xyz;
+                vec3 Position0 = Vertices[Triangle.Index0].Position.xyz;
+                vec3 Position1 = Vertices[Triangle.Index1].Position.xyz;
+                vec3 Position2 = Vertices[Triangle.Index2].Position.xyz;
 
                 if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad))
                 {
+                    vec3 Normal0 = VerticesEx[Triangle.Index0].Normal.xyz;
+                    vec3 Normal1 = VerticesEx[Triangle.Index1].Normal.xyz;
+                    vec3 Normal2 = VerticesEx[Triangle.Index2].Normal.xyz;
+
+                    PayLoad.Normal = normalize((PayLoad.BaryCentrics.x * Normal1) + (PayLoad.BaryCentrics.y * Normal2) + (PayLoad.BaryCentrics.z * Normal0));
                     LastTriangleHitIndex = int(TriangleIndex);
                 }
             }
@@ -362,28 +373,17 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
 
     if (LastTriangleHitIndex >= 0)
     {
-        FTriangle Triangle = Triangles[LastTriangleHitIndex];
-        vec3 Position0 = Vertices[Triangle.Index0].xyz;
-        vec3 Position1 = Vertices[Triangle.Index1].xyz;
-        vec3 Position2 = Vertices[Triangle.Index2].xyz;
-
-        vec3 Edge1 = Position1 - Position0;
-        vec3 Edge2 = Position2 - Position0;
-
         PayLoad.MaterialIndex = MaterialIndex;
         PayLoad.Position      = Ray.Origin + PayLoad.T * Ray.Direction;
         PayLoad.bFromInside   = false;
 
-        vec3 Normal = normalize(cross(Edge1, Edge2));
-        float DdotN = dot(Ray.Direction, Normal);
+        float DdotN = dot(Ray.Direction, PayLoad.Normal);
         if (DdotN < 0.0)
         {
-            PayLoad.Normal     = Normal;
             PayLoad.bFrontFace = true;
         }
         else
         {
-            PayLoad.Normal     = -Normal;
             PayLoad.bFrontFace = false;
         }
     }
@@ -624,7 +624,7 @@ vec3 GetNormalForRay(in FRay Ray)
 
     if (TraceRay(Ray, PayLoad))
     {
-        return PayLoad.Normal;
+        return (PayLoad.Normal + vec3(1.0)) * 0.5;
     }
     else
     {
@@ -667,9 +667,9 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
             for (uint TriangleIndex = floatBitsToUint(Node.BoxMinAndIndex.w); TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
-                vec3 Position0 = Vertices[Triangle.Index0].xyz;
-                vec3 Position1 = Vertices[Triangle.Index1].xyz;
-                vec3 Position2 = Vertices[Triangle.Index2].xyz;
+                vec3 Position0 = Vertices[Triangle.Index0].Position.xyz;
+                vec3 Position1 = Vertices[Triangle.Index1].Position.xyz;
+                vec3 Position2 = Vertices[Triangle.Index2].Position.xyz;
 
                 HitTriangle(Position0, Position1, Position2, Ray, PayLoad);
                 NumTriangleTests++;

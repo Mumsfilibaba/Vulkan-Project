@@ -55,10 +55,16 @@ struct FSphere
     uint Padding2;
 };
 
-struct FVertexPosOnly
+struct FVertex
 {
-    // 0-12
-    vec3 Position;
+    // 0-16
+    vec4 Position;
+};
+
+struct FVertexEx
+{
+    // 0-16
+    vec4 Normal;
 };
 
 struct FTriangle

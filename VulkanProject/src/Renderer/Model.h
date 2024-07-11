@@ -27,25 +27,25 @@ struct FVertex
         
         AttributeDescriptions[1].binding  = 0;
         AttributeDescriptions[1].location = 1;
-        AttributeDescriptions[1].format   = VK_FORMAT_R32G32_SFLOAT;
-        AttributeDescriptions[1].offset   = offsetof(FVertex, TexCoord);
+        AttributeDescriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
+        AttributeDescriptions[1].offset   = offsetof(FVertex, Normal);
         
         AttributeDescriptions[2].binding  = 0;
         AttributeDescriptions[2].location = 2;
-        AttributeDescriptions[2].format   = VK_FORMAT_R32G32B32_SFLOAT;
-        AttributeDescriptions[2].offset   = offsetof(FVertex, Color);
+        AttributeDescriptions[2].format   = VK_FORMAT_R32G32_SFLOAT;
+        AttributeDescriptions[2].offset   = offsetof(FVertex, TexCoord);
         
         return AttributeDescriptions;
     }
 
     bool operator==(const FVertex& Other) const
     {
-        return Position == Other.Position && TexCoord == Other.TexCoord && Color == Other.Color;
+        return Position == Other.Position && Normal == Other.Normal && TexCoord == Other.TexCoord;
     }
     
     glm::vec3 Position;
+    glm::vec3 Normal;
     glm::vec2 TexCoord;
-    glm::vec3 Color;
 };
 
 struct FVertexHasher
@@ -53,7 +53,7 @@ struct FVertexHasher
     size_t operator()(const FVertex& vertex) const
     {
         using namespace std;
-        return ((hash<glm::vec3>()(vertex.Position) ^ (hash<glm::vec3>()(vertex.Color) << 1)) >> 1) ^ (hash<glm::vec2>()(vertex.TexCoord) << 1);
+        return ((hash<glm::vec3>()(vertex.Position) ^ (hash<glm::vec3>()(vertex.Normal) << 1)) >> 1) ^ (hash<glm::vec2>()(vertex.TexCoord) << 1);
     }
 };
 
@@ -93,6 +93,48 @@ struct FVertexPosOnly
 struct FVertexPosOnlyHasher
 {
     size_t operator()(const FVertexPosOnly& Vertex) const
+    {
+        using namespace std;
+        return hash<glm::vec4>()(Vertex.Position);
+    }
+};
+
+struct FVertexAABB
+{
+    static VkVertexInputBindingDescription* GetBindingDescription()
+    {
+        static VkVertexInputBindingDescription BindingDescriptions[1];
+        
+        BindingDescriptions[0].binding   = 0;
+        BindingDescriptions[0].stride    = sizeof(FVertexAABB);
+        BindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        
+        return BindingDescriptions;
+    }
+    
+    static VkVertexInputAttributeDescription* GetAttributeDescriptions()
+    {
+        static VkVertexInputAttributeDescription AttributeDescriptions[1];
+        
+        AttributeDescriptions[0].binding  = 0;
+        AttributeDescriptions[0].location = 0;
+        AttributeDescriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
+        AttributeDescriptions[0].offset   = offsetof(FVertexAABB, Position);
+
+        return AttributeDescriptions;
+    }
+    
+    bool operator==(const FVertexAABB& Other) const
+    {
+        return Position == Other.Position;
+    }
+
+    glm::vec3 Position;
+};
+
+struct FVertexAABBHasher
+{
+    size_t operator()(const FVertexAABB& Vertex) const
     {
         using namespace std;
         return hash<glm::vec3>()(Vertex.Position);
@@ -141,12 +183,16 @@ struct FTriangle
     uint32_t  Indicies[3];
 };
 
+struct FVertexEx
+{
+    glm::vec4 Normal;
+};
+
 struct FMesh
 {
     bool LoadFromFile(const std::string& Filepath);
     
     std::vector<uint32_t>       Indicies;
-    std::vector<FVertexPosOnly> Positions;
-    glm::vec3 BoundingBoxMin;
-    glm::vec3 BoundingBoxMax;
+    std::vector<FVertexPosOnly> Vertices;
+    std::vector<FVertexEx>      VerticesEx;
 };

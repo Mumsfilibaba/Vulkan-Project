@@ -53,6 +53,7 @@ struct FScene
     
     // Triangle Mesh Data
     std::vector<FVertexPosOnly> m_Vertices;
+    std::vector<FVertexEx>      m_VerticesEx;
     std::vector<uint32_t>       m_Indicies;
     std::vector<FShaderMesh>    m_Meshes;
     
@@ -65,8 +66,11 @@ struct FScene
     
     // CPU Buffers
     FBuffer* m_pVertexBuffer;
+    FBuffer* m_pVertexExBuffer;
     FBuffer* m_pTriangleBuffer;
     FBuffer* m_pBoundingBoxBuffer;
+    
+    bool m_bUpdateBuffers;
     
     // Debugging
     FBuffer* m_pMeshVertexBuffer;

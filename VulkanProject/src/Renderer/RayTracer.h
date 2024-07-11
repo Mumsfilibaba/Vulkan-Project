@@ -143,6 +143,7 @@ private:
     FBuffer* m_pTriangleBuffer;
     FBuffer* m_pMeshBuffer;
     FBuffer* m_pVertexBuffer;
+    FBuffer* m_pVertexExBuffer;
     FBuffer* m_pMaterialBuffer;
     FBuffer* m_pBvhBuffer;
     

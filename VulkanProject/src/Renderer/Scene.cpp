@@ -9,6 +9,7 @@ FScene::FScene()
     , m_Materials()
     , m_Settings()
     , m_pVertexBuffer(nullptr)
+    , m_pVertexExBuffer(nullptr)
     , m_pTriangleBuffer(nullptr)
     , m_pBoundingBoxBuffer(nullptr)
     , m_pMeshVertexBuffer(nullptr)
@@ -24,7 +25,10 @@ FScene::FScene()
     m_Spheres.reserve(MAX_SPHERES);
     m_Materials.reserve(MAX_MATERIALS);
     m_Vertices.reserve(MAX_VERTICES);
+    m_VerticesEx.reserve(MAX_VERTICES);
     m_Meshes.reserve(MAX_TRIANGLEMESHES);
+    
+    m_bUpdateBuffers = true;
 }
 
 FScene::~FScene()
@@ -61,8 +65,9 @@ void FModelScene::Initialize()
     }
 
     // Copy vertices
-    m_Vertices = Mesh.Positions;
-    m_Indicies = Mesh.Indicies;
+    m_Vertices   = Mesh.Vertices;
+    m_VerticesEx = Mesh.VerticesEx;
+    m_Indicies   = Mesh.Indicies;
     
     // Build BVH
     m_AccelerationStructure.Build(Mesh, 32);
@@ -96,11 +101,15 @@ void FModelScene::Initialize()
     m_pVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_Vertices.data());
     assert(m_pVertexBuffer != nullptr);
     
-    BufferParams.Size             = sizeof(FVertexPosOnly) * Mesh.Positions.size();
+    BufferParams.Size = sizeof(FVertexEx) * m_VerticesEx.size();
+    m_pVertexExBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_VerticesEx.data());
+    assert(m_pVertexExBuffer != nullptr);
+    
+    BufferParams.Size             = sizeof(FVertexPosOnly) * Mesh.Vertices.size();
     BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
-    m_pMeshVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Positions.data());
+    m_pMeshVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Vertices.data());
     assert(m_pMeshVertexBuffer != nullptr);
     
     BufferParams.Size  = sizeof(uint32_t) * Mesh.Indicies.size();
@@ -197,7 +206,7 @@ void FModelScene::Initialize()
         glm::vec4(0.9f, 0.9f, 0.9f, 0.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
         0.1f,
-        0.2f,
+        0.9f,
         1.0f,
         0.0f,
         0.0f,

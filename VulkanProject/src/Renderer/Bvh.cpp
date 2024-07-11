@@ -251,9 +251,9 @@ void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
         Triangle.Indicies[1] = Mesh.Indicies[i + 1];
         Triangle.Indicies[2] = Mesh.Indicies[i + 2];
         
-        Triangle.Positions[0] = Mesh.Positions[Triangle.Indicies[0]].Position;
-        Triangle.Positions[1] = Mesh.Positions[Triangle.Indicies[1]].Position;
-        Triangle.Positions[2] = Mesh.Positions[Triangle.Indicies[2]].Position;
+        Triangle.Positions[0] = Mesh.Vertices[Triangle.Indicies[0]].Position;
+        Triangle.Positions[1] = Mesh.Vertices[Triangle.Indicies[1]].Position;
+        Triangle.Positions[2] = Mesh.Vertices[Triangle.Indicies[2]].Position;
         
         // Calculate center of the triangle
         Triangle.Center = (Triangle.Positions[0] + Triangle.Positions[1] + Triangle.Positions[2]) / 3.0f;
