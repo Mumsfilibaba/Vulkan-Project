@@ -594,8 +594,8 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
             const FShaderBoundingBox& BoundingBox = m_pScene->m_AccelerationStructure.m_BoundingBoxes[i];
             if (BoundingBox.NumTriangles > 0)
             {
-                glm::vec3 Scale    = BoundingBox.BoxMax - BoundingBox.BoxMin;
-                glm::vec3 Position = BoundingBox.BoxMin + (Scale * 0.5f);
+                glm::vec3 Scale    = glm::vec3(BoundingBox.BoxMax) - glm::vec3(BoundingBox.BoxMin);
+                glm::vec3 Position = glm::vec3(BoundingBox.BoxMin) + (Scale * 0.5f);
                 
                 DebugData.TransformMatrix = glm::identity<glm::mat4>();
                 DebugData.TransformMatrix = glm::translate(DebugData.TransformMatrix, Position);
