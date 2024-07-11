@@ -9,10 +9,10 @@ struct FShaderBoundingBox
 {
     // 0-16
     glm::vec3 BoxMin;
-    float TriangleOrChildIndex = 0.0f;
+    uint32_t TriangleOrChildIndex = 0;
     // 16-32
     glm::vec3 BoxMax;
-    float NumTriangles = 0.0f;
+    uint32_t NumTriangles = 0;
 };
 
 struct FAABB
