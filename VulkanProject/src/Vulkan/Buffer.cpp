@@ -98,7 +98,9 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& Params, 
                 SAFE_DELETE(pBuffer);
                 return nullptr;
             }
-            
+
+            pUploadBuffer->SetDebugName("Upload-Buffer");
+
             FCommandBufferParams CommandBufferParams = {};
             CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
             CommandBufferParams.QueueType = ECommandQueueType::Graphics;
@@ -161,6 +163,26 @@ FBuffer::~FBuffer()
         {
             vkFreeMemory(GetDevice()->GetDevice(), m_DeviceMemory, nullptr);
             m_DeviceMemory = VK_NULL_HANDLE;
+        }
+    }
+}
+
+void FBuffer::SetDebugName(const char* DebugName)
+{
+    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
+        
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_BUFFER;
+        DebugNameInfo.pObjectName  = DebugName;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Buffer);
+
+        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
         }
     }
 }

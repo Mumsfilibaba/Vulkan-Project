@@ -128,7 +128,7 @@ public:
         vkCmdPushConstants(m_CommandBuffer, pPipelineLayout->GetPipelineLayout(), StageFlags, Offset, Size, pData);
     }
     
-    void TransitionImage(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void TransitionImage(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkImageAspectFlags AspectMask);
     
     void UpdateBuffer(FBuffer* pBuffer, VkDeviceSize DstOffset, VkDeviceSize DataSize, const void* pData)
     {

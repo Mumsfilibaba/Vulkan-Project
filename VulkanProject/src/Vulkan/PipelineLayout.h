@@ -21,6 +21,8 @@ public:
     FPipelineLayout(FDevice* pDevice);
     ~FPipelineLayout();
 
+    void SetDebugName(const char* DebugName);
+    
     VkPipelineLayout GetPipelineLayout() const
     {
         return m_PipelineLayout;

@@ -25,6 +25,8 @@ public:
 
     FTexture(FDevice* pDevice);
     ~FTexture();
+    
+    void SetDebugName(const char* DebugName);
 
     VkImage GetImage() const
     {

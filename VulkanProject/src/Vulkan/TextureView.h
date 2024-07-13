@@ -21,6 +21,8 @@ public:
     FTextureView(FDevice* pDevice);
     ~FTextureView();
 
+    void SetDebugName(const char* DebugName);
+
     VkImageView GetImageView() const
     {
         return m_ImageView;

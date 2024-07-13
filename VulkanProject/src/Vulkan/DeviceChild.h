@@ -15,7 +15,7 @@ public:
     {
         m_pDevice = nullptr;
     }
-
+    
     FDevice* GetDevice() const
     {
         return m_pDevice;

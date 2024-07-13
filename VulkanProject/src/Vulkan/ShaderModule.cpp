@@ -1,7 +1,6 @@
 #include "ShaderModule.h"
 #include "Device.h"
-#include <fstream>
-#include <iostream>
+#include "Extensions.h"
 
 FShaderModule* FShaderModule::Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t ByteCodeLength, const char* pEntryPoint)
 {
@@ -91,3 +90,22 @@ FShaderModule::~FShaderModule()
     }
 }
 
+void FShaderModule::SetDebugName(const char* DebugName)
+{
+    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
+        
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_SHADER_MODULE;
+        DebugNameInfo.pObjectName  = DebugName;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Module);
+
+        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+        }
+    }
+}

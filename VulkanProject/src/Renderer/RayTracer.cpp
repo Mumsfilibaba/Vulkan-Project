@@ -84,7 +84,6 @@ FRayTracer::FRayTracer()
 
 FRayTracer::~FRayTracer()
 {
-    SAFE_DELETE(m_pScene);
 }
 
 void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
@@ -339,8 +338,8 @@ void FRayTracer::Tick(float DeltaTime)
 
 void FRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
 {
-    pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
-    pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+    pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 
     if (m_bResetImage)
     {
@@ -402,8 +401,8 @@ void FRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
     VkExtent2D DispatchSize = { Math::AlignUp(m_pSceneTexture0->GetWidth(), Threads) / Threads, Math::AlignUp(m_pSceneTexture0->GetHeight(), Threads) / Threads };
     pCommandBuffer->Dispatch(DispatchSize.width, DispatchSize.height, 1);
 
-    pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void FRayTracer::PerformTonemapping(FCommandBuffer* pCommandBuffer)
@@ -1047,6 +1046,8 @@ void FRayTracer::Release()
     SAFE_DELETE(m_pMeshBuffer);
     SAFE_DELETE(m_pMaterialBuffer);
     SAFE_DELETE(m_pBvhBuffer);
+    SAFE_DELETE(m_pAABBVertexBuffer);
+    SAFE_DELETE(m_pAABBIndexBuffer);
     
     SAFE_DELETE(m_pSkybox);
     
@@ -1063,9 +1064,12 @@ void FRayTracer::Release()
     SAFE_DELETE(m_pTonemappingDescriptorSetLayout);
 
     SAFE_DELETE(m_pDebugPipeline);
+    SAFE_DELETE(m_pDebugPipelineWireframe);
+    SAFE_DELETE(m_pDebugAABBPipeline);
     SAFE_DELETE(m_pDebugRenderPass);
     SAFE_DELETE(m_pDebugPipelineLayout);
     SAFE_DELETE(m_pDebugDescriptorSetLayout);
+    SAFE_DELETE(m_pDebugAABBPipelineLayout);
 
     SAFE_DELETE(m_pSceneTexture1);
     SAFE_DELETE(m_pSceneTextureView1);
@@ -1080,6 +1084,8 @@ void FRayTracer::Release()
     
     SAFE_DELETE(m_pDescriptorPool);
     SAFE_DELETE(m_pDeviceAllocator);
+    
+    SAFE_DELETE(m_pScene);
 }
 
 void FRayTracer::OnWindowResize(uint32_t Width, uint32_t Height)
@@ -1205,10 +1211,12 @@ void FRayTracer::CreateRayTracingResources()
     
     m_pRayTracingPipelineLayout = FPipelineLayout::Create(m_pDevice, RayTracingPipelineLayoutParams);
     assert(m_pRayTracingPipelineLayout != nullptr);
+    m_pRayTracingPipelineLayout->SetDebugName("RayTracingPass PipelineLayout");
 
     // Create RayTracing shader and pipeline
     FShaderModule* pComputeShader = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/raytracer.spv");
     assert(pComputeShader != nullptr);
+    pComputeShader->SetDebugName(RESOURCE_PATH"/shaders/raytracer.spv");
     
     FComputePipelineStateParams PipelineParams = {};
     PipelineParams.pShader         = pComputeShader;
@@ -1216,7 +1224,8 @@ void FRayTracer::CreateRayTracingResources()
     
     m_pRayTracingPipeline = FComputePipeline::Create(m_pDevice, PipelineParams);
     assert(m_pRayTracingPipeline != nullptr);
-
+    m_pRayTracingPipeline.load()->SetDebugName("RayTracingPass Pipeline");
+    
     delete pComputeShader;
 }
 
@@ -1248,25 +1257,31 @@ void FRayTracer::CreateDebugViewResources()
     
     m_pDebugPipelineLayout = FPipelineLayout::Create(m_pDevice, DebugPassPipelineLayoutParams);
     assert(m_pDebugPipelineLayout != nullptr);
+    m_pDebugPipelineLayout->SetDebugName("DebugPass PipelineLayout");
     
     DebugPassPipelineLayoutParams.NumPushConstants = 20;
     
     m_pDebugAABBPipelineLayout = FPipelineLayout::Create(m_pDevice, DebugPassPipelineLayoutParams);
     assert(m_pDebugAABBPipelineLayout != nullptr);
-    
+    m_pDebugAABBPipelineLayout->SetDebugName("DebugPass AABB PipelineLayout");
+
     // PipelineState, RenderPass and Shaders
     FShaderModule* pVertex = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/vertex.spv");
     assert(pVertex != nullptr);
-    
+    pVertex->SetDebugName(RESOURCE_PATH"/shaders/vertex.spv");
+
     FShaderModule* pAABBVertex = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/aabb_debug_vs.spv");
     assert(pAABBVertex != nullptr);
-    
+    pAABBVertex->SetDebugName(RESOURCE_PATH"/shaders/aabb_debug_vs.spv");
+
     FShaderModule* pFragment = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/fragment.spv");
     assert(pFragment != nullptr);
-    
+    pFragment->SetDebugName(RESOURCE_PATH"/shaders/fragment.spv");
+
     FShaderModule* pAABBFragment = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/aabb_debug_fs.spv");
     assert(pAABBFragment != nullptr);
-    
+    pAABBFragment->SetDebugName(RESOURCE_PATH"/shaders/aabb_debug_fs.spv");
+
     FRenderPassAttachment ColorAttachments[1];
     ColorAttachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
     ColorAttachments[0].InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1298,12 +1313,14 @@ void FRayTracer::CreateDebugViewResources()
     
     m_pDebugPipeline = FGraphicsPipeline::Create(m_pDevice, DebugPassPipelineParams);
     assert(m_pDebugPipeline != nullptr);
-    
+    m_pDebugPipeline->SetDebugName("DebugPass Pipeline");
+
     DebugPassPipelineParams.PolygonMode = VK_POLYGON_MODE_LINE;
     
     m_pDebugPipelineWireframe = FGraphicsPipeline::Create(m_pDevice, DebugPassPipelineParams);
     assert(m_pDebugPipelineWireframe != nullptr);
-    
+    m_pDebugPipelineWireframe->SetDebugName("DebugPass Pipeline Wireframe");
+
     DebugPassPipelineParams.pBindingDescriptions      = FVertexAABB::GetBindingDescription();
     DebugPassPipelineParams.BindingDescriptionCount   = 1;
     DebugPassPipelineParams.pAttributeDescriptions    = FVertexAABB::GetAttributeDescriptions();
@@ -1317,11 +1334,13 @@ void FRayTracer::CreateDebugViewResources()
     
     m_pDebugAABBPipeline = FGraphicsPipeline::Create(m_pDevice, DebugPassPipelineParams);
     assert(m_pDebugAABBPipeline != nullptr);
-    
+    m_pDebugAABBPipeline->SetDebugName("DebugPass AABB Pipeline");
+
     delete pVertex;
     delete pAABBVertex;
     delete pFragment;
-    
+    delete pAABBFragment;
+
     std::array<glm::vec3, 8> AABBVertices =
     {
         glm::vec3(-0.5f, -0.5f,  0.5f),
@@ -1358,13 +1377,15 @@ void FRayTracer::CreateDebugViewResources()
     
     m_pAABBVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, AABBVertices.data());
     assert(m_pAABBVertexBuffer != nullptr);
-    
+    m_pAABBVertexBuffer->SetDebugName("AABBVertexBuffer");
+
     BufferParams.Size  = sizeof(uint32_t) * AABBIndices.size();
     BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     m_AABBIndexCount = AABBIndices.size();
     
     m_pAABBIndexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, AABBIndices.data());
     assert(m_pAABBIndexBuffer != nullptr);
+    m_pAABBIndexBuffer->SetDebugName("AABBIndexBuffer");
 }
 
 void FRayTracer::CreateTonemappingResources()
@@ -1401,14 +1422,17 @@ void FRayTracer::CreateTonemappingResources()
     
     m_pTonemappingPipelineLayout = FPipelineLayout::Create(m_pDevice, ToneMappingPipelineLayoutParams);
     assert(m_pTonemappingPipelineLayout != nullptr);
-    
+    m_pTonemappingPipelineLayout->SetDebugName("TonemappingPass PipelineLayout");
+
     // PipelineState, RenderPass and Shaders
     FShaderModule* pVertex = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/fullscreenVS.spv");
     assert(pVertex != nullptr);
-    
+    pVertex->SetDebugName(RESOURCE_PATH"/shaders/fullscreenVS.spv");
+
     FShaderModule* pFragment = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/tonemap.spv");
     assert(pFragment != nullptr);
-    
+    pFragment->SetDebugName(RESOURCE_PATH"/shaders/tonemap.spv");
+
     FRenderPassAttachment Attachments[1];
     Attachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
     Attachments[0].InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1433,7 +1457,8 @@ void FRayTracer::CreateTonemappingResources()
     
     m_pTonemappingPipeline = FGraphicsPipeline::Create(m_pDevice, TonemappingPipelineParams);
     assert(m_pTonemappingPipeline != nullptr);
-    
+    m_pTonemappingPipeline->SetDebugName("TonemappingPass Pipeline");
+
     delete pVertex;
     delete pFragment;
 }
@@ -1448,7 +1473,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pCameraBuffer = FBuffer::Create(m_pDevice, CameraBufferParams, m_pDeviceAllocator);
     assert(m_pCameraBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "Camera-Buffer", reinterpret_cast<uint64_t>(m_pCameraBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pCameraBuffer->SetDebugName("Camera-Buffer");
     
     // Random
     FBufferParams RandomBufferParams;
@@ -1458,7 +1483,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pRandomBuffer = FBuffer::Create(m_pDevice, RandomBufferParams, m_pDeviceAllocator);
     assert(m_pRandomBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "Random-Buffer", reinterpret_cast<uint64_t>(m_pRandomBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pRandomBuffer->SetDebugName("Random-Buffer");
     
     // SceneBuffer
     FBufferParams SceneBufferParams;
@@ -1468,7 +1493,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pSceneBuffer = FBuffer::Create(m_pDevice, SceneBufferParams, m_pDeviceAllocator);
     assert(m_pSceneBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "Scene-Buffer", reinterpret_cast<uint64_t>(m_pSceneBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pSceneBuffer->SetDebugName("Scene-Buffer");
     
     // TonemappingBuffer
     FBufferParams TonemappingBufferParams;
@@ -1478,7 +1503,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pTonemappingBuffer = FBuffer::Create(m_pDevice, TonemappingBufferParams, m_pDeviceAllocator);
     assert(m_pTonemappingBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "Tonemapping-Buffer", reinterpret_cast<uint64_t>(m_pTonemappingBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pTonemappingBuffer->SetDebugName("Tonemapping-Buffer");
     
     // QuadBuffer
     FBufferParams QuadBufferParams;
@@ -1488,7 +1513,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pQuadBuffer = FBuffer::Create(m_pDevice, QuadBufferParams, m_pDeviceAllocator);
     assert(m_pQuadBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "Quad-Buffer", reinterpret_cast<uint64_t>(m_pQuadBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pQuadBuffer->SetDebugName("Quad-Buffer");
     
     // SphereBuffer
     FBufferParams SphereBufferParams;
@@ -1498,7 +1523,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pSphereBuffer = FBuffer::Create(m_pDevice, SphereBufferParams, m_pDeviceAllocator);
     assert(m_pSphereBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "Sphere-Buffer", reinterpret_cast<uint64_t>(m_pSphereBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pSphereBuffer->SetDebugName("Sphere-Buffer");
     
     // VertexBuffer
     FBufferParams VertexBufferParams;
@@ -1508,13 +1533,13 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pVertexBuffer = FBuffer::Create(m_pDevice, VertexBufferParams, m_pDeviceAllocator);
     assert(m_pVertexBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "Vertex-Buffer", reinterpret_cast<uint64_t>(m_pVertexBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pVertexBuffer->SetDebugName("Vertex-Buffer");
     
     VertexBufferParams.Size = sizeof(FVertexEx) * MAX_VERTICES;
     
     m_pVertexExBuffer = FBuffer::Create(m_pDevice, VertexBufferParams, m_pDeviceAllocator);
     assert(m_pVertexExBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "VertexEx-Buffer", reinterpret_cast<uint64_t>(m_pVertexExBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pVertexExBuffer->SetDebugName("VertexEx-Buffer");
     
     // TriangleBuffer
     FBufferParams TriangleBufferParams;
@@ -1524,7 +1549,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pTriangleBuffer = FBuffer::Create(m_pDevice, TriangleBufferParams, m_pDeviceAllocator);
     assert(m_pTriangleBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "Triangle-Buffer", reinterpret_cast<uint64_t>(m_pTriangleBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pTriangleBuffer->SetDebugName("Triangle-Buffer");
     
     // TriangleMeshesBuffer
     FBufferParams MeshBufferParams;
@@ -1534,7 +1559,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pMeshBuffer = FBuffer::Create(m_pDevice, MeshBufferParams, m_pDeviceAllocator);
     assert(m_pMeshBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "TriangleMeshes-Buffer", reinterpret_cast<uint64_t>(m_pMeshBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pMeshBuffer->SetDebugName("TriangleMeshes-Buffer");
     
     // MaterialBuffer
     FBufferParams MaterialBufferParams;
@@ -1544,7 +1569,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pMaterialBuffer = FBuffer::Create(m_pDevice, MaterialBufferParams, m_pDeviceAllocator);
     assert(m_pMaterialBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "Material-Buffer", reinterpret_cast<uint64_t>(m_pMaterialBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pMaterialBuffer->SetDebugName("Material-Buffer");
     
     // BoundingBoxBuffer
     FBufferParams BoundingBoxBufferParams;
@@ -1554,7 +1579,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     m_pBvhBuffer = FBuffer::Create(m_pDevice, BoundingBoxBufferParams, m_pDeviceAllocator);
     assert(m_pBvhBuffer != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "BVH-Buffer", reinterpret_cast<uint64_t>(m_pBvhBuffer->GetBuffer()), VK_OBJECT_TYPE_BUFFER);
+    m_pBvhBuffer->SetDebugName("BVH-Buffer");
 }
 
 void FRayTracer::CreateDescriptorSet()
@@ -1669,7 +1694,7 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     // Scene texture frame 0
     m_pSceneTexture0 = FTexture::Create(m_pDevice, TextureParams);
     assert(m_pSceneTexture0 != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "SceneTexture0", reinterpret_cast<uint64_t>(m_pSceneTexture0->GetImage()), VK_OBJECT_TYPE_IMAGE);
+    m_pSceneTexture0->SetDebugName("SceneTexture0");
 
     {
         FTextureViewParams TextureViewParams = {};
@@ -1677,13 +1702,13 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
 
         m_pSceneTextureView0 = FTextureView::Create(m_pDevice, TextureViewParams);
         assert(m_pSceneTextureView0 != nullptr);
-        SetDebugName(m_pDevice->GetDevice(), "SceneTextureView0", reinterpret_cast<uint64_t>(m_pSceneTextureView0->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
+        m_pSceneTextureView0->SetDebugName("SceneTextureView0");
     }
 
     // Scene texture frame 1
     m_pSceneTexture1 = FTexture::Create(m_pDevice, TextureParams);
     assert(m_pSceneTexture1 != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "SceneTexture1", reinterpret_cast<uint64_t>(m_pSceneTexture1->GetImage()), VK_OBJECT_TYPE_IMAGE);
+    m_pSceneTexture1->SetDebugName("SceneTexture1");
     
     {
         FTextureViewParams TextureViewParams = {};
@@ -1691,7 +1716,7 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
         
         m_pSceneTextureView1 = FTextureView::Create(m_pDevice, TextureViewParams);
         assert(m_pSceneTextureView1 != nullptr);
-        SetDebugName(m_pDevice->GetDevice(), "SceneTextureView1", reinterpret_cast<uint64_t>(m_pSceneTextureView1->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
+        m_pSceneTextureView1->SetDebugName("SceneTextureView1");
     }
 
     // Create texture for the viewport
@@ -1705,7 +1730,7 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     
     m_pOutputTexture = FTexture::Create(m_pDevice, OutputTextureParams);
     assert(m_pOutputTexture != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "OutputTexture", reinterpret_cast<uint64_t>(m_pOutputTexture->GetImage()), VK_OBJECT_TYPE_IMAGE);
+    m_pOutputTexture->SetDebugName("OutputTexture");
     
     {
         FTextureViewParams TextureViewParams = {};
@@ -1713,7 +1738,7 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
         
         m_pOutputTextureView = FTextureView::Create(m_pDevice, TextureViewParams);
         assert(m_pOutputTextureView != nullptr);
-        SetDebugName(m_pDevice->GetDevice(), "OutputTextureView", reinterpret_cast<uint64_t>(m_pOutputTextureView->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
+        m_pOutputTextureView->SetDebugName("OutputTextureView");
     }
     
     // Create depth-buffer texture for the viewport
@@ -1727,7 +1752,7 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     
     m_pDepthBufferTexture = FTexture::Create(m_pDevice, DepthBufferParams);
     assert(m_pDepthBufferTexture != nullptr);
-    SetDebugName(m_pDevice->GetDevice(), "DepthBuffer", reinterpret_cast<uint64_t>(m_pDepthBufferTexture->GetImage()), VK_OBJECT_TYPE_IMAGE);
+    m_pDepthBufferTexture->SetDebugName("DepthBuffer");
     
     {
         FTextureViewParams TextureViewParams = {};
@@ -1735,7 +1760,7 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
         
         m_pDepthBufferTextureView = FTextureView::Create(m_pDevice, TextureViewParams);
         assert(m_pDepthBufferTextureView != nullptr);
-        SetDebugName(m_pDevice->GetDevice(), "DepthBufferView", reinterpret_cast<uint64_t>(m_pDepthBufferTextureView->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
+        m_pDepthBufferTextureView->SetDebugName("DepthBufferView");
     }
     
     // Create Framebuffer for the tonemap stage
@@ -1816,6 +1841,10 @@ void FRayTracer::ReloadShader()
                 SAFE_DELETE(pComputeShader);
                 bIsCompiling = false;
                 return false;
+            }
+            else
+            {
+                pComputePipeline->SetDebugName("RayTracingPass Pipeline");
             }
 
             m_pDevice->WaitForIdle();

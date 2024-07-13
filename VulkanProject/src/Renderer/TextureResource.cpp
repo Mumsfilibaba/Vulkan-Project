@@ -60,16 +60,21 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
         return false;
     }
 
+    s_pCubeMapGenPipelineLayout->SetDebugName("CubeMapGen PipelineLayout");
+
     // Create shader and pipeline
     FShaderModule* pComputeShader = FShaderModule::CreateFromFile(pDevice, "main", RESOURCE_PATH"/shaders/cubemapgen.spv");
+    pComputeShader->SetDebugName(RESOURCE_PATH"/shaders/cubemapgen.spv");
 
     FComputePipelineStateParams PipelineParams = {};
     PipelineParams.pShader         = pComputeShader;
     PipelineParams.pPipelineLayout = s_pCubeMapGenPipelineLayout;
     
     s_pCubeMapGenPipelineState = FComputePipeline::Create(pDevice, PipelineParams);
+    s_pCubeMapGenPipelineState->SetDebugName("CubeMapGen Pipeline");
+
     SAFE_DELETE(pComputeShader);
-    
+
     if (!s_pCubeMapGenPipelineState)
     {
         std::cout << "Failed to create CubeMapGen Pipeline\n";
@@ -249,7 +254,8 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     }
     else
     {
-        SetDebugName(pDevice->GetDevice(), std::string("Texture '") + Filepath + "'", reinterpret_cast<uint64_t>(pTexture->GetImage()), VK_OBJECT_TYPE_IMAGE);
+        const std::string DebugName = std::string("Texture '") + Filepath + "'";
+        pTexture->SetDebugName(DebugName.c_str());
     }
 
     // TextureView
@@ -264,7 +270,8 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     }
     else
     {
-        SetDebugName(pDevice->GetDevice(), std::string("TextureView '") + Filepath + "'", reinterpret_cast<uint64_t>(pTextureView->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
+        const std::string DebugName = std::string("TextureView '") + Filepath + "'";
+        pTextureView->SetDebugName(DebugName.c_str());
     }
 
     std::unique_ptr<FTextureResource> pTextureResource = std::make_unique<FTextureResource>(pDevice);
@@ -304,7 +311,8 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     }
     else
     {
-        SetDebugName(pDevice->GetDevice(), std::string("TextureCube '") + Filepath + "'", reinterpret_cast<uint64_t>(pTexture->GetImage()), VK_OBJECT_TYPE_IMAGE);
+        const std::string DebugName = std::string("TextureCube '") + Filepath + "'";
+        pTexture->SetDebugName(DebugName.c_str());
     }
 
     // TextureView
@@ -321,7 +329,8 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     }
     else
     {
-        SetDebugName(pDevice->GetDevice(), std::string("TextureCubeView UAV'") + Filepath + "'", reinterpret_cast<uint64_t>(pTextureViewUAV->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
+        const std::string DebugName = std::string("TextureCubeView UAV '") + Filepath + "'";
+        pTextureViewUAV->SetDebugName(DebugName.c_str());
     }
     
     TextureViewParams.pTexture       = pTexture.get();
@@ -336,7 +345,8 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     }
     else
     {
-        SetDebugName(pDevice->GetDevice(), std::string("TextureCubeView '") + Filepath + "'", reinterpret_cast<uint64_t>(pTextureView->GetImageView()), VK_OBJECT_TYPE_IMAGE_VIEW);
+        const std::string DebugName = std::string("TextureCubeView '") + Filepath + "'";
+        pTextureViewUAV->SetDebugName(DebugName.c_str());
     }
     
     // DescriptorPool
@@ -380,7 +390,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     pCommandBuffer->Reset();
     pCommandBuffer->Begin();
     
-    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
     
     struct FPushConstants
     {
@@ -396,7 +406,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     constexpr uint32_t NumThreadGroups = CubeMapSize / 16;
     pCommandBuffer->Dispatch(NumThreadGroups, NumThreadGroups, 6);
     
-    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
     pCommandBuffer->End();
     
     pDevice->ExecuteGraphics(pCommandBuffer.get(), nullptr, nullptr);

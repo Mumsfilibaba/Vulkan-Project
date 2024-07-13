@@ -13,6 +13,8 @@ public:
     FShaderModule(FDevice* pDevice);
     ~FShaderModule();
 
+    void SetDebugName(const char* DebugName);
+    
     VkShaderModule GetModule() const
     {
         return m_Module;

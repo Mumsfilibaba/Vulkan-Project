@@ -3,7 +3,7 @@
 #include "RenderPass.h"
 #include "Device.h"
 #include "PipelineLayout.h"
-#include <vector>
+#include "Extensions.h"
 
 FBasePipeline::FBasePipeline(FDevice* pDevice)
     : FDeviceChild(pDevice)
@@ -17,6 +17,26 @@ FBasePipeline::~FBasePipeline()
     {
         vkDestroyPipeline(GetDevice()->GetDevice(), m_Pipeline, nullptr);
         m_Pipeline = VK_NULL_HANDLE;
+    }
+}
+
+void FBasePipeline::SetDebugName(const char* DebugName)
+{
+    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
+        
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_PIPELINE;
+        DebugNameInfo.pObjectName  = DebugName;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Pipeline);
+
+        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+        }
     }
 }
 

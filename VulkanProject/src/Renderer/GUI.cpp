@@ -985,6 +985,8 @@ namespace GUI
                 return false;
             }
             
+            pRendererBackend->pFontTexture->SetDebugName("Font Texture");
+            
             FTextureViewParams textureViewParams = {};
             textureViewParams.pTexture = pRendererBackend->pFontTexture;
             
@@ -993,6 +995,8 @@ namespace GUI
             {
                 return false;
             }
+
+            pRendererBackend->pFontTextureView->SetDebugName("Font TextureView");
             
             pRendererBackend->pFontDescriptorSet->BindCombinedImageSampler(pRendererBackend->pFontTextureView->GetImageView(), pRendererBackend->pFontSampler->GetSampler(), 0);
             io.Fonts->SetTexID((ImTextureID)pRendererBackend->pFontDescriptorSet);
@@ -1116,12 +1120,14 @@ namespace GUI
         {
             pRendererBackend->pShaderModuleVert = FShaderModule::Create(pRendererBackend->pDevice, __glsl_shader_vert_spv, sizeof(__glsl_shader_vert_spv), "main");
             assert(pRendererBackend->pShaderModuleVert != nullptr);
+            pRendererBackend->pShaderModuleVert->SetDebugName("ImGui VertexShader");
         }
         
         if (!pRendererBackend->pShaderModuleFrag)
         {
             pRendererBackend->pShaderModuleFrag = FShaderModule::Create(pRendererBackend->pDevice, __glsl_shader_frag_spv, sizeof(__glsl_shader_frag_spv), "main");
             assert(pRendererBackend->pShaderModuleFrag != nullptr);
+            pRendererBackend->pShaderModuleFrag->SetDebugName("ImGui FragmentShader");
         }
     }
     
@@ -1168,7 +1174,7 @@ namespace GUI
             
             pRendererBackend->pPipeline = FGraphicsPipeline::Create(pRendererBackend->pDevice, graphicsPipelineStateParams);
             assert(pRendererBackend->pPipeline != nullptr);
-            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui Pipeline", reinterpret_cast<uint64_t>(pRendererBackend->pPipeline->GetPipeline()), VK_OBJECT_TYPE_PIPELINE);
+            pRendererBackend->pPipeline->SetDebugName("ImGui Pipeline");
         }
     }
     
@@ -1255,7 +1261,7 @@ namespace GUI
             
             pRendererBackend->pPipelineLayout = FPipelineLayout::Create(pRendererBackend->pDevice, pipelineLayoutParams);
             assert(pRendererBackend->pPipelineLayout != nullptr);
-            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui PipelineLayout", reinterpret_cast<uint64_t>(pRendererBackend->pPipelineLayout->GetPipelineLayout()), VK_OBJECT_TYPE_PIPELINE_LAYOUT);
+            pRendererBackend->pPipelineLayout->SetDebugName("ImGui PipelineLayout");
         }
         
         if (!pRendererBackend->pRenderPass)
@@ -1437,6 +1443,7 @@ namespace GUI
             return;
         }
         
+        pBuffer->SetDebugName("GUI Buffer");
         *ppBuffer = pBuffer;
     }
     

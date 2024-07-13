@@ -29,8 +29,12 @@ void FRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     m_pSwapchain = pSwapchain;
     
     // PipelineState, RenderPass and Shaders
-    FShaderModule* pVertex   = FShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/vertex.spv");
+    FShaderModule* pVertex = FShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/vertex.spv");
+    assert(pVertex != nullptr);
+
     FShaderModule* pFragment = FShaderModule::CreateFromFile(m_pDevice, "main", "res/shaders/fragment.spv");
+    assert(pFragment != nullptr);
+    pFragment->SetDebugName(RESOURCE_PATH"/shaders/tonemap.spv");
 
     FRenderPassAttachment Attachments[1];
     Attachments[0].Format = m_pSwapchain->GetFormat();
@@ -81,7 +85,8 @@ void FRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     CameraBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     CameraBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     m_pCameraBuffer = FBuffer::Create(m_pDevice, CameraBufferParams, m_pDeviceAllocator);
-    
+    m_pCameraBuffer->SetDebugName("Camera-Buffer");
+
     // Create descriptorpool
     FDescriptorPoolParams DescriptorPoolParams;
     DescriptorPoolParams.NumUniformBuffers = 1;

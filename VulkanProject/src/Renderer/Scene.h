@@ -40,7 +40,7 @@ struct FSceneSettings
 struct FScene
 {
     FScene();
-    ~FScene();
+    virtual ~FScene();
 
     virtual void Initialize() {}
     virtual void Reset() {}

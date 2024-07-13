@@ -107,7 +107,18 @@ FTexture* FTexture::Create(FDevice* pDevice, const FTextureParams& Params)
         FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
         pCommandBuffer->Reset();
         pCommandBuffer->Begin();
-        pCommandBuffer->TransitionImage(pTexture->m_Image, VK_IMAGE_LAYOUT_UNDEFINED, Params.InitialLayout);
+        
+        VkImageAspectFlags AspectFlags;
+        if (Params.Format == VK_FORMAT_D24_UNORM_S8_UINT)
+        {
+            AspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+        else
+        {
+            AspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+        }
+        
+        pCommandBuffer->TransitionImage(pTexture->m_Image, VK_IMAGE_LAYOUT_UNDEFINED, Params.InitialLayout, AspectFlags);
         pCommandBuffer->End();
 
         pDevice->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
@@ -148,6 +159,8 @@ FTexture* FTexture::CreateWithData(FDevice* pDevice, const FTextureParams& Param
         SAFE_DELETE(pTexture);
         return nullptr;
     }
+
+    pUploadBuffer->SetDebugName("UploadBuffer");
     
     FCommandBufferParams CommandBufferParams = {};
     CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -164,7 +177,7 @@ FTexture* FTexture::CreateWithData(FDevice* pDevice, const FTextureParams& Param
     pCommandBuffer->Reset();
     pCommandBuffer->Begin();
     
-    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
     
     VkBufferImageCopy BufferImageCopy = {};
     BufferImageCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -176,7 +189,7 @@ FTexture* FTexture::CreateWithData(FDevice* pDevice, const FTextureParams& Param
     pCommandBuffer->CopyBufferToImage(pUploadBuffer->GetBuffer(), pTexture->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &BufferImageCopy);
 
     const VkImageLayout FinalLayout = (Params.InitialLayout == VK_IMAGE_LAYOUT_UNDEFINED) ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : Params.InitialLayout;
-    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, FinalLayout);
+    pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, FinalLayout, VK_IMAGE_ASPECT_COLOR_BIT);
     
     pCommandBuffer->End();
     
@@ -210,5 +223,25 @@ FTexture::~FTexture()
     {
         vkFreeMemory(GetDevice()->GetDevice(), m_Memory, nullptr);
         m_Memory = VK_NULL_HANDLE;
+    }
+}
+
+void FTexture::SetDebugName(const char* DebugName)
+{
+    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
+        
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_IMAGE;
+        DebugNameInfo.pObjectName  = DebugName;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Image);
+
+        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+        }
     }
 }

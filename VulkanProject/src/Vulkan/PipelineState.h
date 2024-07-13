@@ -30,6 +30,8 @@ public:
     FBasePipeline(FDevice* pDevice);
     ~FBasePipeline();
     
+    void SetDebugName(const char* DebugName);
+    
     VkPipeline GetPipeline() const
     {
         return m_Pipeline;

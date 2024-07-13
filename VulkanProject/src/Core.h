@@ -6,7 +6,6 @@
 #include <iostream>
 #include <cassert>
 #include <cstdint>
-
 #include <unordered_map>
 #include <vector>
 #include <array>
@@ -16,6 +15,8 @@
 #include <chrono>
 #include <future>
 #include <atomic>
+#include <fstream>
+#include <iostream>
 
 // GLM stuff
 #define GLM_FORCE_RADIANS

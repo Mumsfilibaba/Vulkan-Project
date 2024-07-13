@@ -2,6 +2,7 @@
 #include "Device.h"
 #include "DescriptorSetLayout.h"
 #include "BindlessManager.h"
+#include "Extensions.h"
 
 FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayoutParams& Params)
 {
@@ -70,5 +71,25 @@ FPipelineLayout::~FPipelineLayout()
     {
         vkDestroyPipelineLayout(GetDevice()->GetDevice(), m_PipelineLayout, nullptr);
         m_PipelineLayout = VK_NULL_HANDLE;
+    }
+}
+
+void FPipelineLayout::SetDebugName(const char* DebugName)
+{
+    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
+        
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_PIPELINE_LAYOUT;
+        DebugNameInfo.pObjectName  = DebugName;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_PipelineLayout);
+
+        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+        }
     }
 }

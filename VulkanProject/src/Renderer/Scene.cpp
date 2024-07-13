@@ -33,11 +33,14 @@ FScene::FScene()
 
 FScene::~FScene()
 {
-    // SAFE_DELETE(m_pVertexBuffer);
-    // SAFE_DELETE(m_pTriangleBuffer);
-    // SAFE_DELETE(m_BoundingBoxBuffer);
-    // SAFE_DELETE(m_pMeshVertexBuffer);
-    // SAFE_DELETE(m_pMeshIndexBuffer);
+    FApplication::Get().GetDevice()->WaitForIdle();
+    
+    SAFE_DELETE(m_pBoundingBoxBuffer);
+    SAFE_DELETE(m_pTriangleBuffer);
+    SAFE_DELETE(m_pVertexBuffer);
+    SAFE_DELETE(m_pVertexExBuffer);
+    SAFE_DELETE(m_pMeshVertexBuffer);
+    SAFE_DELETE(m_pMeshIndexBuffer);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -92,18 +95,22 @@ void FModelScene::Initialize()
     assert(m_AccelerationStructure.m_BoundingBoxes.size() < MAX_BVH_NODES);
     m_pBoundingBoxBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_AccelerationStructure.m_BoundingBoxes.data());
     assert(m_pBoundingBoxBuffer != nullptr);
+    m_pBoundingBoxBuffer->SetDebugName("CPU Bounding Box Buffer");
     
     BufferParams.Size = sizeof(FShaderTriangle) * m_AccelerationStructure.m_Triangles.size();
     m_pTriangleBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_AccelerationStructure.m_Triangles.data());
     assert(m_pTriangleBuffer != nullptr);
+    m_pTriangleBuffer->SetDebugName("CPU Triangle Buffer");
     
     BufferParams.Size = sizeof(FVertexPosOnly) * m_Vertices.size();
     m_pVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_Vertices.data());
     assert(m_pVertexBuffer != nullptr);
+    m_pVertexBuffer->SetDebugName("CPU Vertex Buffer");
     
     BufferParams.Size = sizeof(FVertexEx) * m_VerticesEx.size();
     m_pVertexExBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_VerticesEx.data());
     assert(m_pVertexExBuffer != nullptr);
+    m_pVertexExBuffer->SetDebugName("CPU VertexEx Buffer");
     
     BufferParams.Size             = sizeof(FVertexPosOnly) * Mesh.Vertices.size();
     BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
@@ -111,12 +118,14 @@ void FModelScene::Initialize()
     
     m_pMeshVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Vertices.data());
     assert(m_pMeshVertexBuffer != nullptr);
+    m_pMeshVertexBuffer->SetDebugName("CPU Debug Vertex Buffer");
     
     BufferParams.Size  = sizeof(uint32_t) * Mesh.Indicies.size();
     BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
     m_pMeshIndexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Indicies.data());
     assert(m_pMeshIndexBuffer != nullptr);
+    m_pMeshIndexBuffer->SetDebugName("CPU Debug Index Buffer");
     
     // Quads
 #if 1

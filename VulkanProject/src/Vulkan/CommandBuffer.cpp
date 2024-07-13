@@ -101,7 +101,7 @@ void FCommandBuffer::BindBindlessDescriptors(FPipelineLayout* pPipelineLayout, V
     vkCmdBindDescriptorSets(m_CommandBuffer, BindPoint, pPipelineLayout->GetPipelineLayout(), pPipelineLayout->GetBindlessDescriptorSetIndex(), 1, &BindlessDescriptorSet, 0, nullptr);
 }
 
-void FCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout)
+void FCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkImageAspectFlags AspectMask)
 {
     VkImageMemoryBarrier Barrier;
     ZERO_STRUCT(&Barrier);
@@ -112,7 +112,7 @@ void FCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkI
     Barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
     Barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
     Barrier.image                           = Image;
-    Barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    Barrier.subresourceRange.aspectMask     = AspectMask;
     Barrier.subresourceRange.baseMipLevel   = 0;
     Barrier.subresourceRange.levelCount     = 1;
     Barrier.subresourceRange.baseArrayLayer = 0;
@@ -151,7 +151,7 @@ void FCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkI
         Barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
         SourceStage      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        DestinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        DestinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
     }
     else if (OldLayout == VK_IMAGE_LAYOUT_UNDEFINED && NewLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
     {
