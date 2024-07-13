@@ -696,6 +696,7 @@ void FRayTracer::OnRenderUI()
             {
                 "Render",
                 "Normals",
+                "Barycentrics",
                 "BVH Intersection",
                 "Debug"
             };
@@ -717,9 +718,13 @@ void FRayTracer::OnRenderUI()
                 }
                 else if (CurrentViewMode == 2)
                 {
-                    m_pScene->m_Settings.ViewMode = EViewMode::BVHIntersection;
+                    m_pScene->m_Settings.ViewMode = EViewMode::Barycentrics;
                 }
                 else if (CurrentViewMode == 3)
+                {
+                    m_pScene->m_Settings.ViewMode = EViewMode::BVHIntersection;
+                }
+                else if (CurrentViewMode == 4)
                 {
                     m_pScene->m_Settings.ViewMode = EViewMode::Debug;
                 }
