@@ -18,9 +18,7 @@ class FCommandBuffer;
 class FComputePipeline;
 class FFramebuffer;
 class FQuery;
-
-/*///////////////////////////////////////////////////////////////////////////////////////////////*/
-// Buffer Structs
+class FBindlessManager;
 
 struct FRandomBuffer
 {
@@ -64,9 +62,6 @@ struct FTonemappingBuffer
     uint32_t Padding1 = 0;
     uint32_t Padding2 = 0;
 };
-
-/*///////////////////////////////////////////////////////////////////////////////////////////////*/
-// RayTracer
 
 class FRayTracer : public IRenderer
 {
@@ -163,6 +158,7 @@ private:
 
     // Skybox
     class FTextureResource* m_pSkybox;
+    uint32_t m_SkyboxBindlessIndex;
     
     // Samplers
     FSampler* m_pSkyboxSampler;

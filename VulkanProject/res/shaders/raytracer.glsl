@@ -29,7 +29,9 @@ layout(local_size_x = NUM_THREADS, local_size_y = NUM_THREADS, local_size_z = 1)
 
 layout (binding = 0, rgba32f) uniform image2D uOutput;
 layout (binding = 1, rgba32f) uniform image2D uPreviousFrame;
-layout (binding = 2)          uniform samplerCube uSkybox;
+
+// Bindless Textures
+layout (set = 1, binding = 0) uniform samplerCube uTextures[];
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Global uniforms
@@ -481,7 +483,7 @@ vec3 GetEnvironmentLight(vec3 RayDirection)
     {
         // Sample the Skybox
         vec3 UnitDirection = normalize(RayDirection);
-        vec4 SkyboxColor = texture(uSkybox, UnitDirection);
+        vec4 SkyboxColor = texture(uTextures[0], UnitDirection);
         return SkyboxColor.rgb * SKYBOX_MULTIPLIER;
     }
     else

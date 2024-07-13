@@ -3,6 +3,7 @@
 
 class FSwapchain;
 class FCommandBuffer;
+class FBindlessManager;
 
 enum class ECommandQueueType
 {
@@ -45,29 +46,21 @@ public:
     void Destroy();
     uint32_t GetQueueFamilyIndex(ECommandQueueType Type);
     
-    VkDevice GetDevice() const
-    {
-        return m_Device;
-    }
-    
-    VkPhysicalDevice GetPhysicalDevice() const
-    {
-        return m_PhysicalDevice;
-    }
-    
-    VkInstance GetInstance() const
-    {
-        return m_Instance;
-    }
-    
-    VkQueue GetPresentQueue() const
-    {
-        return m_PresentationQueue;
-    }
+    VkDevice         GetDevice()         const { return m_Device; }
+    VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
+    VkInstance       GetInstance()       const { return m_Instance; }
+    VkQueue          GetPresentQueue()   const { return m_PresentationQueue; }
+    VkQueue          GetGraphicsQueue()  const { return m_GraphicsQueue; }
 
-    VkQueue GetGraphicsQueue() const
+    FBindlessManager& GetBindlessManager() const
     {
-        return m_GraphicsQueue;
+        assert(m_pBindlessManager != nullptr);
+        return *m_pBindlessManager;
+    }
+    
+    const VkPhysicalDeviceLimits& GetDeviceLimits() const
+    {
+        return m_DeviceProperties.limits;
     }
 
     float GetTimestampPeriod() const
@@ -84,11 +77,15 @@ private:
     void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     std::vector<const char*> GetRequiredDeviceExtensions();
     FQueueFamilyIndices GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
+    void QueryPhysicalDeviceFeatures();
     
     VkInstance               m_Instance;
     VkDebugUtilsMessengerEXT m_DebugMessenger;
     VkPhysicalDevice         m_PhysicalDevice;
     VkDevice                 m_Device;
+    
+    // Bindless
+    FBindlessManager* m_pBindlessManager;
     
     // Queues
     VkQueue m_GraphicsQueue;
@@ -97,13 +94,15 @@ private:
     VkQueue m_PresentationQueue;
     
     // Device Features
-    VkPhysicalDeviceFeatures2              m_EnabledDeviceFeatures;
-    VkPhysicalDeviceProperties             m_DeviceProperties;
-    VkPhysicalDeviceFeatures2              m_DeviceFeatures;
-    VkPhysicalDeviceHostQueryResetFeatures m_HostQueryFeatures;
-    VkPhysicalDeviceMemoryProperties       m_DeviceMemoryProperties;
-    FQueueFamilyIndices                    m_QueueFamilyIndices;
+    VkPhysicalDeviceFeatures2                  m_EnabledDeviceFeatures;
+    VkPhysicalDeviceDescriptorIndexingFeatures m_DescriptorIndexFeatures;
+    VkPhysicalDeviceProperties                 m_DeviceProperties;
+    VkPhysicalDeviceFeatures2                  m_DeviceFeatures;
+    VkPhysicalDeviceHostQueryResetFeatures     m_HostQueryFeatures;
+    VkPhysicalDeviceMemoryProperties           m_DeviceMemoryProperties;
+    FQueueFamilyIndices                        m_QueueFamilyIndices;
           
     bool m_bValidationEnabled : 1;
     bool m_bRayTracingEnabled : 1;
+    bool m_bBindlessSupported : 1;
 };

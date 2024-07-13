@@ -7,9 +7,10 @@ class FDescriptorSetLayout;
 
 struct FPipelineLayoutParams
 {
-    FDescriptorSetLayout** ppLayouts        = nullptr;
-    uint32_t               NumLayouts       = 0;
-    uint32_t               NumPushConstants = 0;
+    FDescriptorSetLayout** ppLayouts = nullptr;
+    uint32_t NumLayouts       = 0;
+    uint32_t NumPushConstants = 0;
+    bool     bEnableBindless  = false;
 };
 
 class FPipelineLayout : public FDeviceChild
@@ -24,7 +25,13 @@ public:
     {
         return m_PipelineLayout;
     }
+    
+    uint32_t GetBindlessDescriptorSetIndex() const
+    {
+        return m_BindlessDescriptorSetIndex;
+    }
 
 private:
     VkPipelineLayout m_PipelineLayout;
+    uint32_t         m_BindlessDescriptorSetIndex;
 };

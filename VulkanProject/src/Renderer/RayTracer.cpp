@@ -18,7 +18,7 @@
 #include "Vulkan/Texture.h"
 #include "Vulkan/TextureView.h"
 #include "Vulkan/Helpers.h"
-#include <glm/gtc/type_ptr.hpp>
+#include "Vulkan/BindlessManager.h"
 
 FRayTracer::FRayTracer()
     : m_pDevice(nullptr)
@@ -95,7 +95,7 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
 
     // Init the textureloader
     FTextureResource::InitLoader(m_pDevice);
-    
+
     // Create skybox
     m_pSkybox = FTextureResource::LoadCubeMapFromPanoramaFile(m_pDevice, RESOURCE_PATH"/textures/arches.hdr");
     assert(m_pSkybox != nullptr);
@@ -133,6 +133,9 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
         m_pTonemapSampler = FSampler::Create(pDevice, SamplerParams);
         assert(m_pTonemapSampler != nullptr);
     }
+    
+    // Bindless Manager
+    m_SkyboxBindlessIndex = m_pDevice->GetBindlessManager().AddImageView(m_pSkybox->GetTextureView()->GetImageView(), m_pSkyboxSampler->GetSampler());
     
     // Create scene
     m_pScene = new FSphereScene(ESphereSceneType::Default);
@@ -385,12 +388,14 @@ void FRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
     const uint64_t Frame = (m_FrameIndex % 2);
     if (Frame == 0)
     {
-        pCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet0);
+        pCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet0, 0);
     }
     else
     {
-        pCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet1);
+        pCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet1, 0);
     }
+    
+    pCommandBuffer->BindBindlessDescriptors(m_pRayTracingPipelineLayout, VK_PIPELINE_BIND_POINT_COMPUTE);
 
     // Dispatch RayTracing
     const uint32_t Threads = 16;
@@ -426,11 +431,11 @@ void FRayTracer::PerformTonemapping(FCommandBuffer* pCommandBuffer)
     const uint64_t Frame = (m_FrameIndex % 2);
     if (Frame == 0)
     {
-        pCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet0);
+        pCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet0, 0);
     }
     else
     {
-        pCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet1);
+        pCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet1, 0);
     }
 
     // Draw
@@ -485,11 +490,11 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
         const uint64_t Frame = (m_FrameIndex % 2);
         if (Frame == 0)
         {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0);
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0, 0);
         }
         else
         {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1);
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1, 0);
         }
         
         // Set Vertex- and IndexBuffer
@@ -512,11 +517,11 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
         const uint64_t Frame = (m_FrameIndex % 2);
         if (Frame == 0)
         {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0);
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0, 0);
         }
         else
         {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1);
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1, 0);
         }
         
         // Set Vertex- and IndexBuffer
@@ -536,11 +541,11 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
         const uint64_t Frame = (m_FrameIndex % 2);
         if (Frame == 0)
         {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet0);
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet0, 0);
         }
         else
         {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet1);
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet1, 0);
         }
         
         pCommandBuffer->BindVertexBuffer(m_pAABBVertexBuffer, 0, 0);
@@ -1194,9 +1199,10 @@ void FRayTracer::CreateRayTracingResources()
 
     // Create RayTracing PipelineLayout
     FPipelineLayoutParams RayTracingPipelineLayoutParams;
-    RayTracingPipelineLayoutParams.ppLayouts  = &m_pRayTracingDescriptorSetLayout;
-    RayTracingPipelineLayoutParams.NumLayouts = 1;
-
+    RayTracingPipelineLayoutParams.ppLayouts       = &m_pRayTracingDescriptorSetLayout;
+    RayTracingPipelineLayoutParams.NumLayouts      = 1;
+    RayTracingPipelineLayoutParams.bEnableBindless = true;
+    
     m_pRayTracingPipelineLayout = FPipelineLayout::Create(m_pDevice, RayTracingPipelineLayoutParams);
     assert(m_pRayTracingPipelineLayout != nullptr);
 

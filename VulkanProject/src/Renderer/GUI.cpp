@@ -1618,7 +1618,7 @@ namespace GUI
                     }
                     
                     // Bind DescriptorSet
-                    pCommandBuffer->BindGraphicsDescriptorSet(pRendererbackend->pPipelineLayout, pDescriptorSet);
+                    pCommandBuffer->BindGraphicsDescriptorSet(pRendererbackend->pPipelineLayout, pDescriptorSet, 0);
 
                     // Draw
                     pCommandBuffer->DrawIndexInstanced(pDrawCmd->ElemCount, 1, pDrawCmd->IdxOffset + globalIdxOffset, pDrawCmd->VtxOffset + globalVtxOffset, 0);

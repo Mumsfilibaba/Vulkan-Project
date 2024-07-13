@@ -8,8 +8,13 @@
 #include "DeviceMemoryAllocator.h"
 #include "DescriptorPool.h"
 #include "Swapchain.h"
+#include "BindlessManager.h"
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void*) 
+#if PLATFORM_MAC
+    #include <dlfcn.h>
+#endif
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void*)
 {
     if (MessageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
@@ -30,6 +35,7 @@ FDevice::FDevice()
     , m_DebugMessenger(VK_NULL_HANDLE)
     , m_PhysicalDevice(VK_NULL_HANDLE)
     , m_Device(VK_NULL_HANDLE)
+    , m_pBindlessManager(nullptr)
     , m_GraphicsQueue(VK_NULL_HANDLE)
     , m_ComputeQueue(VK_NULL_HANDLE)
     , m_TransferQueue(VK_NULL_HANDLE)
@@ -40,11 +46,14 @@ FDevice::FDevice()
     , m_QueueFamilyIndices()
     , m_bValidationEnabled(false)
     , m_bRayTracingEnabled(false)
+    , m_bBindlessSupported(false)
 {
 }
 
 FDevice::~FDevice()
 {
+    SAFE_DELETE(m_pBindlessManager);
+    
     if (m_Device)
     {
         vkDestroyDevice(m_Device, nullptr);
@@ -186,6 +195,16 @@ bool FDevice::Init(const FDeviceParams& Params)
         return false;
     }
 
+    // Create BindlessManager
+    if (m_bBindlessSupported)
+    {
+        m_pBindlessManager = FBindlessManager::Create(this);
+        if (!m_pBindlessManager)
+        {
+            return false;
+        }
+    }
+    
     return true;
 }
 
@@ -231,6 +250,19 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
 #if PLATFORM_MAC
     InstanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     InstanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    
+    auto libMoltenVK = dlopen("libMoltenVK.dylib", RTLD_LAZY);
+    PFN_vkGetMoltenVKConfigurationMVK GetMoltenVKConfigurationMVK = (PFN_vkGetMoltenVKConfigurationMVK)dlsym(libMoltenVK, "vkGetMoltenVKConfigurationMVK");
+    assert(GetMoltenVKConfigurationMVK != nullptr);
+    PFN_vkSetMoltenVKConfigurationMVK SetMoltenVKConfigurationMVK = (PFN_vkSetMoltenVKConfigurationMVK)dlsym(libMoltenVK, "vkSetMoltenVKConfigurationMVK");
+    assert(SetMoltenVKConfigurationMVK != nullptr);
+
+    MVKConfiguration MvkConfig;
+    size_t mvkConfigSize = sizeof(MVKConfiguration);
+    GetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &MvkConfig, &mvkConfigSize);
+    
+    MvkConfig.useMetalArgumentBuffers = MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS_ALWAYS;
+    SetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &MvkConfig, &mvkConfigSize);
 #endif
 
     if (m_bValidationEnabled)
@@ -365,13 +397,13 @@ bool FDevice::CreateDebugMessenger()
 bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
 {
     m_QueueFamilyIndices = GetQueueFamilyIndices(m_PhysicalDevice);
-
+    
     std::cout << "Using following queueFamilyIndices: ";
     std::cout << "Graphics = "     << m_QueueFamilyIndices.Graphics;
     std::cout << ", Presentation=" << m_QueueFamilyIndices.Presentation;
     std::cout << ", Compute="      << m_QueueFamilyIndices.Compute;
     std::cout << ", Transfer="     << m_QueueFamilyIndices.Transfer << '\n';
-
+    
     if (m_DeviceProperties.limits.timestampComputeAndGraphics)
     {
         std::cout << "    Timestamps Supported\n";
@@ -380,10 +412,10 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
     {
         std::cout << "    Timestamps NOT Supported\n";
     }
-
+    
     std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
     const float DefaultQueuePriority = 0.0f;
-
+    
     std::set<uint32_t> UniqueQueueFamilies =
     {
         m_QueueFamilyIndices.Graphics,
@@ -391,7 +423,7 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
         m_QueueFamilyIndices.Presentation,
         m_QueueFamilyIndices.Transfer
     };
-
+    
     for (int32_t QueueFamiliy : UniqueQueueFamilies)
     {
         VkDeviceQueueCreateInfo QueueInfo = {};
@@ -401,16 +433,16 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
         QueueInfo.pQueuePriorities = &DefaultQueuePriority;
         QueueInfo.queueFamilyIndex = QueueFamiliy;
         QueueInfo.queueCount       = 1;
-
+        
         QueueCreateInfos.push_back(QueueInfo);
     }
-
+    
     // Get device extensions
     uint32_t DeviceExtensionCount;
     vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &DeviceExtensionCount, nullptr);
     std::vector<VkExtensionProperties> AvailableDeviceExtension(DeviceExtensionCount);
     vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &DeviceExtensionCount, AvailableDeviceExtension.data());
-
+    
     bool bEnableDeviceSubset = false;
     for (VkExtensionProperties Extension : AvailableDeviceExtension)
     {
@@ -428,7 +460,6 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
             std::cout << "   " << Extension.extensionName << '\n';
         }
     }
-
     
     // Enable device extensions
     std::vector<const char*> DeviceExtensions = GetRequiredDeviceExtensions();
@@ -443,11 +474,32 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
         DeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
         m_bRayTracingEnabled = true;
     }
-
+    
     // Enable wanted features here
     ZERO_STRUCT(&m_EnabledDeviceFeatures);
-    m_EnabledDeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    m_EnabledDeviceFeatures.pNext = &m_HostQueryFeatures;
+    m_EnabledDeviceFeatures.sType                      = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    m_EnabledDeviceFeatures.pNext                      = &m_HostQueryFeatures;
+    m_EnabledDeviceFeatures.features.fillModeNonSolid  = VK_TRUE;
+    m_EnabledDeviceFeatures.features.samplerAnisotropy = VK_TRUE;
+    
+    const bool bBindlessSupported =
+        m_DescriptorIndexFeatures.descriptorBindingPartiallyBound && m_DescriptorIndexFeatures.runtimeDescriptorArray &&
+        m_DescriptorIndexFeatures.descriptorBindingSampledImageUpdateAfterBind && m_DescriptorIndexFeatures.shaderSampledImageArrayNonUniformIndexing &&
+        m_DescriptorIndexFeatures.descriptorBindingVariableDescriptorCount;
+    
+    VkPhysicalDeviceDescriptorIndexingFeatures DescriptorIndexingFeatures;
+    if (bBindlessSupported)
+    {
+        ZERO_STRUCT(&DescriptorIndexingFeatures);
+        DescriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+        DescriptorIndexingFeatures.pNext = nullptr;
+        DescriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+        DescriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
+        DescriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+        DescriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+        DescriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
+        m_HostQueryFeatures.pNext = &DescriptorIndexingFeatures;
+    }
 
     // Create the logical device
     VkDeviceCreateInfo DeviceCreateInfo;
@@ -498,6 +550,9 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
         vkGetDeviceQueue(m_Device, m_QueueFamilyIndices.Presentation, 0, &m_PresentationQueue);
         vkGetDeviceQueue(m_Device, m_QueueFamilyIndices.Transfer, 0, &m_TransferQueue);
         vkGetDeviceQueue(m_Device, m_QueueFamilyIndices.Compute, 0, &m_ComputeQueue);
+
+        QueryPhysicalDeviceFeatures();
+        m_bBindlessSupported = bBindlessSupported;
         return true;
     }
     else
@@ -548,7 +603,12 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
         // Check for adapter features
         if (!PhysicalDeviceFeatures.samplerAnisotropy)
         {
-            std::cout << "Anisotropic filtering is not supported by adapter\n";
+            std::cout << "'SamplerAnisotropy' is not supported by adapter\n";
+            continue;
+        }
+        if (!PhysicalDeviceFeatures.fillModeNonSolid)
+        {
+            std::cout << "'FillModeNonSolid' is not supported by adapter\n";
             continue;
         }
 
@@ -607,11 +667,20 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
             std::cout << "Some extensions were not supported on '" << PhysicalDeviceProperties.deviceName << "'\n";
         }
     }
-    
-    
+
+    QueryPhysicalDeviceFeatures();
+    return true;
+}
+
+void FDevice::QueryPhysicalDeviceFeatures()
+{
+    ZERO_STRUCT(&m_DescriptorIndexFeatures);
+    m_DescriptorIndexFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+
     ZERO_STRUCT(&m_HostQueryFeatures);
     m_HostQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES;
-    
+    m_HostQueryFeatures.pNext = &m_DescriptorIndexFeatures;
+
     ZERO_STRUCT(&m_DeviceFeatures);
     m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     m_DeviceFeatures.pNext = &m_HostQueryFeatures;
@@ -619,7 +688,6 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
     vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_DeviceProperties);
     vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &m_DeviceFeatures);
     vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &m_DeviceMemoryProperties);
-    return true;
 }
 
 // Helper function
@@ -679,7 +747,10 @@ FQueueFamilyIndices FDevice::GetQueueFamilyIndices(VkPhysicalDevice PhysicalDevi
 std::vector<const char*> FDevice::GetRequiredDeviceExtensions()
 {
     std::vector<const char*> DeviceExtensions;
+    DeviceExtensions.reserve(16);
+
     DeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     DeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
     return DeviceExtensions;
 }

@@ -26,9 +26,13 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/hash.hpp>
 #include <glm/gtc/constants.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 // Vulkan
 #include <vulkan/vulkan.h>
+#if PLATFORM_MAC
+    #include <MoltenVK/vk_mvk_moltenvk.h>
+#endif
 
 // GLFW
 #define GLFW_INCLUDE_VULKAN

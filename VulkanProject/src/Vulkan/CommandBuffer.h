@@ -23,6 +23,8 @@ public:
     FCommandBuffer(FDevice* pDevice);
     ~FCommandBuffer();
 
+    void BindBindlessDescriptors(FPipelineLayout* pPipelineLayout, VkPipelineBindPoint BindPoint);
+    
     void Begin(VkCommandBufferUsageFlags Flags = 0)
     {
         VkCommandBufferBeginInfo BeginInfo = {};
@@ -89,20 +91,20 @@ public:
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineState->GetPipeline());
     }
     
-    void BindGraphicsDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet)
-    {        
-        assert(pDescriptorSet != nullptr);
-        assert(pPipelineLayout != nullptr);
-        VkDescriptorSet DescriptorSet = pDescriptorSet->GetDescriptorSet();
-        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineLayout->GetPipelineLayout(), 0, 1, &DescriptorSet, 0, nullptr);
-    }
-    
-    void BindComputeDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet)
+    void BindGraphicsDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet, uint32_t DescriptorSetIndex)
     {
         assert(pDescriptorSet != nullptr);
         assert(pPipelineLayout != nullptr);
         VkDescriptorSet DescriptorSet = pDescriptorSet->GetDescriptorSet();
-        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineLayout->GetPipelineLayout(), 0, 1, &DescriptorSet, 0, nullptr);
+        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineLayout->GetPipelineLayout(), DescriptorSetIndex, 1, &DescriptorSet, 0, nullptr);
+    }
+    
+    void BindComputeDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet, uint32_t DescriptorSetIndex)
+    {
+        assert(pDescriptorSet != nullptr);
+        assert(pPipelineLayout != nullptr);
+        VkDescriptorSet DescriptorSet = pDescriptorSet->GetDescriptorSet();
+        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineLayout->GetPipelineLayout(), DescriptorSetIndex, 1, &DescriptorSet, 0, nullptr);
     }
 
     void BindVertexBuffer(FBuffer* pBuffer, VkDeviceSize Offset, uint32_t Slot)

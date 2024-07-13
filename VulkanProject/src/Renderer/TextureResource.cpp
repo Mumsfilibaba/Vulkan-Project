@@ -391,7 +391,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     pCommandBuffer->PushConstants(s_pCubeMapGenPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FPushConstants), &PushConstants);
     
     pCommandBuffer->BindComputePipelineState(s_pCubeMapGenPipelineState);
-    pCommandBuffer->BindComputeDescriptorSet(s_pCubeMapGenPipelineLayout, pDescriptorSet.get());
+    pCommandBuffer->BindComputeDescriptorSet(s_pCubeMapGenPipelineLayout, pDescriptorSet.get(), 0);
     
     constexpr uint32_t NumThreadGroups = CubeMapSize / 16;
     pCommandBuffer->Dispatch(NumThreadGroups, NumThreadGroups, 6);

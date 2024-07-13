@@ -1,6 +1,7 @@
 #include "PipelineLayout.h"
 #include "Device.h"
 #include "DescriptorSetLayout.h"
+#include "BindlessManager.h"
 
 FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayoutParams& Params)
 {
@@ -12,6 +13,12 @@ FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayout
     for (uint32_t i = 0; i < Params.NumLayouts; i++)
     {
         DescriptorSetLayouts.push_back(Params.ppLayouts[i]->GetDescriptorSetLayout());
+    }
+    
+    if (Params.bEnableBindless)
+    {
+        pPipelineLayout->m_BindlessDescriptorSetIndex = static_cast<uint32_t>(DescriptorSetLayouts.size());
+        DescriptorSetLayouts.push_back(pDevice->GetBindlessManager().GetDescriptorSetLayout());
     }
 
     VkPushConstantRange PushConstantRanges[1] = {};
@@ -53,6 +60,7 @@ FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayout
 FPipelineLayout::FPipelineLayout(FDevice* pDevice)
     : FDeviceChild(pDevice)
     , m_PipelineLayout(VK_NULL_HANDLE)
+    , m_BindlessDescriptorSetIndex(uint32_t(-1))
 {
 }
 

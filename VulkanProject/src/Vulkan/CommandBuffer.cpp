@@ -4,6 +4,7 @@
 #include "RenderPass.h"
 #include "Framebuffer.h"
 #include "PipelineState.h"
+#include "BindlessManager.h"
 
 FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferParams& Params)
 {
@@ -88,6 +89,16 @@ FCommandBuffer::~FCommandBuffer()
         vkDestroyCommandPool(GetDevice()->GetDevice(), m_CommandPool, nullptr);
         m_CommandPool = VK_NULL_HANDLE;
     }
+}
+
+void FCommandBuffer::BindBindlessDescriptors(FPipelineLayout* pPipelineLayout, VkPipelineBindPoint BindPoint)
+{
+    assert(pPipelineLayout != nullptr);
+    assert(pPipelineLayout->GetBindlessDescriptorSetIndex() != uint32_t(-1));
+    
+    FBindlessManager& BindlessManager = GetDevice()->GetBindlessManager();
+    VkDescriptorSet BindlessDescriptorSet = BindlessManager.GetDescriptorSet();
+    vkCmdBindDescriptorSets(m_CommandBuffer, BindPoint, pPipelineLayout->GetPipelineLayout(), pPipelineLayout->GetBindlessDescriptorSetIndex(), 1, &BindlessDescriptorSet, 0, nullptr);
 }
 
 void FCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout)
