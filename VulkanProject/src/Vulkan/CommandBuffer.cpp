@@ -5,6 +5,7 @@
 #include "Framebuffer.h"
 #include "PipelineState.h"
 #include "BindlessManager.h"
+#include "Extensions.h"
 
 FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferParams& Params)
 {

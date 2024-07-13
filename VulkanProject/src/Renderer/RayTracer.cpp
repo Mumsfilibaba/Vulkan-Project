@@ -1454,7 +1454,7 @@ void FRayTracer::CreateTonemappingResources()
     
     m_pTonemappingRenderPass = FRenderPass::Create(m_pDevice, RenderPassParams);
     assert(m_pTonemappingRenderPass != nullptr);
-    m_pDebugRenderPass->SetDebugName("TonemappingPass RenderPass");
+    m_pTonemappingRenderPass->SetDebugName("TonemappingPass RenderPass");
 
     FGraphicsPipelineStateParams TonemappingPipelineParams = {};
     TonemappingPipelineParams.pBindingDescriptions      = nullptr;

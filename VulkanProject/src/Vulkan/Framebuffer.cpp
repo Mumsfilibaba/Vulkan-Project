@@ -1,6 +1,7 @@
 #include "Framebuffer.h"
 #include "RenderPass.h"
 #include "Device.h"
+#include "Extensions.h"
 
 FFramebuffer* FFramebuffer::Create(FDevice* pDevice, const FFramebufferParams& Params)
 {

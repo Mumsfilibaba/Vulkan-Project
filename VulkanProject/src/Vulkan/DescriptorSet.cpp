@@ -4,6 +4,7 @@
 #include "PipelineState.h"
 #include "DescriptorSetLayout.h"
 #include "DescriptorSet.h"
+#include "Extensions.h"
 
 // Allocates from pDescriptorPool and uses the layout from pPipeline
 FDescriptorSet* FDescriptorSet::Create(FDevice* pDevice, FDescriptorPool* pDescriptorPool, FDescriptorSetLayout* pDescriptorSetLayout)
