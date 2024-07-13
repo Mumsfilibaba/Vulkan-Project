@@ -16,6 +16,8 @@ public:
     FQuery(FDevice* pDevice);
     ~FQuery();
 
+    void SetDebugName(const char* DebugName);
+    
     void Reset(uint32_t FirstQuery = 0, uint32_t QueryCount = 0);
     bool GetData(uint32_t FirstQuery, uint32_t QueryCount, uint64_t DataSize, void* pData, VkDeviceSize Stride, VkQueryResultFlags Flags);
     

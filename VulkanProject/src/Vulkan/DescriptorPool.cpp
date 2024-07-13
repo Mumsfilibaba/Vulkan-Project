@@ -1,5 +1,6 @@
 #include "DescriptorPool.h"
 #include "Device.h"
+#include "Extensions.h"
 
 FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPoolParams& Params)
 {
@@ -46,7 +47,7 @@ FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPool
     DescriptorPoolCreateInfo.pPoolSizes    = PoolSizes;
     DescriptorPoolCreateInfo.maxSets       = Params.MaxSets;
     
-    if (vkCreateDescriptorPool(pDevice->GetDevice(), &DescriptorPoolCreateInfo, nullptr, &pDescriptorPool->m_Pool) != VK_SUCCESS)
+    if (vkCreateDescriptorPool(pDevice->GetDevice(), &DescriptorPoolCreateInfo, nullptr, &pDescriptorPool->m_DescriptorPool) != VK_SUCCESS)
     {
         std::cout << "vkCreateDescriptorPool failed\n";
         return nullptr;
@@ -60,15 +61,35 @@ FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPool
 
 FDescriptorPool::FDescriptorPool(FDevice* pDevice)
     : FDeviceChild(pDevice)
-    , m_Pool(VK_NULL_HANDLE)
+    , m_DescriptorPool(VK_NULL_HANDLE)
 {
 }
 
 FDescriptorPool::~FDescriptorPool()
 {
-    if (m_Pool != VK_NULL_HANDLE)
+    if (m_DescriptorPool != VK_NULL_HANDLE)
     {
-        vkDestroyDescriptorPool(GetDevice()->GetDevice(), m_Pool, nullptr);
-        m_Pool = VK_NULL_HANDLE;
+        vkDestroyDescriptorPool(GetDevice()->GetDevice(), m_DescriptorPool, nullptr);
+        m_DescriptorPool = VK_NULL_HANDLE;
+    }
+}
+
+void FDescriptorPool::SetDebugName(const char* DebugName)
+{
+    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
+
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_DESCRIPTOR_POOL;
+        DebugNameInfo.pObjectName  = DebugName;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_DescriptorPool);
+
+        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+        }
     }
 }

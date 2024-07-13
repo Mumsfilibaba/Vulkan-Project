@@ -18,12 +18,14 @@ public:
     FDescriptorPool(FDevice* pDevice);
     ~FDescriptorPool();
 
+    void SetDebugName(const char* DebugName);
+
     VkDescriptorPool GetPool() const
     {
-        return m_Pool;
+        return m_DescriptorPool;
     }
 
 private:
-    VkDescriptorPool      m_Pool;
+    VkDescriptorPool      m_DescriptorPool;
     FDescriptorPoolParams m_Params;
 };

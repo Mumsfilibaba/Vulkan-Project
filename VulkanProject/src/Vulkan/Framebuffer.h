@@ -21,6 +21,8 @@ public:
     FFramebuffer(FDevice* pDevice);
     ~FFramebuffer();
 
+    void SetDebugName(const char* DebugName);
+
     VkExtent2D GetExtent() const
     {
         return { m_Width, m_Height };

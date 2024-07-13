@@ -23,7 +23,10 @@ public:
     FCommandBuffer(FDevice* pDevice);
     ~FCommandBuffer();
 
+    void SetDebugName(const char* DebugName);
+
     void BindBindlessDescriptors(FPipelineLayout* pPipelineLayout, VkPipelineBindPoint BindPoint);
+    void TransitionImage(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkImageAspectFlags AspectMask);
     
     void Begin(VkCommandBufferUsageFlags Flags = 0)
     {
@@ -127,8 +130,6 @@ public:
         assert(pPipelineLayout != nullptr);
         vkCmdPushConstants(m_CommandBuffer, pPipelineLayout->GetPipelineLayout(), StageFlags, Offset, Size, pData);
     }
-    
-    void TransitionImage(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkImageAspectFlags AspectMask);
     
     void UpdateBuffer(FBuffer* pBuffer, VkDeviceSize DstOffset, VkDeviceSize DataSize, const void* pData)
     {

@@ -1197,7 +1197,7 @@ namespace GUI
             
             pRendererBackend->pFontSampler = FSampler::Create(pRendererBackend->pDevice, samplerParams);
             assert(pRendererBackend->pFontSampler != nullptr);
-            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui FontSampler", reinterpret_cast<uint64_t>(pRendererBackend->pFontSampler->GetSampler()), VK_OBJECT_TYPE_SAMPLER);
+            pRendererBackend->pFontSampler->SetDebugName("ImGui FontSampler");
         }
         
         if (!pRendererBackend->pImageSampler)
@@ -1215,7 +1215,7 @@ namespace GUI
             
             pRendererBackend->pImageSampler = FSampler::Create(pRendererBackend->pDevice, samplerParams);
             assert(pRendererBackend->pImageSampler != nullptr);
-            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui ImageSampler", reinterpret_cast<uint64_t>(pRendererBackend->pFontSampler->GetSampler()), VK_OBJECT_TYPE_SAMPLER);
+            pRendererBackend->pImageSampler->SetDebugName("ImGui ImageSampler");
         }
         
         if (!pRendererBackend->pDescriptorSetLayout)
@@ -1231,7 +1231,7 @@ namespace GUI
             
             pRendererBackend->pDescriptorSetLayout = FDescriptorSetLayout::Create(pRendererBackend->pDevice, descriptorSetLayoutParams);
             assert(pRendererBackend->pDescriptorSetLayout != nullptr);
-            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui DescriptorSetLayout", reinterpret_cast<uint64_t>(pRendererBackend->pDescriptorSetLayout->GetDescriptorSetLayout()), VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT);
+            pRendererBackend->pDescriptorSetLayout->SetDebugName("ImGui DescriptorSetLayout");
         }
         
         if (!pRendererBackend->pDescriptorPool)
@@ -1242,14 +1242,14 @@ namespace GUI
             
             pRendererBackend->pDescriptorPool = FDescriptorPool::Create(pRendererBackend->pDevice, descriptorPoolParams);
             assert(pRendererBackend->pDescriptorPool != nullptr);
-            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui DescriptorPool", reinterpret_cast<uint64_t>(pRendererBackend->pDescriptorPool->GetPool()), VK_OBJECT_TYPE_DESCRIPTOR_POOL);
+            pRendererBackend->pDescriptorPool->SetDebugName("ImGui DescriptorPool");
         }
         
         if (!pRendererBackend->pFontDescriptorSet)
         {
             pRendererBackend->pFontDescriptorSet = FDescriptorSet::Create(pRendererBackend->pDevice, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
             assert(pRendererBackend->pFontDescriptorSet != nullptr);
-            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui FontDescriptorSet", reinterpret_cast<uint64_t>(pRendererBackend->pFontDescriptorSet->GetDescriptorSet()), VK_OBJECT_TYPE_DESCRIPTOR_SET);
+            pRendererBackend->pFontDescriptorSet->SetDebugName("ImGui FontDescriptorSet");
         }
         
         if (!pRendererBackend->pPipelineLayout)
@@ -1275,7 +1275,7 @@ namespace GUI
             
             pRendererBackend->pRenderPass = FRenderPass::Create(pRendererBackend->pDevice, renderPassParams);
             assert(pRendererBackend->pRenderPass != nullptr);
-            SetDebugName(pRendererBackend->pDevice->GetDevice(), "ImGui RenderPass", reinterpret_cast<uint64_t>(pRendererBackend->pRenderPass->GetRenderPass()), VK_OBJECT_TYPE_RENDER_PASS);
+            pRendererBackend->pRenderPass->SetDebugName("ImGui RenderPass");
         }
         
         ImGuiCreatePipeline();
@@ -1324,6 +1324,8 @@ namespace GUI
             
             FFramebuffer* pFramebuffer = FFramebuffer::Create(pDevice, framebufferParams);
             assert(pFramebuffer != nullptr);
+            pFramebuffer->SetDebugName("ImGui FrameBuffer");
+
             pViewportData->Framebuffers[i] = pFramebuffer;
         }
     }
@@ -1371,7 +1373,8 @@ namespace GUI
             
             pViewportData->pRenderPass = FRenderPass::Create(pRendererBackend->pDevice, renderPassParams);
             assert(pViewportData->pRenderPass != nullptr);
-            
+            pViewportData->pRenderPass->SetDebugName("ImGui Viewport RenderPass");
+
             ImGuiCreateFramebuffers(pRendererBackend->pDevice, pViewportData);
             ImGuiCreateWindowRenderBuffers(pRendererBackend->pDevice, pViewportData);
             
@@ -2067,6 +2070,8 @@ namespace GUI
             return nullptr;
         }
         
+        pRendererBackend->pFontDescriptorSet->SetDebugName("ImGui Texture DescriptorSet");
+
         pDescriptorSet->BindCombinedImageSampler(pTextureView->GetImageView(), pRendererBackend->pImageSampler->GetSampler(), 0);
         return pDescriptorSet;
     }

@@ -26,6 +26,8 @@ public:
     FRenderPass(FDevice* pDevice);
     ~FRenderPass();
 
+    void SetDebugName(const char* DebugName);
+
     VkRenderPass GetRenderPass() const
     {
         return m_RenderPass;

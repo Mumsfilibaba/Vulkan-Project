@@ -46,6 +46,7 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
         return false;
     }
     
+    s_pCubeMapGenDescriptorSetLayout->SetDebugName("CubeMapGen DescriptorSetLayout");
     
     // Create PipelineLayout
     FPipelineLayoutParams PipelineLayoutParams;
@@ -100,6 +101,7 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
         return false;
     }
     
+    s_pCubeMapGenSampler->SetDebugName("CubeMapGenSampler");
     return true;
 }
 
@@ -361,6 +363,10 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
         std::cout << "Failed to create DescriptorPool '" << Filepath << "'\n";
         return nullptr;
     }
+    else
+    {
+        pDescriptorPool->SetDebugName("CubeMapGen DescriptorPool");
+    }
     
     // DescriptorSet
     std::unique_ptr<FDescriptorSet> pDescriptorSet = std::unique_ptr<FDescriptorSet>(FDescriptorSet::Create(pDevice, pDescriptorPool.get(), s_pCubeMapGenDescriptorSetLayout));
@@ -371,6 +377,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     }
     else
     {
+        pDescriptorSet->SetDebugName("CubeMapGen DescriptorSet");
         pDescriptorSet->BindCombinedImageSampler(pPanorama->GetTextureView()->GetImageView(), s_pCubeMapGenSampler->GetSampler(), 0);
         pDescriptorSet->BindStorageImage(pTextureViewUAV->GetImageView(), 1);
     }

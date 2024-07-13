@@ -114,6 +114,7 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
         
         m_pSkyboxSampler = FSampler::Create(pDevice, SamplerParams);
         assert(m_pSkyboxSampler != nullptr);
+        m_pSkyboxSampler->SetDebugName("Skybox Sampler");
     }
     
     // Tonemap Sampler
@@ -131,6 +132,7 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
         
         m_pTonemapSampler = FSampler::Create(pDevice, SamplerParams);
         assert(m_pTonemapSampler != nullptr);
+        m_pTonemapSampler->SetDebugName("Tonemapping Sampler");
     }
     
     // Bindless Manager
@@ -158,6 +160,7 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     
     m_pDescriptorPool = FDescriptorPool::Create(m_pDevice, DescriptorPoolParams);
     assert(m_pDescriptorPool != nullptr);
+    m_pDescriptorPool->SetDebugName("DescriptorPool");
 
     // Create the scene texture
     m_ViewportWidth  = 0;
@@ -187,6 +190,9 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     {
         FQuery* pQuery = FQuery::Create(m_pDevice, QueryParams);
         pQuery->Reset();
+
+        const std::string DebugName = "TimeStamp Queries[" + std::to_string(i) + "]";
+        pQuery->SetDebugName(DebugName.c_str());
         
         m_TimestampQueries[i] = pQuery;
     }
@@ -1202,6 +1208,7 @@ void FRayTracer::CreateRayTracingResources()
 
     m_pRayTracingDescriptorSetLayout = FDescriptorSetLayout::Create(m_pDevice, RayTracingDescriptorSetLayoutParams);
     assert(m_pRayTracingDescriptorSetLayout != nullptr);
+    m_pRayTracingDescriptorSetLayout->SetDebugName("RayTracingPass DescriptorSetLayout");
 
     // Create RayTracing PipelineLayout
     FPipelineLayoutParams RayTracingPipelineLayoutParams;
@@ -1248,6 +1255,7 @@ void FRayTracer::CreateDebugViewResources()
 
     m_pDebugDescriptorSetLayout = FDescriptorSetLayout::Create(m_pDevice, DebugPassDescriptorSetLayoutParams);
     assert(m_pDebugDescriptorSetLayout != nullptr);
+    m_pDebugDescriptorSetLayout->SetDebugName("DebugPass DescriptorSetLayout");
 
     // Create DebugPass PipelineLayout
     FPipelineLayoutParams DebugPassPipelineLayoutParams;
@@ -1299,6 +1307,7 @@ void FRayTracer::CreateDebugViewResources()
     
     m_pDebugRenderPass = FRenderPass::Create(m_pDevice, RenderPassParams);
     assert(m_pDebugRenderPass != nullptr);
+    m_pDebugRenderPass->SetDebugName("DebugPass RenderPass");
     
     FGraphicsPipelineStateParams DebugPassPipelineParams = {};
     DebugPassPipelineParams.pBindingDescriptions      = FVertexPosOnly::GetBindingDescription();
@@ -1414,6 +1423,7 @@ void FRayTracer::CreateTonemappingResources()
 
     m_pTonemappingDescriptorSetLayout = FDescriptorSetLayout::Create(m_pDevice, TonemappingDescriptorSetLayoutParams);
     assert(m_pTonemappingDescriptorSetLayout != nullptr);
+    m_pTonemappingDescriptorSetLayout->SetDebugName("TonemappingPass DescriptorSetLayout");
 
     // Create Tonemapping PipelineLayout
     FPipelineLayoutParams ToneMappingPipelineLayoutParams;
@@ -1444,7 +1454,8 @@ void FRayTracer::CreateTonemappingResources()
     
     m_pTonemappingRenderPass = FRenderPass::Create(m_pDevice, RenderPassParams);
     assert(m_pTonemappingRenderPass != nullptr);
-    
+    m_pDebugRenderPass->SetDebugName("TonemappingPass RenderPass");
+
     FGraphicsPipelineStateParams TonemappingPipelineParams = {};
     TonemappingPipelineParams.pBindingDescriptions      = nullptr;
     TonemappingPipelineParams.BindingDescriptionCount   = 0;
@@ -1587,6 +1598,7 @@ void FRayTracer::CreateDescriptorSet()
     // RayTracing Pass
     m_pRayTracingDescriptorSet0 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pRayTracingDescriptorSetLayout);
     assert(m_pRayTracingDescriptorSet0 != nullptr);
+    m_pRayTracingDescriptorSet0->SetDebugName("RayTracingPass DescriptorSet0");
 
     m_pRayTracingDescriptorSet0->BindStorageImage(m_pSceneTextureView0->GetImageView(), 0);
     m_pRayTracingDescriptorSet0->BindStorageImage(m_pSceneTextureView1->GetImageView(), 1);
@@ -1604,7 +1616,8 @@ void FRayTracer::CreateDescriptorSet()
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 13);
     
     m_pRayTracingDescriptorSet1 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pRayTracingDescriptorSetLayout);
-    assert(m_pRayTracingDescriptorSet0 != nullptr);
+    assert(m_pRayTracingDescriptorSet1 != nullptr);
+    m_pRayTracingDescriptorSet1->SetDebugName("RayTracingPass DescriptorSet1");
 
     m_pRayTracingDescriptorSet1->BindStorageImage(m_pSceneTextureView1->GetImageView(), 0);
     m_pRayTracingDescriptorSet1->BindStorageImage(m_pSceneTextureView0->GetImageView(), 1);
@@ -1624,12 +1637,14 @@ void FRayTracer::CreateDescriptorSet()
     // Tonemapping Pass
     m_pTonemappingDescriptorSet0 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pTonemappingDescriptorSetLayout);
     assert(m_pTonemappingDescriptorSet0 != nullptr);
+    m_pTonemappingDescriptorSet0->SetDebugName("TonemappingPass DescriptorSet0");
 
     m_pTonemappingDescriptorSet0->BindCombinedImageSampler(m_pSceneTextureView0->GetImageView(), m_pTonemapSampler->GetSampler(), 0);
     m_pTonemappingDescriptorSet0->BindUniformBuffer(m_pTonemappingBuffer->GetBuffer(), 1);
     
     m_pTonemappingDescriptorSet1 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pTonemappingDescriptorSetLayout);
     assert(m_pTonemappingDescriptorSet1 != nullptr);
+    m_pTonemappingDescriptorSet1->SetDebugName("TonemappingPass DescriptorSet1");
 
     m_pTonemappingDescriptorSet1->BindCombinedImageSampler(m_pSceneTextureView1->GetImageView(), m_pTonemapSampler->GetSampler(), 0);
     m_pTonemappingDescriptorSet1->BindUniformBuffer(m_pTonemappingBuffer->GetBuffer(), 1);
@@ -1637,11 +1652,13 @@ void FRayTracer::CreateDescriptorSet()
     // Debug Pass
     m_pDebugDescriptorSet0 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pDebugDescriptorSetLayout);
     assert(m_pDebugDescriptorSet0 != nullptr);
+    m_pDebugDescriptorSet0->SetDebugName("DebugPass DescriptorSet0");
 
     m_pDebugDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
     
     m_pDebugDescriptorSet1 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pDebugDescriptorSetLayout);
     assert(m_pDebugDescriptorSet1 != nullptr);
+    m_pDebugDescriptorSet1->SetDebugName("DebugPass DescriptorSet1");
 
     m_pDebugDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
 }
@@ -1774,7 +1791,8 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     FramebufferParams.pAttachMents    = &ImageView;
 
     m_pTonemappingFramebuffer = FFramebuffer::Create(m_pDevice, FramebufferParams);
-    
+    m_pTonemappingFramebuffer->SetDebugName("TonemappingPass FrameBuffer");
+
     // Create Framebuffer for the tonemap stage
     VkImageView DebugPassImageViews[] =
     {
@@ -1787,7 +1805,8 @@ void FRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     FramebufferParams.pAttachMents    = DebugPassImageViews;
 
     m_pDebugFramebuffer = FFramebuffer::Create(m_pDevice, FramebufferParams);
-    
+    m_pDebugFramebuffer->SetDebugName("DebugPass FrameBuffer");
+
     // UI DescriptorSet
     m_pOutputTextureDescriptorSet = GUI::AllocateTextureID(m_pOutputTextureView);
     assert(m_pOutputTextureDescriptorSet != nullptr);

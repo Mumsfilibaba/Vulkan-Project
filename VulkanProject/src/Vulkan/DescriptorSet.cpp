@@ -3,7 +3,7 @@
 #include "DescriptorPool.h"
 #include "PipelineState.h"
 #include "DescriptorSetLayout.h"
-#include <vulkan/vulkan.h>
+#include "DescriptorSet.h"
 
 // Allocates from pDescriptorPool and uses the layout from pPipeline
 FDescriptorSet* FDescriptorSet::Create(FDevice* pDevice, FDescriptorPool* pDescriptorPool, FDescriptorSetLayout* pDescriptorSetLayout)
@@ -153,4 +153,24 @@ void FDescriptorSet::BindStorageBuffer(VkBuffer Buffer, uint32_t Binding)
     DescriptorWrite.pTexelBufferView = nullptr;
 
     vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &DescriptorWrite, 0, nullptr);
+}
+
+void FDescriptorSet::SetDebugName(const char* DebugName)
+{
+    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
+
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_DESCRIPTOR_SET;
+        DebugNameInfo.pObjectName  = DebugName;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_DescriptorSet);
+
+        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+        }
+    }
 }

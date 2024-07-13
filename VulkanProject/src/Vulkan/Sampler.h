@@ -30,6 +30,8 @@ public:
     FSampler(FDevice* pDevice);
     ~FSampler();
 
+    void SetDebugName(const char* DebugName);
+    
     VkSampler GetSampler() const
     {
         return m_Sampler;

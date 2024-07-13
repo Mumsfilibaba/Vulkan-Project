@@ -1,6 +1,6 @@
 #include "RenderPass.h"
 #include "Device.h"
-#include <vector>
+#include "Extensions.h"
 
 FRenderPass* FRenderPass::Create(FDevice* pDevice, const FRenderPassParams& Params)
 {
@@ -118,5 +118,25 @@ FRenderPass::~FRenderPass()
     {
         vkDestroyRenderPass(GetDevice()->GetDevice(), m_RenderPass, nullptr);
         m_RenderPass = VK_NULL_HANDLE;
+    }
+}
+
+void FRenderPass::SetDebugName(const char* DebugName)
+{
+    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
+        
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_RENDER_PASS;
+        DebugNameInfo.pObjectName  = DebugName;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_RenderPass);
+
+        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+        }
     }
 }

@@ -16,6 +16,8 @@ public:
     FDescriptorSetLayout(FDevice* pDevice);
     ~FDescriptorSetLayout();
 
+    void SetDebugName(const char* DebugName);
+    
     VkDescriptorSetLayout GetDescriptorSetLayout() const
     {
         return m_DescriptorSetLayout;
