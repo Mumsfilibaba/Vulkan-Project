@@ -298,8 +298,6 @@ VkResult FSwapchain::AquireNextImage()
 
 void FSwapchain::WaitForImage()
 {
-    std::cout << "FSwapchain::WaitForImage: SemaphoreIndex[" << m_SemaphoreIndex << "]\n";
-
     VkSemaphore WaitSemaphores[] = { GetImageSemaphore() };
     VkPipelineStageFlags WaitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 

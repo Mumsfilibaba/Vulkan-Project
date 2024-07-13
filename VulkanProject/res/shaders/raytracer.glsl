@@ -13,7 +13,7 @@
 
 #define VIEW_MODE_RENDER 0
 #define VIEW_MODE_NORMALS 1
-#define VIEW_MODE_TOP_BVH 2
+#define VIEW_MODE_BVH_INTERSECTION 2
 
 #define NUM_THREADS 16
 #define MAX_DEPTH 1024
@@ -744,7 +744,7 @@ void main()
         vec3 HitNormal = GetNormalForRay(Ray);
         imageStore(uOutput, Pixel, vec4(HitNormal, 1.0));
     }
-    else if (uScene.ViewMode == VIEW_MODE_TOP_BVH)
+    else if (uScene.ViewMode == VIEW_MODE_BVH_INTERSECTION)
     {
         // Get Color for this Ray
         vec3 Color = GetColorForRay_BvhDebug(Ray);

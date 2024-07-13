@@ -23,7 +23,7 @@ enum class EViewMode : uint32_t
 {
     Render = 0,
     Normals = 1,
-    TopBVH = 2,
+    BVHIntersection = 2,
     Debug = 3,
 };
 

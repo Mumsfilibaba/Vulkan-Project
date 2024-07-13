@@ -696,7 +696,7 @@ void FRayTracer::OnRenderUI()
             {
                 "Render",
                 "Normals",
-                "TopBVH",
+                "BVH Intersection",
                 "Debug"
             };
 
@@ -717,7 +717,7 @@ void FRayTracer::OnRenderUI()
                 }
                 else if (CurrentViewMode == 2)
                 {
-                    m_pScene->m_Settings.ViewMode = EViewMode::TopBVH;
+                    m_pScene->m_Settings.ViewMode = EViewMode::BVHIntersection;
                 }
                 else if (CurrentViewMode == 3)
                 {
