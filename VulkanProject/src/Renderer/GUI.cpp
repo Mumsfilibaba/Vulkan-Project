@@ -161,11 +161,11 @@ namespace GUI
         
         void WaitUntilIdle()
         {
-            for (ImGuiFrameRenderData& renderData : FrameData)
+            for (ImGuiFrameRenderData& RenderData : FrameData)
             {
-                if (renderData.pCommandBuffer && renderData.pCommandBuffer->IsFinishedOnGPU())
+                if (RenderData.pCommandBuffer && RenderData.pCommandBuffer->IsFinishedOnGPU())
                 {
-                    renderData.pCommandBuffer->WaitForAndResetFences();
+                    RenderData.pCommandBuffer->WaitForAndResetFences();
                 }
             }
         }
@@ -184,10 +184,10 @@ namespace GUI
 
             for (FFramebuffer* pFramebuffer : Framebuffers)
             {
-                VkExtent2D frameBufferExtent = pFramebuffer->GetExtent();
-                VkExtent2D swapChainExtent   = pSwapchain->GetExtent();
+                VkExtent2D FrameBufferExtent = pFramebuffer->GetExtent();
+                VkExtent2D SwapChainExtent   = pSwapchain->GetExtent();
                 
-                if (frameBufferExtent.width != swapChainExtent.width || frameBufferExtent.height != swapChainExtent.height)
+                if (FrameBufferExtent.width != SwapChainExtent.width || FrameBufferExtent.height != SwapChainExtent.height)
                 {
                     return false;
                 }
@@ -197,9 +197,9 @@ namespace GUI
         }
 
         GLFWwindow*                       pWindow;
-        FSwapchain*                        pSwapchain;
-        FRenderPass*                       pRenderPass;
-        std::vector<FFramebuffer*>         Framebuffers;
+        FSwapchain*                       pSwapchain;
+        FRenderPass*                      pRenderPass;
+        std::vector<FFramebuffer*>        Framebuffers;
         std::vector<ImGuiFrameRenderData> FrameData;
         VkClearValue                      ClearValues;
         
@@ -229,9 +229,9 @@ namespace GUI
         return pViewport->RendererUserData ? reinterpret_cast<ImGuiViewportData*>(pViewport->RendererUserData) : nullptr;
     }
 
-    static ImGuiKey ImGuiKeyToImGuiKey(int key)
+    static ImGuiKey GLFWKeyToImGuiKey(int Key)
     {
-        switch (key)
+        switch (Key)
         {
             case GLFW_KEY_TAB:           return ImGuiKey_Tab;
             case GLFW_KEY_LEFT:          return ImGuiKey_LeftArrow;
@@ -342,76 +342,76 @@ namespace GUI
         }
     }
     
-    static const char* ImGuiGetClipboardText(void* userData)
+    static const char* ImGuiGetClipboardText(void* pUserData)
     {
-        return glfwGetClipboardString((GLFWwindow*)userData);
+        return glfwGetClipboardString((GLFWwindow*)pUserData);
     }
     
-    static void ImGuiSetClipboardText(void* userData, const char* text)
+    static void ImGuiSetClipboardText(void* pUserData, const char* Text)
     {
-        glfwSetClipboardString((GLFWwindow*)userData, text);
+        glfwSetClipboardString((GLFWwindow*)pUserData, Text);
     }
     
     static void ImGuiUpdateKeyModifiers()
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
         
-        ImGuiIO& io = ImGui::GetIO();
-        io.AddKeyEvent(ImGuiMod_Ctrl,  (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS));
-        io.AddKeyEvent(ImGuiMod_Shift, (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_SHIFT)   == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_SHIFT)   == GLFW_PRESS));
-        io.AddKeyEvent(ImGuiMod_Alt,   (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_ALT)     == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_ALT)     == GLFW_PRESS));
-        io.AddKeyEvent(ImGuiMod_Super, (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_SUPER)   == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_SUPER)   == GLFW_PRESS));
+        ImGuiIO& UIState = ImGui::GetIO();
+        UIState.AddKeyEvent(ImGuiMod_Ctrl,  (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS));
+        UIState.AddKeyEvent(ImGuiMod_Shift, (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_SHIFT)   == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_SHIFT)   == GLFW_PRESS));
+        UIState.AddKeyEvent(ImGuiMod_Alt,   (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_ALT)     == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_ALT)     == GLFW_PRESS));
+        UIState.AddKeyEvent(ImGuiMod_Super, (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_SUPER)   == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_SUPER)   == GLFW_PRESS));
     }
     
-    void ImGuiMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+    void ImGuiMouseButtonCallback(GLFWwindow* pWindow, int Button, int Action, int Mods)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        if (pBackend->PrevUserCallbackMousebutton != nullptr && window == pBackend->Window)
+        if (pBackend->PrevUserCallbackMousebutton != nullptr && pWindow == pBackend->Window)
         {
-            pBackend->PrevUserCallbackMousebutton(window, button, action, mods);
+            pBackend->PrevUserCallbackMousebutton(pWindow, Button, Action, Mods);
         }
         
         ImGuiUpdateKeyModifiers();
         
-        ImGuiIO& io = ImGui::GetIO();
-        if (button >= 0 && button < ImGuiMouseButton_COUNT)
+        ImGuiIO& UIState = ImGui::GetIO();
+        if (Button >= 0 && Button < ImGuiMouseButton_COUNT)
         {
-            io.AddMouseButtonEvent(button, action == GLFW_PRESS);
+            UIState.AddMouseButtonEvent(Button, Action == GLFW_PRESS);
         }
     }
     
-    void ImGuiScrollCallback(GLFWwindow* window, double xOffset, double yOffset)
+    void ImGuiScrollCallback(GLFWwindow* pWindow, double OffsetX, double OffsetY)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        if (pBackend->PrevUserCallbackScroll != nullptr && window == pBackend->Window)
+        if (pBackend->PrevUserCallbackScroll != nullptr && pWindow == pBackend->Window)
         {
-            pBackend->PrevUserCallbackScroll(window, xOffset, yOffset);
+            pBackend->PrevUserCallbackScroll(pWindow, OffsetX, OffsetY);
         }
         
-        ImGuiIO& io = ImGui::GetIO();
-        io.AddMouseWheelEvent((float)xOffset, (float)yOffset);
+        ImGuiIO& UIState = ImGui::GetIO();
+        UIState.AddMouseWheelEvent((float)OffsetX, (float)OffsetY);
     }
     
-    static int ImGuiTranslateUntranslatedKey(int key, int scancode)
+    static int ImGuiTranslateUntranslatedKey(int Key, int Scancode)
     {
         // GLFW 3.1+ attempts to "untranslate" keys, which goes the opposite of what every other framework does, making using lettered shortcuts difficult.
         // (It had reasons to do so: namely GLFW is/was more likely to be used for WASD-type game controls rather than lettered shortcuts, but IHMO the 3.1 change could have been done differently)
         // See https://github.com/glfw/glfw/issues/1502 for details.
         // Adding a workaround to undo this (so our keys are translated->untranslated->translated, likely a lossy process).
         // This won't cover edge cases but this is at least going to cover common cases.
-        if (key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_EQUAL)
+        if (Key >= GLFW_KEY_KP_0 && Key <= GLFW_KEY_KP_EQUAL)
         {
-            return key;
+            return Key;
         }
         
-        GLFWerrorfun prevErrorCallback = glfwSetErrorCallback(nullptr);
-        const char* keyName = glfwGetKeyName(key, scancode);
-        glfwSetErrorCallback(prevErrorCallback);
+        GLFWerrorfun PrevErrorCallback = glfwSetErrorCallback(nullptr);
+        const char* KeyName = glfwGetKeyName(Key, Scancode);
+        glfwSetErrorCallback(PrevErrorCallback);
         
         // Eat errors
         (void)glfwGetError(0);
         
-        if (keyName && keyName[0] != 0 && keyName[1] == 0)
+        if (KeyName && KeyName[0] != 0 && KeyName[1] == 0)
         {
             const int charKeys[] =
             {
@@ -429,142 +429,142 @@ namespace GUI
                 0
             };
             
-            const char charNames[] = "`-=[]\\,;\'./";
-            assert(IM_ARRAYSIZE(charNames) == IM_ARRAYSIZE(charKeys));
+            const char CharNames[] = "`-=[]\\,;\'./";
+            assert(IM_ARRAYSIZE(CharNames) == IM_ARRAYSIZE(charKeys));
             
-            if (keyName[0] >= '0' && keyName[0] <= '9')
+            if (KeyName[0] >= '0' && KeyName[0] <= '9')
             {
-                key = GLFW_KEY_0 + (keyName[0] - '0');
+                Key = GLFW_KEY_0 + (KeyName[0] - '0');
             }
-            else if (keyName[0] >= 'A' && keyName[0] <= 'Z')
+            else if (KeyName[0] >= 'A' && KeyName[0] <= 'Z')
             {
-                key = GLFW_KEY_A + (keyName[0] - 'A');
+                Key = GLFW_KEY_A + (KeyName[0] - 'A');
             }
-            else if (keyName[0] >= 'a' && keyName[0] <= 'z')
+            else if (KeyName[0] >= 'a' && KeyName[0] <= 'z')
             {
-                key = GLFW_KEY_A + (keyName[0] - 'a');
+                Key = GLFW_KEY_A + (KeyName[0] - 'a');
             }
-            else if (const char* p = strchr(charNames, keyName[0]))
+            else if (const char* p = strchr(CharNames, KeyName[0]))
             {
-                key = charKeys[p - charNames];
+                Key = charKeys[p - CharNames];
             }
         }
         
-        return key;
+        return Key;
     }
     
-    static void ImGuiKeyCallback(GLFWwindow* window, int keycode, int scancode, int action, int mods)
+    static void ImGuiKeyCallback(GLFWwindow* pWindow, int Keycode, int Scancode, int Action, int Mods)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        if (pBackend->PrevUserCallbackKey != nullptr && window == pBackend->Window)
+        if (pBackend->PrevUserCallbackKey != nullptr && pWindow == pBackend->Window)
         {
-            pBackend->PrevUserCallbackKey(window, keycode, scancode, action, mods);
+            pBackend->PrevUserCallbackKey(pWindow, Keycode, Scancode, Action, Mods);
         }
         
-        if (action != GLFW_PRESS && action != GLFW_RELEASE)
+        if (Action != GLFW_PRESS && Action != GLFW_RELEASE)
         {
             return;
         }
         
         ImGuiUpdateKeyModifiers();
         
-        if (keycode >= 0 && keycode < IM_ARRAYSIZE(pBackend->KeyOwnerWindows))
+        if (Keycode >= 0 && Keycode < IM_ARRAYSIZE(pBackend->KeyOwnerWindows))
         {
-            pBackend->KeyOwnerWindows[keycode] = (action == GLFW_PRESS) ? window : nullptr;
+            pBackend->KeyOwnerWindows[Keycode] = (Action == GLFW_PRESS) ? pWindow : nullptr;
         }
         
-        keycode = ImGuiTranslateUntranslatedKey(keycode, scancode);
+        Keycode = ImGuiTranslateUntranslatedKey(Keycode, Scancode);
         
-        ImGuiIO& io = ImGui::GetIO();
-        ImGuiKey imguiKey = ImGuiKeyToImGuiKey(keycode);
-        io.AddKeyEvent(imguiKey, (action == GLFW_PRESS));
-        io.SetKeyEventNativeData(imguiKey, keycode, scancode); // To support legacy indexing (<1.87 user code)
+        ImGuiIO& UIState = ImGui::GetIO();
+        ImGuiKey ConvertedKey = GLFWKeyToImGuiKey(Keycode);
+        UIState.AddKeyEvent(ConvertedKey, (Action == GLFW_PRESS));
+        UIState.SetKeyEventNativeData(ConvertedKey, Keycode, Scancode); // To support legacy indexing (<1.87 user code)
     }
     
-    static void ImGuiWindowFocusCallback(GLFWwindow* window, int focused)
+    static void ImGuiWindowFocusCallback(GLFWwindow* pWindow, int Focused)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        if (pBackend->PrevUserCallbackWindowFocus != nullptr && window == pBackend->Window)
+        if (pBackend->PrevUserCallbackWindowFocus != nullptr && pWindow == pBackend->Window)
         {
-            pBackend->PrevUserCallbackWindowFocus(window, focused);
+            pBackend->PrevUserCallbackWindowFocus(pWindow, Focused);
         }
         
-        ImGuiIO& io = ImGui::GetIO();
-        io.AddFocusEvent(focused != 0);
+        ImGuiIO& UIState = ImGui::GetIO();
+        UIState.AddFocusEvent(Focused != 0);
     }
     
-    static void ImGuiCursorPosCallback(GLFWwindow* window, double posX, double posY)
+    static void ImGuiCursorPosCallback(GLFWwindow* pWindow, double PosX, double PosY)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        if (pBackend->PrevUserCallbackCursorPos != nullptr && window == pBackend->Window)
+        if (pBackend->PrevUserCallbackCursorPos != nullptr && pWindow == pBackend->Window)
         {
-            pBackend->PrevUserCallbackCursorPos(window, posX, posY);
+            pBackend->PrevUserCallbackCursorPos(pWindow, PosX, PosY);
         }
         
-        if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
+        if (glfwGetInputMode(pWindow, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         {
             return;
         }
         
-        ImGuiIO& io = ImGui::GetIO();
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        ImGuiIO& UIState = ImGui::GetIO();
+        if (UIState.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            int windowPosX;
-            int windowPosY;
-            glfwGetWindowPos(window, &windowPosX, &windowPosY);
+            int WindowPosX;
+            int WindowPosY;
+            glfwGetWindowPos(pWindow, &WindowPosX, &WindowPosY);
             
-            posX += windowPosX;
-            posY += windowPosY;
+            PosX += WindowPosX;
+            PosY += WindowPosY;
         }
         
-        io.AddMousePosEvent((float)posX, (float)posY);
-        pBackend->LastValidMousePos = ImVec2((float)posX, (float)posY);
+        UIState.AddMousePosEvent((float)PosX, (float)PosY);
+        pBackend->LastValidMousePos = ImVec2((float)PosX, (float)PosY);
     }
     
     // Workaround: X11 seems to send spurious Leave/Enter events which would make us lose our position,
     // so we back it up and restore on Leave/Enter (see https://github.com/ocornut/imgui/issues/4984)
-    static void ImGuiCursorEnterCallback(GLFWwindow* window, int entered)
+    static void ImGuiCursorEnterCallback(GLFWwindow* pWindow, int Entered)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        if (pBackend->PrevUserCallbackCursorEnter != nullptr && window == pBackend->Window)
+        if (pBackend->PrevUserCallbackCursorEnter != nullptr && pWindow == pBackend->Window)
         {
-            pBackend->PrevUserCallbackCursorEnter(window, entered);
+            pBackend->PrevUserCallbackCursorEnter(pWindow, Entered);
         }
         
-        if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
+        if (glfwGetInputMode(pWindow, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         {
             return;
         }
         
-        ImGuiIO& io = ImGui::GetIO();
-        if (entered)
+        ImGuiIO& UIState = ImGui::GetIO();
+        if (Entered)
         {
-            pBackend->MouseWindow = window;
-            io.AddMousePosEvent(pBackend->LastValidMousePos.x, pBackend->LastValidMousePos.y);
+            pBackend->MouseWindow = pWindow;
+            UIState.AddMousePosEvent(pBackend->LastValidMousePos.x, pBackend->LastValidMousePos.y);
         }
-        else if (!entered && pBackend->MouseWindow == window)
+        else if (!Entered && pBackend->MouseWindow == pWindow)
         {
-            pBackend->LastValidMousePos = io.MousePos;
+            pBackend->LastValidMousePos = UIState.MousePos;
             pBackend->MouseWindow       = nullptr;
-            io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+            UIState.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
         }
     }
     
-    static void ImGuiCharCallback(GLFWwindow* window, unsigned int c)
+    static void ImGuiCharCallback(GLFWwindow* pWindow, unsigned int Char)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        if (pBackend->PrevUserCallbackChar != nullptr && window == pBackend->Window)
+        if (pBackend->PrevUserCallbackChar != nullptr && pWindow == pBackend->Window)
         {
-            pBackend->PrevUserCallbackChar(window, c);
+            pBackend->PrevUserCallbackChar(pWindow, Char);
         }
         
-        ImGuiIO& io = ImGui::GetIO();
-        io.AddInputCharacter(c);
+        ImGuiIO& UIState = ImGui::GetIO();
+        UIState.AddInputCharacter(Char);
     }
     
-    static void ImGuiWindowCloseCallback(GLFWwindow* window)
+    static void ImGuiWindowCloseCallback(GLFWwindow* pWindow)
     {
-        if (ImGuiViewport* pViewport = ImGui::FindViewportByPlatformHandle(window))
+        if (ImGuiViewport* pViewport = ImGui::FindViewportByPlatformHandle(pWindow))
         {
             pViewport->PlatformRequestClose = true;
         }
@@ -576,9 +576,9 @@ namespace GUI
     // - on Linux it is queued and invoked during glfwPollEvents()
     // Because the event doesn't always fire on glfwSetWindowXXX() we use a frame counter tag to only
     // ignore recent glfwSetWindowXXX() calls.
-    static void ImGuiWindowPosCallback(GLFWwindow* window, int, int)
+    static void ImGuiWindowPosCallback(GLFWwindow* pWindow, int, int)
     {
-        if (ImGuiViewport* pViewport = ImGui::FindViewportByPlatformHandle(window))
+        if (ImGuiViewport* pViewport = ImGui::FindViewportByPlatformHandle(pWindow))
         {
             if (ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData)
             {
@@ -593,9 +593,9 @@ namespace GUI
         }
     }
     
-    static void ImGuiWindowSizeCallback(GLFWwindow* window, int, int)
+    static void ImGuiWindowSizeCallback(GLFWwindow* pWindow, int, int)
     {
-        if (ImGuiViewport* pViewport = ImGui::FindViewportByPlatformHandle(window))
+        if (ImGuiViewport* pViewport = ImGui::FindViewportByPlatformHandle(pWindow))
         {
             if (ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData)
             {
@@ -661,48 +661,48 @@ namespace GUI
     
     static void ImGuiUpdateMonitors()
     {
-        int monitorsCount = 0;
-        GLFWmonitor** glfwMonitors = glfwGetMonitors(&monitorsCount);
+        int MonitorsCount = 0;
+        GLFWmonitor** ppGlfwMonitors = glfwGetMonitors(&MonitorsCount);
         
-        ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-        platformIO.Monitors.resize(0);
+        ImGuiPlatformIO& UIPlatformState = ImGui::GetPlatformIO();
+        UIPlatformState.Monitors.resize(0);
         
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
         pBackend->bWantUpdateMonitors = false;
         
-        for (int n = 0; n < monitorsCount; n++)
+        for (int n = 0; n < MonitorsCount; n++)
         {
-            int posX;
-            int posY;
-            glfwGetMonitorPos(glfwMonitors[n], &posX, &posY);
+            int PosX;
+            int PosY;
+            glfwGetMonitorPos(ppGlfwMonitors[n], &PosX, &PosY);
             
-            const GLFWvidmode* videoMode = glfwGetVideoMode(glfwMonitors[n]);
+            const GLFWvidmode* videoMode = glfwGetVideoMode(ppGlfwMonitors[n]);
             if (videoMode == nullptr)
             {
                 continue;
             }
             
-            ImGuiPlatformMonitor monitor;
-            monitor.MainPos  = monitor.WorkPos  = ImVec2((float)posX, (float)posY);
-            monitor.MainSize = monitor.WorkSize = ImVec2((float)videoMode->width, (float)videoMode->height);
+            ImGuiPlatformMonitor Monitor;
+            Monitor.MainPos  = Monitor.WorkPos  = ImVec2((float)PosX, (float)PosY);
+            Monitor.MainSize = Monitor.WorkSize = ImVec2((float)videoMode->width, (float)videoMode->height);
             
-            int width;
-            int height;
-            glfwGetMonitorWorkarea(glfwMonitors[n], &posX, &posY, &width, &height);
+            int Width;
+            int Height;
+            glfwGetMonitorWorkarea(ppGlfwMonitors[n], &PosX, &PosY, &Width, &Height);
             
-            if (width > 0 && height > 0) // Workaround a small GLFW issue reporting zero on monitor changes: https://github.com/glfw/glfw/pull/1761
+            if (Width > 0 && Height > 0) // Workaround a small GLFW issue reporting zero on monitor changes: https://github.com/glfw/glfw/pull/1761
             {
-                monitor.WorkPos  = ImVec2((float)posX, (float)posY);
-                monitor.WorkSize = ImVec2((float)width, (float)height);
+                Monitor.WorkPos  = ImVec2((float)PosX, (float)PosY);
+                Monitor.WorkSize = ImVec2((float)Width, (float)Height);
             }
             
             // Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
-            float scaleX;
-            float scaleY;
-            glfwGetMonitorContentScale(glfwMonitors[n], &scaleX, &scaleY);
-            monitor.DpiScale = scaleX;
+            float ScaleX;
+            float ScaleY;
+            glfwGetMonitorContentScale(ppGlfwMonitors[n], &ScaleX, &ScaleY);
+            Monitor.DpiScale = ScaleX;
             
-            platformIO.Monitors.push_back(monitor);
+            UIPlatformState.Monitors.push_back(Monitor);
         }
     }
     
@@ -793,40 +793,40 @@ namespace GUI
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         
-        int posX = 0;
-        int posY = 0;
-        glfwGetWindowPos(pViewportData->pWindow, &posX, &posY);
-        return ImVec2((float)posX, (float)posY);
+        int PosX = 0;
+        int PosY = 0;
+        glfwGetWindowPos(pViewportData->pWindow, &PosX, &PosY);
+        return ImVec2((float)PosX, (float)PosY);
     }
     
-    static void ImGuiSetWindowPos(ImGuiViewport* pViewport, ImVec2 pos)
+    static void ImGuiSetWindowPos(ImGuiViewport* pViewport, ImVec2 Pos)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         pViewportData->IgnoreWindowPosEventFrame = ImGui::GetFrameCount();
-        glfwSetWindowPos(pViewportData->pWindow, (int)pos.x, (int)pos.y);
+        glfwSetWindowPos(pViewportData->pWindow, (int)Pos.x, (int)Pos.y);
     }
     
     static ImVec2 ImGuiGetWindowSize(ImGuiViewport* pViewport)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         
-        int width  = 0;
-        int height = 0;
-        glfwGetWindowSize(pViewportData->pWindow, &width, &height);
-        return ImVec2((float)width, (float)height);
+        int Width  = 0;
+        int Height = 0;
+        glfwGetWindowSize(pViewportData->pWindow, &Width, &Height);
+        return ImVec2((float)Width, (float)Height);
     }
     
-    static void ImGuiSetWindowSize(ImGuiViewport* pViewport, ImVec2 size)
+    static void ImGuiSetWindowSize(ImGuiViewport* pViewport, ImVec2 Size)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         pViewportData->IgnoreWindowSizeEventFrame = ImGui::GetFrameCount();
-        glfwSetWindowSize(pViewportData->pWindow, (int)size.x, (int)size.y);
+        glfwSetWindowSize(pViewportData->pWindow, (int)Size.x, (int)Size.y);
     }
     
-    static void ImGuiSetWindowTitle(ImGuiViewport* pViewport, const char* title)
+    static void ImGuiSetWindowTitle(ImGuiViewport* pViewport, const char* Title)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
-        glfwSetWindowTitle(pViewportData->pWindow, title);
+        glfwSetWindowTitle(pViewportData->pWindow, Title);
     }
     
     static void ImGuiSetWindowFocus(ImGuiViewport* pViewport)
@@ -847,10 +847,10 @@ namespace GUI
         return glfwGetWindowAttrib(pViewportData->pWindow, GLFW_ICONIFIED) != 0;
     }
     
-    static void ImGuiSetWindowAlpha(ImGuiViewport* pViewport, float alpha)
+    static void ImGuiSetWindowAlpha(ImGuiViewport* pViewport, float Alpha)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
-        glfwSetWindowOpacity(pViewportData->pWindow, alpha);
+        glfwSetWindowOpacity(pViewportData->pWindow, Alpha);
     }
     
     static void ImGuiRenderWindow(ImGuiViewport* pViewport, void*)
@@ -861,11 +861,11 @@ namespace GUI
     {
     }
     
-    static int ImGuiCreateVkSurface(ImGuiViewport* pViewport, ImU64 instance, const void* allocator, ImU64* outSurface)
+    static int ImGuiCreateVkSurface(ImGuiViewport* pViewport, ImU64 Instance, const void* Allocator, ImU64* OutSurface)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
-        VkResult result = glfwCreateWindowSurface((VkInstance)instance, pViewportData->pWindow, (const VkAllocationCallbacks*)allocator, (VkSurfaceKHR*)outSurface);
-        return (int)result;
+        VkResult Result = glfwCreateWindowSurface((VkInstance)Instance, pViewportData->pWindow, (const VkAllocationCallbacks*)Allocator, (VkSurfaceKHR*)OutSurface);
+        return (int)Result;
     }
     
     static void ImGuiInitPlatformInterface()
@@ -873,22 +873,22 @@ namespace GUI
         // Register platform interface (will be coupled with a renderer interface)
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
         
-        ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-        platformIO.Platform_CreateWindow       = ImGuiCreateWindow;
-        platformIO.Platform_DestroyWindow      = ImGuiDestroyWindow;
-        platformIO.Platform_ShowWindow         = ImGuiShowWindow;
-        platformIO.Platform_SetWindowPos       = ImGuiSetWindowPos;
-        platformIO.Platform_GetWindowPos       = ImGuiGetWindowPos;
-        platformIO.Platform_SetWindowSize      = ImGuiSetWindowSize;
-        platformIO.Platform_GetWindowSize      = ImGuiGetWindowSize;
-        platformIO.Platform_SetWindowFocus     = ImGuiSetWindowFocus;
-        platformIO.Platform_GetWindowFocus     = ImGuiGetWindowFocus;
-        platformIO.Platform_GetWindowMinimized = ImGuiGetWindowMinimized;
-        platformIO.Platform_SetWindowTitle     = ImGuiSetWindowTitle;
-        platformIO.Platform_RenderWindow       = ImGuiRenderWindow;
-        platformIO.Platform_SwapBuffers        = ImGuiSwapBuffers;
-        platformIO.Platform_SetWindowAlpha     = ImGuiSetWindowAlpha;
-        platformIO.Platform_CreateVkSurface    = ImGuiCreateVkSurface;
+        ImGuiPlatformIO& UIPlatformState = ImGui::GetPlatformIO();
+        UIPlatformState.Platform_CreateWindow       = ImGuiCreateWindow;
+        UIPlatformState.Platform_DestroyWindow      = ImGuiDestroyWindow;
+        UIPlatformState.Platform_ShowWindow         = ImGuiShowWindow;
+        UIPlatformState.Platform_SetWindowPos       = ImGuiSetWindowPos;
+        UIPlatformState.Platform_GetWindowPos       = ImGuiGetWindowPos;
+        UIPlatformState.Platform_SetWindowSize      = ImGuiSetWindowSize;
+        UIPlatformState.Platform_GetWindowSize      = ImGuiGetWindowSize;
+        UIPlatformState.Platform_SetWindowFocus     = ImGuiSetWindowFocus;
+        UIPlatformState.Platform_GetWindowFocus     = ImGuiGetWindowFocus;
+        UIPlatformState.Platform_GetWindowMinimized = ImGuiGetWindowMinimized;
+        UIPlatformState.Platform_SetWindowTitle     = ImGuiSetWindowTitle;
+        UIPlatformState.Platform_RenderWindow       = ImGuiRenderWindow;
+        UIPlatformState.Platform_SwapBuffers        = ImGuiSwapBuffers;
+        UIPlatformState.Platform_SetWindowAlpha     = ImGuiSetWindowAlpha;
+        UIPlatformState.Platform_CreateVkSurface    = ImGuiCreateVkSurface;
         
         // Register main window handle (which is owned by the main application, not by us)
         // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
@@ -908,24 +908,24 @@ namespace GUI
         pBackend->Time               = 0.0;
         pBackend->bWantUpdateMonitors = true;
         
-        ImGuiIO& io = ImGui::GetIO();
-        io.BackendPlatformUserData = pBackend;
-        io.BackendPlatformName     = "VulkanProject";
+        ImGuiIO& UIState = ImGui::GetIO();
+        UIState.BackendPlatformUserData = pBackend;
+        UIState.BackendPlatformName     = "VulkanProject";
         
-        io.SetClipboardTextFn = ImGuiSetClipboardText;
-        io.GetClipboardTextFn = ImGuiGetClipboardText;
-        io.ClipboardUserData  = pBackend->Window;
+        UIState.SetClipboardTextFn = ImGuiSetClipboardText;
+        UIState.GetClipboardTextFn = ImGuiGetClipboardText;
+        UIState.ClipboardUserData  = pBackend->Window;
         
-        io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
-        io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
-        io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
-        io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can call io.AddMouseViewportEvent() with correct data (optional)
+        UIState.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
+        UIState.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
+        UIState.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
+        UIState.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can call io.AddMouseViewportEvent() with correct data (optional)
         
         // Create mouse cursors
         // (By design, on X11 cursors are user configurable and some cursors may be missing. When a cursor doesn't exist,
         // GLFW will emit an error which will often be printed by the app, so we temporarily disable error reporting.
         // Missing cursors will return nullptr and our _UpdateMouseCursor() function will use the Arrow cursor instead.)
-        GLFWerrorfun prevErrorCallback = glfwSetErrorCallback(nullptr);
+        GLFWerrorfun PrevErrorCallback = glfwSetErrorCallback(nullptr);
         pBackend->MouseCursors[ImGuiMouseCursor_Arrow]      = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
         pBackend->MouseCursors[ImGuiMouseCursor_TextInput]  = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
         pBackend->MouseCursors[ImGuiMouseCursor_ResizeNS]   = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR);
@@ -935,7 +935,7 @@ namespace GUI
         pBackend->MouseCursors[ImGuiMouseCursor_ResizeNESW] = glfwCreateStandardCursor(GLFW_RESIZE_NESW_CURSOR);
         pBackend->MouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_RESIZE_NWSE_CURSOR);
         pBackend->MouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
-        glfwSetErrorCallback(prevErrorCallback);
+        glfwSetErrorCallback(PrevErrorCallback);
         
         // Eat errors
         (void)glfwGetError(0);
@@ -956,7 +956,7 @@ namespace GUI
         pMainViewport->PlatformHandleRaw = glfwGetCocoaWindow(pBackend->Window);
     #endif
         
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        if (UIState.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGuiInitPlatformInterface();
         }
@@ -966,20 +966,20 @@ namespace GUI
     {
         if (ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData())
         {
-            int width;
-            int height;
-            unsigned char* pixels;
+            int Width;
+            int Height;
+            unsigned char* Pixels;
             
-            ImGuiIO& io = ImGui::GetIO();
-            io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+            ImGuiIO& UIstate = ImGui::GetIO();
+            UIstate.Fonts->GetTexDataAsRGBA32(&Pixels, &Width, &Height);
             
-            FTextureParams textureParams = {};
-            textureParams.Format    = VK_FORMAT_R8G8B8A8_UNORM;
-            textureParams.ImageType = VK_IMAGE_TYPE_2D;
-            textureParams.Width     = width;
-            textureParams.Height    = height;
+            FTextureParams TextureParams = {};
+            TextureParams.Format    = VK_FORMAT_R8G8B8A8_UNORM;
+            TextureParams.ImageType = VK_IMAGE_TYPE_2D;
+            TextureParams.Width     = Width;
+            TextureParams.Height    = Height;
             
-            pRendererBackend->pFontTexture = FTexture::CreateWithData(pRendererBackend->pDevice, textureParams, pixels);
+            pRendererBackend->pFontTexture = FTexture::CreateWithData(pRendererBackend->pDevice, TextureParams, Pixels);
             if (!pRendererBackend->pFontTexture)
             {
                 return false;
@@ -987,10 +987,10 @@ namespace GUI
             
             pRendererBackend->pFontTexture->SetDebugName("Font Texture");
             
-            FTextureViewParams textureViewParams = {};
-            textureViewParams.pTexture = pRendererBackend->pFontTexture;
+            FTextureViewParams TextureViewParams = {};
+            TextureViewParams.pTexture = pRendererBackend->pFontTexture;
             
-            pRendererBackend->pFontTextureView = FTextureView::Create(pRendererBackend->pDevice, textureViewParams);
+            pRendererBackend->pFontTextureView = FTextureView::Create(pRendererBackend->pDevice, TextureViewParams);
             if (!pRendererBackend->pFontTextureView)
             {
                 return false;
@@ -999,7 +999,7 @@ namespace GUI
             pRendererBackend->pFontTextureView->SetDebugName("Font TextureView");
             
             pRendererBackend->pFontDescriptorSet->BindCombinedImageSampler(pRendererBackend->pFontTextureView->GetImageView(), pRendererBackend->pFontSampler->GetSampler(), 0);
-            io.Fonts->SetTexID((ImTextureID)pRendererBackend->pFontDescriptorSet);
+            UIstate.Fonts->SetTexID((ImTextureID)pRendererBackend->pFontDescriptorSet);
             return true;
         }
         else
@@ -1138,41 +1138,41 @@ namespace GUI
         
         if (!pRendererBackend->pPipeline)
         {
-            FGraphicsPipelineStateParams graphicsPipelineStateParams = {};
-            graphicsPipelineStateParams.pVertexShader   = pRendererBackend->pShaderModuleVert;
-            graphicsPipelineStateParams.pFragmentShader = pRendererBackend->pShaderModuleFrag;
-            graphicsPipelineStateParams.pRenderPass     = pRendererBackend->pRenderPass;
-            graphicsPipelineStateParams.pPipelineLayout = pRendererBackend->pPipelineLayout;
+            FGraphicsPipelineStateParams GraphicsPipelineStateParams = {};
+            GraphicsPipelineStateParams.pVertexShader   = pRendererBackend->pShaderModuleVert;
+            GraphicsPipelineStateParams.pFragmentShader = pRendererBackend->pShaderModuleFrag;
+            GraphicsPipelineStateParams.pRenderPass     = pRendererBackend->pRenderPass;
+            GraphicsPipelineStateParams.pPipelineLayout = pRendererBackend->pPipelineLayout;
             
-            VkVertexInputBindingDescription bindingDesc[1] = {};
-            bindingDesc[0].stride    = sizeof(ImDrawVert);
-            bindingDesc[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            VkVertexInputBindingDescription BindingDesc[1] = {};
+            BindingDesc[0].stride    = sizeof(ImDrawVert);
+            BindingDesc[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
             
-            VkVertexInputAttributeDescription attributeDesc[3] = {};
-            attributeDesc[0].location = 0;
-            attributeDesc[0].binding  = bindingDesc[0].binding;
-            attributeDesc[0].format   = VK_FORMAT_R32G32_SFLOAT;
-            attributeDesc[0].offset   = IM_OFFSETOF(ImDrawVert, pos);
-            attributeDesc[1].location = 1;
-            attributeDesc[1].binding  = bindingDesc[0].binding;
-            attributeDesc[1].format   = VK_FORMAT_R32G32_SFLOAT;
-            attributeDesc[1].offset   = IM_OFFSETOF(ImDrawVert, uv);
-            attributeDesc[2].location = 2;
-            attributeDesc[2].binding  = bindingDesc[0].binding;
-            attributeDesc[2].format   = VK_FORMAT_R8G8B8A8_UNORM;
-            attributeDesc[2].offset   = IM_OFFSETOF(ImDrawVert, col);
+            VkVertexInputAttributeDescription AttributeDesc[3] = {};
+            AttributeDesc[0].location = 0;
+            AttributeDesc[0].binding  = BindingDesc[0].binding;
+            AttributeDesc[0].format   = VK_FORMAT_R32G32_SFLOAT;
+            AttributeDesc[0].offset   = IM_OFFSETOF(ImDrawVert, pos);
+            AttributeDesc[1].location = 1;
+            AttributeDesc[1].binding  = BindingDesc[0].binding;
+            AttributeDesc[1].format   = VK_FORMAT_R32G32_SFLOAT;
+            AttributeDesc[1].offset   = IM_OFFSETOF(ImDrawVert, uv);
+            AttributeDesc[2].location = 2;
+            AttributeDesc[2].binding  = BindingDesc[0].binding;
+            AttributeDesc[2].format   = VK_FORMAT_R8G8B8A8_UNORM;
+            AttributeDesc[2].offset   = IM_OFFSETOF(ImDrawVert, col);
             
-            graphicsPipelineStateParams.AttributeDescriptionCount = 3;
-            graphicsPipelineStateParams.pAttributeDescriptions    = attributeDesc;
+            GraphicsPipelineStateParams.AttributeDescriptionCount = 3;
+            GraphicsPipelineStateParams.pAttributeDescriptions    = AttributeDesc;
             
-            graphicsPipelineStateParams.BindingDescriptionCount = 1;
-            graphicsPipelineStateParams.pBindingDescriptions    = bindingDesc;
+            GraphicsPipelineStateParams.BindingDescriptionCount = 1;
+            GraphicsPipelineStateParams.pBindingDescriptions    = BindingDesc;
             
-            graphicsPipelineStateParams.CullMode     = VK_CULL_MODE_NONE;
-            graphicsPipelineStateParams.FrontFace    = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-            graphicsPipelineStateParams.bBlendEnable = true;
+            GraphicsPipelineStateParams.CullMode     = VK_CULL_MODE_NONE;
+            GraphicsPipelineStateParams.FrontFace    = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+            GraphicsPipelineStateParams.bBlendEnable = true;
             
-            pRendererBackend->pPipeline = FGraphicsPipeline::Create(pRendererBackend->pDevice, graphicsPipelineStateParams);
+            pRendererBackend->pPipeline = FGraphicsPipeline::Create(pRendererBackend->pDevice, GraphicsPipelineStateParams);
             assert(pRendererBackend->pPipeline != nullptr);
             pRendererBackend->pPipeline->SetDebugName("ImGui Pipeline");
         }
@@ -1184,63 +1184,63 @@ namespace GUI
         if (!pRendererBackend->pFontSampler)
         {
             // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
-            FSamplerParams samplerParams = {};
-            samplerParams.MagFilter     = VK_FILTER_LINEAR;
-            samplerParams.MinFilter     = VK_FILTER_LINEAR;
-            samplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            samplerParams.AddressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.AddressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.AddressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.MinLod        = -1000;
-            samplerParams.MaxLod        = 1000;
-            samplerParams.MaxAnisotropy = 1.0f;
+            FSamplerParams SamplerParams = {};
+            SamplerParams.MagFilter     = VK_FILTER_LINEAR;
+            SamplerParams.MinFilter     = VK_FILTER_LINEAR;
+            SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            SamplerParams.AddressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            SamplerParams.AddressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            SamplerParams.AddressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            SamplerParams.MinLod        = -1000;
+            SamplerParams.MaxLod        = 1000;
+            SamplerParams.MaxAnisotropy = 1.0f;
             
-            pRendererBackend->pFontSampler = FSampler::Create(pRendererBackend->pDevice, samplerParams);
+            pRendererBackend->pFontSampler = FSampler::Create(pRendererBackend->pDevice, SamplerParams);
             assert(pRendererBackend->pFontSampler != nullptr);
             pRendererBackend->pFontSampler->SetDebugName("ImGui FontSampler");
         }
         
         if (!pRendererBackend->pImageSampler)
         {
-            FSamplerParams samplerParams = {};
-            samplerParams.MagFilter     = VK_FILTER_NEAREST;
-            samplerParams.MinFilter     = VK_FILTER_NEAREST;
-            samplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            samplerParams.AddressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.AddressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.AddressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerParams.MinLod        = 0;
-            samplerParams.MaxLod        = 1000;
-            samplerParams.MaxAnisotropy = 1.0f;
+            FSamplerParams SamplerParams = {};
+            SamplerParams.MagFilter     = VK_FILTER_NEAREST;
+            SamplerParams.MinFilter     = VK_FILTER_NEAREST;
+            SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            SamplerParams.AddressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            SamplerParams.AddressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            SamplerParams.AddressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            SamplerParams.MinLod        = 0;
+            SamplerParams.MaxLod        = 1000;
+            SamplerParams.MaxAnisotropy = 1.0f;
             
-            pRendererBackend->pImageSampler = FSampler::Create(pRendererBackend->pDevice, samplerParams);
+            pRendererBackend->pImageSampler = FSampler::Create(pRendererBackend->pDevice, SamplerParams);
             assert(pRendererBackend->pImageSampler != nullptr);
             pRendererBackend->pImageSampler->SetDebugName("ImGui ImageSampler");
         }
         
         if (!pRendererBackend->pDescriptorSetLayout)
         {
-            VkDescriptorSetLayoutBinding binding[1] = {};
-            binding[0].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            binding[0].descriptorCount = 1;
-            binding[0].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+            VkDescriptorSetLayoutBinding Binding[1] = {};
+            Binding[0].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            Binding[0].descriptorCount = 1;
+            Binding[0].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
             
-            FDescriptorSetLayoutParams descriptorSetLayoutParams = {};
-            descriptorSetLayoutParams.NumBindings = 1;
-            descriptorSetLayoutParams.pBindings   = binding;
+            FDescriptorSetLayoutParams DescriptorSetLayoutParams = {};
+            DescriptorSetLayoutParams.NumBindings = 1;
+            DescriptorSetLayoutParams.pBindings   = Binding;
             
-            pRendererBackend->pDescriptorSetLayout = FDescriptorSetLayout::Create(pRendererBackend->pDevice, descriptorSetLayoutParams);
+            pRendererBackend->pDescriptorSetLayout = FDescriptorSetLayout::Create(pRendererBackend->pDevice, DescriptorSetLayoutParams);
             assert(pRendererBackend->pDescriptorSetLayout != nullptr);
             pRendererBackend->pDescriptorSetLayout->SetDebugName("ImGui DescriptorSetLayout");
         }
         
         if (!pRendererBackend->pDescriptorPool)
         {
-            FDescriptorPoolParams descriptorPoolParams = {};
-            descriptorPoolParams.MaxSets                  = 1024;
-            descriptorPoolParams.NumCombinedImageSamplers = 1024;
+            FDescriptorPoolParams DescriptorPoolParams = {};
+            DescriptorPoolParams.MaxSets                  = 1024;
+            DescriptorPoolParams.NumCombinedImageSamplers = 1024;
             
-            pRendererBackend->pDescriptorPool = FDescriptorPool::Create(pRendererBackend->pDevice, descriptorPoolParams);
+            pRendererBackend->pDescriptorPool = FDescriptorPool::Create(pRendererBackend->pDevice, DescriptorPoolParams);
             assert(pRendererBackend->pDescriptorPool != nullptr);
             pRendererBackend->pDescriptorPool->SetDebugName("ImGui DescriptorPool");
         }
@@ -1254,26 +1254,26 @@ namespace GUI
         
         if (!pRendererBackend->pPipelineLayout)
         {
-            FPipelineLayoutParams pipelineLayoutParams = {};
-            pipelineLayoutParams.ppLayouts        = &pRendererBackend->pDescriptorSetLayout;
-            pipelineLayoutParams.NumLayouts       = 1;
-            pipelineLayoutParams.NumPushConstants = 4;
+            FPipelineLayoutParams PipelineLayoutParams = {};
+            PipelineLayoutParams.ppLayouts        = &pRendererBackend->pDescriptorSetLayout;
+            PipelineLayoutParams.NumLayouts       = 1;
+            PipelineLayoutParams.NumPushConstants = 4;
             
-            pRendererBackend->pPipelineLayout = FPipelineLayout::Create(pRendererBackend->pDevice, pipelineLayoutParams);
+            pRendererBackend->pPipelineLayout = FPipelineLayout::Create(pRendererBackend->pDevice, PipelineLayoutParams);
             assert(pRendererBackend->pPipelineLayout != nullptr);
             pRendererBackend->pPipelineLayout->SetDebugName("ImGui PipelineLayout");
         }
         
         if (!pRendererBackend->pRenderPass)
         {
-            FRenderPassAttachment attachment = {};
-            attachment.Format = pRendererBackend->pSwapchain->GetFormat();
+            FRenderPassAttachment Attachment = {};
+            Attachment.Format = pRendererBackend->pSwapchain->GetFormat();
 
-            FRenderPassParams renderPassParams = {};
-            renderPassParams.ColorAttachmentCount = 1;
-            renderPassParams.pColorAttachments    = &attachment;
+            FRenderPassParams RenderPassParams = {};
+            RenderPassParams.ColorAttachmentCount = 1;
+            RenderPassParams.pColorAttachments    = &Attachment;
             
-            pRendererBackend->pRenderPass = FRenderPass::Create(pRendererBackend->pDevice, renderPassParams);
+            pRendererBackend->pRenderPass = FRenderPass::Create(pRendererBackend->pDevice, RenderPassParams);
             assert(pRendererBackend->pRenderPass != nullptr);
             pRendererBackend->pRenderPass->SetDebugName("ImGui RenderPass");
         }
@@ -1308,21 +1308,21 @@ namespace GUI
         VkExtent2D extent = pViewportData->pSwapchain->GetExtent();
         
         // Create Framebuffers
-        FFramebufferParams framebufferParams = {};
-        framebufferParams.pRenderPass     = pViewportData->pRenderPass;
-        framebufferParams.AttachmentCount = 1;
-        framebufferParams.Width           = extent.width;
-        framebufferParams.Height          = extent.height;
+        FFramebufferParams FramebufferParams = {};
+        FramebufferParams.pRenderPass     = pViewportData->pRenderPass;
+        FramebufferParams.AttachmentCount = 1;
+        FramebufferParams.Width           = extent.width;
+        FramebufferParams.Height          = extent.height;
         
-        uint32_t numBackbuffers = pViewportData->pSwapchain->GetNumBackBuffers();
-        pViewportData->Framebuffers.resize(numBackbuffers);
+        uint32_t NumBackbuffers = pViewportData->pSwapchain->GetNumBackBuffers();
+        pViewportData->Framebuffers.resize(NumBackbuffers);
         
-        for (uint32_t i = 0; i < numBackbuffers; i++)
+        for (uint32_t i = 0; i < NumBackbuffers; i++)
         {
-            VkImageView imageView = pViewportData->pSwapchain->GetImageView(i);
-            framebufferParams.pAttachMents = &imageView;
+            VkImageView ImageView = pViewportData->pSwapchain->GetImageView(i);
+            FramebufferParams.pAttachMents = &ImageView;
             
-            FFramebuffer* pFramebuffer = FFramebuffer::Create(pDevice, framebufferParams);
+            FFramebuffer* pFramebuffer = FFramebuffer::Create(pDevice, FramebufferParams);
             assert(pFramebuffer != nullptr);
             pFramebuffer->SetDebugName("ImGui FrameBuffer");
 
@@ -1332,16 +1332,16 @@ namespace GUI
     
     static void ImGuiCreateWindowRenderBuffers(FDevice* pDevice, ImGuiViewportData* pViewportData)
     {
-        FCommandBufferParams commandBufferParams = {};
-        commandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        commandBufferParams.QueueType = ECommandQueueType::Graphics;
+        FCommandBufferParams CommandBufferParams = {};
+        CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        CommandBufferParams.QueueType = ECommandQueueType::Graphics;
         
-        uint32_t numBackbuffers = pViewportData->pSwapchain->GetNumBackBuffers();
-        pViewportData->FrameData.resize(numBackbuffers);
+        uint32_t NumBackbuffers = pViewportData->pSwapchain->GetNumBackBuffers();
+        pViewportData->FrameData.resize(NumBackbuffers);
         
-        for (uint32_t i = 0; i < numBackbuffers; i++)
+        for (uint32_t i = 0; i < NumBackbuffers; i++)
         {
-            FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, commandBufferParams);
+            FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
             assert(pCommandBuffer != nullptr);
             pViewportData->FrameData[i].pCommandBuffer = pCommandBuffer;
         }
@@ -1359,19 +1359,19 @@ namespace GUI
             pViewportData->pSwapchain = FSwapchain::Create(pRendererBackend->pDevice, pViewportData->pWindow);
             
             // Create RenderPass for this Viewport
-            FRenderPassAttachment attachment = {};
-            attachment.Format = pViewportData->pSwapchain->GetFormat();
+            FRenderPassAttachment Attachment = {};
+            Attachment.Format = pViewportData->pSwapchain->GetFormat();
 
             if (pViewport->Flags & ImGuiViewportFlags_NoRendererClear)
             {
-                attachment.LoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                Attachment.LoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             }
 
-            FRenderPassParams renderPassParams = {};
-            renderPassParams.ColorAttachmentCount = 1;
-            renderPassParams.pColorAttachments    = &attachment;
+            FRenderPassParams RenderPassParams = {};
+            RenderPassParams.ColorAttachmentCount = 1;
+            RenderPassParams.pColorAttachments    = &Attachment;
             
-            pViewportData->pRenderPass = FRenderPass::Create(pRendererBackend->pDevice, renderPassParams);
+            pViewportData->pRenderPass = FRenderPass::Create(pRendererBackend->pDevice, RenderPassParams);
             assert(pViewportData->pRenderPass != nullptr);
             pViewportData->pRenderPass->SetDebugName("ImGui Viewport RenderPass");
 
@@ -1404,7 +1404,7 @@ namespace GUI
         pViewport->RendererUserData = nullptr;
     }
     
-    static void ImGuiRendererSetWindowSize(ImGuiViewport* pViewport, ImVec2 size)
+    static void ImGuiRendererSetWindowSize(ImGuiViewport* pViewport, ImVec2 Size)
     {
         if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->RendererUserData))
         {
@@ -1414,7 +1414,7 @@ namespace GUI
             // Resize the swapchain
             if (pViewportData->pSwapchain)
             {
-                pViewportData->pSwapchain->Resize(size.x, size.y);
+                pViewportData->pSwapchain->Resize(Size.x, Size.y);
             }
 
             // Create new Framebuffers
@@ -1423,7 +1423,7 @@ namespace GUI
         }
     }
     
-    static void CreateOrResizeBuffer(FBuffer** ppBuffer, VkDeviceSize size, VkBufferUsageFlags usage)
+    static void CreateOrResizeBuffer(FBuffer** ppBuffer, VkDeviceSize Size, VkBufferUsageFlags Usage)
     {
         assert(ppBuffer != nullptr);
         
@@ -1433,13 +1433,13 @@ namespace GUI
             delete *ppBuffer;
         }
         
-        FBufferParams bufferParams;
-        bufferParams.Usage            = usage;
-        bufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-        bufferParams.Size             = size;
+        FBufferParams BufferParams;
+        BufferParams.Usage            = Usage;
+        BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+        BufferParams.Size             = Size;
      
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
-        FBuffer* pBuffer = FBuffer::Create(pRendererBackend->pDevice, bufferParams, nullptr);
+        FBuffer* pBuffer = FBuffer::Create(pRendererBackend->pDevice, BufferParams, nullptr);
         if (!pBuffer)
         {
             assert(false);
@@ -1450,7 +1450,7 @@ namespace GUI
         *ppBuffer = pBuffer;
     }
     
-    static void ImGuiSetupRenderState(ImDrawData* pDrawData, FCommandBuffer* pCommandBuffer, FGraphicsPipeline* pPipeline, const ImGuiFrameRenderData& renderData, int fbWidth, int fbHeight)
+    static void ImGuiSetupRenderState(ImDrawData* pDrawData, FCommandBuffer* pCommandBuffer, FGraphicsPipeline* pPipeline, const ImGuiFrameRenderData& RenderData, int Width, int Height)
     {
         ImGuiRendererBackendData* pRendererbackend = ImGuiGetRendererBackendData();
 
@@ -1460,36 +1460,36 @@ namespace GUI
         // Bind Vertex And Index Buffer:
         if (pDrawData->TotalVtxCount > 0)
         {
-            pCommandBuffer->BindVertexBuffer(renderData.pVertexBuffer, 0, 0);
-            pCommandBuffer->BindIndexBuffer(renderData.pIndexBuffer, 0, sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+            pCommandBuffer->BindVertexBuffer(RenderData.pVertexBuffer, 0, 0);
+            pCommandBuffer->BindIndexBuffer(RenderData.pIndexBuffer, 0, sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
         }
 
         // Setup viewport:
         {
-            VkViewport viewport;
-            viewport.x        = 0;
-            viewport.y        = 0;
-            viewport.width    = (float)fbWidth;
-            viewport.height   = (float)fbHeight;
-            viewport.minDepth = 0.0f;
-            viewport.maxDepth = 1.0f;
+            VkViewport Viewport;
+            Viewport.x        = 0;
+            Viewport.y        = 0;
+            Viewport.width    = (float)Width;
+            Viewport.height   = (float)Height;
+            Viewport.minDepth = 0.0f;
+            Viewport.maxDepth = 1.0f;
             
-            pCommandBuffer->SetViewport(viewport);
+            pCommandBuffer->SetViewport(Viewport);
         }
 
         // Setup scale and translation:
         // Our visible ImGui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
         {
-            float scale[2];
-            scale[0] = 2.0f / pDrawData->DisplaySize.x;
-            scale[1] = 2.0f / pDrawData->DisplaySize.y;
+            float Scale[2];
+            Scale[0] = 2.0f / pDrawData->DisplaySize.x;
+            Scale[1] = 2.0f / pDrawData->DisplaySize.y;
             
-            float translate[2];
-            translate[0] = -1.0f - pDrawData->DisplayPos.x * scale[0];
-            translate[1] = -1.0f - pDrawData->DisplayPos.y * scale[1];
+            float Translate[2];
+            Translate[0] = -1.0f - pDrawData->DisplayPos.x * Scale[0];
+            Translate[1] = -1.0f - pDrawData->DisplayPos.y * Scale[1];
             
-            pCommandBuffer->PushConstants(pRendererbackend->pPipelineLayout, VK_SHADER_STAGE_ALL, sizeof(float) * 0, sizeof(float) * 2, scale);
-            pCommandBuffer->PushConstants(pRendererbackend->pPipelineLayout, VK_SHADER_STAGE_ALL, sizeof(float) * 2, sizeof(float) * 2, translate);
+            pCommandBuffer->PushConstants(pRendererbackend->pPipelineLayout, VK_SHADER_STAGE_ALL, sizeof(float) * 0, sizeof(float) * 2, Scale);
+            pCommandBuffer->PushConstants(pRendererbackend->pPipelineLayout, VK_SHADER_STAGE_ALL, sizeof(float) * 2, sizeof(float) * 2, Translate);
         }
     }
 
@@ -1499,9 +1499,9 @@ namespace GUI
         ImGuiRendererBackendData* pRendererbackend = ImGuiGetRendererBackendData();
         
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-        int fbWidth  = (int)(pDrawData->DisplaySize.x * pDrawData->FramebufferScale.x);
-        int fbHeight = (int)(pDrawData->DisplaySize.y * pDrawData->FramebufferScale.y);
-        if (fbWidth <= 0 || fbHeight <= 0)
+        int FrameBufferWidth  = (int)(pDrawData->DisplaySize.x * pDrawData->FramebufferScale.x);
+        int FrameBufferHeight = (int)(pDrawData->DisplaySize.y * pDrawData->FramebufferScale.y);
+        if (FrameBufferWidth <= 0 || FrameBufferHeight <= 0)
         {
             return;
         }
@@ -1510,71 +1510,71 @@ namespace GUI
         ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pDrawData->OwnerViewport->RendererUserData);
         assert(pViewportData != nullptr);
         
-        const uint32_t frameIndex = pViewportData->pSwapchain->GetCurrentBackBufferIndex();
-        ImGuiFrameRenderData& renderData = pViewportData->FrameData[frameIndex];
+        const uint32_t FrameIndex = pViewportData->pSwapchain->GetCurrentBackBufferIndex();
+        ImGuiFrameRenderData& RenderData = pViewportData->FrameData[FrameIndex];
         if (pDrawData->TotalVtxCount > 0)
         {
             // Create or resize the vertex/index buffers
-            const VkDeviceSize vertexSize = pDrawData->TotalVtxCount * sizeof(ImDrawVert);
-            if (!renderData.pVertexBuffer || renderData.pVertexBuffer->GetSize() < vertexSize)
+            const VkDeviceSize VertexSize = pDrawData->TotalVtxCount * sizeof(ImDrawVert);
+            if (!RenderData.pVertexBuffer || RenderData.pVertexBuffer->GetSize() < VertexSize)
             {
-                CreateOrResizeBuffer(&renderData.pVertexBuffer, vertexSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+                CreateOrResizeBuffer(&RenderData.pVertexBuffer, VertexSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
             }
             
-            const VkDeviceSize indexSize  = pDrawData->TotalIdxCount * sizeof(ImDrawIdx);
-            if (!renderData.pIndexBuffer || renderData.pIndexBuffer->GetSize() < indexSize)
+            const VkDeviceSize IndexSize  = pDrawData->TotalIdxCount * sizeof(ImDrawIdx);
+            if (!RenderData.pIndexBuffer || RenderData.pIndexBuffer->GetSize() < IndexSize)
             {
-                CreateOrResizeBuffer(&renderData.pIndexBuffer, indexSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+                CreateOrResizeBuffer(&RenderData.pIndexBuffer, IndexSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
             }
 
             // Upload vertex/index data into a single contiguous GPU buffer
-            ImDrawVert* vertexDst = reinterpret_cast<ImDrawVert*>(renderData.pVertexBuffer->Map());
-            assert(vertexDst != nullptr);
+            ImDrawVert* pVertexDst = reinterpret_cast<ImDrawVert*>(RenderData.pVertexBuffer->Map());
+            assert(pVertexDst != nullptr);
             
-            ImDrawIdx* indexDst = reinterpret_cast<ImDrawIdx*>(renderData.pIndexBuffer->Map());
-            assert(indexDst != nullptr);
+            ImDrawIdx* pIndexDst = reinterpret_cast<ImDrawIdx*>(RenderData.pIndexBuffer->Map());
+            assert(pIndexDst != nullptr);
 
             for (int n = 0; n < pDrawData->CmdListsCount; n++)
             {
                 const ImDrawList* pCmdList = pDrawData->CmdLists[n];
-                memcpy(vertexDst, pCmdList->VtxBuffer.Data, pCmdList->VtxBuffer.Size * sizeof(ImDrawVert));
-                vertexDst += pCmdList->VtxBuffer.Size;
+                memcpy(pVertexDst, pCmdList->VtxBuffer.Data, pCmdList->VtxBuffer.Size * sizeof(ImDrawVert));
+                pVertexDst += pCmdList->VtxBuffer.Size;
 
-                memcpy(indexDst, pCmdList->IdxBuffer.Data, pCmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
-                indexDst += pCmdList->IdxBuffer.Size;
+                memcpy(pIndexDst, pCmdList->IdxBuffer.Data, pCmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
+                pIndexDst += pCmdList->IdxBuffer.Size;
             }
             
-            renderData.pVertexBuffer->FlushMappedMemoryRange();
-            renderData.pVertexBuffer->Unmap();
+            RenderData.pVertexBuffer->FlushMappedMemoryRange();
+            RenderData.pVertexBuffer->Unmap();
             
-            renderData.pIndexBuffer->FlushMappedMemoryRange();
-            renderData.pIndexBuffer->Unmap();
+            RenderData.pIndexBuffer->FlushMappedMemoryRange();
+            RenderData.pIndexBuffer->Unmap();
         }
 
         // Setup desired Vulkan state
-        ImGuiSetupRenderState(pDrawData, pCommandBuffer, pRendererbackend->pPipeline, renderData, fbWidth, fbHeight);
+        ImGuiSetupRenderState(pDrawData, pCommandBuffer, pRendererbackend->pPipeline, RenderData, FrameBufferWidth, FrameBufferHeight);
 
         // Will project scissor/clipping rectangles into framebuffer space
-        ImVec2 clipOffset = pDrawData->DisplayPos;       // (0,0) unless using multi-viewports
-        ImVec2 clipScale  = pDrawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+        ImVec2 ClipOffset = pDrawData->DisplayPos;       // (0,0) unless using multi-viewports
+        ImVec2 ClipScale  = pDrawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
         // Render command lists
         // (Because we merged all buffers into a single one, we maintain our own offset into them)
-        int globalVtxOffset = 0;
-        int globalIdxOffset = 0;
+        int GlobalVtxOffset = 0;
+        int GlobalIdxOffset = 0;
         for (int n = 0; n < pDrawData->CmdListsCount; n++)
         {
             const ImDrawList* pCmdList = pDrawData->CmdLists[n];
-            for (int cmdIndex = 0; cmdIndex < pCmdList->CmdBuffer.Size; cmdIndex++)
+            for (int CmdIndex = 0; CmdIndex < pCmdList->CmdBuffer.Size; CmdIndex++)
             {
-                const ImDrawCmd* pDrawCmd = &pCmdList->CmdBuffer[cmdIndex];
+                const ImDrawCmd* pDrawCmd = &pCmdList->CmdBuffer[CmdIndex];
                 if (pDrawCmd->UserCallback != nullptr)
                 {
                     // User callback, registered via ImDrawList::AddCallback()
                     // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                     if (pDrawCmd->UserCallback == ImDrawCallback_ResetRenderState)
                     {
-                        ImGuiSetupRenderState(pDrawData, pCommandBuffer, pRendererbackend->pPipeline, renderData, fbWidth, fbHeight);
+                        ImGuiSetupRenderState(pDrawData, pCommandBuffer, pRendererbackend->pPipeline, RenderData, FrameBufferWidth, FrameBufferHeight);
                     }
                     else
                     {
@@ -1584,39 +1584,39 @@ namespace GUI
                 else
                 {
                     // Project scissor/clipping rectangles into framebuffer space
-                    ImVec2 clipMin((pDrawCmd->ClipRect.x - clipOffset.x) * clipScale.x, (pDrawCmd->ClipRect.y - clipOffset.y) * clipScale.y);
-                    ImVec2 clipMax((pDrawCmd->ClipRect.z - clipOffset.x) * clipScale.x, (pDrawCmd->ClipRect.w - clipOffset.y) * clipScale.y);
+                    ImVec2 ClipMin((pDrawCmd->ClipRect.x - ClipOffset.x) * ClipScale.x, (pDrawCmd->ClipRect.y - ClipOffset.y) * ClipScale.y);
+                    ImVec2 ClipMax((pDrawCmd->ClipRect.z - ClipOffset.x) * ClipScale.x, (pDrawCmd->ClipRect.w - ClipOffset.y) * ClipScale.y);
 
                     // Clamp to viewport as vkCmdSetScissor() won't accept values that are off bounds
-                    if (clipMin.x < 0.0f)
+                    if (ClipMin.x < 0.0f)
                     {
-                        clipMin.x = 0.0f;
+                        ClipMin.x = 0.0f;
                     }
-                    if (clipMin.y < 0.0f)
+                    if (ClipMin.y < 0.0f)
                     {
-                        clipMin.y = 0.0f;
+                        ClipMin.y = 0.0f;
                     }
-                    if (clipMax.x > fbWidth)
+                    if (ClipMax.x > FrameBufferWidth)
                     {
-                        clipMax.x = (float)fbWidth;
+                        ClipMax.x = (float)FrameBufferWidth;
                     }
-                    if (clipMax.y > fbHeight)
+                    if (ClipMax.y > FrameBufferHeight)
                     {
-                        clipMax.y = (float)fbHeight;
+                        ClipMax.y = (float)FrameBufferHeight;
                     }
                     
-                    if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y)
+                    if (ClipMax.x <= ClipMin.x || ClipMax.y <= ClipMin.y)
                     {
                         continue;
                     }
 
                     // Apply scissor/clipping rectangle
-                    VkRect2D scissor;
-                    scissor.offset.x      = (int32_t)(clipMin.x);
-                    scissor.offset.y      = (int32_t)(clipMin.y);
-                    scissor.extent.width  = (uint32_t)(clipMax.x - clipMin.x);
-                    scissor.extent.height = (uint32_t)(clipMax.y - clipMin.y);
-                    pCommandBuffer->SetScissorRect(scissor);
+                    VkRect2D Scissor;
+                    Scissor.offset.x      = (int32_t)(ClipMin.x);
+                    Scissor.offset.y      = (int32_t)(ClipMin.y);
+                    Scissor.extent.width  = (uint32_t)(ClipMax.x - ClipMin.x);
+                    Scissor.extent.height = (uint32_t)(ClipMax.y - ClipMin.y);
+                    pCommandBuffer->SetScissorRect(Scissor);
 
                     // Retrieve DescriptorSet
                     FDescriptorSet* pDescriptorSet = (FDescriptorSet*)pDrawCmd->TextureId;
@@ -1631,12 +1631,12 @@ namespace GUI
                     pCommandBuffer->BindGraphicsDescriptorSet(pRendererbackend->pPipelineLayout, pDescriptorSet, 0);
 
                     // Draw
-                    pCommandBuffer->DrawIndexInstanced(pDrawCmd->ElemCount, 1, pDrawCmd->IdxOffset + globalIdxOffset, pDrawCmd->VtxOffset + globalVtxOffset, 0);
+                    pCommandBuffer->DrawIndexInstanced(pDrawCmd->ElemCount, 1, pDrawCmd->IdxOffset + GlobalIdxOffset, pDrawCmd->VtxOffset + GlobalVtxOffset, 0);
                 }
             }
             
-            globalIdxOffset += pCmdList->IdxBuffer.Size;
-            globalVtxOffset += pCmdList->VtxBuffer.Size;
+            GlobalIdxOffset += pCmdList->IdxBuffer.Size;
+            GlobalVtxOffset += pCmdList->VtxBuffer.Size;
         }
 
         // Note: at this point both vkCmdSetViewport() and vkCmdSetScissor() have been called.
@@ -1647,8 +1647,8 @@ namespace GUI
         // In theory we should aim to backup/restore those values but I am not sure this is possible.
         // We perform a call to vkCmdSetScissor() to set back a full viewport which is likely to fix things for 99% users but technically this is not perfect. (See github #4644)
 
-        VkRect2D scissor = { { 0, 0 }, { (uint32_t)fbWidth, (uint32_t)fbHeight } };
-        pCommandBuffer->SetScissorRect(scissor);
+        VkRect2D Scissor = { { 0, 0 }, { (uint32_t)FrameBufferWidth, (uint32_t)FrameBufferHeight } };
+        pCommandBuffer->SetScissorRect(Scissor);
     }
     
     static void ImGuiRendererRenderWindow(ImGuiViewport* pViewport, void*)
@@ -1660,26 +1660,28 @@ namespace GUI
         }
 
         FSwapchain* pSwapchain = pViewportData->pSwapchain;
-        const uint32_t frameIndex = pSwapchain->GetCurrentBackBufferIndex();
+        const uint32_t FrameIndex = pSwapchain->GetCurrentBackBufferIndex();
         
-        ImGuiFrameRenderData& renderData = pViewportData->FrameData[frameIndex];
-        renderData.pCommandBuffer->Reset();
-        renderData.pCommandBuffer->Begin();
+        ImGuiFrameRenderData& RenderData = pViewportData->FrameData[FrameIndex];
+        
+        FCommandBuffer* pCommandBuffer = RenderData.pCommandBuffer;
+        pCommandBuffer->Reset();
+        pCommandBuffer->Begin();
         
         const VkClearValue* pClearValues = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? nullptr : &pViewportData->ClearValues;
-        uint32_t clearValueCount         = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? 0 : 1;
+        const uint32_t ClearValueCount   = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? 0 : 1;
         
-        FFramebuffer* pFramebuffer = pViewportData->Framebuffers[frameIndex];
-        renderData.pCommandBuffer->BeginRenderPass(pViewportData->pRenderPass, pFramebuffer, pClearValues, clearValueCount);
+        FFramebuffer* pFramebuffer = pViewportData->Framebuffers[FrameIndex];
+        pCommandBuffer->BeginRenderPass(pViewportData->pRenderPass, pFramebuffer, pClearValues, ClearValueCount);
         
-        ImGuiRenderDrawData(pViewport->DrawData, renderData.pCommandBuffer);
+        ImGuiRenderDrawData(pViewport->DrawData, pCommandBuffer);
         
-        renderData.pCommandBuffer->EndRenderPass();
-        renderData.pCommandBuffer->End();
+        pCommandBuffer->EndRenderPass();
+        pCommandBuffer->End();
         
-        VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
-        pRendererBackend->pDevice->ExecuteGraphics(renderData.pCommandBuffer, pSwapchain, &waitStage);
+        VkPipelineStageFlags WaitStage[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        pRendererBackend->pDevice->ExecuteGraphics(pCommandBuffer, pSwapchain, WaitStage);
     }
 
     static void ImGuiRendererSwapBuffers(ImGuiViewport* pViewport, void*)
@@ -1690,8 +1692,8 @@ namespace GUI
             return;
         }
         
-        VkResult result = pViewportData->pSwapchain->Present();
-        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+        VkResult Result = pViewportData->pSwapchain->Present();
+        if (Result == VK_SUBOPTIMAL_KHR || Result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
             ImGuiDestroyFramebuffers(pViewportData);
@@ -1701,18 +1703,18 @@ namespace GUI
 
     static void ImGuiInitRendererPlatformInterface()
     {
-        ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-        platformIO.Renderer_CreateWindow  = ImGuiRendererCreateWindow;
-        platformIO.Renderer_DestroyWindow = ImGuiRendererDestroyWindow;
-        platformIO.Renderer_SetWindowSize = ImGuiRendererSetWindowSize;
-        platformIO.Renderer_RenderWindow  = ImGuiRendererRenderWindow;
-        platformIO.Renderer_SwapBuffers   = ImGuiRendererSwapBuffers;
+        ImGuiPlatformIO& UIPlatformState = ImGui::GetPlatformIO();
+        UIPlatformState.Renderer_CreateWindow  = ImGuiRendererCreateWindow;
+        UIPlatformState.Renderer_DestroyWindow = ImGuiRendererDestroyWindow;
+        UIPlatformState.Renderer_SetWindowSize = ImGuiRendererSetWindowSize;
+        UIPlatformState.Renderer_RenderWindow  = ImGuiRendererRenderWindow;
+        UIPlatformState.Renderer_SwapBuffers   = ImGuiRendererSwapBuffers;
     }
 
     static void ImguiInitRendererBackend(GLFWwindow* pWindow, FDevice* pDevice, FSwapchain* pSwapchain)
     {
-        ImGuiIO& io = ImGui::GetIO();
-        assert(io.BackendRendererUserData == nullptr);
+        ImGuiIO& UIState = ImGui::GetIO();
+        assert(UIState.BackendRendererUserData == nullptr);
         
         ImGuiRendererBackendData* pRendererBackend = new ImGuiRendererBackendData();
         assert(pDevice != nullptr);
@@ -1720,10 +1722,10 @@ namespace GUI
         pRendererBackend->pDevice    = pDevice;
         pRendererBackend->pSwapchain = pSwapchain;
 
-        io.BackendRendererUserData = pRendererBackend;
-        io.BackendRendererName     = "PathTracer";
-        io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset; // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
-        io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports; // We can create multi-viewports on the Renderer side (optional)
+        UIState.BackendRendererUserData = pRendererBackend;
+        UIState.BackendRendererName     = "PathTracer";
+        UIState.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset; // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+        UIState.BackendFlags |= ImGuiBackendFlags_RendererHasViewports; // We can create multi-viewports on the Renderer side (optional)
         
         // Create pipelinelayout, renderpass, descriptorsetlayout, pipeline
         ImGuiCreateDeviceObjects();
@@ -1741,7 +1743,7 @@ namespace GUI
             ImGuiCreateWindowRenderBuffers(pDevice, pViewportData);
         }
         
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        if (UIState.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGuiInitRendererPlatformInterface();
         }
@@ -1754,20 +1756,20 @@ namespace GUI
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
 
-        ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO& UIState = ImGui::GetIO();
         if (glfwGetInputMode(pBackend->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         {
-            io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+            UIState.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
             return;
         }
 
-        ImGuiID mouseViewportID = 0;
-        const ImVec2 mousePosPrev = io.MousePos;
+        ImGuiID MouseViewportID = 0;
+        const ImVec2 MousePosPrev = UIState.MousePos;
         
-        ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-        for (int n = 0; n < platformIO.Viewports.Size; n++)
+        ImGuiPlatformIO& UIPlatformState = ImGui::GetPlatformIO();
+        for (int n = 0; n < UIPlatformState.Viewports.Size; n++)
         {
-            ImGuiViewport* pViewport = platformIO.Viewports[n];
+            ImGuiViewport* pViewport = UIPlatformState.Viewports[n];
             GLFWwindow*    pWindow   = (GLFWwindow*)pViewport->PlatformHandle;
 
             const bool bIsWindowFocused = glfwGetWindowAttrib(pWindow, GLFW_FOCUSED) != 0;
@@ -1775,19 +1777,19 @@ namespace GUI
             {
                 // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
                 // When multi-viewports are enabled, all Dear ImGui positions are same as OS positions.
-                if (io.WantSetMousePos)
+                if (UIState.WantSetMousePos)
                 {
-                    glfwSetCursorPos(pWindow, (double)(mousePosPrev.x - pViewport->Pos.x), (double)(mousePosPrev.y - pViewport->Pos.y));
+                    glfwSetCursorPos(pWindow, (double)(MousePosPrev.x - pViewport->Pos.x), (double)(MousePosPrev.y - pViewport->Pos.y));
                 }
 
                 // (Optional) Fallback to provide mouse position when focused (ImGui_ImplGlfw_CursorPosCallback already provides this when hovered or captured)
                 if (pBackend->MouseWindow == nullptr)
                 {
-                    double mouseX;
-                    double mouseY;
-                    glfwGetCursorPos(pWindow, &mouseX, &mouseY);
+                    double MouseX;
+                    double MouseY;
+                    glfwGetCursorPos(pWindow, &MouseX, &MouseY);
                     
-                    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+                    if (UIState.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
                     {
                         // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
                         // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
@@ -1795,12 +1797,12 @@ namespace GUI
                         int window_y;
                         glfwGetWindowPos(pWindow, &window_x, &window_y);
                         
-                        mouseX += window_x;
-                        mouseY += window_y;
+                        MouseX += window_x;
+                        MouseY += window_y;
                     }
                     
-                    pBackend->LastValidMousePos = ImVec2((float)mouseX, (float)mouseY);
-                    io.AddMousePosEvent((float)mouseX, (float)mouseY);
+                    pBackend->LastValidMousePos = ImVec2((float)MouseX, (float)MouseY);
+                    UIState.AddMousePosEvent((float)MouseX, (float)MouseY);
                 }
             }
 
@@ -1817,42 +1819,42 @@ namespace GUI
             glfwSetWindowAttrib(pWindow, GLFW_MOUSE_PASSTHROUGH, bWindowNoInput);
             if (glfwGetWindowAttrib(pWindow, GLFW_HOVERED) && !bWindowNoInput)
             {
-                mouseViewportID = pViewport->ID;
+                MouseViewportID = pViewport->ID;
             }
         }
 
-        if (io.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport)
+        if (UIState.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport)
         {
-            io.AddMouseViewportEvent(mouseViewportID);
+            UIState.AddMouseViewportEvent(MouseViewportID);
         }
     }
 
     static void ImGuiUpdateMouseCursor()
     {
-        ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO& UIState = ImGui::GetIO();
         
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(pBackend->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
+        if ((UIState.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(pBackend->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         {
             return;
         }
 
-        ImGuiMouseCursor imguiCursor = ImGui::GetMouseCursor();
-        ImGuiPlatformIO& platformIO  = ImGui::GetPlatformIO();
-        for (int n = 0; n < platformIO.Viewports.Size; n++)
+        ImGuiMouseCursor CurrentCursor = ImGui::GetMouseCursor();
+        ImGuiPlatformIO& UIPlatformState  = ImGui::GetPlatformIO();
+        for (int n = 0; n < UIPlatformState.Viewports.Size; n++)
         {
-            GLFWwindow* window = (GLFWwindow*)platformIO.Viewports[n]->PlatformHandle;
-            if (imguiCursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
+            GLFWwindow* pWindow = (GLFWwindow*)UIPlatformState.Viewports[n]->PlatformHandle;
+            if (CurrentCursor == ImGuiMouseCursor_None || UIState.MouseDrawCursor)
             {
                 // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+                glfwSetInputMode(pWindow, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
             }
             else
             {
                 // Show OS mouse cursor
                 // FIXME-PLATFORM: Unfocused windows seems to fail changing the mouse cursor with GLFW 3.2, but 3.3 works here.
-                glfwSetCursor(window, pBackend->MouseCursors[imguiCursor] ? pBackend->MouseCursors[imguiCursor] : pBackend->MouseCursors[ImGuiMouseCursor_Arrow]);
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                glfwSetCursor(pWindow, pBackend->MouseCursors[CurrentCursor] ? pBackend->MouseCursors[CurrentCursor] : pBackend->MouseCursors[ImGuiMouseCursor_Arrow]);
+                glfwSetInputMode(pWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             }
         }
     }
@@ -1865,16 +1867,16 @@ namespace GUI
 
     static void ImGuiUpdateGamepads()
     {
-        ImGuiIO& io = ImGui::GetIO();
-        if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0) // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
+        ImGuiIO& UIState = ImGui::GetIO();
+        if ((UIState.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0) // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
         {
             return;
         }
 
-        io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+        UIState.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
 
-        GLFWgamepadstate gamepad;
-        if (!glfwGetGamepadState(GLFW_JOYSTICK_1, &gamepad))
+        GLFWgamepadstate Gamepad;
+        if (!glfwGetGamepadState(GLFW_JOYSTICK_1, &Gamepad))
         {
             return;
         }
@@ -1882,18 +1884,18 @@ namespace GUI
     #define MAP_BUTTON(KEY_NO, BUTTON_NO, _UNUSED) \
         do \
         { \
-            io.AddKeyEvent(KEY_NO, gamepad.buttons[BUTTON_NO] != 0); \
+            UIState.AddKeyEvent(KEY_NO, Gamepad.buttons[BUTTON_NO] != 0); \
         } while (0)
         
     #define MAP_ANALOG(KEY_NO, AXIS_NO, _UNUSED, V0, V1) \
         do \
         { \
-            float v = gamepad.axes[AXIS_NO]; \
-            v = (v - V0) / (V1 - V0); \
-            io.AddKeyAnalogEvent(KEY_NO, v > 0.10f, Saturate(v)); \
+            float Axis = Gamepad.axes[AXIS_NO]; \
+            Axis = (Axis - V0) / (V1 - V0); \
+            UIState.AddKeyAnalogEvent(KEY_NO, Axis > 0.10f, Saturate(Axis)); \
         } while (0)
 
-        io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+        UIState.BackendFlags |= ImGuiBackendFlags_HasGamepad;
         MAP_BUTTON(ImGuiKey_GamepadStart,       GLFW_GAMEPAD_BUTTON_START,          7);
         MAP_BUTTON(ImGuiKey_GamepadBack,        GLFW_GAMEPAD_BUTTON_BACK,           6);
         MAP_BUTTON(ImGuiKey_GamepadFaceLeft,    GLFW_GAMEPAD_BUTTON_X,              2);     // Xbox X, PS Square
@@ -1933,10 +1935,10 @@ namespace GUI
         ImGui::CreateContext();
 
         // General ImGui config
-        ImGuiIO& UIConfig = ImGui::GetIO();
-        UIConfig.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-        UIConfig.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
-        UIConfig.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
+        ImGuiIO& UIState = ImGui::GetIO();
+        UIState.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+        UIState.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+        UIState.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
 
         // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
         // io.ConfigViewportsNoAutoMerge   = true;
@@ -1953,7 +1955,7 @@ namespace GUI
 
         // When Viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
         ImGuiStyle& UIStyle = ImGui::GetStyle();
-        if (UIConfig.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        if (UIState.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             UIStyle.WindowRounding = 0.0f;
             UIStyle.Colors[ImGuiCol_WindowBg].w = 1.0f;
@@ -2044,13 +2046,13 @@ namespace GUI
             glfwDestroyCursor(pBackend->MouseCursors[n]);
         }
 
-        ImGuiIO& UIConfig = ImGui::GetIO();
-        UIConfig.BackendPlatformName     = nullptr;
-        UIConfig.BackendPlatformUserData = nullptr;
+        ImGuiIO& UIState = ImGui::GetIO();
+        UIState.BackendPlatformName     = nullptr;
+        UIState.BackendPlatformUserData = nullptr;
         SAFE_DELETE(pBackend);
 
-        UIConfig.BackendRendererName     = nullptr;
-        UIConfig.BackendRendererUserData = nullptr;
+        UIState.BackendRendererName     = nullptr;
+        UIState.BackendRendererUserData = nullptr;
         SAFE_DELETE(pRendererBackend);
         
         // Destroy the context last

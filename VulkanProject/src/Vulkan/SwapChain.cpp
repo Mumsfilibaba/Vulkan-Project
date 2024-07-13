@@ -51,18 +51,18 @@ FSwapchain::FSwapchain(FDevice* pDevice, GLFWwindow* pWindow)
 
 FSwapchain::~FSwapchain()
 {
-    for (FFrameData& FrameData : m_FrameData)
+    for (FSemaphores& SemaphoreData : m_SemaphoreData)
     {
-        if (FrameData.ImageSemaphore != VK_NULL_HANDLE)
+        if (SemaphoreData.ImageSemaphore != VK_NULL_HANDLE)
         {
-            vkDestroySemaphore(GetDevice()->GetDevice(), FrameData.ImageSemaphore, nullptr);
-            FrameData.ImageSemaphore = VK_NULL_HANDLE;
+            vkDestroySemaphore(GetDevice()->GetDevice(), SemaphoreData.ImageSemaphore, nullptr);
+            SemaphoreData.ImageSemaphore = VK_NULL_HANDLE;
         }
         
-        if (FrameData.RenderSemaphore != VK_NULL_HANDLE)
+        if (SemaphoreData.RenderSemaphore != VK_NULL_HANDLE)
         {
-            vkDestroySemaphore(GetDevice()->GetDevice(), FrameData.RenderSemaphore, nullptr);
-            FrameData.RenderSemaphore = VK_NULL_HANDLE;
+            vkDestroySemaphore(GetDevice()->GetDevice(), SemaphoreData.RenderSemaphore, nullptr);
+            SemaphoreData.RenderSemaphore = VK_NULL_HANDLE;
         }
     }
     
@@ -108,7 +108,6 @@ bool FSwapchain::CreateSwapchain()
         m_Extent = ActualExtent;
     }
 
-
     std::vector<VkPresentModeKHR>   PresentModes;
     std::vector<VkSurfaceFormatKHR> Formats;
 
@@ -137,7 +136,6 @@ bool FSwapchain::CreateSwapchain()
         return false;
     }
 
-
     uint32_t PresentModeCount;
     vkGetPhysicalDeviceSurfacePresentModesKHR(GetDevice()->GetPhysicalDevice(), m_Surface, &PresentModeCount, nullptr);
     if (PresentModeCount > 0)
@@ -165,7 +163,6 @@ bool FSwapchain::CreateSwapchain()
     {
         m_ImageCount = Capabilities.maxImageCount;
     }
-
 
     // Create the swapchain
     {
@@ -205,7 +202,6 @@ bool FSwapchain::CreateSwapchain()
 
     std::vector<VkImage> Images(RealImageCount);
     vkGetSwapchainImagesKHR(GetDevice()->GetDevice(), m_Swapchain, &RealImageCount, Images.data());
-
 
     // Create ImageViews for the BackBuffers
     {
@@ -267,7 +263,9 @@ bool FSwapchain::CreateSemaphores()
     SemaphoreCreateInfo.flags = 0;
 
     // Create semaphores
-    for (uint32_t i = 0; i < m_ImageCount; i++)
+    m_SemaphoreCount = m_ImageCount + 1;
+    m_SemaphoreData.resize(m_SemaphoreCount);
+    for (uint32_t i = 0; i < m_SemaphoreCount; i++)
     {
         VkSemaphore ImageSemaphore  = VK_NULL_HANDLE;
         VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
@@ -284,8 +282,8 @@ bool FSwapchain::CreateSemaphores()
             SetDebugName(GetDevice()->GetDevice(), "RenderSemaphore[" + std::to_string(i) + "]", (uint64_t)RenderSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
         }
 
-        m_FrameData[i].ImageSemaphore  = ImageSemaphore;
-        m_FrameData[i].RenderSemaphore = RenderSemaphore;
+        m_SemaphoreData[i].ImageSemaphore  = ImageSemaphore;
+        m_SemaphoreData[i].RenderSemaphore = RenderSemaphore;
     }
 
     return true;
@@ -293,21 +291,22 @@ bool FSwapchain::CreateSemaphores()
 
 VkResult FSwapchain::AquireNextImage()
 {
-    VkSemaphore SignalSemaphore = m_FrameData[m_SemaphoreIndex].ImageSemaphore;
+    m_SemaphoreIndex = (m_SemaphoreIndex + 1) % m_SemaphoreCount;
+    VkSemaphore SignalSemaphore = GetImageSemaphore();
     return vkAcquireNextImageKHR(GetDevice()->GetDevice(), m_Swapchain, UINT64_MAX, SignalSemaphore, VK_NULL_HANDLE, &m_CurrentBufferIndex);
 }
 
 void FSwapchain::WaitForImage()
 {
+    std::cout << "FSwapchain::WaitForImage: SemaphoreIndex[" << m_SemaphoreIndex << "]\n";
+
+    VkSemaphore WaitSemaphores[] = { GetImageSemaphore() };
+    VkPipelineStageFlags WaitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
     VkSubmitInfo SubmitInfo;
     ZERO_STRUCT(&SubmitInfo);
 
-    SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    VkSemaphore WaitSemaphores[1] = {};
-    WaitSemaphores[0] = GetImageSemaphore();
-
-    VkPipelineStageFlags WaitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.waitSemaphoreCount = 1;
     SubmitInfo.pWaitSemaphores    = WaitSemaphores;
     SubmitInfo.pWaitDstStageMask  = WaitStages;
@@ -344,11 +343,11 @@ void FSwapchain::Resize(uint32_t Width, uint32_t Height)
 
 VkResult FSwapchain::Present()
 {
-    VkSemaphore WaitSemaphores[] = { m_FrameData[m_SemaphoreIndex].RenderSemaphore };
+    VkSemaphore WaitSemaphores[] = { GetRenderSemaphore() };
 
     VkPresentInfoKHR PresentInfo;
     ZERO_STRUCT(&PresentInfo);
-    
+
     PresentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     PresentInfo.waitSemaphoreCount = 1;
     PresentInfo.pWaitSemaphores    = WaitSemaphores;
@@ -361,7 +360,6 @@ VkResult FSwapchain::Present()
     if (Result == VK_SUCCESS)
     {
         // Acquire next image
-        m_SemaphoreIndex = (m_SemaphoreIndex + 1) % m_ImageCount;
         Result = AquireNextImage();
     }
 

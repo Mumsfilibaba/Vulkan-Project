@@ -11,6 +11,10 @@ class FSwapchain : public FDeviceChild
     {
         VkImage     BackBuffer      = VK_NULL_HANDLE;
         VkImageView BackBufferView  = VK_NULL_HANDLE;
+    };
+    
+    struct FSemaphores
+    {
         VkSemaphore ImageSemaphore  = VK_NULL_HANDLE;
         VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
     };
@@ -26,12 +30,12 @@ public:
 
     VkSemaphore GetImageSemaphore() const
     {
-        return m_FrameData[m_SemaphoreIndex].ImageSemaphore;
+        return m_SemaphoreData[m_SemaphoreIndex].ImageSemaphore;
     }
     
     VkSemaphore GetRenderSemaphore() const
     {
-        return m_FrameData[m_SemaphoreIndex].RenderSemaphore;
+        return m_SemaphoreData[m_SemaphoreIndex].RenderSemaphore;
     }
     
     VkImage GetImage(uint32_t index) const
@@ -73,14 +77,16 @@ private:
     VkResult AquireNextImage();
     void WaitForImage();
 
-    GLFWwindow*             m_pWindow;
-    VkSurfaceKHR            m_Surface;
-    VkSwapchainKHR          m_Swapchain;
-    VkExtent2D              m_Extent;
-    VkSurfaceFormatKHR      m_SwapchainFormat;
-    VkPresentModeKHR        m_PresentMode;
-    uint32_t                m_ImageCount;
-    std::vector<FFrameData> m_FrameData;
-    mutable uint32_t        m_SemaphoreIndex;
-    mutable uint32_t        m_CurrentBufferIndex;
+    GLFWwindow*              m_pWindow;
+    VkSurfaceKHR             m_Surface;
+    VkSwapchainKHR           m_Swapchain;
+    VkExtent2D               m_Extent;
+    VkSurfaceFormatKHR       m_SwapchainFormat;
+    VkPresentModeKHR         m_PresentMode;
+    uint32_t                 m_ImageCount;
+    uint32_t                 m_SemaphoreCount;
+    std::vector<FFrameData>  m_FrameData;
+    std::vector<FSemaphores> m_SemaphoreData;
+    mutable uint32_t         m_SemaphoreIndex;
+    mutable uint32_t         m_CurrentBufferIndex;
 };
