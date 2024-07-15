@@ -27,7 +27,6 @@ layout(binding = 0) uniform CameraBufferObject
 
 layout(push_constant, std430) uniform PushConstant
 {
-    mat4 TransformMatrix;
     vec4 Color;
 } Constants;
 

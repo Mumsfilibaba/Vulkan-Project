@@ -562,13 +562,12 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
         
         struct FAABBDebugData
         {
-            glm::mat4 TransformMatrix;
             glm::vec4 Color;
         } DebugData;
         
         DebugData.Color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
         
-#if 0
+    #if 0
         for (size_t i = 0; i < Indicies.first; i++)
         {
             const FShaderBoundingBox& BoundingBox = m_pScene->m_AccelerationStructure.m_BoundingBoxes[i];
@@ -598,13 +597,13 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
             pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FAABBDebugData), &DebugData);
             pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, 1, 0, 0, 0);
         }
-#else
+    #else
         DebugData.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
         pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FAABBDebugData), &DebugData);
         
         const uint32_t NumInstances = static_cast<uint32_t>(m_pScene->m_AccelerationStructure.m_BoundingBoxes.size());
         pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, NumInstances, 0, 0, 0);
-#endif
+    #endif
     }
     
     // End renderpass

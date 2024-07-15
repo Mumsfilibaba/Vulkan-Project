@@ -5,7 +5,6 @@ layout(location = 0) out vec4 outColor;
 
 layout(push_constant, std430) uniform PushConstant
 {
-    mat4 TransformMatrix;
     vec4 Color;
 } Constants;
 
