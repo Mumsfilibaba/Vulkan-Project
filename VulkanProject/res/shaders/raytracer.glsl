@@ -13,9 +13,10 @@
 
 #define VIEW_MODE_RENDER 0
 #define VIEW_MODE_NORMALS 1
-#define VIEW_MODE_BARYCENTRICS 2
-#define VIEW_MODE_TEXCOORDS 3
-#define VIEW_MODE_BVH_INTERSECTION 4
+#define VIEW_MODE_ALBEDO 2
+#define VIEW_MODE_BARYCENTRICS 3
+#define VIEW_MODE_TEXCOORDS 4
+#define VIEW_MODE_BVH_INTERSECTION 5
 
 #define NUM_THREADS 16
 #define MAX_DEPTH 1024
@@ -679,6 +680,27 @@ vec3 GetTexCoordsForRay(in FRay Ray)
     }
 }
 
+vec3 GetAlbedoForRay(in FRay Ray)
+{
+    FRayPayLoad PayLoad;
+    PayLoad.MinT        = 0.0001;
+    PayLoad.MaxT        = 100000.0;
+    PayLoad.T           = PayLoad.MaxT;
+    PayLoad.bFrontFace  = false;
+    PayLoad.bFromInside = false;
+
+    if (TraceRay(Ray, PayLoad))
+    {
+        const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
+        FMaterial Material = Materials[MaterialIndex];
+        return Material.AlbedoColor.rgb;
+    }
+    else
+    {
+        return vec3(0.0, 0.0, 0.0);
+    }
+}
+
 vec3 GetColorForRay_BvhDebug(in FRay Ray)
 {
     // Create a stack for checking all the nodes
@@ -789,6 +811,12 @@ void main()
         vec3 HitNormal = GetNormalForRay(Ray);
         imageStore(uOutput, Pixel, vec4(HitNormal, 1.0));
     }
+    else if (uScene.ViewMode == VIEW_MODE_ALBEDO)
+    {
+        // Get Barycentrics for this Ray
+        vec3 HitAlbedo = GetAlbedoForRay(Ray);
+        imageStore(uOutput, Pixel, vec4(HitAlbedo, 1.0));
+    }
     else if (uScene.ViewMode == VIEW_MODE_BARYCENTRICS)
     {
         // Get Barycentrics for this Ray
@@ -798,8 +826,8 @@ void main()
     else if (uScene.ViewMode == VIEW_MODE_TEXCOORDS)
     {
         // Get Barycentrics for this Ray
-        vec3 HitBarycentrics = GetTexCoordsForRay(Ray);
-        imageStore(uOutput, Pixel, vec4(HitBarycentrics, 1.0));
+        vec3 HitTexCoords = GetTexCoordsForRay(Ray);
+        imageStore(uOutput, Pixel, vec4(HitTexCoords, 1.0));
     }
     else if (uScene.ViewMode == VIEW_MODE_BVH_INTERSECTION)
     {

@@ -190,6 +190,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
         }
     }
     
+    //
     Vertices   = std::move(NewVertices);
     VerticesEx = std::move(NewVerticesEx);
     Indicies   = std::move(NewIndices);

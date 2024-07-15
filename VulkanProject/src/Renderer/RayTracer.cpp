@@ -683,6 +683,7 @@ void FRayTracer::OnRenderUI()
             {
                 "Render",
                 "Normals",
+                "Albedo",
                 "Barycentrics",
                 "TexCoords",
                 "BVH Intersection",
@@ -706,17 +707,21 @@ void FRayTracer::OnRenderUI()
                 }
                 else if (CurrentViewMode == 2)
                 {
-                    m_pScene->m_Settings.ViewMode = EViewMode::Barycentrics;
+                    m_pScene->m_Settings.ViewMode = EViewMode::Albedo;
                 }
                 else if (CurrentViewMode == 3)
                 {
-                    m_pScene->m_Settings.ViewMode = EViewMode::TexCoords;
+                    m_pScene->m_Settings.ViewMode = EViewMode::Barycentrics;
                 }
                 else if (CurrentViewMode == 4)
                 {
-                    m_pScene->m_Settings.ViewMode = EViewMode::BVHIntersection;
+                    m_pScene->m_Settings.ViewMode = EViewMode::TexCoords;
                 }
                 else if (CurrentViewMode == 5)
+                {
+                    m_pScene->m_Settings.ViewMode = EViewMode::BVHIntersection;
+                }
+                else if (CurrentViewMode == 6)
                 {
                     m_pScene->m_Settings.ViewMode = EViewMode::Debug;
                 }
