@@ -156,14 +156,26 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
                 Attrib.vertices[BasePositionIndex + 2],
             };
             
-            const size_t BaseNormalIndex = 3 * Index.normal_index;
-            
-            Vertex.Normal =
+            if (Index.normal_index >= 0)
             {
-                Attrib.normals[BaseNormalIndex + 0],
-                Attrib.normals[BaseNormalIndex + 1],
-                Attrib.normals[BaseNormalIndex + 2],
-            };
+                const size_t BaseNormalIndex = 3 * Index.normal_index;
+                Vertex.Normal =
+                {
+                    Attrib.normals[BaseNormalIndex + 0],
+                    Attrib.normals[BaseNormalIndex + 1],
+                    Attrib.normals[BaseNormalIndex + 2],
+                };
+            }
+            
+            if (Index.texcoord_index >= 0)
+            {
+                const size_t BaseTexCoordIndex = 2 * Index.texcoord_index;
+                Vertex.TexCoord =
+                {
+                    Attrib.texcoords[BaseTexCoordIndex + 0],
+                    1.0f - Attrib.texcoords[BaseTexCoordIndex + 1]
+                };
+            }
             
             if (UniqueVertices.count(Vertex) == 0)
             {
@@ -171,7 +183,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
                 
                 // Convert this massive vertex into the two "lighter" vertices
                 NewVertices.push_back({ glm::vec4(Vertex.Position, 0.0f) });
-                NewVerticesEx.push_back({ glm::vec4(Vertex.Normal, 0.0f) });
+                NewVerticesEx.push_back({ glm::vec4(Vertex.Normal, 0.0f), glm::vec4(Vertex.TexCoord, 0.0f, 0.0f) });
             }
 
             NewIndices.push_back(UniqueVertices[Vertex]);

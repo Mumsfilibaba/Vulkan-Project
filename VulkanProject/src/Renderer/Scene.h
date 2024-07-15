@@ -24,8 +24,9 @@ enum class EViewMode : uint32_t
     Render = 0,
     Normals = 1,
     Barycentrics = 2,
-    BVHIntersection = 3,
-    Debug = 4,
+    TexCoords = 3,
+    BVHIntersection = 4,
+    Debug = 5,
 };
 
 struct FSceneSettings

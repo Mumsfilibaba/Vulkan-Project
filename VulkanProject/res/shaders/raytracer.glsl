@@ -14,7 +14,8 @@
 #define VIEW_MODE_RENDER 0
 #define VIEW_MODE_NORMALS 1
 #define VIEW_MODE_BARYCENTRICS 2
-#define VIEW_MODE_BVH_INTERSECTION 3
+#define VIEW_MODE_TEXCOORDS 3
+#define VIEW_MODE_BVH_INTERSECTION 4
 
 #define NUM_THREADS 16
 #define MAX_DEPTH 1024
@@ -342,7 +343,12 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
                     vec3 Normal1 = VerticesEx[Triangle.Index1].Normal.xyz;
                     vec3 Normal2 = VerticesEx[Triangle.Index2].Normal.xyz;
 
-                    PayLoad.Normal = normalize((PayLoad.BaryCentrics.x * Normal1) + (PayLoad.BaryCentrics.y * Normal2) + (PayLoad.BaryCentrics.z * Normal0));
+                    vec2 TexCoords0 = VerticesEx[Triangle.Index0].TexCoords.xy;
+                    vec2 TexCoords1 = VerticesEx[Triangle.Index1].TexCoords.xy;
+                    vec2 TexCoords2 = VerticesEx[Triangle.Index2].TexCoords.xy;
+
+                    PayLoad.Normal    = normalize((PayLoad.BaryCentrics.x * Normal1) + (PayLoad.BaryCentrics.y * Normal2) + (PayLoad.BaryCentrics.z * Normal0));
+                    PayLoad.TexCoords = (PayLoad.BaryCentrics.x * TexCoords1) + (PayLoad.BaryCentrics.y * TexCoords2) + (PayLoad.BaryCentrics.z * TexCoords0);
                     LastTriangleHitIndex = int(TriangleIndex);
                 }
             }
@@ -654,6 +660,25 @@ vec3 GetBarycentricsForRay(in FRay Ray)
     }
 }
 
+vec3 GetTexCoordsForRay(in FRay Ray)
+{
+    FRayPayLoad PayLoad;
+    PayLoad.MinT        = 0.0001;
+    PayLoad.MaxT        = 100000.0;
+    PayLoad.T           = PayLoad.MaxT;
+    PayLoad.bFrontFace  = false;
+    PayLoad.bFromInside = false;
+
+    if (TraceRay(Ray, PayLoad))
+    {
+        return vec3(PayLoad.TexCoords, 0.0);
+    }
+    else
+    {
+        return vec3(0.0, 0.0, 0.0);
+    }
+}
+
 vec3 GetColorForRay_BvhDebug(in FRay Ray)
 {
     // Create a stack for checking all the nodes
@@ -764,10 +789,16 @@ void main()
         vec3 HitNormal = GetNormalForRay(Ray);
         imageStore(uOutput, Pixel, vec4(HitNormal, 1.0));
     }
-        else if (uScene.ViewMode == VIEW_MODE_BARYCENTRICS)
+    else if (uScene.ViewMode == VIEW_MODE_BARYCENTRICS)
     {
         // Get Barycentrics for this Ray
         vec3 HitBarycentrics = GetBarycentricsForRay(Ray);
+        imageStore(uOutput, Pixel, vec4(HitBarycentrics, 1.0));
+    }
+    else if (uScene.ViewMode == VIEW_MODE_TEXCOORDS)
+    {
+        // Get Barycentrics for this Ray
+        vec3 HitBarycentrics = GetTexCoordsForRay(Ray);
         imageStore(uOutput, Pixel, vec4(HitBarycentrics, 1.0));
     }
     else if (uScene.ViewMode == VIEW_MODE_BVH_INTERSECTION)

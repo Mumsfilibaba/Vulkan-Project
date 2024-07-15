@@ -65,6 +65,8 @@ struct FVertexEx
 {
     // 0-16
     vec4 Normal;
+    // 16-32
+    vec4 TexCoords;
 };
 
 struct FTriangle

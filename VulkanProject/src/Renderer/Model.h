@@ -186,6 +186,7 @@ struct FTriangle
 struct FVertexEx
 {
     glm::vec4 Normal;
+    glm::vec4 TexCoords;
 };
 
 struct FMesh

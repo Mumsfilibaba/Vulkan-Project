@@ -13,6 +13,7 @@ struct FRayPayLoad
     vec3  Normal;
     vec3  Position;
     vec3  BaryCentrics;
+    vec2  TexCoords;
     float T;
     float MinT;
     float MaxT;
