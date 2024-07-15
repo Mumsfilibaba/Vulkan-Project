@@ -62,6 +62,7 @@ FRayTracer::FRayTracer()
     , m_pBvhBuffer(nullptr)
     , m_pAABBVertexBuffer(nullptr)
     , m_pAABBIndexBuffer(nullptr)
+    , m_pAABBInstanceBuffer(nullptr)
     , m_pSceneTexture1(nullptr)
     , m_pSceneTextureView1(nullptr)
     , m_pSceneTexture0(nullptr)
@@ -599,23 +600,10 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
         }
 #else
         DebugData.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+        pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FAABBDebugData), &DebugData);
         
-        for (size_t i = 0; i < m_pScene->m_AccelerationStructure.m_BoundingBoxes.size(); i++)
-        {
-            const FShaderBoundingBox& BoundingBox = m_pScene->m_AccelerationStructure.m_BoundingBoxes[i];
-            if (BoundingBox.NumTriangles > 0)
-            {
-                glm::vec3 Scale    = glm::vec3(BoundingBox.BoxMax) - glm::vec3(BoundingBox.BoxMin);
-                glm::vec3 Position = glm::vec3(BoundingBox.BoxMin) + (Scale * 0.5f);
-                
-                DebugData.TransformMatrix = glm::identity<glm::mat4>();
-                DebugData.TransformMatrix = glm::translate(DebugData.TransformMatrix, Position);
-                DebugData.TransformMatrix = glm::scale(DebugData.TransformMatrix, Scale);
-                
-                pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FAABBDebugData), &DebugData);
-                pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, 1, 0, 0, 0);
-            }
-        }
+        const uint32_t NumInstances = static_cast<uint32_t>(m_pScene->m_AccelerationStructure.m_BoundingBoxes.size());
+        pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, NumInstances, 0, 0, 0);
 #endif
     }
     
@@ -1059,6 +1047,7 @@ void FRayTracer::Release()
     SAFE_DELETE(m_pBvhBuffer);
     SAFE_DELETE(m_pAABBVertexBuffer);
     SAFE_DELETE(m_pAABBIndexBuffer);
+    SAFE_DELETE(m_pAABBInstanceBuffer);
     
     SAFE_DELETE(m_pSkybox);
     
@@ -1244,7 +1233,7 @@ void FRayTracer::CreateRayTracingResources()
 void FRayTracer::CreateDebugViewResources()
 {
     // Create DebugView DescriptorSetLayout
-    constexpr uint32_t NumDebugPassBindings = 1;
+    constexpr uint32_t NumDebugPassBindings = 2;
     VkDescriptorSetLayoutBinding DebugPassBindings[NumDebugPassBindings];
 
     // Camera Buffer
@@ -1253,6 +1242,13 @@ void FRayTracer::CreateDebugViewResources()
     DebugPassBindings[0].descriptorCount    = 1;
     DebugPassBindings[0].stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
     DebugPassBindings[0].pImmutableSamplers = nullptr;
+    
+    // Storage Buffer
+    DebugPassBindings[1].binding            = 1;
+    DebugPassBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    DebugPassBindings[1].descriptorCount    = 1;
+    DebugPassBindings[1].stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+    DebugPassBindings[1].pImmutableSamplers = nullptr;
     
     FDescriptorSetLayoutParams DebugPassDescriptorSetLayoutParams;
     DebugPassDescriptorSetLayoutParams.pBindings   = DebugPassBindings;
@@ -1596,6 +1592,16 @@ void FRayTracer::CreateGlobalBuffers()
     m_pBvhBuffer = FBuffer::Create(m_pDevice, BoundingBoxBufferParams, m_pDeviceAllocator);
     assert(m_pBvhBuffer != nullptr);
     m_pBvhBuffer->SetDebugName("BVH-Buffer");
+    
+    // Debug AABB instance buffer
+    FBufferParams AABBInstanceBufferParams;
+    AABBInstanceBufferParams.Size             = sizeof(glm::mat4) * MAX_BVH_NODES;
+    AABBInstanceBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    AABBInstanceBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pAABBInstanceBuffer = FBuffer::Create(m_pDevice, AABBInstanceBufferParams, m_pDeviceAllocator);
+    assert(m_pAABBInstanceBuffer != nullptr);
+    m_pAABBInstanceBuffer->SetDebugName("Debug AABB Instance Buffer");
 }
 
 void FRayTracer::CreateDescriptorSet()
@@ -1660,12 +1666,14 @@ void FRayTracer::CreateDescriptorSet()
     m_pDebugDescriptorSet0->SetDebugName("DebugPass DescriptorSet0");
 
     m_pDebugDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
+    m_pDebugDescriptorSet0->BindStorageBuffer(m_pAABBInstanceBuffer->GetBuffer(), 1);
     
     m_pDebugDescriptorSet1 = FDescriptorSet::Create(m_pDevice, m_pDescriptorPool, m_pDebugDescriptorSetLayout);
     assert(m_pDebugDescriptorSet1 != nullptr);
     m_pDebugDescriptorSet1->SetDebugName("DebugPass DescriptorSet1");
 
     m_pDebugDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
+    m_pDebugDescriptorSet1->BindStorageBuffer(m_pAABBInstanceBuffer->GetBuffer(), 1);
 }
 
 void FRayTracer::ReleaseDescriptorSets()
@@ -1925,6 +1933,16 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         BufferCopy.srcOffset = 0;
         
         pCommandBuffer->CopyBuffer(m_pScene->m_pBoundingBoxBuffer->GetBuffer(), m_pBvhBuffer->GetBuffer(), 1, &BufferCopy);
+    }
+    
+    if (m_pScene->m_bUpdateBuffers && m_pScene->m_pAABBInstanceBuffer)
+    {
+        VkBufferCopy BufferCopy;
+        BufferCopy.size      = m_pScene->m_pAABBInstanceBuffer->GetSize();
+        BufferCopy.dstOffset = 0;
+        BufferCopy.srcOffset = 0;
+        
+        pCommandBuffer->CopyBuffer(m_pScene->m_pAABBInstanceBuffer->GetBuffer(), m_pAABBInstanceBuffer->GetBuffer(), 1, &BufferCopy);
     }
     
     // Do not update next frame

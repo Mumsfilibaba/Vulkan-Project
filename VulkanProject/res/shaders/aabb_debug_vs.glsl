@@ -31,7 +31,13 @@ layout(push_constant, std430) uniform PushConstant
     vec4 Color;
 } Constants;
 
+layout(std430, binding = 1) buffer MatrixBuffer
+{
+    mat4 InstanceMatrices[];
+};
+
 void main() 
 {
-    gl_Position = uCamera.Projection * uCamera.View * Constants.TransformMatrix * vec4(inPosition, 1.0);
+    mat4 TransformMatrix = InstanceMatrices[gl_InstanceIndex];
+    gl_Position = uCamera.Projection * uCamera.View * TransformMatrix * vec4(inPosition, 1.0);
 }

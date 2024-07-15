@@ -144,6 +144,7 @@ private:
     
     FBuffer* m_pAABBVertexBuffer;
     FBuffer* m_pAABBIndexBuffer;
+    FBuffer* m_pAABBInstanceBuffer;
 
     // SceneTexture
     FTexture*       m_pSceneTexture0;

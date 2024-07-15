@@ -41,6 +41,7 @@ FScene::~FScene()
     SAFE_DELETE(m_pVertexExBuffer);
     SAFE_DELETE(m_pMeshVertexBuffer);
     SAFE_DELETE(m_pMeshIndexBuffer);
+    SAFE_DELETE(m_pAABBInstanceBuffer);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -113,7 +114,7 @@ void FModelScene::Initialize()
     m_pVertexExBuffer->SetDebugName("CPU VertexEx Buffer");
     
     BufferParams.Size             = sizeof(FVertexPosOnly) * Mesh.Vertices.size();
-    BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    BufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
     m_pMeshVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Vertices.data());
@@ -126,6 +127,33 @@ void FModelScene::Initialize()
     m_pMeshIndexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Indicies.data());
     assert(m_pMeshIndexBuffer != nullptr);
     m_pMeshIndexBuffer->SetDebugName("CPU Debug Index Buffer");
+    
+    // Create a matrix for each AABB
+    std::vector<glm::mat4> AABBMatrices;
+    AABBMatrices.reserve(m_AccelerationStructure.m_BoundingBoxes.size());
+    
+    for (size_t i = 0; i < m_AccelerationStructure.m_BoundingBoxes.size(); i++)
+    {
+        const FShaderBoundingBox& BoundingBox = m_AccelerationStructure.m_BoundingBoxes[i];
+        if (BoundingBox.NumTriangles > 0)
+        {
+            glm::vec3 Scale    = glm::vec3(BoundingBox.BoxMax) - glm::vec3(BoundingBox.BoxMin);
+            glm::vec3 Position = glm::vec3(BoundingBox.BoxMin) + (Scale * 0.5f);
+            
+            glm::mat4 TransformMatrix = glm::identity<glm::mat4>();
+            TransformMatrix = glm::translate(TransformMatrix, Position);
+            TransformMatrix = glm::scale(TransformMatrix, Scale);
+            AABBMatrices.push_back(TransformMatrix);
+        }
+    }
+    
+    BufferParams.Size             = sizeof(glm::mat4) * AABBMatrices.size();
+    BufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    
+    m_pAABBInstanceBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, AABBMatrices.data());
+    assert(m_pAABBInstanceBuffer != nullptr);
+    m_pAABBInstanceBuffer->SetDebugName("CPU Debug AABB Instance Buffer");
     
     // Quads
 #if 1

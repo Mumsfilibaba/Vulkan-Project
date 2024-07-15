@@ -76,6 +76,7 @@ struct FScene
     // Debugging
     FBuffer* m_pMeshVertexBuffer;
     FBuffer* m_pMeshIndexBuffer;
+    FBuffer* m_pAABBInstanceBuffer;
 };
 
 enum class EModelSceneType
