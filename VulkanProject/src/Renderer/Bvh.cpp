@@ -269,6 +269,7 @@ void FBvhAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
         
         // Set the MaterialIndex for this triangle
         Triangle.MaterialIndex = Mesh.TriangleInfo[TriangleIndex].MaterialIndex;
+        TriangleIndex++;
     }
     
     // Create root-node and insert all triangles into it
@@ -307,10 +308,10 @@ void FBvhAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
         }
         
         FShaderBoundingBox& ShaderBox = m_BoundingBoxes.emplace_back();
-        ShaderBox.BoxMin               = Box.BoxMin;
-        ShaderBox.BoxMax               = Box.BoxMax;
+        ShaderBox.BoxMin         = Box.BoxMin;
+        ShaderBox.BoxMax         = Box.BoxMax;
         ShaderBox.PrimitiveIndex = (Box.NumTriangles == 0) ? Box.ChildIndex : Box.FirstTriangleIndex;
-        ShaderBox.NumTriangles         = Box.NumTriangles;
+        ShaderBox.NumTriangles   = Box.NumTriangles;
 
         if (ShaderBox.NumTriangles > 0)
         {

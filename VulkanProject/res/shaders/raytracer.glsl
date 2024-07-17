@@ -594,7 +594,17 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
 
             if (DoRefraction == 0.0)
             {
-                RayColor *= mix(Material.AlbedoColor.rgb, Material.SpecularColor.rgb, DoSpecular);
+                vec3 Albedo;
+                if (Material.AlbedoTexIndex != INVALID_BINDLESS_ID)
+                {
+                    Albedo = texture(uTextures[Material.AlbedoTexIndex], PayLoad.TexCoords).rgb;
+                }
+                else
+                {
+                    Albedo = Material.AlbedoColor.rgb;
+                }
+
+                RayColor *= mix(Albedo.rgb, Material.SpecularColor.rgb, DoSpecular);
             }
 
             // Take ray probability into account
@@ -696,6 +706,7 @@ vec3 GetAlbedoForRay(in FRay Ray)
     if (TraceRay(Ray, PayLoad))
     {
         const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
+
         FMaterial Material = Materials[MaterialIndex];
         if (Material.AlbedoTexIndex != INVALID_BINDLESS_ID)
         {

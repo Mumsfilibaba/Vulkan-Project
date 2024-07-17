@@ -178,12 +178,12 @@ void FModelScene::Initialize()
     
     // Create Sampler for materials
     FSamplerParams SamplerParams = {};
-    SamplerParams.MagFilter     = VK_FILTER_NEAREST;
-    SamplerParams.MinFilter     = VK_FILTER_NEAREST;
-    SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-    SamplerParams.AddressModeU  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    SamplerParams.AddressModeV  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    SamplerParams.AddressModeW  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    SamplerParams.MagFilter     = VK_FILTER_LINEAR;
+    SamplerParams.MinFilter     = VK_FILTER_LINEAR;
+    SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    SamplerParams.AddressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    SamplerParams.AddressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    SamplerParams.AddressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     SamplerParams.MinLod        = 0;
     SamplerParams.MaxLod        = 1000;
     SamplerParams.MaxAnisotropy = 1.0f;
