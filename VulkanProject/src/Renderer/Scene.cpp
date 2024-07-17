@@ -43,7 +43,10 @@ FScene::~FScene()
         // Cleanup any textures from the BindlessManager
         for (const auto& Material : m_Materials)
         {
-            pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
+            if (Material.AlbedoTex)
+            {
+                pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
+            }
         }
     }
     
@@ -202,7 +205,12 @@ void FModelScene::Initialize()
         ShaderMaterial.IncidenceOfRefraction = 1.0f;
         ShaderMaterial.RefractionChance      = 0.0f;
         ShaderMaterial.RefractionRoughness   = 0.0f;
-        ShaderMaterial.AlbedoTexIndex        = pDevice->GetBindlessManager().AddImageView(Material.AlbedoTex->GetTextureView()->GetImageView(), m_pMaterialSampler->GetSampler());
+        
+        // Add texture to the BindlessManager if there is a texture for this material
+        if (Material.AlbedoTex)
+        {
+            ShaderMaterial.AlbedoTexIndex = pDevice->GetBindlessManager().AddImageView(Material.AlbedoTex->GetTextureView()->GetImageView(), m_pMaterialSampler->GetSampler());
+        }
     }
     
     // Quads
