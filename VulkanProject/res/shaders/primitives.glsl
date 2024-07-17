@@ -1,6 +1,8 @@
 #ifndef PRIMITIVES_GLSL
 #define PRIMITIVES_GLSL
 
+#define INVALID_BINDLESS_ID uint(-1)
+
 struct FMaterial
 {
     // 0-16
@@ -16,13 +18,14 @@ struct FMaterial
     float SpecularRoughness;
     float IncidenceOfRefraction;
     float RefractionChance;
-    // 80-84
+    // 80-88
     float RefractionRoughness;
+    // 84-88
+    uint AlbedoTexIndex;
 
     // Padding
     uint Padding0;
     uint Padding1;
-    uint Padding2;
 };
 
 struct FQuad

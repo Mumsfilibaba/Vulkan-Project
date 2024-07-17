@@ -179,17 +179,15 @@ private:
     uint32_t m_IndexCount;
 };
 
-struct FTriangle
-{
-    glm::vec3 Center;
-    glm::vec3 Positions[3];
-    uint32_t  Indicies[3];
-};
-
 struct FVertexEx
 {
     glm::vec4 Normal;
     glm::vec4 TexCoords;
+};
+
+struct FTriangleInfo
+{
+    uint32_t MaterialIndex;
 };
 
 struct FMaterial
@@ -201,6 +199,7 @@ struct FMesh
 {
     bool LoadFromFile(const std::string& Filepath);
     
+    std::vector<FTriangleInfo>  TriangleInfo;
     std::vector<uint32_t>       Indicies;
     std::vector<FVertexPosOnly> Vertices;
     std::vector<FVertexEx>      VerticesEx;

@@ -3,13 +3,16 @@
 #include "ScenePrimitives.h"
 #include "Model.h"
 
-struct FBoundingBoxBuilder;
+struct FBvhBuilder;
 
 struct FShaderBoundingBox
 {
     // 0-16
     glm::vec3 BoxMin;
-    uint32_t TriangleOrChildIndex = 0;
+    
+    // Depending on the context this is etiher first child index or frist triangle index
+    uint32_t PrimitiveIndex = 0;
+    
     // 16-32
     glm::vec3 BoxMax;
     uint32_t NumTriangles = 0;
@@ -39,9 +42,9 @@ struct FAABB
     glm::vec3 Max;
 };
 
-struct FBoundingBox
+struct FBvhBoundingBox
 {
-    FBoundingBox()
+    FBvhBoundingBox()
         : BoxMin(std::numeric_limits<float>::max())
         , BoxMax(std::numeric_limits<float>::lowest())
         , Triangles()
@@ -59,25 +62,36 @@ struct FBoundingBox
     uint32_t              ChildIndex;
 };
 
-struct FBoundingBoxBuilder
+struct FBvhTriangle
 {
-    FBoundingBoxBuilder(uint32_t InMaxDepth);
+    glm::vec3 Center;
+    glm::vec3 BoundsMin;
+    glm::vec3 BoundsMax;
+
+    glm::vec3 Positions[3];
+    uint32_t  Indicies[3];
+    uint32_t  MaterialIndex;
+};
+
+struct FBvhBuilder
+{
+    FBvhBuilder(uint32_t InMaxDepth);
     
     void BuildHierarchy();
     void Finalize();
     void RecalculateBounds(size_t VolumeIndex);
     float EvaluateCost(size_t VolumeIndex, size_t AxisIndex, float SplitPos);
     
-    std::vector<FTriangle>                 Triangles;
-    std::vector<FBoundingBox>              BoundingBoxes;
+    std::vector<FBvhTriangle>              Triangles;
+    std::vector<FBvhBoundingBox>           BoundingBoxes;
     const uint32_t                         MaxDepth;
     uint32_t                               Depth;
     std::vector<std::pair<size_t, size_t>> DepthDebugIndicies;
 };
 
-struct FAccelerationStructure
+struct FBvhAccelerationStructure
 {
-    FAccelerationStructure();
+    FBvhAccelerationStructure();
     
     void Build(const FMesh& Mesh, uint32_t MaxDepth);
 

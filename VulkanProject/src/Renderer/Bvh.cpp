@@ -7,14 +7,14 @@
 #define SAH_OPTIMIZED 1
 #define SAH_NUM_SPLITS 100
 
-FBoundingBoxBuilder::FBoundingBoxBuilder(uint32_t InMaxDepth)
+FBvhBuilder::FBvhBuilder(uint32_t InMaxDepth)
     : BoundingBoxes()
     , MaxDepth(InMaxDepth)
     , Depth(0)
 {
 }
 
-void FBoundingBoxBuilder::BuildHierarchy()
+void FBvhBuilder::BuildHierarchy()
 {
     // Split bounding box along the longest axix
     std::queue<uint32_t> Queue;
@@ -85,13 +85,16 @@ void FBoundingBoxBuilder::BuildHierarchy()
             #endif
             }
             
+            // Axis must be valid
+            assert(BestAxis >= 0);
+            
             // Add triangles to the child-nodes
             std::vector<uint32_t> LeftIndicies;
             std::vector<uint32_t> RightIndicies;
             for (uint32_t TriangleIndex : TriangleIndices)
             {
                 // Add to either the right- or left- child
-                FTriangle& Triangle = Triangles[TriangleIndex];
+                FBvhTriangle& Triangle = Triangles[TriangleIndex];
                 if (Triangle.Center[BestAxis] < BestSplit)
                 {
                     LeftIndicies.emplace_back(TriangleIndex);
@@ -144,12 +147,12 @@ void FBoundingBoxBuilder::BuildHierarchy()
     Depth = CurrentDepth;
 }
 
-void FBoundingBoxBuilder::Finalize()
+void FBvhBuilder::Finalize()
 {
-    std::vector<FTriangle> NewTriangles;
+    std::vector<FBvhTriangle> NewTriangles;
     NewTriangles.reserve(Triangles.size());
     
-    for (FBoundingBox& Box : BoundingBoxes)
+    for (FBvhBoundingBox& Box : BoundingBoxes)
     {
         // Only process leaf-nodes
         if (Box.ChildIndex != 0)
@@ -179,51 +182,47 @@ void FBoundingBoxBuilder::Finalize()
     Triangles = std::move(NewTriangles);
 }
 
-void FBoundingBoxBuilder::RecalculateBounds(size_t VolumeIndex)
+void FBvhBuilder::RecalculateBounds(size_t VolumeIndex)
 {
     glm::vec3 BoxMin = glm::vec3(std::numeric_limits<float>::max());
     glm::vec3 BoxMax = glm::vec3(std::numeric_limits<float>::lowest());
     
-    FBoundingBox& BoundingBox = BoundingBoxes[VolumeIndex];
+    FBvhBoundingBox& BoundingBox = BoundingBoxes[VolumeIndex];
     for (uint32_t TriangleIndex : BoundingBox.Triangles)
     {
-        FTriangle& Triangle = Triangles[TriangleIndex];
-        BoxMin = glm::min(BoxMin, Triangle.Positions[0]);
-        BoxMin = glm::min(BoxMin, Triangle.Positions[1]);
-        BoxMin = glm::min(BoxMin, Triangle.Positions[2]);
+        FBvhTriangle& Triangle = Triangles[TriangleIndex];
+        BoxMin = glm::min(BoxMin, Triangle.BoundsMin);
+        BoxMin = glm::min(BoxMin, Triangle.BoundsMax);
         
-        BoxMax = glm::max(BoxMax, Triangle.Positions[0]);
-        BoxMax = glm::max(BoxMax, Triangle.Positions[1]);
-        BoxMax = glm::max(BoxMax, Triangle.Positions[2]);
+        BoxMax = glm::max(BoxMax, Triangle.BoundsMin);
+        BoxMax = glm::max(BoxMax, Triangle.BoundsMax);
     }
     
     BoundingBox.BoxMin = BoxMin;
     BoundingBox.BoxMax = BoxMax;
 }
 
-float FBoundingBoxBuilder::EvaluateCost(size_t VolumeIndex, size_t AxisIndex, float SplitPos)
+float FBvhBuilder::EvaluateCost(size_t VolumeIndex, size_t AxisIndex, float SplitPos)
 {
     FAABB LeftBox;
     FAABB RightBox;
     size_t LeftCount  = 0;
     size_t RightCount = 0;
     
-    FBoundingBox& BoundingBox = BoundingBoxes[VolumeIndex];
+    FBvhBoundingBox& BoundingBox = BoundingBoxes[VolumeIndex];
     for (uint32_t TriangleIndex : BoundingBox.Triangles)
     {
-        FTriangle& Triangle = Triangles[TriangleIndex];
+        FBvhTriangle& Triangle = Triangles[TriangleIndex];
         if (Triangle.Center[AxisIndex] < SplitPos)
         {
-            LeftBox.FitAroundPoint(Triangle.Positions[0]);
-            LeftBox.FitAroundPoint(Triangle.Positions[1]);
-            LeftBox.FitAroundPoint(Triangle.Positions[2]);
+            LeftBox.FitAroundPoint(Triangle.BoundsMin);
+            LeftBox.FitAroundPoint(Triangle.BoundsMax);
             LeftCount++;
         }
         else
         {
-            RightBox.FitAroundPoint(Triangle.Positions[0]);
-            RightBox.FitAroundPoint(Triangle.Positions[1]);
-            RightBox.FitAroundPoint(Triangle.Positions[2]);
+            RightBox.FitAroundPoint(Triangle.BoundsMin);
+            RightBox.FitAroundPoint(Triangle.BoundsMax);
             RightCount++;
         }
     }
@@ -232,21 +231,21 @@ float FBoundingBoxBuilder::EvaluateCost(size_t VolumeIndex, size_t AxisIndex, fl
     return Cost > 0 ? Cost : std::numeric_limits<float>::max();
 }
 
-FAccelerationStructure::FAccelerationStructure()
+FBvhAccelerationStructure::FBvhAccelerationStructure()
     : m_Triangles()
     , m_BoundingBoxes()
 {
 }
 
-void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
+void FBvhAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
 {
-    FBoundingBoxBuilder BoundingBoxBuilder(MaxDepth);
+    FBvhBuilder BoundingBoxBuilder(MaxDepth);
     
     // Create all triangles
-    for (uint32_t i = 0; i < Mesh.Indicies.size(); i += 3)
+    for (uint32_t i = 0, TriangleIndex = 0; i < Mesh.Indicies.size(); i += 3)
     {
         // Set each index for the triangle
-        FTriangle Triangle;
+        FBvhTriangle& Triangle = BoundingBoxBuilder.Triangles.emplace_back();
         Triangle.Indicies[0] = Mesh.Indicies[i + 0];
         Triangle.Indicies[1] = Mesh.Indicies[i + 1];
         Triangle.Indicies[2] = Mesh.Indicies[i + 2];
@@ -258,8 +257,18 @@ void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
         // Calculate center of the triangle
         Triangle.Center = (Triangle.Positions[0] + Triangle.Positions[1] + Triangle.Positions[2]) / 3.0f;
         
-        // Insert the triangle into the builder
-        BoundingBoxBuilder.Triangles.push_back(Triangle);
+        // Cache the bounds of the triangle
+        Triangle.BoundsMin = glm::vec3(std::numeric_limits<float>::max());
+        Triangle.BoundsMax = glm::vec3(std::numeric_limits<float>::lowest());
+        
+        for (size_t j = 0; j < 3; j++)
+        {
+            Triangle.BoundsMin = glm::min(Triangle.BoundsMin, Triangle.Positions[j]);
+            Triangle.BoundsMax = glm::max(Triangle.BoundsMax, Triangle.Positions[j]);
+        }
+        
+        // Set the MaterialIndex for this triangle
+        Triangle.MaterialIndex = Mesh.TriangleInfo[TriangleIndex].MaterialIndex;
     }
     
     // Create root-node and insert all triangles into it
@@ -277,18 +286,19 @@ void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
     
     // Convert triangles into shader-compatible structure
     m_Triangles.reserve(BoundingBoxBuilder.Triangles.size());
-    for (const FTriangle& Triangle : BoundingBoxBuilder.Triangles)
+    for (const FBvhTriangle& Triangle : BoundingBoxBuilder.Triangles)
     {
         FShaderTriangle& ShaderTriangle = m_Triangles.emplace_back();
-        ShaderTriangle.Index0 = Triangle.Indicies[0];
-        ShaderTriangle.Index1 = Triangle.Indicies[1];
-        ShaderTriangle.Index2 = Triangle.Indicies[2];
+        ShaderTriangle.Index0        = Triangle.Indicies[0];
+        ShaderTriangle.Index1        = Triangle.Indicies[1];
+        ShaderTriangle.Index2        = Triangle.Indicies[2];
+        ShaderTriangle.MaterialIndex = Triangle.MaterialIndex;
     }
 
     // Convert bounding-boxes into shader-compatible structure
     uint32_t MaxTriangleCount = 0;
     m_BoundingBoxes.reserve(BoundingBoxBuilder.BoundingBoxes.size());
-    for (const FBoundingBox& Box : BoundingBoxBuilder.BoundingBoxes)
+    for (const FBvhBoundingBox& Box : BoundingBoxBuilder.BoundingBoxes)
     {
         if (Box.ChildIndex != 0)
         {
@@ -299,12 +309,12 @@ void FAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
         FShaderBoundingBox& ShaderBox = m_BoundingBoxes.emplace_back();
         ShaderBox.BoxMin               = Box.BoxMin;
         ShaderBox.BoxMax               = Box.BoxMax;
-        ShaderBox.TriangleOrChildIndex = (Box.NumTriangles == 0) ? Box.ChildIndex : Box.FirstTriangleIndex;
+        ShaderBox.PrimitiveIndex = (Box.NumTriangles == 0) ? Box.ChildIndex : Box.FirstTriangleIndex;
         ShaderBox.NumTriangles         = Box.NumTriangles;
 
         if (ShaderBox.NumTriangles > 0)
         {
-            const uint32_t LastTriangleIndex = ShaderBox.TriangleOrChildIndex + ShaderBox.NumTriangles;
+            const uint32_t LastTriangleIndex = ShaderBox.PrimitiveIndex + ShaderBox.NumTriangles;
             assert(LastTriangleIndex <= m_Triangles.size());
             MaxTriangleCount = std::max(static_cast<uint32_t>(ShaderBox.NumTriangles), MaxTriangleCount);
         }

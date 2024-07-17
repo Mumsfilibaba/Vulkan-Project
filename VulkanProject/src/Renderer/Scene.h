@@ -67,7 +67,7 @@ struct FScene
     std::vector<FShaderQuad>    m_Quads;
 
     // Bvh Container
-    FAccelerationStructure m_AccelerationStructure;
+    FBvhAccelerationStructure m_AccelerationStructure;
     
     // CPU Buffers
     FBuffer* m_pVertexBuffer;

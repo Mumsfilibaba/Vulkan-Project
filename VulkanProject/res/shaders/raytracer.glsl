@@ -1,4 +1,6 @@
 #version 450
+#extension GL_EXT_nonuniform_qualifier : enable
+
 #include "halton.glsl"
 #include "random.glsl"
 #include "math.glsl"
@@ -34,7 +36,8 @@ layout (binding = 0, rgba32f) uniform image2D uOutput;
 layout (binding = 1, rgba32f) uniform image2D uPreviousFrame;
 
 // Bindless Textures
-layout (set = 1, binding = 0) uniform samplerCube uTextures[];
+layout (set = 1, binding = 0) uniform sampler2D   uTextures[];
+// layout (set = 1, binding = 0) uniform samplerCube uCubeTextures[];
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Global uniforms
@@ -491,9 +494,9 @@ vec3 GetEnvironmentLight(vec3 RayDirection)
     else if (uScene.BackgroundType == BACKGROUND_TYPE_SKYBOX)
     {
         // Sample the Skybox
-        vec3 UnitDirection = normalize(RayDirection);
-        vec4 SkyboxColor = texture(uTextures[0], UnitDirection);
-        return SkyboxColor.rgb * SKYBOX_MULTIPLIER;
+        //vec3 UnitDirection = normalize(RayDirection);
+        //vec4 SkyboxColor = texture(uCubeTextures[0], UnitDirection);
+        return vec3(1.0, 0.0, 0.0); //SkyboxColor.rgb * SKYBOX_MULTIPLIER;
     }
     else
     {
@@ -694,7 +697,14 @@ vec3 GetAlbedoForRay(in FRay Ray)
     {
         const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
         FMaterial Material = Materials[MaterialIndex];
-        return Material.AlbedoColor.rgb;
+        if (Material.AlbedoTexIndex != INVALID_BINDLESS_ID)
+        {
+            return texture(uTextures[Material.AlbedoTexIndex], PayLoad.TexCoords).rgb;
+        }
+        else
+        {
+            return Material.AlbedoColor.rgb;
+        }
     }
     else
     {

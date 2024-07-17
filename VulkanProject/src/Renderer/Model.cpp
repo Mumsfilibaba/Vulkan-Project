@@ -196,25 +196,32 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     }
     
     // Parse the vertices
+    std::vector<FTriangleInfo>  NewTriangleInfo;
     std::vector<uint32_t>       NewIndices;
     std::vector<FVertexPosOnly> NewVertices;
     std::vector<FVertexEx>      NewVerticesEx;
+    std::vector<uint32_t>       MaterialIndicies;
         
     std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices;
     for (const auto& Shape : TinyObjShapes)
     {
+        size_t VerticesProcessed = 0;
         for (const auto& Index : Shape.mesh.indices)
         {
-            const size_t BasePositionIndex = 3 * Index.vertex_index;
-            
             FVertex Vertex;
+
+            // Positions must be present
+            const size_t BasePositionIndex = 3 * Index.vertex_index;
+            assert(BasePositionIndex >= 0);
+
             Vertex.Position =
             {
                 TinyObjAttrib.vertices[BasePositionIndex + 0],
                 TinyObjAttrib.vertices[BasePositionIndex + 1],
                 TinyObjAttrib.vertices[BasePositionIndex + 2],
             };
-            
+
+            // Check for normals
             if (Index.normal_index >= 0)
             {
                 const size_t BaseNormalIndex = 3 * Index.normal_index;
@@ -225,7 +232,8 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
                     TinyObjAttrib.normals[BaseNormalIndex + 2],
                 };
             }
-            
+
+            // Check for UVs
             if (Index.texcoord_index >= 0)
             {
                 const size_t BaseTexCoordIndex = 2 * Index.texcoord_index;
@@ -235,7 +243,8 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
                     1.0f - TinyObjAttrib.texcoords[BaseTexCoordIndex + 1]
                 };
             }
-            
+
+            // Add unique vertex data
             if (UniqueVertices.count(Vertex) == 0)
             {
                 UniqueVertices[Vertex] = static_cast<uint32_t>(NewVertices.size());
@@ -246,13 +255,29 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
             }
 
             NewIndices.push_back(UniqueVertices[Vertex]);
+
+            // Add a new triangle
+            VerticesProcessed++;
+            
+            if (VerticesProcessed >= 3)
+            {
+                const size_t TriangleIndex = Index.vertex_index;
+                const size_t MaterialIndex = Shape.mesh.material_ids[TriangleIndex];
+                NewTriangleInfo.push_back({ static_cast<uint32_t>(MaterialIndex) });
+                VerticesProcessed = 0;
+            }
         }
     }
-    
+
+    // Ensure everything is correct
+    const size_t TriangleCount = NewIndices.size() / 3;
+    assert(TriangleCount == NewTriangleInfo.size());
+
     // Setup the vertices
-    Vertices   = std::move(NewVertices);
-    VerticesEx = std::move(NewVerticesEx);
-    Indicies   = std::move(NewIndices);
-    Materials  = std::move(NewMaterials);
+    TriangleInfo = std::move(NewTriangleInfo);
+    Vertices     = std::move(NewVertices);
+    VerticesEx   = std::move(NewVerticesEx);
+    Indicies     = std::move(NewIndices);
+    Materials    = std::move(NewMaterials);
     return true;
 }
