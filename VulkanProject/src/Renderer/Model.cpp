@@ -156,7 +156,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     }
     else
     {
-        std::cout << "Loaded model '" << Filepath << "'" << std::endl;
+        std::cout << "Loading model... '" << Filepath << "'" << std::endl;
         if (!TinyObjWarning.empty())
         {
             std::cout << "Warning:\n" << TinyObjWarning << std::endl;
@@ -205,6 +205,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices;
     for (const auto& Shape : TinyObjShapes)
     {
+        size_t CurrentIndex      = 0;
         size_t VerticesProcessed = 0;
         for (const auto& Index : Shape.mesh.indices)
         {
@@ -261,11 +262,21 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
             
             if (VerticesProcessed >= 3)
             {
-                const size_t TriangleIndex = Index.vertex_index;
-                const size_t MaterialIndex = Shape.mesh.material_ids[TriangleIndex];
+                const size_t TriangleIndex = CurrentIndex / 3;
+                assert(TriangleIndex < Shape.mesh.material_ids.size());
+                
+                const int32_t MaterialIndex = Shape.mesh.material_ids[TriangleIndex];
+                if (MaterialIndex >= 0)
+                {
+                    assert(MaterialIndex < NewMaterials.size());
+                }
+                
                 NewTriangleInfo.push_back({ static_cast<uint32_t>(MaterialIndex) });
                 VerticesProcessed = 0;
             }
+            
+            // Increment the current index (VertexIndex)
+            CurrentIndex++;
         }
     }
 
@@ -273,6 +284,8 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     const size_t TriangleCount = NewIndices.size() / 3;
     assert(TriangleCount == NewTriangleInfo.size());
 
+    std::cout << "... finished loading model '" << Filepath << "'" << std::endl;
+    
     // Setup the vertices
     TriangleInfo = std::move(NewTriangleInfo);
     Vertices     = std::move(NewVertices);
