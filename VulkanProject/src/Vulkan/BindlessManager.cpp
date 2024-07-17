@@ -143,25 +143,25 @@ uint32_t FBindlessManager::AddImageView(VkImageView ImageView, VkSampler Sampler
     assert(ImageView != VK_NULL_HANDLE);
     
     // Generate a bindless ID
-    uint32_t Binding = InvalidBindlessID;
+    uint32_t BindlessHandle = InvalidBindlessID;
     if (m_TextureFreeList.empty())
     {
         assert(m_NextTextureBinding < m_MaxTextureBinding);
         
         if (m_NextTextureBinding < m_MaxTextureBinding)
         {
-            Binding = m_NextTextureBinding++;
+            BindlessHandle = m_NextTextureBinding++;
         }
     }
     else
     {
-        Binding = m_TextureFreeList.back();
+        BindlessHandle = m_TextureFreeList.back();
         m_TextureFreeList.pop_back();
     }
     
-    if (Binding != InvalidBindlessID)
+    if (BindlessHandle != InvalidBindlessID)
     {
-        m_TextureBindings.insert(std::make_pair(ImageView, Binding));
+        m_TextureBindings.insert(std::make_pair(ImageView, BindlessHandle));
     }
     else
     {
@@ -179,8 +179,8 @@ uint32_t FBindlessManager::AddImageView(VkImageView ImageView, VkSampler Sampler
 
     DescriptorWrite.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     DescriptorWrite.dstSet           = m_DescriptorSet;
-    DescriptorWrite.dstBinding       = Binding;
-    DescriptorWrite.dstArrayElement  = 0;
+    DescriptorWrite.dstBinding       = 0;
+    DescriptorWrite.dstArrayElement  = BindlessHandle;
     DescriptorWrite.descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     DescriptorWrite.descriptorCount  = 1;
     DescriptorWrite.pBufferInfo      = nullptr;
@@ -188,7 +188,7 @@ uint32_t FBindlessManager::AddImageView(VkImageView ImageView, VkSampler Sampler
     DescriptorWrite.pTexelBufferView = nullptr;
     
     vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &DescriptorWrite, 0, nullptr);
-    return Binding;
+    return BindlessHandle;
 }
 
 void FBindlessManager::RemoveImageView(VkImageView ImageView)

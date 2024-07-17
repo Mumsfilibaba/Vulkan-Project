@@ -4,6 +4,7 @@
 #include "TextureResource.h"
 #include "Vulkan/Buffer.h"
 #include "Vulkan/BindlessManager.h"
+#include "Vulkan/Sampler.h"
 
 FScene::FScene()
     : m_Quads()
@@ -50,6 +51,8 @@ FScene::~FScene()
     SAFE_DELETE(m_pTriangleBuffer);
     SAFE_DELETE(m_pVertexBuffer);
     SAFE_DELETE(m_pVertexExBuffer);
+    SAFE_DELETE(m_pMaterialSampler);
+
     SAFE_DELETE(m_pMeshVertexBuffer);
     SAFE_DELETE(m_pMeshIndexBuffer);
     SAFE_DELETE(m_pAABBInstanceBuffer);
@@ -99,6 +102,9 @@ void FModelScene::Initialize()
         4, // MaterialIndex
     });
     
+    // Cache Device
+    FDevice* pDevice = FApplication::Get().GetDevice();
+    
     // BVH Buffers
     FBufferParams BufferParams;
     BufferParams.Size             = sizeof(FShaderBoundingBox) * m_AccelerationStructure.m_BoundingBoxes.size();
@@ -106,22 +112,22 @@ void FModelScene::Initialize()
     BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
     assert(m_AccelerationStructure.m_BoundingBoxes.size() < MAX_BVH_NODES);
-    m_pBoundingBoxBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_AccelerationStructure.m_BoundingBoxes.data());
+    m_pBoundingBoxBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_AccelerationStructure.m_BoundingBoxes.data());
     assert(m_pBoundingBoxBuffer != nullptr);
     m_pBoundingBoxBuffer->SetDebugName("CPU Bounding Box Buffer");
     
     BufferParams.Size = sizeof(FShaderTriangle) * m_AccelerationStructure.m_Triangles.size();
-    m_pTriangleBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_AccelerationStructure.m_Triangles.data());
+    m_pTriangleBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_AccelerationStructure.m_Triangles.data());
     assert(m_pTriangleBuffer != nullptr);
     m_pTriangleBuffer->SetDebugName("CPU Triangle Buffer");
     
     BufferParams.Size = sizeof(FVertexPosOnly) * m_Vertices.size();
-    m_pVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_Vertices.data());
+    m_pVertexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_Vertices.data());
     assert(m_pVertexBuffer != nullptr);
     m_pVertexBuffer->SetDebugName("CPU Vertex Buffer");
     
     BufferParams.Size = sizeof(FVertexEx) * m_VerticesEx.size();
-    m_pVertexExBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, m_VerticesEx.data());
+    m_pVertexExBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_VerticesEx.data());
     assert(m_pVertexExBuffer != nullptr);
     m_pVertexExBuffer->SetDebugName("CPU VertexEx Buffer");
     
@@ -129,14 +135,14 @@ void FModelScene::Initialize()
     BufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
-    m_pMeshVertexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Vertices.data());
+    m_pMeshVertexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, Mesh.Vertices.data());
     assert(m_pMeshVertexBuffer != nullptr);
     m_pMeshVertexBuffer->SetDebugName("CPU Debug Vertex Buffer");
     
     BufferParams.Size  = sizeof(uint32_t) * Mesh.Indicies.size();
     BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
-    m_pMeshIndexBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, Mesh.Indicies.data());
+    m_pMeshIndexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, Mesh.Indicies.data());
     assert(m_pMeshIndexBuffer != nullptr);
     m_pMeshIndexBuffer->SetDebugName("CPU Debug Index Buffer");
     
@@ -163,12 +169,41 @@ void FModelScene::Initialize()
     BufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     
-    m_pAABBInstanceBuffer = FBuffer::CreateWithData(FApplication::Get().GetDevice(), BufferParams, nullptr, AABBMatrices.data());
+    m_pAABBInstanceBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, AABBMatrices.data());
     assert(m_pAABBInstanceBuffer != nullptr);
     m_pAABBInstanceBuffer->SetDebugName("CPU Debug AABB Instance Buffer");
     
-    // Create materials for the materials
+    // Create Sampler for materials
+    FSamplerParams SamplerParams = {};
+    SamplerParams.MagFilter     = VK_FILTER_NEAREST;
+    SamplerParams.MinFilter     = VK_FILTER_NEAREST;
+    SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    SamplerParams.AddressModeU  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    SamplerParams.AddressModeV  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    SamplerParams.AddressModeW  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    SamplerParams.MinLod        = 0;
+    SamplerParams.MaxLod        = 1000;
+    SamplerParams.MaxAnisotropy = 1.0f;
     
+    m_pMaterialSampler = FSampler::Create(pDevice, SamplerParams);
+    assert(m_pMaterialSampler != nullptr);
+    m_pMaterialSampler->SetDebugName("Material Sampler");
+    
+    // Create materials for the materials
+    for (const auto& Material : m_Materials)
+    {
+        FShaderMaterial& ShaderMaterial = m_GpuMaterials.emplace_back();
+        ShaderMaterial.AlbedoColor           = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
+        ShaderMaterial.EmissiveColor         = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        ShaderMaterial.SpecularColor         = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
+        ShaderMaterial.AbsorbtionColor       = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        ShaderMaterial.SpecularChance        = 0.0f;
+        ShaderMaterial.SpecularRoughness     = 1.0f;
+        ShaderMaterial.IncidenceOfRefraction = 1.0f;
+        ShaderMaterial.RefractionChance      = 0.0f;
+        ShaderMaterial.RefractionRoughness   = 0.0f;
+        ShaderMaterial.AlbedoTexIndex        = pDevice->GetBindlessManager().AddImageView(Material.AlbedoTex->GetTextureView()->GetImageView(), m_pMaterialSampler->GetSampler());
+    }
     
     // Quads
 #if 1

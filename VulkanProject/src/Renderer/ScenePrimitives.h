@@ -77,6 +77,6 @@ struct FShaderMaterial
     uint32_t AlbedoTexIndex;
 
     // Padding
+    uint32_t Padding0;
     uint32_t Padding1;
-    uint32_t Padding2;
 };

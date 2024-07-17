@@ -18,6 +18,7 @@
 #define BACKGROUND_TYPE_SKYBOX 2
 
 class FBuffer;
+class FSampler;
 
 enum class EViewMode : uint32_t
 {
@@ -73,8 +74,10 @@ struct FScene
     FBuffer* m_pVertexExBuffer;
     FBuffer* m_pTriangleBuffer;
     FBuffer* m_pBoundingBoxBuffer;
+    bool     m_bUpdateBuffers;
     
-    bool m_bUpdateBuffers;
+    // Sampler for materials
+    FSampler* m_pMaterialSampler;
     
     // Debugging
     FBuffer* m_pMeshVertexBuffer;
