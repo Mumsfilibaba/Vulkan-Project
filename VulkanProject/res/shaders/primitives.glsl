@@ -71,10 +71,11 @@ struct FVertexEx
 
 struct FTriangle
 {
-    // 0-12
+    // 0-16
     uint Index0;
     uint Index1;
     uint Index2;
+    uint MaterialIndex;
 };
 
 struct FMesh

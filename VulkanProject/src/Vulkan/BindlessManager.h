@@ -9,11 +9,16 @@ class FBindlessManager : public FDeviceChild
 public:
     static FBindlessManager* Create(FDevice* pDevice);
 
+    static constexpr const uint32_t InvalidBindlessID = static_cast<uint32_t>(-1);
+    
     FBindlessManager(FDevice* pDevice);
     ~FBindlessManager();
 
     // Returns a Bindless ID
     uint32_t AddImageView(VkImageView ImageView, VkSampler Sampler);
+    
+    // Removes a ImageView and frees the Bindless ID
+    void RemoveImageView(VkImageView ImageView);
 
     VkDescriptorSet GetDescriptorSet()
     {
@@ -26,8 +31,13 @@ public:
     }
 
 private:
+    using BindlessMap = std::unordered_map<VkImageView, uint32_t>;
+    
     VkDescriptorSet       m_DescriptorSet;
     VkDescriptorPool      m_DescriptorPool;
     VkDescriptorSetLayout m_DescriptorSetLayout;
     uint32_t              m_NextTextureBinding;
+    uint32_t              m_MaxTextureBinding;
+    std::vector<uint32_t> m_TextureFreeList;
+    BindlessMap           m_TextureBindings;
 };

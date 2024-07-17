@@ -12,6 +12,7 @@ FBindlessManager* FBindlessManager::Create(FDevice* pDevice)
     
     const size_t NumMaxBindlessResources      = DeviceLimits.maxPerStageDescriptorSampledImages;
     const size_t BindlessResourceBindingIndex = 0;
+    pBindlessManager->m_MaxTextureBinding = static_cast<uint32_t>(NumMaxBindlessResources);
     
     // DescriptorPool
     constexpr uint32_t NumPoolSizes = 1;
@@ -116,6 +117,7 @@ FBindlessManager::FBindlessManager(FDevice* pDevice)
     , m_DescriptorSet(VK_NULL_HANDLE)
     , m_DescriptorSetLayout(VK_NULL_HANDLE)
     , m_NextTextureBinding(0)
+    , m_MaxTextureBinding()
 {
 }
 
@@ -140,12 +142,38 @@ uint32_t FBindlessManager::AddImageView(VkImageView ImageView, VkSampler Sampler
     assert(Sampler != VK_NULL_HANDLE);
     assert(ImageView != VK_NULL_HANDLE);
     
+    // Generate a bindless ID
+    uint32_t Binding = InvalidBindlessID;
+    if (m_TextureFreeList.empty())
+    {
+        assert(m_NextTextureBinding < m_MaxTextureBinding);
+        
+        if (m_NextTextureBinding < m_MaxTextureBinding)
+        {
+            Binding = m_NextTextureBinding++;
+        }
+    }
+    else
+    {
+        Binding = m_TextureFreeList.back();
+        m_TextureFreeList.pop_back();
+    }
+    
+    if (Binding != InvalidBindlessID)
+    {
+        m_TextureBindings.insert(std::make_pair(ImageView, Binding));
+    }
+    else
+    {
+        return InvalidBindlessID;
+    }
+
+    // Write Descriptor
     VkDescriptorImageInfo ImageInfo = {};
     ImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     ImageInfo.imageView   = ImageView;
     ImageInfo.sampler     = Sampler;
     
-    const uint32_t Binding = m_NextTextureBinding++;
     VkWriteDescriptorSet DescriptorWrite = {};
     ZERO_STRUCT(&DescriptorWrite);
 
@@ -161,4 +189,16 @@ uint32_t FBindlessManager::AddImageView(VkImageView ImageView, VkSampler Sampler
     
     vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &DescriptorWrite, 0, nullptr);
     return Binding;
+}
+
+void FBindlessManager::RemoveImageView(VkImageView ImageView)
+{
+    auto It = m_TextureBindings.find(ImageView);
+    if (It == m_TextureBindings.end())
+    {
+        return;
+    }
+    
+    m_TextureBindings.erase(It);
+    m_TextureFreeList.emplace_back(It->second);
 }

@@ -1,7 +1,10 @@
 #pragma once
+#include "ScenePrimitives.h"
 #include "Vulkan/Buffer.h"
 #include "Vulkan/Device.h"
 #include "Vulkan/DeviceMemoryAllocator.h"
+
+class FTextureResource;
 
 struct FVertex
 {
@@ -189,6 +192,11 @@ struct FVertexEx
     glm::vec4 TexCoords;
 };
 
+struct FMaterial
+{
+    std::shared_ptr<FTextureResource> AlbedoTex;
+};
+
 struct FMesh
 {
     bool LoadFromFile(const std::string& Filepath);
@@ -196,4 +204,5 @@ struct FMesh
     std::vector<uint32_t>       Indicies;
     std::vector<FVertexPosOnly> Vertices;
     std::vector<FVertexEx>      VerticesEx;
+    std::vector<FMaterial>      Materials;
 };

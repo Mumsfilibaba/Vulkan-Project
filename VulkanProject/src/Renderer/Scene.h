@@ -52,7 +52,8 @@ struct FScene
     FSceneSettings m_Settings;
 
     // Materials
-    std::vector<FShaderMaterial> m_Materials;
+    std::vector<FMaterial>       m_Materials;
+    std::vector<FShaderMaterial> m_GpuMaterials;
     
     // Triangle Mesh Data
     std::vector<FVertexPosOnly> m_Vertices;

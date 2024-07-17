@@ -42,10 +42,11 @@ struct FShaderQuad
 
 struct FShaderTriangle
 {
-    // 0-12
+    // 0-16
     uint32_t Index0;
     uint32_t Index1;
     uint32_t Index2;
+    uint32_t MaterialIndex;
 };
 
 struct FShaderMesh
@@ -72,9 +73,10 @@ struct FShaderMaterial
     float RefractionChance;
     // 80-84
     float RefractionRoughness;
+    // 84-88
+    uint32_t AlbedoTexIndex;
 
     // Padding
-    uint32_t Padding0;
     uint32_t Padding1;
     uint32_t Padding2;
 };

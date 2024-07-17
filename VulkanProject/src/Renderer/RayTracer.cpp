@@ -378,7 +378,7 @@ void FRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
     FSceneBuffer SceneBuffer = {};
     SceneBuffer.NumQuads       = m_pScene->m_Quads.size();
     SceneBuffer.NumSpheres     = m_pScene->m_Spheres.size();
-    SceneBuffer.NumMaterials   = m_pScene->m_Materials.size();
+    SceneBuffer.NumMaterials   = m_pScene->m_GpuMaterials.size();
     SceneBuffer.NumMeshes      = m_pScene->m_Meshes.size();
     SceneBuffer.NumBvhNodes    = m_pScene->m_AccelerationStructure.m_BoundingBoxes.size();
     SceneBuffer.NumTriangles   = m_pScene->m_AccelerationStructure.m_Triangles.size();
@@ -953,7 +953,7 @@ void FRayTracer::OnRenderUI()
 
         {
             uint32_t Index = 1;
-            for (FShaderMaterial& Material : m_pScene->m_Materials)
+            for (FShaderMaterial& Material : m_pScene->m_GpuMaterials)
             {
                 ImGui::PushID(ImguiID++);
                 ImGui::Text("Material %d", Index++);
@@ -1976,9 +1976,9 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(FShaderMesh) * m_pScene->m_Meshes.size(), m_pScene->m_Meshes.data());
     }
     
-    if (!m_pScene->m_Materials.empty())
+    if (!m_pScene->m_GpuMaterials.empty())
     {
-        assert(sizeof(FShaderMaterial) * m_pScene->m_Materials.size() < m_pMaterialBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FShaderMaterial) * m_pScene->m_Materials.size(), m_pScene->m_Materials.data());
+        assert(sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size() < m_pMaterialBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
     }
 }

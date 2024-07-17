@@ -1,12 +1,14 @@
 #include "Scene.h"
 #include "Model.h"
 #include "Application.h"
+#include "TextureResource.h"
 #include "Vulkan/Buffer.h"
+#include "Vulkan/BindlessManager.h"
 
 FScene::FScene()
     : m_Quads()
     , m_Spheres()
-    , m_Materials()
+    , m_GpuMaterials()
     , m_Settings()
     , m_pVertexBuffer(nullptr)
     , m_pVertexExBuffer(nullptr)
@@ -23,7 +25,7 @@ FScene::FScene()
     
     m_Quads.reserve(MAX_QUADS);
     m_Spheres.reserve(MAX_SPHERES);
-    m_Materials.reserve(MAX_MATERIALS);
+    m_GpuMaterials.reserve(MAX_MATERIALS);
     m_Vertices.reserve(MAX_VERTICES);
     m_VerticesEx.reserve(MAX_VERTICES);
     m_Meshes.reserve(MAX_TRIANGLEMESHES);
@@ -33,7 +35,16 @@ FScene::FScene()
 
 FScene::~FScene()
 {
-    FApplication::Get().GetDevice()->WaitForIdle();
+    if (FDevice* pDevice = FApplication::Get().GetDevice())
+    {
+        pDevice->WaitForIdle();
+        
+        // Cleanup any textures from the BindlessManager
+        for (const auto& Material : m_Materials)
+        {
+            pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
+        }
+    }
     
     SAFE_DELETE(m_pBoundingBoxBuffer);
     SAFE_DELETE(m_pTriangleBuffer);
@@ -68,10 +79,11 @@ void FModelScene::Initialize()
         m_Settings.CameraSpeed = 150.0f;
     }
 
-    // Copy vertices
+    // Copy data to the scene
     m_Vertices   = Mesh.Vertices;
     m_VerticesEx = Mesh.VerticesEx;
     m_Indicies   = Mesh.Indicies;
+    m_Materials  = Mesh.Materials;
     
     // Build BVH
     m_AccelerationStructure.Build(Mesh, 32);
@@ -155,6 +167,9 @@ void FModelScene::Initialize()
     assert(m_pAABBInstanceBuffer != nullptr);
     m_pAABBInstanceBuffer->SetDebugName("CPU Debug AABB Instance Buffer");
     
+    // Create materials for the materials
+    
+    
     // Quads
 #if 1
     if (Type == EModelSceneType::Default)
@@ -175,7 +190,7 @@ void FModelScene::Initialize()
 #endif
     
     // Materials
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -190,7 +205,7 @@ void FModelScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -205,7 +220,7 @@ void FModelScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -221,7 +236,7 @@ void FModelScene::Initialize()
     });
     
     // Light
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
         glm::vec4(40.0f, 36.0f, 28.0f, 1.0f),
@@ -236,7 +251,7 @@ void FModelScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -286,7 +301,7 @@ void FSphereScene::Initialize()
         // Materials
         
         // Right Ball (Golden Ball)
-        m_Materials.push_back(
+        m_GpuMaterials.push_back(
         {
             glm::vec4(0.8f, 0.6f, 0.2f, 1.0f),
             glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -302,7 +317,7 @@ void FSphereScene::Initialize()
         });
         
         // Middle Ball (Pink Ball)
-        m_Materials.push_back(
+        m_GpuMaterials.push_back(
         {
             glm::vec4(0.7f, 0.3f, 0.3f, 1.0f),
             glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -318,7 +333,7 @@ void FSphereScene::Initialize()
         });
         
         // Left Ball (White Ball)
-        m_Materials.push_back(
+        m_GpuMaterials.push_back(
         {
             glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
             glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -334,7 +349,7 @@ void FSphereScene::Initialize()
         });
         
         // Large Ball (Green Ball)
-        m_Materials.push_back(
+        m_GpuMaterials.push_back(
         {
             glm::vec4(0.7f, 0.9f, 0.0f, 1.0f),
             glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -402,7 +417,7 @@ void FSphereScene::Initialize()
     #endif
         
         // Roof-, Floor- and Wall- Material
-        m_Materials.push_back(
+        m_GpuMaterials.push_back(
         {
             glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
             glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -418,7 +433,7 @@ void FSphereScene::Initialize()
         });
         
         // Wall- Material
-        m_Materials.push_back(
+        m_GpuMaterials.push_back(
         {
             glm::vec4(0.02f, 0.02f, 0.02f, 1.0f),
             glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -434,7 +449,7 @@ void FSphereScene::Initialize()
         });
         
         // Light Material
-        m_Materials.push_back(
+        m_GpuMaterials.push_back(
         {
             glm::vec4(0.0f,  0.0f,  0.0f, 1.0f),
             glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
@@ -450,7 +465,7 @@ void FSphereScene::Initialize()
         });
         
         // Spheres
-        const uint32_t StartMaterialIndex = static_cast<uint32_t>(m_Materials.size());
+        const uint32_t StartMaterialIndex = static_cast<uint32_t>(m_GpuMaterials.size());
         for (int32_t i = 0; i < NumSpheres; i++)
         {
             const float SphereStartPos = -(SphereHalfFootPrint - HalfWidth);
@@ -467,7 +482,7 @@ void FSphereScene::Initialize()
             for (int32_t i = 0; i < NumSpheres; i++)
             {
                 const float IncidenceOfRefraction = 1.0f + 0.5f * float(i) / float(NumSpheres - 1);
-                m_Materials.push_back(
+                m_GpuMaterials.push_back(
                 {
                     glm::vec4(0.9f, 0.25f, 0.25f, 1.0f),
                     glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -488,7 +503,7 @@ void FSphereScene::Initialize()
             for (int32_t i = 0; i < NumSpheres; i++)
             {
                 const float Roughness = float(i) / float(NumSpheres - 1) * 0.5f;
-                m_Materials.push_back(
+                m_GpuMaterials.push_back(
                 {
                     glm::vec4(0.9f, 0.25f, 0.25f, 1.0f),
                     glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -509,7 +524,7 @@ void FSphereScene::Initialize()
             for (int32_t i = 0; i < NumSpheres; i++)
             {
                 const float Roughness = float(i) / float(NumSpheres - 1) * 0.5f;
-                m_Materials.push_back(
+                m_GpuMaterials.push_back(
                 {
                     glm::vec4(0.9f, 0.25f, 0.25f, 1.0f),
                     glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -592,7 +607,7 @@ void FCornellBoxScene::Initialize()
     m_Spheres.push_back({ glm::vec3(-2.2f, 0.75f, 0.5f), 0.7f, 11 });
     
     // Wall Materials
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -607,7 +622,7 @@ void FCornellBoxScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -622,7 +637,7 @@ void FCornellBoxScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -638,7 +653,7 @@ void FCornellBoxScene::Initialize()
     });
     
     // Light
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
         glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
@@ -654,7 +669,7 @@ void FCornellBoxScene::Initialize()
     });
     
     // Green Materials
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -669,7 +684,7 @@ void FCornellBoxScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -684,7 +699,7 @@ void FCornellBoxScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -699,7 +714,7 @@ void FCornellBoxScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -714,7 +729,7 @@ void FCornellBoxScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.3f, 0.9f, 0.3f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -730,7 +745,7 @@ void FCornellBoxScene::Initialize()
     });
     
     // Ball Materials
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.9f, 0.9f, 0.75f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -745,7 +760,7 @@ void FCornellBoxScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.9f, 0.75f, 0.9f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
@@ -760,7 +775,7 @@ void FCornellBoxScene::Initialize()
         0, 0, 0
     });
     
-    m_Materials.push_back(
+    m_GpuMaterials.push_back(
     {
         glm::vec4(0.75f, 0.9f, 0.9f, 1.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),

@@ -383,7 +383,8 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
 
     if (LastTriangleHitIndex >= 0)
     {
-        PayLoad.MaterialIndex = MaterialIndex;
+        FTriangle Triangle = Triangles[LastTriangleHitIndex];
+        PayLoad.MaterialIndex = Triangle.MaterialIndex;
         PayLoad.Position      = Ray.Origin + PayLoad.T * Ray.Direction;
         PayLoad.bFromInside   = false;
 

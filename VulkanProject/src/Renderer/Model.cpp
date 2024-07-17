@@ -1,5 +1,30 @@
 #include "Model.h"
+#include "TextureResource.h"
+#include "Application.h"
+#include "Vulkan/BindlessManager.h"
 #include <tiny_obj_loader.h>
+
+static std::string ExtractPath(const std::string& Path)
+{
+    const size_t Position = Path.find_last_of("/\\");
+    if (Position != std::string::npos)
+    {
+        return Path.substr(0, Position + 1);
+    }
+    
+    return Path;
+}
+
+static void ReplaceBackslashes(std::string& Path)
+{
+    for (char& Char : Path)
+    {
+        if (Char == '\\')
+        {
+            Char = '/';
+        }
+    }
+}
 
 FModel::FModel()
     : m_pVertexBuffer(nullptr)
@@ -108,22 +133,23 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice, FDevice
 
 bool FMesh::LoadFromFile(const std::string& Filepath)
 {
-    tinyobj::attrib_t                Attrib;
-    std::vector<tinyobj::shape_t>    Shapes;
-    std::vector<tinyobj::material_t> Materials;
-    std::string                      Warning;
-    std::string                      Error;
+    tinyobj::attrib_t                TinyObjAttrib;
+    std::vector<tinyobj::shape_t>    TinyObjShapes;
+    std::vector<tinyobj::material_t> TinyObjMaterials;
+    std::string                      TinyObjWarning;
+    std::string                      TinyObjError;
 
-    if (!tinyobj::LoadObj(&Attrib, &Shapes, &Materials, &Warning, &Error, Filepath.c_str()))
+    const std::string MaterialPath = ExtractPath(Filepath);
+    if (!tinyobj::LoadObj(&TinyObjAttrib, &TinyObjShapes, &TinyObjMaterials, &TinyObjWarning, &TinyObjError, Filepath.c_str(), MaterialPath.c_str(), true))
     {
         std::cout << "Failed to load model '" << Filepath << "'" << std::endl;
-        if (!Warning.empty())
+        if (!TinyObjWarning.empty())
         {
-            std::cout << "  Warning: " << Warning << std::endl;
+            std::cout << "  Warning: " << TinyObjWarning << std::endl;
         }
-        if (!Error.empty())
+        if (!TinyObjError.empty())
         {
-            std::cout << "  Error: " << Error << std::endl;
+            std::cout << "  Error: " << TinyObjError << std::endl;
         }
         
         return false;
@@ -131,18 +157,51 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     else
     {
         std::cout << "Loaded model '" << Filepath << "'" << std::endl;
-        if (!Warning.empty())
+        if (!TinyObjWarning.empty())
         {
-            std::cout << "  Warning: " << Warning << std::endl;
+            std::cout << "Warning:\n" << TinyObjWarning << std::endl;
         }
     }
     
+    // Parse Materials
+    FDevice* pDevice = FApplication::Get().GetDevice();
+    
+    std::vector<FMaterial> NewMaterials;
+    std::unordered_map<std::string, std::shared_ptr<FTextureResource>> MaterialTextures;
+    for (const auto& Material : TinyObjMaterials)
+    {
+        std::shared_ptr<FTextureResource> Texture;
+        if (!Material.diffuse_texname.empty())
+        {
+            auto It = MaterialTextures.find(Material.diffuse_texname);
+            if (It == MaterialTextures.end())
+            {
+                std::string Path = MaterialPath + Material.diffuse_texname;
+                ReplaceBackslashes(Path);
+                
+                Texture = std::shared_ptr<FTextureResource>(FTextureResource::LoadFromFile(pDevice, Path.c_str()));
+                if (Texture)
+                {
+                    MaterialTextures.insert(std::make_pair(Material.diffuse_texname, Texture));
+                }
+            }
+            else
+            {
+                Texture = It->second;
+            }
+        }
+
+        FMaterial NewMaterial = { Texture };
+        NewMaterials.emplace_back(std::move(NewMaterial));
+    }
+    
+    // Parse the vertices
     std::vector<uint32_t>       NewIndices;
     std::vector<FVertexPosOnly> NewVertices;
     std::vector<FVertexEx>      NewVerticesEx;
         
     std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices;
-    for (const auto& Shape : Shapes)
+    for (const auto& Shape : TinyObjShapes)
     {
         for (const auto& Index : Shape.mesh.indices)
         {
@@ -151,9 +210,9 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
             FVertex Vertex;
             Vertex.Position =
             {
-                Attrib.vertices[BasePositionIndex + 0],
-                Attrib.vertices[BasePositionIndex + 1],
-                Attrib.vertices[BasePositionIndex + 2],
+                TinyObjAttrib.vertices[BasePositionIndex + 0],
+                TinyObjAttrib.vertices[BasePositionIndex + 1],
+                TinyObjAttrib.vertices[BasePositionIndex + 2],
             };
             
             if (Index.normal_index >= 0)
@@ -161,9 +220,9 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
                 const size_t BaseNormalIndex = 3 * Index.normal_index;
                 Vertex.Normal =
                 {
-                    Attrib.normals[BaseNormalIndex + 0],
-                    Attrib.normals[BaseNormalIndex + 1],
-                    Attrib.normals[BaseNormalIndex + 2],
+                    TinyObjAttrib.normals[BaseNormalIndex + 0],
+                    TinyObjAttrib.normals[BaseNormalIndex + 1],
+                    TinyObjAttrib.normals[BaseNormalIndex + 2],
                 };
             }
             
@@ -172,8 +231,8 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
                 const size_t BaseTexCoordIndex = 2 * Index.texcoord_index;
                 Vertex.TexCoord =
                 {
-                    Attrib.texcoords[BaseTexCoordIndex + 0],
-                    1.0f - Attrib.texcoords[BaseTexCoordIndex + 1]
+                    TinyObjAttrib.texcoords[BaseTexCoordIndex + 0],
+                    1.0f - TinyObjAttrib.texcoords[BaseTexCoordIndex + 1]
                 };
             }
             
@@ -190,9 +249,10 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
         }
     }
     
-    //
+    // Setup the vertices
     Vertices   = std::move(NewVertices);
     VerticesEx = std::move(NewVerticesEx);
     Indicies   = std::move(NewIndices);
+    Materials  = std::move(NewMaterials);
     return true;
 }
