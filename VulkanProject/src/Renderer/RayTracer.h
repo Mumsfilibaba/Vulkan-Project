@@ -43,13 +43,13 @@ struct FSceneBuffer
     uint32_t NumTriangles = 0;
     uint32_t BackgroundType = 0;
     uint32_t NumBounces = 4;
-    // 32-36
+    // 32-40
     uint32_t ViewMode = 0;
+    float    GradientLightStrength = 1.0f;
     
     // Padding
     uint32_t Padding0;
     uint32_t Padding1;
-    uint32_t Padding2;
 };
 
 struct FTonemappingBuffer

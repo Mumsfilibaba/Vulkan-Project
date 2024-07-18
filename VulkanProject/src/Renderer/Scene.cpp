@@ -18,11 +18,12 @@ FScene::FScene()
     , m_pMeshVertexBuffer(nullptr)
     , m_pMeshIndexBuffer(nullptr)
 {
-    m_Settings.ViewMode    = EViewMode::Render;
-    m_Settings.Exposure    = 0.5f;
-    m_Settings.NumBounces  = 8;
-    m_Settings.FieldOfView = 90.0f;
-    m_Settings.CameraSpeed = 1.5f;
+    m_Settings.ViewMode              = EViewMode::Render;
+    m_Settings.Exposure              = 0.5f;
+    m_Settings.NumBounces            = 4;
+    m_Settings.FieldOfView           = 90.0f;
+    m_Settings.CameraSpeed           = 1.5f;
+    m_Settings.GradientLightStrength = 1.0f;
     
     m_Quads.reserve(MAX_QUADS);
     m_Spheres.reserve(MAX_SPHERES);

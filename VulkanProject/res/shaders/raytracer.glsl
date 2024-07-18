@@ -87,13 +87,13 @@ layout(binding = 5) uniform SceneBufferObject
     uint NumTriangles;
     uint BackgroundType;
     uint NumBounces;
-    // 32-36
-    uint ViewMode;
+    // 32-40
+    uint  ViewMode;
+    float GradientLightStrength;
     
     // Padding
     uint Padding0;
     uint Padding1;
-    uint Padding2;
 } uScene;
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -487,9 +487,11 @@ vec3 GetEnvironmentLight(vec3 RayDirection)
     else if (uScene.BackgroundType == BACKGROUND_TYPE_GRADIENT)
     {
         // Create a gradient
-        vec3 UnitDirection = normalize(RayDirection);
-        float Alpha = 0.5 * (UnitDirection.y + 1.0);
-        return (1.0 - Alpha) * vec3(1.0, 1.0, 1.0) + Alpha * vec3(0.5, 0.7, 1.0);
+        vec3  UnitDir  = normalize(RayDirection);
+        float Alpha    = 0.5 * (UnitDir.y + 1.0);
+        vec3  Color    = (1.0 - Alpha) * vec3(1.0, 1.0, 1.0) + Alpha * vec3(0.5, 0.7, 1.0);
+        float Strength = max(1.0, uScene.GradientLightStrength);
+        return Color * Strength;
     }
     else if (uScene.BackgroundType == BACKGROUND_TYPE_SKYBOX)
     {

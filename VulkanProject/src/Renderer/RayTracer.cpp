@@ -376,16 +376,17 @@ void FRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
 
     // Update Scene
     FSceneBuffer SceneBuffer = {};
-    SceneBuffer.NumQuads       = m_pScene->m_Quads.size();
-    SceneBuffer.NumSpheres     = m_pScene->m_Spheres.size();
-    SceneBuffer.NumMaterials   = m_pScene->m_GpuMaterials.size();
-    SceneBuffer.NumMeshes      = m_pScene->m_Meshes.size();
-    SceneBuffer.NumBvhNodes    = m_pScene->m_AccelerationStructure.m_BoundingBoxes.size();
-    SceneBuffer.NumTriangles   = m_pScene->m_AccelerationStructure.m_Triangles.size();
-    SceneBuffer.BackgroundType = m_pScene->m_Settings.BackgroundType;
-    SceneBuffer.NumBounces     = m_pScene->m_Settings.NumBounces;
-    SceneBuffer.ViewMode       = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
-
+    SceneBuffer.NumQuads              = m_pScene->m_Quads.size();
+    SceneBuffer.NumSpheres            = m_pScene->m_Spheres.size();
+    SceneBuffer.NumMaterials          = m_pScene->m_GpuMaterials.size();
+    SceneBuffer.NumMeshes             = m_pScene->m_Meshes.size();
+    SceneBuffer.NumBvhNodes           = m_pScene->m_AccelerationStructure.m_BoundingBoxes.size();
+    SceneBuffer.NumTriangles          = m_pScene->m_AccelerationStructure.m_Triangles.size();
+    SceneBuffer.BackgroundType        = m_pScene->m_Settings.BackgroundType;
+    SceneBuffer.NumBounces            = m_pScene->m_Settings.NumBounces;
+    SceneBuffer.ViewMode              = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
+    SceneBuffer.GradientLightStrength = m_pScene->m_Settings.GradientLightStrength;
+    
     pCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(FSceneBuffer), &SceneBuffer);
 
     // Bind pipeline and descriptorSet
@@ -852,6 +853,16 @@ void FRayTracer::OnRenderUI()
                 PrevBG = CurrentBG;
             }
 
+            if (CurrentBG == 1)
+            {
+                float Strength = m_pScene->m_Settings.GradientLightStrength;
+                if (ImGui::DragFloat("Gradient Strength", &Strength, 0.1f, 1.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+                {
+                    m_pScene->m_Settings.GradientLightStrength = Strength;
+                    m_bResetImage = true;
+                }
+            }
+            
             float Exposure = m_pScene->m_Settings.Exposure;
             if (ImGui::DragFloat("Exposure", &Exposure, 0.01f, 0.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
             {

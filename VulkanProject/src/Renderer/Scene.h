@@ -35,6 +35,7 @@ struct FSceneSettings
 {
     EViewMode ViewMode;
     uint32_t  BackgroundType;
+    float     GradientLightStrength;
     float     Exposure;
     uint32_t  NumBounces;
     float     FieldOfView;
