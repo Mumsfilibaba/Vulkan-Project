@@ -314,8 +314,8 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
         glm::vec2 deltaUV1 = NewVerticesEx[i1].TexCoords - NewVerticesEx[i0].TexCoords;
         glm::vec2 deltaUV2 = NewVerticesEx[i2].TexCoords - NewVerticesEx[i0].TexCoords;
 
-        float denom = (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
-        float f     = (std::abs(denom) > 0.0f) ?  (1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y)) : 0.0f;
+        float denom = deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y;
+        float f     = std::abs(denom) > 0.0f ? 1.0f / denom : 0.0f;
 
         glm::vec3 tangent;
         tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
