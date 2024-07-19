@@ -11,6 +11,7 @@ struct FRay
 struct FRayPayLoad
 {
     vec3  Normal;
+    vec3  Tangent;
     vec3  Position;
     vec3  BaryCentrics;
     vec2  TexCoords;

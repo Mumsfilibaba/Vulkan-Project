@@ -218,6 +218,15 @@ void FModelScene::Initialize()
         {
             ShaderMaterial.AlbedoTexIndex = FBindlessManager::InvalidBindlessID;
         }
+
+        if (Material.NormalTex)
+        {
+            ShaderMaterial.NormalTexIndex = pDevice->GetBindlessManager().AddImageView(Material.NormalTex->GetTextureView()->GetImageView(), m_pMaterialSampler->GetSampler());
+        }
+        else
+        {
+            ShaderMaterial.NormalTexIndex = FBindlessManager::InvalidBindlessID;
+        }
     }
     
     // Quads
@@ -252,8 +261,9 @@ void FModelScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -268,8 +278,9 @@ void FModelScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -284,8 +295,9 @@ void FModelScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     // Light
@@ -301,8 +313,9 @@ void FModelScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -317,8 +330,9 @@ void FModelScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
 }
 
@@ -368,8 +382,9 @@ void FSphereScene::Initialize()
             0.0f,
             0.0f,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0, 0
+            0
         });
         
         // Middle Ball (Pink Ball)
@@ -385,8 +400,9 @@ void FSphereScene::Initialize()
             0.0f,
             0.0f,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0, 0
+            0
         });
         
         // Left Ball (White Ball)
@@ -402,8 +418,9 @@ void FSphereScene::Initialize()
             0.0f,
             0.0f,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0, 0
+            0
         });
         
         // Large Ball (Green Ball)
@@ -419,8 +436,9 @@ void FSphereScene::Initialize()
             0.0f,
             0.0f,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0, 0
+            0
         });
     }
     else
@@ -488,8 +506,9 @@ void FSphereScene::Initialize()
             0.0f,
             0.0f,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0, 0
+            0
         });
         
         // Wall- Material
@@ -505,8 +524,9 @@ void FSphereScene::Initialize()
             0.0f,
             0.0f,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0, 0
+            0
         });
         
         // Light Material
@@ -522,8 +542,9 @@ void FSphereScene::Initialize()
             0.0f,
             0.0f,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0, 0
+            0
         });
         
         // Spheres
@@ -556,8 +577,9 @@ void FSphereScene::Initialize()
                     1.0f,
                     0.0f,
                     FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
                     // padding
-                    0, 0
+                    0
                 });
             }
         }
@@ -578,8 +600,9 @@ void FSphereScene::Initialize()
                     1.0f,
                     Roughness,
                     FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
                     // padding
-                    0, 0
+                    0
                 });
             }
         }
@@ -600,8 +623,9 @@ void FSphereScene::Initialize()
                     1.0f,
                     Roughness,
                     FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
                     // padding
-                    0, 0
+                    0
                 });
             }
         }
@@ -684,8 +708,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -700,8 +725,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -716,8 +742,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     // Light
@@ -733,8 +760,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     // Green Materials
@@ -750,8 +778,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -766,8 +795,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -782,8 +812,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -798,8 +829,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -814,8 +846,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     // Ball Materials
@@ -831,8 +864,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -847,8 +881,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
     
     m_GpuMaterials.push_back(
@@ -863,8 +898,9 @@ void FCornellBoxScene::Initialize()
         0.0f,
         0.0f,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0, 0
+        0
     });
 }
 

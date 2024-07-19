@@ -22,10 +22,10 @@ struct FMaterial
     float RefractionRoughness;
     // 84-88
     uint AlbedoTexIndex;
+    uint NormalTexIndex;
 
     // Padding
     uint Padding0;
-    uint Padding1;
 };
 
 struct FQuad
@@ -69,6 +69,8 @@ struct FVertexEx
     // 0-16
     vec4 Normal;
     // 16-32
+    vec4 Tangent;
+    // 32-48
     vec4 TexCoords;
 };
 

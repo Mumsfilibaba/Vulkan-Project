@@ -75,8 +75,8 @@ struct FShaderMaterial
     float RefractionRoughness;
     // 84-88
     uint32_t AlbedoTexIndex;
+    uint32_t NormalTexIndex;
 
     // Padding
     uint32_t Padding0;
-    uint32_t Padding1;
 };

@@ -151,7 +151,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
         {
             std::cout << "  Error: " << TinyObjError << std::endl;
         }
-        
+
         return false;
     }
     else
@@ -162,27 +162,26 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
             std::cout << "Warning:\n" << TinyObjWarning << std::endl;
         }
     }
-    
+
     // Parse Materials
     FDevice* pDevice = FApplication::Get().GetDevice();
-    
-    std::vector<FMaterial> NewMaterials;
+
     std::unordered_map<std::string, std::shared_ptr<FTextureResource>> MaterialTextures;
-    for (const auto& Material : TinyObjMaterials)
+    const auto LoadMaterialTexture = [&](const std::string& TextureName)
     {
         std::shared_ptr<FTextureResource> Texture;
-        if (!Material.diffuse_texname.empty())
+        if (!TextureName.empty())
         {
-            auto It = MaterialTextures.find(Material.diffuse_texname);
+            auto It = MaterialTextures.find(TextureName);
             if (It == MaterialTextures.end())
             {
-                std::string Path = MaterialPath + Material.diffuse_texname;
+                std::string Path = MaterialPath + TextureName;
                 ReplaceBackslashes(Path);
-                
+
                 Texture = std::shared_ptr<FTextureResource>(FTextureResource::LoadFromFile(pDevice, Path.c_str()));
                 if (Texture)
                 {
-                    MaterialTextures.insert(std::make_pair(Material.diffuse_texname, Texture));
+                    MaterialTextures.insert(std::make_pair(TextureName, Texture));
                 }
             }
             else
@@ -191,17 +190,25 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
             }
         }
 
-        FMaterial NewMaterial = { Texture };
+        return Texture;
+    };
+
+    std::vector<FMaterial> NewMaterials;
+    for (const auto& Material : TinyObjMaterials)
+    {
+        FMaterial NewMaterial;
+        NewMaterial.AlbedoTex = LoadMaterialTexture(Material.diffuse_texname);
+        NewMaterial.NormalTex = LoadMaterialTexture(Material.bump_texname);
         NewMaterials.emplace_back(std::move(NewMaterial));
     }
-    
+
     // Parse the vertices
     std::vector<FTriangleInfo>  NewTriangleInfo;
     std::vector<uint32_t>       NewIndices;
     std::vector<FVertexPosOnly> NewVertices;
     std::vector<FVertexEx>      NewVerticesEx;
     std::vector<uint32_t>       MaterialIndicies;
-        
+
     std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices;
     for (const auto& Shape : TinyObjShapes)
     {
@@ -249,22 +256,26 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
             if (UniqueVertices.count(Vertex) == 0)
             {
                 UniqueVertices[Vertex] = static_cast<uint32_t>(NewVertices.size());
-                
+
                 // Convert this massive vertex into the two "lighter" vertices
-                NewVertices.push_back({ glm::vec4(Vertex.Position, 0.0f) });
-                NewVerticesEx.push_back({ glm::vec4(Vertex.Normal, 0.0f), glm::vec4(Vertex.TexCoord, 0.0f, 0.0f) });
+                FVertexPosOnly& NewVertex = NewVertices.emplace_back();
+                NewVertex.Position = glm::vec4(Vertex.Position, 0.0f);
+
+                FVertexEx& NewVertexEx = NewVerticesEx.emplace_back();
+                NewVertexEx.Normal    = glm::vec4(Vertex.Normal, 0.0f);
+                NewVertexEx.TexCoords = glm::vec4(Vertex.TexCoord, 0.0f, 0.0f);
             }
 
             NewIndices.push_back(UniqueVertices[Vertex]);
 
             // Add a new triangle
             VerticesProcessed++;
-            
+
             if (VerticesProcessed >= 3)
             {
                 const size_t TriangleIndex = CurrentIndex / 3;
                 assert(TriangleIndex < Shape.mesh.material_ids.size());
-                
+
                 const int32_t MaterialIndex = Shape.mesh.material_ids[TriangleIndex];
                 if (MaterialIndex >= 0)
                 {
@@ -274,7 +285,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
                 NewTriangleInfo.push_back({ static_cast<uint32_t>(MaterialIndex) });
                 VerticesProcessed = 0;
             }
-            
+
             // Increment the current index (VertexIndex)
             CurrentIndex++;
         }
@@ -285,7 +296,45 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     assert(TriangleCount == NewTriangleInfo.size());
 
     std::cout << "... finished loading model '" << Filepath << "'" << std::endl;
-    
+    std::cout << "Calculating Tangents..." << std::endl;
+
+    // Calculate tangents for each triangle
+    std::vector<glm::vec3> TangentAccumulation;
+    TangentAccumulation.resize(NewVertices.size());
+
+    for (size_t i = 0; i < NewIndices.size(); i += 3)
+    {
+        uint32_t i0 = NewIndices[i + 0];
+        uint32_t i1 = NewIndices[i + 1];
+        uint32_t i2 = NewIndices[i + 2];
+
+        glm::vec3 edge1 = NewVertices[i1].Position - NewVertices[i0].Position;
+        glm::vec3 edge2 = NewVertices[i2].Position - NewVertices[i0].Position;
+
+        glm::vec2 deltaUV1 = NewVerticesEx[i1].TexCoords - NewVerticesEx[i0].TexCoords;
+        glm::vec2 deltaUV2 = NewVerticesEx[i2].TexCoords - NewVerticesEx[i0].TexCoords;
+
+        float denom = (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+        float f     = (std::abs(denom) > 0.0f) ?  (1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y)) : 0.0f;
+
+        glm::vec3 tangent;
+        tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+        TangentAccumulation[i0] += tangent;
+        TangentAccumulation[i1] += tangent;
+        TangentAccumulation[i2] += tangent;
+    }
+
+    for (size_t i = 0; i < NewVerticesEx.size(); i++)
+    {
+        glm::vec3 Tangent = glm::normalize(TangentAccumulation[i]);
+        NewVerticesEx[i].Tangent = glm::vec4(Tangent, 0.0);
+    }
+
+    std::cout << "... Finished calculating Tangents" << std::endl;
+
     // Setup the vertices
     TriangleInfo = std::move(NewTriangleInfo);
     Vertices     = std::move(NewVertices);

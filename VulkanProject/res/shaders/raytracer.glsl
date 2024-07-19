@@ -347,11 +347,16 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
                     vec3 Normal1 = VerticesEx[Triangle.Index1].Normal.xyz;
                     vec3 Normal2 = VerticesEx[Triangle.Index2].Normal.xyz;
 
+                    vec3 Tangent0 = VerticesEx[Triangle.Index0].Tangent.xyz;
+                    vec3 Tangent1 = VerticesEx[Triangle.Index1].Tangent.xyz;
+                    vec3 Tangent2 = VerticesEx[Triangle.Index2].Tangent.xyz;
+
                     vec2 TexCoords0 = VerticesEx[Triangle.Index0].TexCoords.xy;
                     vec2 TexCoords1 = VerticesEx[Triangle.Index1].TexCoords.xy;
                     vec2 TexCoords2 = VerticesEx[Triangle.Index2].TexCoords.xy;
 
-                    PayLoad.Normal    = normalize((PayLoad.BaryCentrics.x * Normal1) + (PayLoad.BaryCentrics.y * Normal2) + (PayLoad.BaryCentrics.z * Normal0));
+                    PayLoad.Normal    = normalize((PayLoad.BaryCentrics.x * Normal1)  + (PayLoad.BaryCentrics.y * Normal2)  + (PayLoad.BaryCentrics.z * Normal0));
+                    PayLoad.Tangent   = normalize((PayLoad.BaryCentrics.x * Tangent1) + (PayLoad.BaryCentrics.y * Tangent2) + (PayLoad.BaryCentrics.z * Tangent0));
                     PayLoad.TexCoords = (PayLoad.BaryCentrics.x * TexCoords1) + (PayLoad.BaryCentrics.y * TexCoords2) + (PayLoad.BaryCentrics.z * TexCoords0);
                     LastTriangleHitIndex = int(TriangleIndex);
                 }
@@ -650,7 +655,25 @@ vec3 GetNormalForRay(in FRay Ray)
 
     if (TraceRay(Ray, PayLoad))
     {
-        return (PayLoad.Normal + vec3(1.0)) * 0.5;
+        const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
+
+        vec3 Normal;
+        FMaterial Material = Materials[MaterialIndex];
+        if (Material.NormalTexIndex != INVALID_BINDLESS_ID)
+        {
+            vec3 BiTangent = cross(PayLoad.Normal, PayLoad.Tangent);
+            vec3 NormalMap = texture(uTextures[Material.NormalTexIndex], PayLoad.TexCoords).rgb;
+            NormalMap = normalize(NormalMap * 2.0 - 1.0); // Transform from [0,1] range to [-1,1]
+
+            mat3 TBN = mat3(PayLoad.Tangent, BiTangent, PayLoad.Normal);
+            Normal = normalize(TBN * NormalMap);
+        }
+        else
+        {
+            Normal = PayLoad.Normal;
+        }
+
+        return (Normal + vec3(1.0)) * 0.5;
     }
     else
     {

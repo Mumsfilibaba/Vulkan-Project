@@ -182,6 +182,7 @@ private:
 struct FVertexEx
 {
     glm::vec4 Normal;
+    glm::vec4 Tangent;
     glm::vec4 TexCoords;
 };
 
@@ -193,6 +194,7 @@ struct FTriangleInfo
 struct FMaterial
 {
     std::shared_ptr<FTextureResource> AlbedoTex;
+    std::shared_ptr<FTextureResource> NormalTex;
 };
 
 struct FMesh
