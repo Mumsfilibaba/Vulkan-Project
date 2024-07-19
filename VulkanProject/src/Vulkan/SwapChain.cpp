@@ -93,19 +93,37 @@ bool FSwapchain::CreateSwapchain()
     int32_t Height = 0;
     glfwGetFramebufferSize(m_pWindow, &Width, &Height);
 
+    if (Width <= 0 || Height <= 0)
+    {
+        std::cout << "Width or Height is zero" << std::endl;
+        return false;
+    }
+
     // Get capabilities and formats that are supported
     VkSurfaceCapabilitiesKHR Capabilities = {};
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetDevice()->GetPhysicalDevice(), m_Surface, &Capabilities);
+    
+    VkExtent2D NewExtent;
     if (Capabilities.currentExtent.width != UINT32_MAX && Capabilities.currentExtent.height != UINT32_MAX)
     {
-        m_Extent = Capabilities.currentExtent;
+        NewExtent = Capabilities.currentExtent;
     }
     else
     {
         VkExtent2D ActualExtent = { uint32_t(Width), uint32_t(Height) };
         ActualExtent.width  = std::max(Capabilities.minImageExtent.width,  std::min(Capabilities.maxImageExtent.width,  ActualExtent.width));
         ActualExtent.height = std::max(Capabilities.minImageExtent.height, std::min(Capabilities.maxImageExtent.height, ActualExtent.height));
-        m_Extent = ActualExtent;
+        NewExtent = ActualExtent;
+    }
+
+    if (NewExtent.width <= 0 || NewExtent.height <= 0)
+    {
+        std::cout << "Extent contains a Width or Height that is zero" << std::endl;
+        return false;
+    }
+    else
+    {
+        m_Extent = NewExtent;
     }
 
     std::vector<VkPresentModeKHR>   PresentModes;

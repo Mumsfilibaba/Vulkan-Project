@@ -15,8 +15,10 @@ FScene::FScene()
     , m_pVertexExBuffer(nullptr)
     , m_pTriangleBuffer(nullptr)
     , m_pBoundingBoxBuffer(nullptr)
+    , m_pMaterialSampler(nullptr)
     , m_pMeshVertexBuffer(nullptr)
     , m_pMeshIndexBuffer(nullptr)
+    , m_pAABBInstanceBuffer(nullptr)
 {
     m_Settings.ViewMode              = EViewMode::Render;
     m_Settings.Exposure              = 0.5f;

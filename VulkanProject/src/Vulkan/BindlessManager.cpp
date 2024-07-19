@@ -9,8 +9,13 @@ FBindlessManager* FBindlessManager::Create(FDevice* pDevice)
     FBindlessManager* pBindlessManager = new FBindlessManager(pDevice);
 
     const VkPhysicalDeviceLimits& DeviceLimits = pDevice->GetDeviceLimits();
-    
-    const size_t NumMaxBindlessResources      = DeviceLimits.maxPerStageDescriptorSampledImages;
+    if (DeviceLimits.maxPerStageDescriptorSampledImages < 16)
+    {
+        std::cout << "Not enough samplers/images supported for bindless" << std::endl;
+        return nullptr;
+    }
+
+    const size_t NumMaxBindlessResources      = DeviceLimits.maxPerStageDescriptorSampledImages - 16;
     const size_t BindlessResourceBindingIndex = 0;
     pBindlessManager->m_MaxTextureBinding = static_cast<uint32_t>(NumMaxBindlessResources);
     
@@ -198,7 +203,7 @@ void FBindlessManager::RemoveImageView(VkImageView ImageView)
     {
         return;
     }
-    
-    m_TextureBindings.erase(It);
+
     m_TextureFreeList.emplace_back(It->second);
+    m_TextureBindings.erase(It);
 }

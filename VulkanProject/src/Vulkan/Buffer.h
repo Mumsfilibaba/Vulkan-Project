@@ -23,11 +23,10 @@ public:
     FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator);
     ~FBuffer();
     
-    void SetDebugName(const char* DebugName);
-    
     void* Map();
     void FlushMappedMemoryRange();
     void Unmap();
+    void SetDebugName(const char* DebugName);
     
     VkBuffer GetBuffer() const
     {

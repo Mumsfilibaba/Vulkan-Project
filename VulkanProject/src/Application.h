@@ -33,6 +33,7 @@ public:
     void Release();
     bool CreateWindow();
     
+    void OnWindowMinimized(GLFWwindow* pWindow, int32_t Minimized);
     void OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height);
     void OnWindowClose(GLFWwindow* pWindow);
 
@@ -51,10 +52,10 @@ private:
     IRenderer*  m_pRenderer;
     FDevice*    m_pDevice;
     FSwapchain* m_pSwapchain;
-    
-    uint32_t m_Width;
-    uint32_t m_Height;
-    
+    uint32_t    m_Width;
+    uint32_t    m_Height;
+    bool        m_bIsMinimized;
+
     std::chrono::time_point<std::chrono::system_clock> m_LastTime;
 
     static FApplication* GAppInstance;

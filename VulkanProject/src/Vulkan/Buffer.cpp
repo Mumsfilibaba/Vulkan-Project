@@ -167,26 +167,6 @@ FBuffer::~FBuffer()
     }
 }
 
-void FBuffer::SetDebugName(const char* DebugName)
-{
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
-    {
-        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
-        ZERO_STRUCT(&DebugNameInfo);
-        
-        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-        DebugNameInfo.objectType   = VK_OBJECT_TYPE_BUFFER;
-        DebugNameInfo.pObjectName  = DebugName;
-        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Buffer);
-
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
-        if (Result != VK_SUCCESS)
-        {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
-        }
-    }
-}
-
 void* FBuffer::Map()
 {
     void* pResult = nullptr;
@@ -233,5 +213,25 @@ void FBuffer::Unmap()
     if (!m_pAllocator)
     {
         vkUnmapMemory(GetDevice()->GetDevice(), m_DeviceMemory);
+    }
+}
+
+void FBuffer::SetDebugName(const char* DebugName)
+{
+    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
+
+        DebugNameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType = VK_OBJECT_TYPE_BUFFER;
+        DebugNameInfo.pObjectName = DebugName;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Buffer);
+
+        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+        }
     }
 }

@@ -5,7 +5,7 @@
 
 #define SAH_PER_TRIANGLE 0
 #define SAH_OPTIMIZED 1
-#define SAH_NUM_SPLITS 100
+#define SAH_NUM_SPLITS 32
 
 FBvhBuilder::FBvhBuilder(uint32_t InMaxDepth)
     : BoundingBoxes()

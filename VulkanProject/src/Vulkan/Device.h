@@ -52,9 +52,14 @@ public:
     VkQueue          GetPresentQueue()   const { return m_PresentationQueue; }
     VkQueue          GetGraphicsQueue()  const { return m_GraphicsQueue; }
 
+    bool IsBindlessSupported() const
+    {
+        return m_pBindlessManager != nullptr;
+    }
+
     FBindlessManager& GetBindlessManager() const
     {
-        assert(m_pBindlessManager != nullptr);
+        assert(IsBindlessSupported());
         return *m_pBindlessManager;
     }
     

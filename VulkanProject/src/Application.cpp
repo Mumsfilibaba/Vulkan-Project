@@ -64,7 +64,7 @@ bool FApplication::Init()
         return false;
     }
     
-    // Create Swapchain
+    // Create SwapChain
     m_pSwapchain = FSwapchain::Create(m_pDevice, m_pWindow);
 
     // Initialize ImGui
@@ -75,7 +75,8 @@ bool FApplication::Init()
     
     // Show window
     glfwShowWindow(m_pWindow);
-        
+    m_bIsMinimized = false;
+
     m_LastTime = std::chrono::system_clock::now();
     return true;
 }
@@ -92,6 +93,11 @@ bool FApplication::CreateWindow()
     if (m_pWindow)
     {
         // Setup callbacks
+        glfwSetWindowIconifyCallback(m_pWindow, [](GLFWwindow* pWindow, int32_t Minimized)
+        {
+            GAppInstance->OnWindowMinimized(pWindow, Minimized);
+        });
+
         glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow* pWindow)
         {
             GAppInstance->OnWindowClose(pWindow);
@@ -110,19 +116,35 @@ bool FApplication::CreateWindow()
     }
 }
 
+void FApplication::OnWindowMinimized(GLFWwindow* pWindow, int32_t Minimized)
+{
+    if (Minimized)
+    {
+        m_bIsMinimized = true;
+    }
+    else
+    {
+        m_bIsMinimized = false;
+    }
+}
+
 void FApplication::OnWindowResize(GLFWwindow* pWindow, uint32_t Width, uint32_t Height)
 {
-    m_Width  = Width;
-    m_Height = Height;
+    // This happens when we minimize a window
+    if (Width > 0 && Height > 0)
+    {
+        m_Width  = Width;
+        m_Height = Height;
 
-    // Resize the swapchain
-    m_pSwapchain->Resize(Width, m_Height);
+        // Resize the swapchain
+        m_pSwapchain->Resize(Width, m_Height);
 
-    // Ensure that ImGui can create necessary resources for the main window
-    GUI::OnSwapchainRecreated();
+        // Ensure that ImGui can create necessary resources for the main window
+        GUI::OnSwapchainRecreated();
 
-    // Let the renderer know about the resize
-    m_pRenderer->OnWindowResize(m_Width, m_Height);
+        // Let the renderer know about the resize
+        m_pRenderer->OnWindowResize(m_Width, m_Height);
+    }
 }
 
 void FApplication::OnWindowClose(GLFWwindow* pWindow)
@@ -141,24 +163,28 @@ void FApplication::Tick()
     glfwPollEvents();
 
     std::chrono::duration<double> ElapsedSeconds = CurrentTime - m_LastTime;
-    
-    // Update GUI
-    GUI::TickImGui();
-    
-    // Render
-    m_pRenderer->Tick(ElapsedSeconds.count());
-    
-    // Render the renderers UI
-    m_pRenderer->OnRenderUI();
-    
-    // Render ImGui
-    GUI::RenderImGui();
-    
-    // Present main window
-    VkResult Result = m_pSwapchain->Present();
-    if (Result == VK_SUBOPTIMAL_KHR || Result == VK_ERROR_OUT_OF_DATE_KHR)
+
+    // Skip rendering if we are minimized
+    if (!m_bIsMinimized)
     {
-        GUI::OnSwapchainRecreated();
+        // Update GUI
+        GUI::TickImGui();
+    
+        // Render
+        m_pRenderer->Tick(ElapsedSeconds.count());
+    
+        // Render the renderers UI
+        m_pRenderer->OnRenderUI();
+    
+        // Render ImGui
+        GUI::RenderImGui();
+    
+        // Present main window
+        VkResult Result = m_pSwapchain->Present();
+        if (Result == VK_SUBOPTIMAL_KHR || Result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            GUI::OnSwapchainRecreated();
+        }
     }
 
     m_LastTime = CurrentTime;
