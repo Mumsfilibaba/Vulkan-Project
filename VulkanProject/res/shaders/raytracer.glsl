@@ -23,7 +23,7 @@
 #define NUM_THREADS 16
 #define MAX_DEPTH 1024
 #define SIGMA 0.0001
-#define RAY_OFFSET 0.01
+#define RAY_OFFSET 0.001
 #define GAMMA 2.2
 #define SKYBOX_MULTIPLIER 1.0
 
@@ -532,6 +532,26 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
             const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
             FMaterial Material = Materials[MaterialIndex];
 
+            vec3 Normal;
+            if (Material.NormalTexIndex != INVALID_BINDLESS_ID)
+            {
+                vec3 BiTangent = cross(PayLoad.Normal, PayLoad.Tangent);
+                vec3 NormalMap = texture(uTextures[Material.NormalTexIndex], PayLoad.TexCoords).rgb;
+                NormalMap = normalize(NormalMap * 2.0 - 1.0); // Transform from [0,1] range to [-1,1]
+
+                mat3 TBN = mat3(PayLoad.Tangent, BiTangent, PayLoad.Normal);
+                Normal = normalize(TBN * NormalMap);
+
+                if (any(isnan(Normal)) || any(isinf(Normal)))
+                {
+                    Normal = PayLoad.Normal;                 
+                }
+            }
+            else
+            {
+                Normal = PayLoad.Normal;
+            }
+
             if (PayLoad.bFromInside)
             {
                 RayColor *= exp(-Material.AbsorbtionColor.rgb * PayLoad.T);
@@ -544,7 +564,7 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
             {
                 float IncidenceOfRefraction1 = PayLoad.bFromInside ? Material.IncidenceOfRefraction : 1.0;
                 float IncidenceOfRefraction2 = !PayLoad.bFromInside ? Material.IncidenceOfRefraction : 1.0;
-                SpecularChance = FresnelReflectAmount(IncidenceOfRefraction1, IncidenceOfRefraction2, Ray.Direction, PayLoad.Normal, Material.SpecularChance, 1.0);
+                SpecularChance = FresnelReflectAmount(IncidenceOfRefraction1, IncidenceOfRefraction2, Ray.Direction, Normal, Material.SpecularChance, 1.0);
 
                 float ChanceMultiplier = (1.0 - SpecularChance) / (1.0 - Material.SpecularChance);
                 RefractionChance *= ChanceMultiplier;
@@ -575,23 +595,23 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
             vec3 RayPosition  = PayLoad.Position;
             if (DoRefraction == 1.0)
             {
-                RayPosition = RayPosition - PayLoad.Normal * RAY_OFFSET;
+                RayPosition = RayPosition - Normal * RAY_OFFSET;
             }
             else
             {
-                RayPosition = RayPosition + PayLoad.Normal * RAY_OFFSET;
+                RayPosition = RayPosition + Normal * RAY_OFFSET;
             }
 
             // Create diffuse ray
-            vec3 DiffuseRay = normalize(PayLoad.Normal + NextRandomUnitSphereVec3(RandomSeed));
+            vec3 DiffuseRay = normalize(Normal + NextRandomUnitSphereVec3(RandomSeed));
 
             // Create specular ray 
-            vec3 SpecularRay = reflect(RayDirection, PayLoad.Normal);
+            vec3 SpecularRay = reflect(RayDirection, Normal);
             SpecularRay = normalize(mix(SpecularRay, DiffuseRay, Material.SpecularRoughness * Material.SpecularRoughness));
             
             // Create refraction ray
-            vec3 RefractionRay = refract(RayDirection, PayLoad.Normal, PayLoad.bFromInside ? Material.IncidenceOfRefraction : 1.0 / Material.IncidenceOfRefraction);
-            RefractionRay = normalize(mix(RefractionRay, normalize(PayLoad.Normal + NextRandomUnitSphereVec3(RandomSeed)), Material.RefractionRoughness * Material.RefractionRoughness));
+            vec3 RefractionRay = refract(RayDirection, Normal, PayLoad.bFromInside ? Material.IncidenceOfRefraction : 1.0 / Material.IncidenceOfRefraction);
+            RefractionRay = normalize(mix(RefractionRay, normalize(Normal + NextRandomUnitSphereVec3(RandomSeed)), Material.RefractionRoughness * Material.RefractionRoughness));
 
             // blend rays
             RayDirection = mix(DiffuseRay, SpecularRay, DoSpecular);
@@ -667,6 +687,11 @@ vec3 GetNormalForRay(in FRay Ray)
 
             mat3 TBN = mat3(PayLoad.Tangent, BiTangent, PayLoad.Normal);
             Normal = normalize(TBN * NormalMap);
+
+            if (any(isnan(Normal)) || any(isinf(Normal)))
+            {
+                Normal = PayLoad.Normal;                 
+            }
         }
         else
         {
