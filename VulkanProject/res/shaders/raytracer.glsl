@@ -509,7 +509,8 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
     vec3 RayColor    = vec3(1.0);
     vec3 SampleColor = vec3(0.0);
 
-    uint MaxBounces = min(uScene.NumBounces, MAX_DEPTH);
+    // Add one bounce (Primary ray)
+    uint MaxBounces = min(uScene.NumBounces, MAX_DEPTH) + 1;
     for (uint i = 0; i < MaxBounces; i++)
     {
         FRayPayLoad PayLoad;
