@@ -139,13 +139,6 @@ layout(std430, binding = 13) buffer BvhBuffer
     FBoundingBox BvhNodes[];
 };
 
-float IntersectRayAABB(in uint NodeIndex, in FRay Ray)
-{
-    vec3 BoxMin = BvhNodes[NodeIndex].BoxMinAndIndex.xyz;
-    vec3 BoxMax = BvhNodes[NodeIndex].BoxMaxAndNumTriangles.xyz;
-    return IntersectRayAABB(BoxMin, BoxMax, Ray);
-}
-
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Code
 
@@ -267,48 +260,43 @@ void HitSphere(in FSphere Sphere, in FRay Ray, inout FRayPayLoad PayLoad)
     }
 }
 
-bool HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in FRay Ray, inout FRayPayLoad PayLoad) 
+FHitInfo HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in vec3 RayOrigin, in vec3 RayDirection) 
 {
+    FHitInfo HitInfo;
+    HitInfo.Dist = LARGE_NUMBER;
+
     // Compute the triangle edges
     vec3 Edge1 = Vertex1 - Vertex0;
     vec3 Edge2 = Vertex2 - Vertex0;
-    vec3 DirectionCrossEdge2 = cross(Ray.Direction, Edge2);
+    vec3 DirectionCrossEdge2 = cross(RayDirection, Edge2);
 
     float Determinant = dot(Edge1, DirectionCrossEdge2);
     if (abs(Determinant) < SIGMA) 
     {
-        return false;
+        return HitInfo;
     }
 
-    vec3 RayOriginToVertex0 = Ray.Origin - Vertex0;
+    vec3 RayOriginToVertex0 = RayOrigin - Vertex0;
 
     float RecipDeterminant = 1.0 / Determinant;
     float U = RecipDeterminant * dot(RayOriginToVertex0, DirectionCrossEdge2);
     if (U < 0.0 || U > 1.0) 
     {
-        return false;
+        return HitInfo;
     }
 
     vec3 RayOriginToVertex0CrossEdge1 = cross(RayOriginToVertex0, Edge1);
 
-    float V = RecipDeterminant * dot(Ray.Direction, RayOriginToVertex0CrossEdge1);
+    float V = RecipDeterminant * dot(RayDirection, RayOriginToVertex0CrossEdge1);
     if (V < 0.0 || U + V > 1.0) 
     {
-        return false;
+        return HitInfo;
     }
 
     // At this stage we can compute t to find out where the intersection point is on the line.
-    float T = RecipDeterminant * dot(Edge2, RayOriginToVertex0CrossEdge1);
-    if (T > PayLoad.MinT && T < PayLoad.MaxT && T < PayLoad.T) 
-    {
-        PayLoad.T = T;
-        PayLoad.BaryCentrics = vec3(U, V, 1.0 - (U + V));
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    HitInfo.Dist = RecipDeterminant * dot(Edge2, RayOriginToVertex0CrossEdge1);
+    HitInfo.BaryCentrics = vec2(U, V);
+    return HitInfo;
 }
 
 void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint MaterialIndex)
@@ -341,8 +329,15 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
                 vec3 Position1 = Vertices[Triangle.Index1].Position.xyz;
                 vec3 Position2 = Vertices[Triangle.Index2].Position.xyz;
 
-                if (HitTriangle(Position0, Position1, Position2, Ray, PayLoad))
+                FHitInfo HitInfo = HitTriangle(Position0, Position1, Position2, Ray.Origin, Ray.Direction); 
+                if (HitInfo.Dist > PayLoad.MinT && HitInfo.Dist < PayLoad.MaxT && HitInfo.Dist < PayLoad.T)
                 {
+                    PayLoad.T = HitInfo.Dist;
+
+                    vec2 TexCoords0 = VerticesEx[Triangle.Index0].TexCoords.xy;
+                    vec2 TexCoords1 = VerticesEx[Triangle.Index1].TexCoords.xy;
+                    vec2 TexCoords2 = VerticesEx[Triangle.Index2].TexCoords.xy;
+
                     vec3 Normal0 = VerticesEx[Triangle.Index0].Normal.xyz;
                     vec3 Normal1 = VerticesEx[Triangle.Index1].Normal.xyz;
                     vec3 Normal2 = VerticesEx[Triangle.Index2].Normal.xyz;
@@ -351,13 +346,10 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
                     vec3 Tangent1 = VerticesEx[Triangle.Index1].Tangent.xyz;
                     vec3 Tangent2 = VerticesEx[Triangle.Index2].Tangent.xyz;
 
-                    vec2 TexCoords0 = VerticesEx[Triangle.Index0].TexCoords.xy;
-                    vec2 TexCoords1 = VerticesEx[Triangle.Index1].TexCoords.xy;
-                    vec2 TexCoords2 = VerticesEx[Triangle.Index2].TexCoords.xy;
-
-                    PayLoad.Normal    = normalize((PayLoad.BaryCentrics.x * Normal1)  + (PayLoad.BaryCentrics.y * Normal2)  + (PayLoad.BaryCentrics.z * Normal0));
-                    PayLoad.Tangent   = normalize((PayLoad.BaryCentrics.x * Tangent1) + (PayLoad.BaryCentrics.y * Tangent2) + (PayLoad.BaryCentrics.z * Tangent0));
-                    PayLoad.TexCoords = (PayLoad.BaryCentrics.x * TexCoords1) + (PayLoad.BaryCentrics.y * TexCoords2) + (PayLoad.BaryCentrics.z * TexCoords0);
+                    PayLoad.BaryCentrics = vec3(HitInfo.BaryCentrics, 1.0 - (HitInfo.BaryCentrics.x + HitInfo.BaryCentrics.y));
+                    PayLoad.Normal       = normalize((PayLoad.BaryCentrics.x * Normal1)  + (PayLoad.BaryCentrics.y * Normal2)  + (PayLoad.BaryCentrics.z * Normal0));
+                    PayLoad.Tangent      = normalize((PayLoad.BaryCentrics.x * Tangent1) + (PayLoad.BaryCentrics.y * Tangent2) + (PayLoad.BaryCentrics.z * Tangent0));
+                    PayLoad.TexCoords    = (PayLoad.BaryCentrics.x * TexCoords1) + (PayLoad.BaryCentrics.y * TexCoords2) + (PayLoad.BaryCentrics.z * TexCoords0);
                     LastTriangleHitIndex = int(TriangleIndex);
                 }
             }
@@ -368,8 +360,8 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
             uint ChildIndex2 = floatBitsToUint(Node.BoxMinAndIndex.w) + 1;
 
             // Check intersection of child nodes
-            float Dist1 = IntersectRayAABB(ChildIndex1, Ray);
-            float Dist2 = IntersectRayAABB(ChildIndex2, Ray);
+            float Dist1 = IntersectRayAABB(BvhNodes[ChildIndex1].BoxMinAndIndex.xyz, BvhNodes[ChildIndex1].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection);
+            float Dist2 = IntersectRayAABB(BvhNodes[ChildIndex2].BoxMinAndIndex.xyz, BvhNodes[ChildIndex2].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection);
 
             // Ensure 1 is the closest
             if (Dist1 > Dist2)
@@ -812,7 +804,12 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
                 vec3 Position1 = Vertices[Triangle.Index1].Position.xyz;
                 vec3 Position2 = Vertices[Triangle.Index2].Position.xyz;
 
-                HitTriangle(Position0, Position1, Position2, Ray, PayLoad);
+                FHitInfo HitInfo = HitTriangle(Position0, Position1, Position2, Ray.Origin, Ray.Direction); 
+                if (HitInfo.Dist > PayLoad.MinT && HitInfo.Dist < PayLoad.MaxT && HitInfo.Dist < PayLoad.T)
+                {
+                    PayLoad.T = HitInfo.Dist;
+                }
+
                 NumTriangleTests++;
             }
         }
@@ -822,8 +819,8 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
             uint ChildIndex2 = floatBitsToUint(Node.BoxMinAndIndex.w) + 1;
 
             // Check intersection of child nodes
-            float Dist1 = IntersectRayAABB(ChildIndex1, Ray);
-            float Dist2 = IntersectRayAABB(ChildIndex2, Ray);
+            float Dist1 = IntersectRayAABB(BvhNodes[ChildIndex1].BoxMinAndIndex.xyz, BvhNodes[ChildIndex1].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection);
+            float Dist2 = IntersectRayAABB(BvhNodes[ChildIndex2].BoxMinAndIndex.xyz, BvhNodes[ChildIndex2].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection);
             NumBoxTests += 2;
 
             // Ensure 1 is the closest

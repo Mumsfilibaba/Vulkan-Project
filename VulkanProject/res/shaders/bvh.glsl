@@ -18,10 +18,10 @@ struct FBoundingBox
     vec4 BoxMaxAndNumTriangles;
 };
 
-float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in FRay Ray)
+float IntersectRayAABB(in vec3 BoxMin, in vec3 BoxMax, in vec3 RayOrigin, in vec3 InvRayDirection)
 {
-    vec3 MinT = (BoxMin - Ray.Origin) * Ray.InvDirection;
-    vec3 MaxT = (BoxMax - Ray.Origin) * Ray.InvDirection;
+    vec3 MinT = (BoxMin - RayOrigin) * InvRayDirection;
+    vec3 MaxT = (BoxMax - RayOrigin) * InvRayDirection;
 
     vec3 T1 = min(MinT, MaxT);
     vec3 T2 = max(MinT, MaxT);

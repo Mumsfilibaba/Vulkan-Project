@@ -90,4 +90,10 @@ struct FMesh
     uint MaterialIndex;
 };
 
+struct FHitInfo
+{
+    vec2  BaryCentrics;
+    float Dist;
+};
+
 #endif
