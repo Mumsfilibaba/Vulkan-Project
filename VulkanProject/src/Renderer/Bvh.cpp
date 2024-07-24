@@ -5,7 +5,7 @@
 
 #define SAH_PER_TRIANGLE 0
 #define SAH_OPTIMIZED 1
-#define SAH_NUM_SPLITS 32
+#define SAH_NUM_SPLITS 8
 
 FBvhBuilder::FBvhBuilder(uint32_t InMaxDepth)
     : BoundingBoxes()
@@ -16,22 +16,13 @@ FBvhBuilder::FBvhBuilder(uint32_t InMaxDepth)
 
 void FBvhBuilder::BuildHierarchy()
 {
-    // Split bounding box along the longest axix
+    // Split bounding box along the longest axis
     std::queue<uint32_t> Queue;
     Queue.push(0);
-    
-    DepthDebugIndicies =
-    {
-        { 0, 1 }
-    };
-    
+
     uint32_t CurrentDepth = 0;
     while (CurrentDepth < MaxDepth && !Queue.empty())
     {
-        // Store the start index for this depth
-        std::pair<size_t, size_t>& DebugIndicies = DepthDebugIndicies.emplace_back();
-        DebugIndicies.first = BoundingBoxes.size();
-        
         // Go through all the nodes
         size_t NumNodes = Queue.size();
         for (size_t i = 0; i < NumNodes; i++)
@@ -44,17 +35,16 @@ void FBvhBuilder::BuildHierarchy()
             {
                 continue;
             }
-            
+
             // Go through each axis and find the best cost
             float   BestSplit = 0.0f;
             int32_t BestAxis  = -1;
             float   BestCost  = std::numeric_limits<float>::max();
-            
+
         #if SAH_OPTIMIZED
             const size_t NumSplits = SAH_NUM_SPLITS;
-            const glm::vec3 Extent = BoundingBoxes[CurrentIndex].BoxMax - BoundingBoxes[CurrentIndex].BoxMin;
         #endif
-            
+
             const std::vector<uint32_t>& TriangleIndices = BoundingBoxes[CurrentIndex].Triangles;
             for (size_t Axis = 0; Axis < 3; Axis++)
             {
@@ -70,10 +60,26 @@ void FBvhBuilder::BuildHierarchy()
                     }
                 }
             #elif SAH_OPTIMIZED
-                const float PerSplitDistance = Extent[Axis] / static_cast<float>(NumSplits);
+                float BoxMin = std::numeric_limits<float>::max();
+                float BoxMax = std::numeric_limits<float>::lowest();
+
+                for (uint32_t TriangleIndex : TriangleIndices)
+                {
+                    const float Center = Triangles[TriangleIndex].Center[Axis];
+                    BoxMin = std::min(BoxMin, Center);
+                    BoxMax = std::max(BoxMax, Center);
+                }
+
+                if (BoxMin == BoxMax)
+                {
+                    continue;
+                }
+
+                const float Extent = BoxMax - BoxMin;
+                const float Scale  = Extent / static_cast<float>(NumSplits);
                 for (size_t i = 0; i < NumSplits; i++)
                 {
-                    const float SplitPos = BoundingBoxes[CurrentIndex].BoxMin[Axis] + (static_cast<float>(i) * PerSplitDistance);
+                    const float SplitPos = BoxMin + (static_cast<float>(i) * Scale);
                     const float Cost = EvaluateCost(CurrentIndex, Axis, SplitPos);
                     if (Cost < BestCost)
                     {
@@ -84,10 +90,10 @@ void FBvhBuilder::BuildHierarchy()
                 }
             #endif
             }
-            
+
             // Axis must be valid
             assert(BestAxis >= 0);
-            
+
             // Add triangles to the child-nodes
             std::vector<uint32_t> LeftIndicies;
             std::vector<uint32_t> RightIndicies;
@@ -135,10 +141,7 @@ void FBvhBuilder::BuildHierarchy()
             RecalculateBounds(NewIndex);
             RecalculateBounds(NewIndex + 1);
         }
-        
-        // Store the end index for this depth
-        DebugIndicies.second = BoundingBoxes.size();
-        
+
         // Move to next depth
         CurrentDepth++;
     }
@@ -171,7 +174,7 @@ void FBvhBuilder::Finalize()
         Box.NumTriangles       = NumTriangles;
         Box.FirstTriangleIndex = NewTriangles.size();
         
-        // Insert trianfles into the new array in the new order
+        // Insert triangles into the new array in the new order
         for (uint32_t TriangleIndex : Box.Triangles)
         {
             NewTriangles.push_back(Triangles[TriangleIndex]);
@@ -324,7 +327,4 @@ void FBvhAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
     // Setup the stats
     Stats.Depth = BoundingBoxBuilder.Depth;
     Stats.MaxTrianglesInLeafNode = MaxTriangleCount;
-    
-    // Store the depth-indices
-    m_DepthIndicies = BoundingBoxBuilder.DepthDebugIndicies;
 }

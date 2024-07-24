@@ -82,11 +82,10 @@ struct FBvhBuilder
     void RecalculateBounds(size_t VolumeIndex);
     float EvaluateCost(size_t VolumeIndex, size_t AxisIndex, float SplitPos);
     
-    std::vector<FBvhTriangle>              Triangles;
-    std::vector<FBvhBoundingBox>           BoundingBoxes;
-    const uint32_t                         MaxDepth;
-    uint32_t                               Depth;
-    std::vector<std::pair<size_t, size_t>> DepthDebugIndicies;
+    std::vector<FBvhTriangle>    Triangles;
+    std::vector<FBvhBoundingBox> BoundingBoxes;
+    const uint32_t               MaxDepth;
+    uint32_t                     Depth;
 };
 
 struct FBvhAccelerationStructure
@@ -95,9 +94,8 @@ struct FBvhAccelerationStructure
     
     void Build(const FMesh& Mesh, uint32_t MaxDepth);
 
-    std::vector<FShaderTriangle>           m_Triangles;
-    std::vector<FShaderBoundingBox>        m_BoundingBoxes;
-    std::vector<std::pair<size_t, size_t>> m_DepthIndicies;
+    std::vector<FShaderTriangle>    m_Triangles;
+    std::vector<FShaderBoundingBox> m_BoundingBoxes;
     
     struct
     {

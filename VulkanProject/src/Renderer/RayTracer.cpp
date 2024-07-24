@@ -519,7 +519,7 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
         pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
     }
     
-    // Draw Wireframe
+    // Draw wire-frame
     {
         pCommandBuffer->BindGraphicsPipelineState(m_pDebugPipelineWireframe);
 
@@ -549,7 +549,7 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
     // Draw the bounding boxes
     {
         pCommandBuffer->BindGraphicsPipelineState(m_pDebugAABBPipeline);
-        
+
         // Bind DescriptorSets
         const uint64_t Frame = (m_FrameIndex % 2);
         if (Frame == 0)
@@ -560,60 +560,23 @@ void FRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
         {
             pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet1, 0);
         }
-        
+
         pCommandBuffer->BindVertexBuffer(m_pAABBVertexBuffer, 0, 0);
         pCommandBuffer->BindIndexBuffer(m_pAABBIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        
-        std::pair<size_t, size_t> Indicies = m_pScene->m_AccelerationStructure.m_DepthIndicies[m_DebugDepth];
-        Indicies.second = std::min(Indicies.second, m_pScene->m_AccelerationStructure.m_BoundingBoxes.size());
-        
+
         struct FAABBDebugData
         {
             glm::vec4 Color;
         } DebugData;
-        
-        DebugData.Color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-        
-    #if 0
-        for (size_t i = 0; i < Indicies.first; i++)
-        {
-            const FShaderBoundingBox& BoundingBox = m_pScene->m_AccelerationStructure.m_BoundingBoxes[i];
-            glm::vec3 Scale    = BoundingBox.BoxMax - BoundingBox.BoxMin;
-            glm::vec3 Position = BoundingBox.BoxMin + (Scale * 0.5f);
-            
-            DebugData.TransformMatrix = glm::identity<glm::mat4>();
-            DebugData.TransformMatrix = glm::translate(DebugData.TransformMatrix, Position);
-            DebugData.TransformMatrix = glm::scale(DebugData.TransformMatrix, Scale);
-            
-            pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FAABBDebugData), &DebugData);
-            pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, 1, 0, 0, 0);
-        }
-        
-        DebugData.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
-        
-        for (size_t i = Indicies.first; i < Indicies.second; i++)
-        {
-            const FShaderBoundingBox& BoundingBox = m_pScene->m_AccelerationStructure.m_BoundingBoxes[i];
-            glm::vec3 Scale    = BoundingBox.BoxMax - BoundingBox.BoxMin;
-            glm::vec3 Position = BoundingBox.BoxMin + (Scale * 0.5f);
-            
-            DebugData.TransformMatrix = glm::identity<glm::mat4>();
-            DebugData.TransformMatrix = glm::translate(DebugData.TransformMatrix, Position);
-            DebugData.TransformMatrix = glm::scale(DebugData.TransformMatrix, Scale);
-            
-            pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FAABBDebugData), &DebugData);
-            pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, 1, 0, 0, 0);
-        }
-    #else
+
         DebugData.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
         pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FAABBDebugData), &DebugData);
-        
+
         const uint32_t NumInstances = static_cast<uint32_t>(m_pScene->m_AccelerationStructure.m_BoundingBoxes.size());
         pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, NumInstances, 0, 0, 0);
-    #endif
     }
     
-    // End renderpass
+    // End RenderPass
     pCommandBuffer->EndRenderPass();
 }
 
