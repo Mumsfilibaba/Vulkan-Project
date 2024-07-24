@@ -66,11 +66,11 @@ FScene::~FScene()
         {
             if (Material.AlbedoTex)
             {
-                //pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
+                pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
             }
-            if (Material.AlbedoTex)
+            if (Material.NormalTex)
             {
-                //pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
+                pDevice->GetBindlessManager().RemoveImageView(Material.NormalTex->GetTextureView()->GetImageView());
             }
         }
     }
