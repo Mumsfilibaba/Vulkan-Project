@@ -60,5 +60,5 @@
 #define LOG(Message, ...) \
     do \
     { \
-        printf(Message, __VA_ARGS__); \
-    } while(false);
+        printf(Message, ##__VA_ARGS__); \
+    } while(false)
