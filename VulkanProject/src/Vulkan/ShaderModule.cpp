@@ -58,12 +58,12 @@ FShaderModule* FShaderModule::CreateFromFile(FDevice* pDevice, const char* pEntr
             return nullptr;
         }
         
-        LOG("Loaded Shader '%s'\n", Filepath);
+        LOG("Loaded Shader '%s'\n", Filepath.c_str());
         return pShader;
     }
     else
     {
-        LOG("Failed to open file '%s'\n", Filepath);
+        LOG("Failed to open file '%s'\n", Filepath.c_str());
         return nullptr;
     }
 }

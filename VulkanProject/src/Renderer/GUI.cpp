@@ -1343,6 +1343,10 @@ namespace GUI
         {
             FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
             assert(pCommandBuffer != nullptr);
+
+            const std::string DebugName = "ImGui CommandBuffer[" + std::to_string(i) + "]";
+            pCommandBuffer->SetDebugName(DebugName.c_str());
+
             pViewportData->FrameData[i].pCommandBuffer = pCommandBuffer;
         }
     }

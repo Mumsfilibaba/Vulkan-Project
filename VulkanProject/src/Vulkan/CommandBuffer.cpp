@@ -72,6 +72,7 @@ FCommandBuffer::FCommandBuffer(FDevice* pDevice)
     , m_CommandPool(VK_NULL_HANDLE)
     , m_CommandBuffer(VK_NULL_HANDLE)
     , m_Fence(VK_NULL_HANDLE)
+    , m_NumCommands(0)
 {
 }
 
@@ -79,8 +80,11 @@ FCommandBuffer::~FCommandBuffer()
 {
     if (m_Fence != VK_NULL_HANDLE)
     {
-        WaitForAndResetFences();
-        
+        if (m_NumCommands > 0)
+        {
+            WaitForAndResetFences();
+        }
+
         vkDestroyFence(GetDevice()->GetDevice(), m_Fence, nullptr);
         m_Fence = VK_NULL_HANDLE;
     }
@@ -100,11 +104,29 @@ void FCommandBuffer::SetDebugName(const char* DebugName)
         ZERO_STRUCT(&DebugNameInfo);
 
         DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-        DebugNameInfo.objectType   = VK_OBJECT_TYPE_COMMAND_POOL;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_COMMAND_BUFFER;
         DebugNameInfo.pObjectName  = DebugName;
-        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_CommandPool);
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_CommandBuffer);
 
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
+        }
+
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_COMMAND_POOL;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_CommandPool);
+
+        Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
+        }
+
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_FENCE;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Fence);
+
+        Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
@@ -120,6 +142,7 @@ void FCommandBuffer::BindBindlessDescriptors(FPipelineLayout* pPipelineLayout, V
     FBindlessManager& BindlessManager = GetDevice()->GetBindlessManager();
     VkDescriptorSet BindlessDescriptorSet = BindlessManager.GetDescriptorSet();
     vkCmdBindDescriptorSets(m_CommandBuffer, BindPoint, pPipelineLayout->GetPipelineLayout(), pPipelineLayout->GetBindlessDescriptorSetIndex(), 1, &BindlessDescriptorSet, 0, nullptr);
+    m_NumCommands++;
 }
 
 void FCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkImageAspectFlags AspectMask)
@@ -222,4 +245,5 @@ void FCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkI
     }
 
     vkCmdPipelineBarrier(m_CommandBuffer, SourceStage, DestinationStage, 0, 0, nullptr, 0, nullptr, 1, &Barrier);
+    m_NumCommands++;
 }

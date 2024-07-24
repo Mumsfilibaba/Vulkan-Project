@@ -105,6 +105,16 @@ FTexture* FTexture::Create(FDevice* pDevice, const FTextureParams& Params)
         CommandBufferParams.QueueType = ECommandQueueType::Graphics;
 
         FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
+        if (!pCommandBuffer)
+        {
+            SAFE_DELETE(pTexture);
+            return nullptr;
+        }
+        else
+        {
+            pCommandBuffer->SetDebugName("FTexture::Create LayoutTransfer CommandBuffer");
+        }
+
         pCommandBuffer->Reset();
         pCommandBuffer->Begin();
         
@@ -172,6 +182,10 @@ FTexture* FTexture::CreateWithData(FDevice* pDevice, const FTextureParams& Param
         SAFE_DELETE(pUploadBuffer);
         SAFE_DELETE(pTexture);
         return nullptr;
+    }
+    else
+    {
+        pCommandBuffer->SetDebugName("FTexture::CreateWithData UploadCommandBuffer");
     }
     
     pCommandBuffer->Reset();

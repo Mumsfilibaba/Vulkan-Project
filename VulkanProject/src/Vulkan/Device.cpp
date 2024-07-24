@@ -14,11 +14,20 @@
     #include <dlfcn.h>
 #endif
 
+#define BREAK_ON_ERROR 1
+
 static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void*)
 {
     if (MessageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
         LOG("[Vulkan] %s\n", pCallbackData->pMessage);
+
+    #if BREAK_ON_ERROR
+        if (MessageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+        {
+            DEBUG_BREAK();
+        }
+    #endif
     }
     
     return VK_FALSE;
@@ -119,14 +128,13 @@ void FDevice::ExecuteGraphics(FCommandBuffer* pCommandBuffer, FSwapchain* pSwapc
     }
 
     // Calling execute with nullptr CommandBuffer results in waiting for the current semaphore
-    // This seems to be the only way of handling this
     VkFence Fence = VK_NULL_HANDLE;
-    VkCommandBuffer CommandBuffers[1] = {};
+    VkCommandBuffer CommandBuffers[1];
     if (pCommandBuffer)
     {
+        CommandBuffers[0] = pCommandBuffer->GetCommandBuffer();
         Fence = pCommandBuffer->GetFence();
 
-        CommandBuffers[0] = pCommandBuffer->GetCommandBuffer();
         SubmitInfo.pCommandBuffers    = CommandBuffers;
         SubmitInfo.commandBufferCount = 1;
     }

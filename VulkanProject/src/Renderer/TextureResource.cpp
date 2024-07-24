@@ -393,6 +393,10 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
         LOG("Failed to create CommandBuffer '%s'\n", Filepath);
         return nullptr;
     }
+    else
+    {
+        pCommandBuffer->SetDebugName("FTextureResource::LoadCubeMapFromPanoramaFile CommandBuffer");
+    }
     
     pCommandBuffer->Reset();
     pCommandBuffer->Begin();

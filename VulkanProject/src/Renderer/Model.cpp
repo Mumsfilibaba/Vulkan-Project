@@ -50,7 +50,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice, FDevice
 
     if (!tinyobj::LoadObj(&Attrib, &Shapes, &Materials, &Warning, &Error, Filepath.c_str()))
     {
-        LOG("Failed to load model '%s'\n", Filepath);
+        LOG("Failed to load model '%s'\n", Filepath.c_str());
         if (!Warning.empty())
         {
             LOG("  Warning: %s\n", Warning.c_str());
@@ -64,7 +64,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice, FDevice
     }
     else
     {
-        LOG("Loaded model '%s'\n", Filepath);
+        LOG("Loaded model '%s'\n", Filepath.c_str());
         if (!Warning.empty())
         {
             LOG("  Warning: %s\n", Warning.c_str());
@@ -142,7 +142,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     const std::string MaterialPath = ExtractPath(Filepath);
     if (!tinyobj::LoadObj(&TinyObjAttrib, &TinyObjShapes, &TinyObjMaterials, &TinyObjWarning, &TinyObjError, Filepath.c_str(), MaterialPath.c_str(), true))
     {
-        LOG("Failed to load model '%s'\n", Filepath);
+        LOG("Failed to load model '%s'\n", Filepath.c_str());
         if (!TinyObjWarning.empty())
         {
             LOG("  Warning: %s\n", TinyObjWarning.c_str());
@@ -156,7 +156,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     }
     else
     {
-        LOG("Loading model... '%s'\n", Filepath);
+        LOG("Loading model... '%s'\n", Filepath.c_str());
         if (!TinyObjWarning.empty())
         {
             LOG("Warning: %s\n", TinyObjWarning.c_str());
@@ -295,7 +295,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     const size_t TriangleCount = NewIndices.size() / 3;
     assert(TriangleCount == NewTriangleInfo.size());
 
-    LOG("... finished loading model '%s'\n", Filepath);
+    LOG("... finished loading model '%s'\n", Filepath.c_str());
     LOG("Calculating Tangents...\n");
 
     // Calculate tangents for each triangle

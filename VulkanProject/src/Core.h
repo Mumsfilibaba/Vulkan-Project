@@ -44,6 +44,12 @@
 #define ZERO_MEMORY(dst, size) memset(dst, 0, size)
 #define ZERO_STRUCT(dst) memset(dst, 0, sizeof(std::remove_pointer_t<decltype(dst)>))
 
+#if PLATFORM_WINDOWS
+    #define DEBUG_BREAK __debugbreak
+#elif PLATFORM_MAC
+    #define DEBUG_BREAK __builtin_trap
+#endif
+
 #define SAFE_DELETE(pObject) \
     if (pObject) \
     { \

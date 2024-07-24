@@ -112,6 +112,10 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& Params, 
                 SAFE_DELETE(pBuffer);
                 return nullptr;
             }
+            else
+            {
+                pCommandBuffer->SetDebugName("FBuffer::CreateWithData UploadCommandBuffer");
+            }
             
             pCommandBuffer->Reset();
             pCommandBuffer->Begin();

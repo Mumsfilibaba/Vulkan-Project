@@ -179,6 +179,11 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     for (size_t i = 0; i < m_CommandBuffers.size(); i++)
     {
         FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(m_pDevice, CommandBufferParams);
+        assert(pCommandBuffer != nullptr);
+
+        const std::string DebugName = "Frame CommandBuffer[" + std::to_string(i) + "]";
+        pCommandBuffer->SetDebugName(DebugName.c_str());
+
         m_CommandBuffers[i] = pCommandBuffer;
     }
 
