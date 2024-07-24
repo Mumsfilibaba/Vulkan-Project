@@ -153,7 +153,11 @@ void FDevice::ExecuteGraphics(FCommandBuffer* pCommandBuffer, FSwapchain* pSwapc
 
 void FDevice::WaitForIdle()
 {
-    vkDeviceWaitIdle(m_Device);
+    VkResult Result = vkDeviceWaitIdle(m_Device);
+    if (Result != VK_SUCCESS)
+    {
+        DEBUG_BREAK();
+    }
 }
 
 void FDevice::Destroy()
@@ -296,7 +300,7 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
     LOG("Enabled instance extensions:\n");
     for (const char* pEnabledExtension : InstanceExtensions)
     {
-        LOG("   &s\n", pEnabledExtension);
+        LOG("   %s\n", pEnabledExtension);
 
         bool bExtensionFound = false;
         for (VkExtensionProperties Extension : InstanceExtensionProperties)

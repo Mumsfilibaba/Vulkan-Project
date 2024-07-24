@@ -1977,24 +1977,28 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
     // Update smaller buffers
     if (!m_pScene->m_Quads.empty())
     {
+        pCommandBuffer->FillBuffer(m_pQuadBuffer, 0, m_pQuadBuffer->GetSize(), 0);
         assert(sizeof(FShaderQuad) * m_pScene->m_Quads.size() < m_pQuadBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pQuadBuffer, 0, sizeof(FShaderQuad) * m_pScene->m_Quads.size(), m_pScene->m_Quads.data());
     }
     
     if (!m_pScene->m_Spheres.empty())
     {
+        pCommandBuffer->FillBuffer(m_pSphereBuffer, 0, m_pSphereBuffer->GetSize(), 0);
         assert(sizeof(FShaderSphere) * m_pScene->m_Spheres.size() < m_pSphereBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(FShaderSphere) * m_pScene->m_Spheres.size(), m_pScene->m_Spheres.data());
     }
     
     if (!m_pScene->m_Meshes.empty())
     {
+        pCommandBuffer->FillBuffer(m_pMeshBuffer, 0, m_pMeshBuffer->GetSize(), 0);
         assert(sizeof(FShaderMesh) * m_pScene->m_Meshes.size() < m_pMeshBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(FShaderMesh) * m_pScene->m_Meshes.size(), m_pScene->m_Meshes.data());
     }
     
     if (!m_pScene->m_GpuMaterials.empty())
     {
+        pCommandBuffer->FillBuffer(m_pMaterialBuffer, 0, m_pMaterialBuffer->GetSize(), 0);
         assert(sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size() < m_pMaterialBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
     }

@@ -6,6 +6,13 @@
 #include "Vulkan/BindlessManager.h"
 #include "Vulkan/Sampler.h"
 
+template<typename T>
+static void ZeroVector(std::vector<T>& OutVector)
+{
+    const size_t Size = sizeof(T) * OutVector.capacity();
+    memset(OutVector.data(), 0, Size);
+}
+
 FScene::FScene()
     : m_Quads()
     , m_Spheres()
@@ -28,12 +35,23 @@ FScene::FScene()
     m_Settings.GradientLightStrength = 1.0f;
     
     m_Quads.reserve(MAX_QUADS);
+    ZeroVector(m_Quads);
+
     m_Spheres.reserve(MAX_SPHERES);
+    ZeroVector(m_Spheres);
+
     m_GpuMaterials.reserve(MAX_MATERIALS);
+    ZeroVector(m_GpuMaterials);
+
     m_Vertices.reserve(MAX_VERTICES);
+    ZeroVector(m_Vertices);
+
     m_VerticesEx.reserve(MAX_VERTICES);
+    ZeroVector(m_VerticesEx);
+
     m_Meshes.reserve(MAX_TRIANGLEMESHES);
-    
+    ZeroVector(m_Meshes);
+
     m_bUpdateBuffers = true;
 }
 
@@ -42,13 +60,17 @@ FScene::~FScene()
     if (FDevice* pDevice = FApplication::Get().GetDevice())
     {
         pDevice->WaitForIdle();
-        
+
         // Cleanup any textures from the BindlessManager
         for (const auto& Material : m_Materials)
         {
             if (Material.AlbedoTex)
             {
-                pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
+                //pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
+            }
+            if (Material.AlbedoTex)
+            {
+                //pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
             }
         }
     }
@@ -71,10 +93,10 @@ void FModelScene::Initialize()
 {
     // Settings
     m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
-    
+
     // Setup Camera
     Reset();
-    
+
     // Load Model
     FMesh Mesh;
     if (Type == EModelSceneType::Default)

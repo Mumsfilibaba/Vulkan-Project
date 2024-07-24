@@ -30,19 +30,20 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceM
     VkMemoryRequirements MemoryRequirements = {};
     vkGetBufferMemoryRequirements(pDevice->GetDevice(), pBuffer->m_Buffer, &MemoryRequirements);
     
-    if (pAllocator)
+    /*if (pAllocator)
     {
         if (pAllocator->Allocate(pBuffer->m_Allocation, MemoryRequirements, Params.MemoryProperties))
         {
             vkBindBufferMemory(pDevice->GetDevice(), pBuffer->m_Buffer, pBuffer->m_Allocation.DeviceMemory, pBuffer->m_Allocation.DeviceMemoryOffset);
-            pBuffer->m_Size = Params.Size;
+            pBuffer->m_Size          = Params.Size;
+            pBuffer->m_AllocatedSize = MemoryRequirements.size;
         }
         else
         {
             LOG("VulkanDeviceAllocator::Allocate failed\n");
         }
     }
-    else
+    else*/
     {
         VkMemoryAllocateInfo AllocInfo;
         ZERO_STRUCT(&AllocInfo);
@@ -59,7 +60,8 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceM
         else
         {
             vkBindBufferMemory(pDevice->GetDevice(), pBuffer->m_Buffer, pBuffer->m_DeviceMemory, 0);
-            pBuffer->m_Size = MemoryRequirements.size;
+            pBuffer->m_Size          = Params.Size;
+            pBuffer->m_AllocatedSize = MemoryRequirements.size;
 
             LOG("Allocated %llu bytes\n", MemoryRequirements.size);
         }
@@ -145,6 +147,7 @@ FBuffer::FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator)
     , m_Buffer(VK_NULL_HANDLE)
     , m_DeviceMemory(VK_NULL_HANDLE)
     , m_Size(0)
+    , m_AllocatedSize(0)
     , m_Allocation()
 {
 }
@@ -180,7 +183,7 @@ void* FBuffer::Map()
     }
     else
     {
-        VkResult Result = vkMapMemory(GetDevice()->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
+        VkResult Result = vkMapMemory(GetDevice()->GetDevice(), m_DeviceMemory, 0, m_AllocatedSize, 0, &pResult);
         if (Result != VK_SUCCESS)
         {
             LOG("vkMapMemory failed. Error: %d\n", Result);
@@ -201,7 +204,7 @@ void FBuffer::FlushMappedMemoryRange()
         Range.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
         Range.memory = m_DeviceMemory;
         Range.offset = 0;
-        Range.size   = m_Size;
+        Range.size   = m_AllocatedSize;
 
         VkResult Result = vkFlushMappedMemoryRanges(GetDevice()->GetDevice(), 1, &Range);
         if (Result != VK_SUCCESS)
@@ -227,9 +230,9 @@ void FBuffer::SetDebugName(const char* DebugName)
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
 
-        DebugNameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-        DebugNameInfo.objectType = VK_OBJECT_TYPE_BUFFER;
-        DebugNameInfo.pObjectName = DebugName;
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_BUFFER;
+        DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Buffer);
 
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);

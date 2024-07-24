@@ -150,6 +150,13 @@ public:
         vkCmdUpdateBuffer(m_CommandBuffer, pBuffer->GetBuffer(), DstOffset, DataSize, pData);
         m_NumCommands++;
     }
+
+    void FillBuffer(FBuffer* pBuffer, VkDeviceSize DstOffset, VkDeviceSize Size, uint32_t Data)
+    {
+        assert(pBuffer != nullptr);
+        vkCmdFillBuffer(m_CommandBuffer, pBuffer->GetBuffer(), DstOffset, Size, Data);
+        m_NumCommands++;
+    }
     
     void CopyBuffer(VkBuffer SrcBuffer, VkBuffer DstBuffer, uint32_t RegionCount, const VkBufferCopy* pRegions)
     {
@@ -210,7 +217,11 @@ public:
             DEBUG_BREAK();
         }
 
-        vkResetFences(GetDevice()->GetDevice(), 1, &m_Fence);
+        Result = vkResetFences(GetDevice()->GetDevice(), 1, &m_Fence);
+        if (Result != VK_SUCCESS)
+        {
+            DEBUG_BREAK();
+        }
     }
 
     void Reset(VkCommandPoolResetFlags Flags = 0)
@@ -219,7 +230,11 @@ public:
         WaitForAndResetFences();
         
         // Avoid using the VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT since we can reuse the memory
-        vkResetCommandPool(GetDevice()->GetDevice(), m_CommandPool, Flags);
+        VkResult Result = vkResetCommandPool(GetDevice()->GetDevice(), m_CommandPool, Flags);
+        if (Result != VK_SUCCESS)
+        {
+            DEBUG_BREAK();
+        }
 
         // Reset CommandCount
         m_NumCommands = 0;

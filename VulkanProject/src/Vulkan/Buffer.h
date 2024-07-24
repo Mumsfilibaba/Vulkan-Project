@@ -43,5 +43,6 @@ private:
     VkBuffer                m_Buffer;
     VkDeviceMemory          m_DeviceMemory;
     VkDeviceSize            m_Size;
+    VkDeviceSize            m_AllocatedSize;
     FDeviceAllocation       m_Allocation;
 };
