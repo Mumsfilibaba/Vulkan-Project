@@ -27,7 +27,7 @@ FDescriptorSet* FDescriptorSet::Create(FDevice* pDevice, FDescriptorPool* pDescr
     VkResult Result = vkAllocateDescriptorSets(pDevice->GetDevice(), &DescriptorSetAllocateInfo, &pDescriptorSet->m_DescriptorSet);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkAllocateDescriptorSets failed\n";
+        LOG("vkAllocateDescriptorSets failed\n");
         return nullptr;
     }
     
@@ -171,7 +171,7 @@ void FDescriptorSet::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

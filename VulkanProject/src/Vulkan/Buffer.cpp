@@ -19,12 +19,12 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceM
     VkResult Result = vkCreateBuffer(pDevice->GetDevice(), &BufferCreateInfo, nullptr, &pBuffer->m_Buffer);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateBuffer failed. Error: " << Result << "\n";
+        LOG("vkCreateBuffer failed. Error: %d\n", Result);
         return nullptr;
     }
     else
     {
-        std::cout << "Created Buffer\n";
+        LOG("Created Buffer\n");
     }
 
     VkMemoryRequirements MemoryRequirements = {};
@@ -39,7 +39,7 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceM
         }
         else
         {
-            std::cout << "VulkanDeviceAllocator::Allocate failed\n";
+            LOG("VulkanDeviceAllocator::Allocate failed\n");
         }
     }
     else
@@ -54,14 +54,14 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceM
         Result = vkAllocateMemory(pDevice->GetDevice(), &AllocInfo, nullptr, &pBuffer->m_DeviceMemory);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "vkAllocateMemory failed. Error: " << Result << "\n";
+            LOG("vkAllocateMemory failed. Error: %d\n", Result);
         }
         else
         {
             vkBindBufferMemory(pDevice->GetDevice(), pBuffer->m_Buffer, pBuffer->m_DeviceMemory, 0);
             pBuffer->m_Size = MemoryRequirements.size;
 
-            std::cout << "Allocated " << MemoryRequirements.size << " bytes\n";
+            LOG("Allocated %llu bytes\n", MemoryRequirements.size);
         }
     }
     
@@ -179,7 +179,7 @@ void* FBuffer::Map()
         VkResult Result = vkMapMemory(GetDevice()->GetDevice(), m_DeviceMemory, 0, m_Size, 0, &pResult);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "vkMapMemory failed. Error: " << Result << "\n";
+            LOG("vkMapMemory failed. Error: %d\n", Result);
             assert(false);
         }
     }
@@ -202,7 +202,7 @@ void FBuffer::FlushMappedMemoryRange()
         VkResult Result = vkFlushMappedMemoryRanges(GetDevice()->GetDevice(), 1, &Range);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "vkFlushMappedMemoryRanges failed. Error: " << Result << "\n";
+            LOG("vkFlushMappedMemoryRanges failed. Error: %d\n", Result);
             assert(false);
         }
     }
@@ -231,7 +231,7 @@ void FBuffer::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

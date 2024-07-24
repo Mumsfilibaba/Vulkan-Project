@@ -1866,19 +1866,19 @@ void FRayTracer::ReloadShader()
             auto Result = std::system(SHADER_SCRIPT_PATH);
             if (Result != 0)
             {
-                std::cout << "FAILED to Compile Shaders\n";
+                LOG("FAILED to Compile Shaders\n");
                 bIsCompiling = false;
                 return false;
             }
 
             // Upload the new shaders
-            std::cout << "Compiled Shaders Successfully\n";
+            LOG("Compiled Shaders Successfully\n");
 
             // Create shader and pipeline
             FShaderModule* pComputeShader = FShaderModule::CreateFromFile(m_pDevice, "main", RESOURCE_PATH"/shaders/raytracer.spv");
             if (!pComputeShader)
             {
-                std::cout << "FAILED to create ComputeShader\n";
+                LOG("FAILED to create ComputeShader\n");
                 bIsCompiling = false;
                 return false;
             }
@@ -1890,7 +1890,7 @@ void FRayTracer::ReloadShader()
             FComputePipeline* pComputePipeline  = FComputePipeline::Create(m_pDevice, pipelineParams);
             if (!pComputePipeline)
             {
-                std::cout << "FAILED to create ComputePipeline\n";
+                LOG("FAILED to create ComputePipeline\n");
                 SAFE_DELETE(pComputeShader);
                 bIsCompiling = false;
                 return false;

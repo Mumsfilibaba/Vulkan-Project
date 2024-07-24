@@ -30,12 +30,12 @@ FTextureView* FTextureView::Create(FDevice* pDevice, const FTextureViewParams& P
     VkResult result = vkCreateImageView(pDevice->GetDevice(), &TextureViewCreateInfo, nullptr, &pTextureView->m_ImageView);
     if (result != VK_SUCCESS)
     {
-        std::cout << "vkCreateImageView failed\n";
+        LOG("vkCreateImageView failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created ImageView\n";
+        LOG("Created ImageView\n");
         return pTextureView;
     }
 }
@@ -70,7 +70,7 @@ void FTextureView::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

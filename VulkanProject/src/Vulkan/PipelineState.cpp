@@ -35,7 +35,7 @@ void FBasePipeline::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }
@@ -189,12 +189,12 @@ FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPi
     VkResult Result = vkCreateGraphicsPipelines(pDevice->GetDevice(), VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &pPipeline->m_Pipeline);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateGraphicsPipelines failed\n";
+        LOG("vkCreateGraphicsPipelines failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created Graphics-Pipeline\n";
+        LOG("Created Graphics-Pipeline\n");
     }
     
     return pPipeline;
@@ -231,12 +231,12 @@ FComputePipeline* FComputePipeline::Create(FDevice* pDevice, const FComputePipel
     VkResult Result = vkCreateComputePipelines(pDevice->GetDevice(), VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &pNewPipeline->m_Pipeline);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateComputePipelines failed\n";
+        LOG("vkCreateComputePipelines failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created Compute-Pipeline\n";
+        LOG("Created Compute-Pipeline\n");
     }
     
     return pNewPipeline;

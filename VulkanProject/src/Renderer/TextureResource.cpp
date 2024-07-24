@@ -42,7 +42,7 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
     s_pCubeMapGenDescriptorSetLayout = FDescriptorSetLayout::Create(pDevice, DescriptorSetLayoutParams);
     if (!s_pCubeMapGenDescriptorSetLayout)
     {
-        std::cout << "Failed to create CubeMapGen DescriptorSetLayout\n";
+        LOG("Failed to create CubeMapGen DescriptorSetLayout\n");
         return false;
     }
     
@@ -57,7 +57,7 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
     s_pCubeMapGenPipelineLayout = FPipelineLayout::Create(pDevice, PipelineLayoutParams);
     if (!s_pCubeMapGenPipelineLayout)
     {
-        std::cout << "Failed to create CubeMapGen PipelineLayout\n";
+        LOG("Failed to create CubeMapGen PipelineLayout\n");
         return false;
     }
 
@@ -78,7 +78,7 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
 
     if (!s_pCubeMapGenPipelineState)
     {
-        std::cout << "Failed to create CubeMapGen Pipeline\n";
+        LOG("Failed to create CubeMapGen Pipeline\n");
         return false;
     }
     
@@ -97,7 +97,7 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
     s_pCubeMapGenSampler = FSampler::Create(pDevice, SamplerParams);
     if (!s_pCubeMapGenSampler)
     {
-        std::cout << "Failed to create CubeMapGen Sampler\n";
+        LOG("Failed to create CubeMapGen Sampler\n");
         return false;
     }
     
@@ -183,7 +183,7 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     FILE* File = fopen(Filepath, "rb");
     if (!File)
     {
-        std::cout << "Failed to open '" << Filepath << "'\n";
+        LOG("Failed to open '%s'\n", Filepath);
         return nullptr;
     }
     
@@ -235,7 +235,7 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     assert(Format != VK_FORMAT_UNDEFINED);
     if (!Pixels)
     {
-        std::cout << "Failed to load '" << Filepath << "'\n";
+        LOG("Failed to load '%s'\n", Filepath);
         return nullptr;
     }
 
@@ -251,7 +251,7 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     std::unique_ptr<FTexture> pTexture = std::unique_ptr<FTexture>(FTexture::CreateWithData(pDevice, TextureParams, Pixels.get()));
     if (!pTexture)
     {
-        std::cout << "Failed to create Texture '" << Filepath << "'\n";
+        LOG("Failed to create Texture '%s'\n", Filepath);
         return nullptr;
     }
     else
@@ -267,7 +267,7 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     std::unique_ptr<FTextureView> pTextureView = std::unique_ptr<FTextureView>(FTextureView::Create(pDevice, TextureViewParams));
     if (!pTextureView)
     {
-        std::cout << "Failed to create TextureView '" << Filepath << "'\n";
+        LOG("Failed to create TextureView '%s'\n", Filepath);
         return nullptr;
     }
     else
@@ -281,8 +281,8 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     pTextureResource->m_pTextureView = pTextureView.release();
     pTextureResource->m_Width        = Width;
     pTextureResource->m_Height       = Height;
-    
-    std::cout << "Loaded Texture '" << Filepath << "'\n";
+
+    LOG("Loaded Texture '%s'\n", Filepath);
     return pTextureResource.release();
 }
 
@@ -308,7 +308,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     std::unique_ptr<FTexture> pTexture = std::unique_ptr<FTexture>(FTexture::Create(pDevice, TextureParams));
     if (!pTexture)
     {
-        std::cout << "Failed to create TextureCube '" << Filepath << "'\n";
+        LOG("Failed to create TextureCube '%s'\n", Filepath);
         return nullptr;
     }
     else
@@ -326,7 +326,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     std::unique_ptr<FTextureView> pTextureViewUAV = std::unique_ptr<FTextureView>(FTextureView::Create(pDevice, TextureViewParams));
     if (!pTextureViewUAV)
     {
-        std::cout << "Failed to create TextureView UAV for TextureCube'" << Filepath << "'\n";
+        LOG("Failed to create TextureView UAV for TextureCube '%s'\n", Filepath);
         return nullptr;
     }
     else
@@ -342,7 +342,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     std::unique_ptr<FTextureView> pTextureView = std::unique_ptr<FTextureView>(FTextureView::Create(pDevice, TextureViewParams));
     if (!pTextureView)
     {
-        std::cout << "Failed to create TextureView for TextureCube'" << Filepath << "'\n";
+        LOG("Failed to create TextureView for TextureCube '%s'\n", Filepath);
         return nullptr;
     }
     else
@@ -360,7 +360,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     std::unique_ptr<FDescriptorPool> pDescriptorPool = std::unique_ptr<FDescriptorPool>(FDescriptorPool::Create(pDevice, DescriptorPoolParams));
     if (!pDescriptorPool)
     {
-        std::cout << "Failed to create DescriptorPool '" << Filepath << "'\n";
+        LOG("Failed to create DescriptorPool '%s'\n", Filepath);
         return nullptr;
     }
     else
@@ -372,7 +372,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     std::unique_ptr<FDescriptorSet> pDescriptorSet = std::unique_ptr<FDescriptorSet>(FDescriptorSet::Create(pDevice, pDescriptorPool.get(), s_pCubeMapGenDescriptorSetLayout));
     if (!pDescriptorSet)
     {
-        std::cout << "Failed to create DescriptorSet '" << Filepath << "'\n";
+        LOG("Failed to create DescriptorSet '%s'\n", Filepath);
         return nullptr;
     }
     else
@@ -390,7 +390,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     std::unique_ptr<FCommandBuffer> pCommandBuffer = std::unique_ptr<FCommandBuffer>(FCommandBuffer::Create(pDevice, CommandBufferParams));
     if (!pCommandBuffer)
     {
-        std::cout << "Failed to create CommandBuffer '" << Filepath << "'\n";
+        LOG("Failed to create CommandBuffer '%s'\n", Filepath);
         return nullptr;
     }
     
@@ -424,8 +424,8 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     pTextureResource->m_pTextureView = pTextureView.release();
     pTextureResource->m_Width        = pTextureResource->m_pTexture->GetWidth();
     pTextureResource->m_Height       = pTextureResource->m_pTexture->GetHeight();
-    
-    std::cout << "Loaded Texture '" << Filepath << "'\n";
+
+    LOG("Loaded Texture '%s'\n", Filepath);
     return pTextureResource.release();
 }
 

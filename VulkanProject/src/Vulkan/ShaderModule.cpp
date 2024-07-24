@@ -19,7 +19,7 @@ FShaderModule* FShaderModule::Create(FDevice* pDevice, const uint32_t* pByteCode
     VkResult Result = vkCreateShaderModule(pDevice->GetDevice(), &ShaderModuleCreateInfo, nullptr, &pShader->m_Module);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateShaderModule failed\n";
+        LOG("vkCreateShaderModule failed\n");
         return nullptr;
     }
     else
@@ -28,7 +28,7 @@ FShaderModule* FShaderModule::Create(FDevice* pDevice, const uint32_t* pByteCode
         pShader->m_pEntryPoint = new char[Length + 1];
         strcpy(pShader->m_pEntryPoint, pEntryPoint);
 
-        std::cout << "Created ShaderModule\n";
+        LOG("Created ShaderModule\n");
         return pShader;
     }
 }
@@ -37,7 +37,7 @@ FShaderModule* FShaderModule::CreateFromFile(FDevice* pDevice, const char* pEntr
 {
     if (!pFilePath)
     {
-        std::cout << "Not a valid filename\n";
+        LOG("Not a valid filename\n");
         return nullptr;
     }
 
@@ -58,12 +58,12 @@ FShaderModule* FShaderModule::CreateFromFile(FDevice* pDevice, const char* pEntr
             return nullptr;
         }
         
-        std::cout << "Loaded Shader '" << Filepath << "'\n";
+        LOG("Loaded Shader '%s'\n", Filepath);
         return pShader;
     }
     else
     {
-        std::cout << "Failed to open file '" << Filepath << "'\n";
+        LOG("Failed to open file '%s'\n", Filepath);
         return nullptr;
     }
 }
@@ -105,7 +105,7 @@ void FShaderModule::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

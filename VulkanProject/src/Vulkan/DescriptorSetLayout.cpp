@@ -16,12 +16,12 @@ FDescriptorSetLayout* FDescriptorSetLayout::Create(FDevice* pDevice, const FDesc
     VkResult Result = vkCreateDescriptorSetLayout(pDevice->GetDevice(), &DescriptorLayoutCreateInfo, nullptr, &pDescriptorSetLayout->m_DescriptorSetLayout);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreatePipelineLayout failed\n";
+        LOG("vkCreatePipelineLayout failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created DescriptorSetLayout\n";
+        LOG("Created DescriptorSetLayout\n");
         return pDescriptorSetLayout;
     }
 }
@@ -56,7 +56,7 @@ void FDescriptorSetLayout::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

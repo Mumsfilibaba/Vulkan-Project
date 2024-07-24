@@ -16,12 +16,12 @@ FQuery* FQuery::Create(class FDevice* pDevice, const FQueryParams& Params)
     VkResult Result = vkCreateQueryPool(pDevice->GetDevice(), &QueryCreateInfo, nullptr, &pQuery->m_QueryPool);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateQueryPool failed. Error: " << Result << '\n';
+        LOG("vkCreateQueryPool failed. Error: %d\n", Result);
         return nullptr;
     }
     else
     {
-        std::cout << "Created query\n";
+        LOG("Created query\n");
     }
     
     return pQuery;
@@ -80,7 +80,7 @@ void FQuery::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

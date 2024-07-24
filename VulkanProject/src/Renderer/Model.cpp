@@ -50,24 +50,24 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice, FDevice
 
     if (!tinyobj::LoadObj(&Attrib, &Shapes, &Materials, &Warning, &Error, Filepath.c_str()))
     {
-        std::cout << "Failed to load model '" << Filepath << "'" << std::endl;
+        LOG("Failed to load model '%s'\n", Filepath);
         if (!Warning.empty())
         {
-            std::cout << "  Warning: " << Warning << std::endl;
+            LOG("  Warning: %s\n", Warning.c_str());
         }
         if (!Error.empty())
         {
-            std::cout << "  Error: " << Error << std::endl;
+            LOG("  Error: %s\n", Error.c_str());
         }
         
         return false;
     }
     else
     {
-        std::cout << "Loaded model '" << Filepath << "'" << std::endl;
+        LOG("Loaded model '%s'\n", Filepath);
         if (!Warning.empty())
         {
-            std::cout << "  Warning: " << Warning << std::endl;
+            LOG("  Warning: %s\n", Warning.c_str());
         }
     }
     
@@ -142,24 +142,24 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     const std::string MaterialPath = ExtractPath(Filepath);
     if (!tinyobj::LoadObj(&TinyObjAttrib, &TinyObjShapes, &TinyObjMaterials, &TinyObjWarning, &TinyObjError, Filepath.c_str(), MaterialPath.c_str(), true))
     {
-        std::cout << "Failed to load model '" << Filepath << "'" << std::endl;
+        LOG("Failed to load model '%s'\n", Filepath);
         if (!TinyObjWarning.empty())
         {
-            std::cout << "  Warning: " << TinyObjWarning << std::endl;
+            LOG("  Warning: %s\n", TinyObjWarning.c_str());
         }
         if (!TinyObjError.empty())
         {
-            std::cout << "  Error: " << TinyObjError << std::endl;
+            LOG("  Error: %s\n", TinyObjError.c_str());
         }
 
         return false;
     }
     else
     {
-        std::cout << "Loading model... '" << Filepath << "'" << std::endl;
+        LOG("Loading model... '%s'\n", Filepath);
         if (!TinyObjWarning.empty())
         {
-            std::cout << "Warning:\n" << TinyObjWarning << std::endl;
+            LOG("Warning: %s\n", TinyObjWarning.c_str());
         }
     }
 
@@ -295,8 +295,8 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     const size_t TriangleCount = NewIndices.size() / 3;
     assert(TriangleCount == NewTriangleInfo.size());
 
-    std::cout << "... finished loading model '" << Filepath << "'" << std::endl;
-    std::cout << "Calculating Tangents..." << std::endl;
+    LOG("... finished loading model '%s'\n", Filepath);
+    LOG("Calculating Tangents...\n");
 
     // Calculate tangents for each triangle
     std::vector<glm::vec3> TangentAccumulation;
@@ -333,7 +333,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
         NewVerticesEx[i].Tangent = glm::vec4(Tangent, 0.0);
     }
 
-    std::cout << "... Finished calculating Tangents" << std::endl;
+    LOG("... Finished calculating Tangents\n");
 
     // Setup the vertices
     TriangleInfo = std::move(NewTriangleInfo);

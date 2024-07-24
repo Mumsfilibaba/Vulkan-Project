@@ -96,12 +96,12 @@ FRenderPass* FRenderPass::Create(FDevice* pDevice, const FRenderPassParams& Para
     VkResult Result = vkCreateRenderPass(pDevice->GetDevice(), &RenderPassCreateInfo, nullptr, &pRenderPass->m_RenderPass);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateRenderPass failed\n";
+        LOG("vkCreateRenderPass failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created RenderPass\n";
+        LOG("Created RenderPass\n");
         return pRenderPass;
     }
 }
@@ -136,7 +136,7 @@ void FRenderPass::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

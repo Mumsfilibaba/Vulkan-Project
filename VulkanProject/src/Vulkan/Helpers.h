@@ -17,7 +17,7 @@ inline void SetDebugName(VkDevice Device, const std::string& Name, uint64_t Hand
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(Device, &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

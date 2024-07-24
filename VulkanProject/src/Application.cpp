@@ -29,13 +29,13 @@ bool FApplication::Init()
     // Setup error handling
     glfwSetErrorCallback([](int32_t, const char* pErrorMessage)
     {
-        std::cerr << pErrorMessage << '\n';
+        LOG("%s\n", pErrorMessage);
     });
     
     // Init window library
     if (!glfwInit())
     {
-        std::cout << "Failed to init GLFW\n";
+        LOG("Failed to init GLFW\n");
         return false;
     }
 
@@ -46,7 +46,7 @@ bool FApplication::Init()
 
     if (!glfwVulkanSupported())
     {
-        std::cout << "GLFW: Vulkan Not Supported\n";
+        LOG("GLFW: Vulkan Not Supported\n");
         return 1;
     }
     
@@ -60,7 +60,7 @@ bool FApplication::Init()
     m_pDevice = FDevice::Create(DeviceParams);
     if (!m_pDevice)
     {
-        std::cout << "Failed to init Vulkan\n";
+        LOG("Failed to init Vulkan\n");
         return false;
     }
     

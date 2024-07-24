@@ -97,9 +97,9 @@ void FModelScene::Initialize()
     // Build BVH
     m_AccelerationStructure.Build(Mesh, 32);
     
-    std::cout << "Depth: " << m_AccelerationStructure.Stats.Depth << "\n";
-    std::cout << "MaxTrianglesInLeafNode: " << m_AccelerationStructure.Stats.MaxTrianglesInLeafNode << "\n";
-    std::cout << "Num BoundingBoxes: " << m_AccelerationStructure.m_BoundingBoxes.size() << "\n";
+    LOG("Depth: %u\n", m_AccelerationStructure.Stats.Depth);
+    LOG("MaxTrianglesInLeafNode: %u\n", m_AccelerationStructure.Stats.MaxTrianglesInLeafNode);
+    LOG("Num BoundingBoxes: %u\n", m_AccelerationStructure.m_BoundingBoxes.size());
     
     // Mesh Data
     m_Meshes.push_back(

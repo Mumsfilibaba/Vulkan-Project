@@ -39,7 +39,7 @@ public:
         VkResult Result = vkBeginCommandBuffer(m_CommandBuffer, &BeginInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "vkBeginCommandBuffer failed. Error: " << Result << std::endl;
+            LOG("vkBeginCommandBuffer failed. Error: %d\n", Result);
         }
     }
 
@@ -173,7 +173,7 @@ public:
         VkResult Result = vkEndCommandBuffer(m_CommandBuffer);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "vkEndCommandBuffer failed. Error: " << Result << std::endl;
+            LOG("vkEndCommandBuffer failed. Error: %d\n", Result);
         }
     }
     

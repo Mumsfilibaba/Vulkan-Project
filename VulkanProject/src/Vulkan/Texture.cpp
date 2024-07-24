@@ -61,7 +61,7 @@ FTexture* FTexture::Create(FDevice* pDevice, const FTextureParams& Params)
     VkResult Result = vkCreateImage(pDevice->GetDevice(), &TextureCreateInfo, nullptr, &pTexture->m_Image);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateImage failed\n";
+        LOG("vkCreateImage failed\n");
         return nullptr;
     }
     
@@ -78,23 +78,23 @@ FTexture* FTexture::Create(FDevice* pDevice, const FTextureParams& Params)
     Result = vkAllocateMemory(pDevice->GetDevice(), &MemoryAllocteInfo, nullptr, &pTexture->m_Memory);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkAllocateMemory failed\n";
+        LOG("vkAllocateMemory failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Allocated " << MemoryRequirements.size << " bytes\n";
+        LOG("Allocated bytes\n", MemoryRequirements.size);
     }
 
     Result = vkBindImageMemory(pDevice->GetDevice(), pTexture->m_Image, pTexture->m_Memory, 0);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkAllocateMemory failed\n";
+        LOG("vkAllocateMemory failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created image w=" << Params.Width << ", h=" << Params.Height << "\n";
+        LOG("Created image w=%u, h=%u\n", Params.Width, Params.Height);
     }
 
     // Transfer image to the expected layout
@@ -241,7 +241,7 @@ void FTexture::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

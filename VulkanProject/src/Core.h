@@ -3,9 +3,10 @@
     #pragma warning(disable : 4201)
 #endif
 
-#include <iostream>
 #include <cassert>
 #include <cstdint>
+#include <cstdio>
+#include <iostream>
 #include <unordered_map>
 #include <vector>
 #include <array>
@@ -49,3 +50,9 @@
         delete (pObject); \
         pObject = nullptr; \
     }
+
+#define LOG(Message, ...) \
+    do \
+    { \
+        printf(Message, __VA_ARGS__); \
+    } while(false);

@@ -14,7 +14,7 @@ FSwapchain* FSwapchain::Create(FDevice* pDevice, GLFWwindow* pWindow)
     
     if (pSwapchain->CreateSemaphores())
     {
-        std::cout << "Created Semphores and Fences\n";
+        LOG("Created Semphores and Fences\n");
     }
     else
     {
@@ -23,7 +23,7 @@ FSwapchain* FSwapchain::Create(FDevice* pDevice, GLFWwindow* pWindow)
 
     if (pSwapchain->CreateSwapchain())
     {
-        std::cout << "Created Swapchain\n";
+        LOG("Created Swapchain\n");
     }
     else
     {
@@ -80,7 +80,7 @@ bool FSwapchain::CreateSurface()
     VkResult Result = glfwCreateWindowSurface(GetDevice()->GetInstance(), m_pWindow, nullptr, &m_Surface);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "glfwCreateWindowSurface failed  with error: " << Result << '\n';
+        LOG("glfwCreateWindowSurface failed  with error: %d\n", Result);
         return false;
     }
 
@@ -95,7 +95,7 @@ bool FSwapchain::CreateSwapchain()
 
     if (Width <= 0 || Height <= 0)
     {
-        std::cout << "Width or Height is zero" << std::endl;
+        LOG("Width or Height is zero\n");
         return false;
     }
 
@@ -118,7 +118,7 @@ bool FSwapchain::CreateSwapchain()
 
     if (NewExtent.width <= 0 || NewExtent.height <= 0)
     {
-        std::cout << "Extent contains a Width or Height that is zero" << std::endl;
+        LOG("Extent contains a Width or Height that is zero\n");
         return false;
     }
     else
@@ -150,7 +150,7 @@ bool FSwapchain::CreateSwapchain()
     }
     else
     {
-        std::cout << "No available formats for Swapchain\n";
+        LOG("No available formats for Swapchain\n");
         return false;
     }
 
@@ -173,7 +173,7 @@ bool FSwapchain::CreateSwapchain()
     }
     else
     {
-        std::cout << "No available presentModes for Swapchain\n";
+        LOG("No available presentModes for Swapchain\n");
         return false;
     }
 
@@ -205,7 +205,7 @@ bool FSwapchain::CreateSwapchain()
         VkResult result = vkCreateSwapchainKHR(GetDevice()->GetDevice(), &SwapChainCreateInfo, nullptr, &m_Swapchain);
         if (result != VK_SUCCESS)
         {
-            std::cout << "vkCreateSwapchainKHR failed. Error: " << result << '\n';
+            LOG("vkCreateSwapchainKHR failed. Error: %d\n", result);
             return false;
         }
     }
@@ -215,7 +215,7 @@ bool FSwapchain::CreateSwapchain()
     vkGetSwapchainImagesKHR(GetDevice()->GetDevice(), m_Swapchain, &RealImageCount, nullptr);
     if (RealImageCount < m_ImageCount)
     {
-        std::cout << "WARNING: Less images than requested in swapchain\n";
+        LOG("WARNING: Less images than requested in swapchain\n");
     }
 
     std::vector<VkImage> Images(RealImageCount);
@@ -247,11 +247,11 @@ bool FSwapchain::CreateSwapchain()
             VkResult Result = vkCreateImageView(GetDevice()->GetDevice(), &ImageViewCreateInfo, nullptr, &ImageView);
             if (Result != VK_SUCCESS)
             {
-                std::cout << "vkCreateImageView failed. Error: " << Result << '\n';
+                LOG("vkCreateImageView failed. Error: %d\n", Result);
             }
             else
             {
-                std::cout << "Created ImageView\n";
+                LOG("Created ImageView\n");
             }
 
             m_FrameData[i].BackBuffer     = Images[i];
@@ -265,7 +265,7 @@ bool FSwapchain::CreateSwapchain()
         VkResult Result = AquireNextImage();
         if (Result != VK_SUCCESS)
         {
-            std::cout << "AquireNextImage failed. Error: " << Result << '\n';
+            LOG("AquireNextImage failed. Error: %d\n", Result);
         }
     }
 
@@ -291,7 +291,7 @@ bool FSwapchain::CreateSemaphores()
         if (vkCreateSemaphore(GetDevice()->GetDevice(), &SemaphoreCreateInfo, nullptr, &ImageSemaphore) != VK_SUCCESS ||
             vkCreateSemaphore(GetDevice()->GetDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore) != VK_SUCCESS)
         {
-            std::cout << "vkCreateSemaphore failed\n";
+            LOG("vkCreateSemaphore failed\n");
             return false;
         }
         else
@@ -330,7 +330,7 @@ void FSwapchain::WaitForImage()
     VkResult Result = vkQueueSubmit(GetDevice()->GetGraphicsQueue(), 1, &SubmitInfo, VK_NULL_HANDLE);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkQueueSubmit failed. Error: " << Result << '\n';
+        LOG("vkQueueSubmit failed. Error: %d\n", Result);
     }
 }
 
@@ -353,7 +353,7 @@ void FSwapchain::Resize(uint32_t Width, uint32_t Height)
         ReleaseSwapchainResources();
         CreateSwapchain();
         
-        std::cout << "Resized Swapchain: w=" << m_Extent.width << ", h=" << m_Extent.height << '\n';
+        LOG("Resized Swapchain: w=%u, h=%u\n", m_Extent.width, m_Extent.height);
     }
 }
 
@@ -385,11 +385,11 @@ VkResult FSwapchain::Present()
         if (Result == VK_SUBOPTIMAL_KHR || Result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             RecreateSwapchain();
-            std::cout << "Suboptimal or Out Of Date Swapchain\n";
+            LOG("Suboptimal or Out Of Date Swapchain\n");
         }
         else
         {
-            std::cout << "Present Failed. Error: " << Result << '\n';
+            LOG("Present Failed. Error: %d\n", Result);
         }
     }
 

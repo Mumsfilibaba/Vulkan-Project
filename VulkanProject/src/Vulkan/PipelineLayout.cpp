@@ -48,12 +48,12 @@ FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayout
     VkResult Result = vkCreatePipelineLayout(pDevice->GetDevice(), &PipelineLayoutCreateInfo, nullptr, &pPipelineLayout->m_PipelineLayout);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreatePipelineLayout failed\n";
+        LOG("vkCreatePipelineLayout failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created PipelineLayout\n";
+        LOG("Created PipelineLayout\n");
         return pPipelineLayout;
     }
 }
@@ -89,7 +89,7 @@ void FPipelineLayout::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

@@ -11,7 +11,7 @@ FBindlessManager* FBindlessManager::Create(FDevice* pDevice)
     const VkPhysicalDeviceLimits& DeviceLimits = pDevice->GetDeviceLimits();
     if (DeviceLimits.maxPerStageDescriptorSampledImages < 16)
     {
-        std::cout << "Not enough samplers/images supported for bindless" << std::endl;
+        LOG("Not enough samplers/images supported for bindless\n");
         return nullptr;
     }
 
@@ -37,12 +37,12 @@ FBindlessManager* FBindlessManager::Create(FDevice* pDevice)
     VkResult Result = vkCreateDescriptorPool(pDevice->GetDevice(), &DescriptorPoolCreateInfo, nullptr, &pBindlessManager->m_DescriptorPool);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "Bindless vkCreateDescriptorPool failed\n";
+        LOG("Bindless vkCreateDescriptorPool failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created Bindless DescriptorPool\n";
+        LOG("Created Bindless DescriptorPool\n");
     }
     
     // DescriptorSetLayout
@@ -77,12 +77,12 @@ FBindlessManager* FBindlessManager::Create(FDevice* pDevice)
     Result = vkCreateDescriptorSetLayout(pDevice->GetDevice(), &DescriptorLayoutCreateInfo, nullptr, &pBindlessManager->m_DescriptorSetLayout);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "Bindless vkCreatePipelineLayout failed\n";
+        LOG("Bindless vkCreatePipelineLayout failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created Bindless DescriptorSetLayout\n";
+        LOG("Created Bindless DescriptorSetLayout\n");
     }
     
     VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo;
@@ -105,12 +105,12 @@ FBindlessManager* FBindlessManager::Create(FDevice* pDevice)
     Result = vkAllocateDescriptorSets(pDevice->GetDevice(), &DescriptorSetAllocateInfo, &pBindlessManager->m_DescriptorSet);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "Bindless vkAllocateDescriptorSets failed\n";
+        LOG("Bindless vkAllocateDescriptorSets failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Allocated Bindless DescriptorSet\n";
+        LOG("Allocated Bindless DescriptorSet\n");
     }
     
     return pBindlessManager;

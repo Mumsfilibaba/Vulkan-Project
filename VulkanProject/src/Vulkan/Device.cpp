@@ -18,7 +18,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSev
 {
     if (MessageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        std::cout << "[Vulkan] " << pCallbackData->pMessage << "\n";
+        LOG("[Vulkan] %s\n", pCallbackData->pMessage);
     }
     
     return VK_FALSE;
@@ -139,7 +139,7 @@ void FDevice::ExecuteGraphics(FCommandBuffer* pCommandBuffer, FSwapchain* pSwapc
     VkResult Result = vkQueueSubmit(m_GraphicsQueue, 1, &SubmitInfo, Fence);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkQueueSubmit failed. Error: " << Result << '\n';
+        LOG("vkQueueSubmit failed. Error: %d\n", Result);
     }
 }
 
@@ -158,7 +158,7 @@ bool FDevice::Init(const FDeviceParams& Params)
     m_bValidationEnabled = Params.bEnableValidation;
     if (CreateInstance(Params))
     {
-        std::cout << "Created Vulkan Instance\n";
+        LOG("Created Vulkan Instance\n");
     }
     else
     {
@@ -169,7 +169,7 @@ bool FDevice::Init(const FDeviceParams& Params)
     {
         if (CreateDebugMessenger())
         {
-            std::cout << "Created Debug Messenger\n";
+            LOG("Created Debug Messenger\n");
         }
         else
         {
@@ -179,7 +179,7 @@ bool FDevice::Init(const FDeviceParams& Params)
 
     if (QueryPhysicalDevice(Params))
     {
-        std::cout << "Queried physical device: " << m_DeviceProperties.deviceName << '\n';
+        LOG("Queried physical device: %s\n", m_DeviceProperties.deviceName);
     }
     else
     {
@@ -188,7 +188,7 @@ bool FDevice::Init(const FDeviceParams& Params)
 
     if (CreateDeviceAndQueues(Params))
     {
-        std::cout << "Created Vulkan Device\n";
+        LOG("Created Vulkan Device\n");
     }
     else
     {
@@ -227,10 +227,10 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
     const char** ppRequiredInstanceExtension = glfwGetRequiredInstanceExtensions(&RequiredInstanceExtensionCount);
     if (RequiredInstanceExtensionCount > 0)
     {
-        std::cout << "Required instance extensions:\n";
+        LOG("Required instance extensions:\n");
         for (uint32_t i = 0; i < RequiredInstanceExtensionCount; i++)
         {
-            std::cout << "   " << ppRequiredInstanceExtension[i] << '\n';
+            LOG("   %s\n", ppRequiredInstanceExtension[i]);
             InstanceExtensions.push_back(ppRequiredInstanceExtension[i]);
         }
     }
@@ -278,17 +278,17 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
 
     if (Params.bVerbose)
     {
-        std::cout << "Available instance extensions:\n";
+        LOG("Available instance extensions:\n");
         for (VkExtensionProperties Extension : InstanceExtensionProperties)
         {
-            std::cout << "   " << Extension.extensionName << '\n';
+            LOG("   %s\n", Extension.extensionName);
         }
     }
 
-    std::cout << "Enabled instance extensions:\n";
+    LOG("Enabled instance extensions:\n");
     for (const char* pEnabledExtension : InstanceExtensions)
     {
-        std::cout << "   " << pEnabledExtension << '\n';
+        LOG("   &s\n", pEnabledExtension);
 
         bool bExtensionFound = false;
         for (VkExtensionProperties Extension : InstanceExtensionProperties)
@@ -302,7 +302,7 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
 
         if (!bExtensionFound)
         {
-            std::cout << "Extension '" << pEnabledExtension << "' not present\n";
+            LOG("Extension '%s' not present\n", pEnabledExtension);
         }
     }
 
@@ -341,14 +341,14 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
         }
         else
         {
-            std::cout << "Validation layer VK_LAYER_KHRONOS_validation not present, validation is disabled\n";
+            LOG("Validation layer VK_LAYER_KHRONOS_validation not present, validation is disabled\n");
         }
     }
 
     VkResult Result = vkCreateInstance(&InstanceCreateInfo, nullptr, &m_Instance);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateInstance failed\n";
+        LOG("vkCreateInstance failed\n");
         return false;
     }
     
@@ -356,18 +356,18 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
     FExtensions::vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT");
     if (!FExtensions::vkSetDebugUtilsObjectNameEXT)
     {
-        std::cout << "Failed to retrieve 'vkSetDebugUtilsObjectNameEXT'\n";
+        LOG("Failed to retrieve 'vkSetDebugUtilsObjectNameEXT'\n");
     }
     
     FExtensions::vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT");
     if (!FExtensions::vkCreateDebugUtilsMessengerEXT)
     {
-        std::cout << "Failed to retrieve 'vkCreateDebugUtilsMessengerEXT'\n";
+        LOG("Failed to retrieve 'vkCreateDebugUtilsMessengerEXT'\n");
     }
     FExtensions::vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkDestroyDebugUtilsMessengerEXT");
     if (!FExtensions::vkDestroyDebugUtilsMessengerEXT)
     {
-        std::cout << "Failed to retrieve 'vkDestroyDebugUtilsMessengerEXT'\n";
+        LOG("Failed to retrieve 'vkDestroyDebugUtilsMessengerEXT'\n");
     }
     
     return true;
@@ -383,7 +383,7 @@ bool FDevice::CreateDebugMessenger()
         VkResult Result = FExtensions::vkCreateDebugUtilsMessengerEXT(m_Instance, &CreateInfo, nullptr, &m_DebugMessenger);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "vkCreateDebugUtilsMessengerEXT failed. Error: " << Result << '\n';
+            LOG("vkCreateDebugUtilsMessengerEXT failed. Error: %d\n", Result);
         }
         else
         {
@@ -397,20 +397,20 @@ bool FDevice::CreateDebugMessenger()
 bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
 {
     m_QueueFamilyIndices = GetQueueFamilyIndices(m_PhysicalDevice);
-    
-    std::cout << "Using following queueFamilyIndices: ";
-    std::cout << "Graphics = "     << m_QueueFamilyIndices.Graphics;
-    std::cout << ", Presentation=" << m_QueueFamilyIndices.Presentation;
-    std::cout << ", Compute="      << m_QueueFamilyIndices.Compute;
-    std::cout << ", Transfer="     << m_QueueFamilyIndices.Transfer << '\n';
+
+    LOG("Using following queueFamilyIndices: Graphics=%d, Presentation=%d, Compute=%d, Transfer=%d\n",
+        m_QueueFamilyIndices.Graphics,
+        m_QueueFamilyIndices.Presentation,
+        m_QueueFamilyIndices.Compute,
+        m_QueueFamilyIndices.Transfer);
     
     if (m_DeviceProperties.limits.timestampComputeAndGraphics)
     {
-        std::cout << "    Timestamps Supported\n";
+        LOG("    Timestamps Supported\n");
     }
     else
     {
-        std::cout << "    Timestamps NOT Supported\n";
+        LOG("    Timestamps NOT Supported\n");
     }
     
     std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
@@ -454,10 +454,11 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
     
     if (Params.bVerbose)
     {
-        std::cout << "Available device extensions:\n";
+        LOG("Available device extensions:\n");
+        
         for (VkExtensionProperties Extension : AvailableDeviceExtension)
         {
-            std::cout << "   " << Extension.extensionName << '\n';
+            LOG("   %s\n", Extension.extensionName);
         }
     }
     
@@ -513,7 +514,7 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
     // Verify extensions
     if (DeviceExtensions.size() > 0)
     {
-        std::cout << "Enabled device extensions:\n";
+        LOG("Enabled device extensions:\n");
         for (auto it = DeviceExtensions.begin(); it != DeviceExtensions.end();)
         {
             bool bExtensionFound = false;
@@ -529,12 +530,12 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
             // Warning that extension is not present, and do not try and activate it
             if (!bExtensionFound)
             {
-                std::cout << "WARNING: Extension '" << (*it) << "' not present\n";
+                LOG("WARNING: Extension '%s' not present\n", (*it));
                 it = DeviceExtensions.erase(it);
             }
             else
             {
-                std::cout << "   " << (*it) << '\n';
+                LOG("   %s\n", (*it));
                 it++;
             }
         }
@@ -581,7 +582,7 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
     Result = vkEnumeratePhysicalDevices(m_Instance, &GpuCount, PhysicalDevices.data());
     if (Result != VK_SUCCESS || GpuCount < 1) 
     {
-        std::cerr << "vkEnumeratePhysicalDevices failed. Error: " << Result << '\n';
+        LOG("vkEnumeratePhysicalDevices failed. Error: %d\n", Result);
         return false;
     }
 
@@ -589,13 +590,13 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
     m_PhysicalDevice = PhysicalDevices[0];
 
     // GPU selection
-    std::cout << "Available GPUs\n";
+    LOG("Available GPUs\n");
     for (VkPhysicalDevice PhysicalDevice : PhysicalDevices)
     {
         VkPhysicalDeviceProperties PhysicalDeviceProperties;
         vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
         
-        std::cout << "   " << PhysicalDeviceProperties.deviceName << '\n';
+        LOG("   %s\n", PhysicalDeviceProperties.deviceName);
 
         VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
         vkGetPhysicalDeviceFeatures(PhysicalDevice, &PhysicalDeviceFeatures);
@@ -603,12 +604,12 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
         // Check for adapter features
         if (!PhysicalDeviceFeatures.samplerAnisotropy)
         {
-            std::cout << "'SamplerAnisotropy' is not supported by adapter\n";
+            LOG("'SamplerAnisotropy' is not supported by adapter\n");
             continue;
         }
         if (!PhysicalDeviceFeatures.fillModeNonSolid)
         {
-            std::cout << "'FillModeNonSolid' is not supported by adapter\n";
+            LOG("'FillModeNonSolid' is not supported by adapter\n");
             continue;
         }
 
@@ -616,7 +617,7 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
         FQueueFamilyIndices Indices = GetQueueFamilyIndices(PhysicalDevice);
         if (!Indices.IsValid())
         {
-            std::cout << "Failed to find a suitable queue-families\n";
+            LOG("Failed to find a suitable queue-families\n");
             return false;
         }
 
@@ -630,10 +631,10 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
         
         if (Params.bVerbose)
         {
-            std::cout << "      Available extensions:\n";
+            LOG("      Available extensions:\n");
             for (const auto& Extension : AvailableDeviceExtension)
             {
-                std::cout << "         " << Extension.extensionName << '\n';
+                LOG("         %s\n", Extension.extensionName);
             }
         }
         
@@ -652,7 +653,7 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
             
             if (!bExtensionsFound)
             {
-                std::cout << ExtensionName << " is not supported\n";
+                LOG("'%s' is not supported\n", ExtensionName);
             }
         }
 
@@ -664,7 +665,7 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
         }
         else
         {
-            std::cout << "Some extensions were not supported on '" << PhysicalDeviceProperties.deviceName << "'\n";
+            LOG("Some extensions were not supported on '%s'\n", PhysicalDeviceProperties.deviceName);
         }
     }
 

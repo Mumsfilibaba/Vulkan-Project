@@ -29,12 +29,12 @@ FSampler* FSampler::Create(FDevice* pDevice, const FSamplerParams& Params)
     VkResult Result = vkCreateSampler(pDevice->GetDevice(), &SamplerCreateInfo, nullptr, &pSampler->m_Sampler);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateSampler failed\n";
+        LOG("vkCreateSampler failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created sampler\n";
+        LOG("Created sampler\n");
         return pSampler;
     }
 }
@@ -69,7 +69,7 @@ void FSampler::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

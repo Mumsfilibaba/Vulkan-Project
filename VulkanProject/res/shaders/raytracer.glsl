@@ -310,6 +310,7 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
     Stack[StackIndex] = RootBoxIndex;
 
     // Start traversing the bounding boxes
+    FHitInfo LastHitInfo;
     int LastTriangleHitIndex = -1;
     while (StackIndex >= 0)
     {
@@ -335,24 +336,8 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
                 if (HitInfo.Dist > PayLoad.MinT && HitInfo.Dist < PayLoad.MaxT && HitInfo.Dist < PayLoad.T)
                 {
                     PayLoad.T = HitInfo.Dist;
-
-                    vec2 TexCoords0 = VerticesEx[Triangle.Index0].TexCoords.xy;
-                    vec2 TexCoords1 = VerticesEx[Triangle.Index1].TexCoords.xy;
-                    vec2 TexCoords2 = VerticesEx[Triangle.Index2].TexCoords.xy;
-
-                    vec3 Normal0 = VerticesEx[Triangle.Index0].Normal.xyz;
-                    vec3 Normal1 = VerticesEx[Triangle.Index1].Normal.xyz;
-                    vec3 Normal2 = VerticesEx[Triangle.Index2].Normal.xyz;
-
-                    vec3 Tangent0 = VerticesEx[Triangle.Index0].Tangent.xyz;
-                    vec3 Tangent1 = VerticesEx[Triangle.Index1].Tangent.xyz;
-                    vec3 Tangent2 = VerticesEx[Triangle.Index2].Tangent.xyz;
-
-                    PayLoad.BaryCentrics = vec3(HitInfo.BaryCentrics, 1.0 - (HitInfo.BaryCentrics.x + HitInfo.BaryCentrics.y));
-                    PayLoad.Normal       = normalize((PayLoad.BaryCentrics.x * Normal1)  + (PayLoad.BaryCentrics.y * Normal2)  + (PayLoad.BaryCentrics.z * Normal0));
-                    PayLoad.Tangent      = normalize((PayLoad.BaryCentrics.x * Tangent1) + (PayLoad.BaryCentrics.y * Tangent2) + (PayLoad.BaryCentrics.z * Tangent0));
-                    PayLoad.TexCoords    = (PayLoad.BaryCentrics.x * TexCoords1) + (PayLoad.BaryCentrics.y * TexCoords2) + (PayLoad.BaryCentrics.z * TexCoords0);
                     LastTriangleHitIndex = int(TriangleIndex);
+                    LastHitInfo = HitInfo;
                 }
             }
         }
@@ -387,6 +372,23 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
     if (LastTriangleHitIndex >= 0)
     {
         FTriangle Triangle = Triangles[LastTriangleHitIndex];
+
+        vec2 TexCoords0 = VerticesEx[Triangle.Index0].TexCoords.xy;
+        vec2 TexCoords1 = VerticesEx[Triangle.Index1].TexCoords.xy;
+        vec2 TexCoords2 = VerticesEx[Triangle.Index2].TexCoords.xy;
+
+        vec3 Normal0 = VerticesEx[Triangle.Index0].Normal.xyz;
+        vec3 Normal1 = VerticesEx[Triangle.Index1].Normal.xyz;
+        vec3 Normal2 = VerticesEx[Triangle.Index2].Normal.xyz;
+
+        vec3 Tangent0 = VerticesEx[Triangle.Index0].Tangent.xyz;
+        vec3 Tangent1 = VerticesEx[Triangle.Index1].Tangent.xyz;
+        vec3 Tangent2 = VerticesEx[Triangle.Index2].Tangent.xyz;
+
+        PayLoad.BaryCentrics  = vec3(LastHitInfo.BaryCentrics, 1.0 - (LastHitInfo.BaryCentrics.x + LastHitInfo.BaryCentrics.y));
+        PayLoad.Normal        = normalize((PayLoad.BaryCentrics.x * Normal1)  + (PayLoad.BaryCentrics.y * Normal2)  + (PayLoad.BaryCentrics.z * Normal0));
+        PayLoad.Tangent       = normalize((PayLoad.BaryCentrics.x * Tangent1) + (PayLoad.BaryCentrics.y * Tangent2) + (PayLoad.BaryCentrics.z * Tangent0));
+        PayLoad.TexCoords     = (PayLoad.BaryCentrics.x * TexCoords1) + (PayLoad.BaryCentrics.y * TexCoords2) + (PayLoad.BaryCentrics.z * TexCoords0);
         PayLoad.MaterialIndex = Triangle.MaterialIndex;
         PayLoad.Position      = Ray.Origin + PayLoad.T * Ray.Direction;
         PayLoad.bFromInside   = false;

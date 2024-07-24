@@ -20,12 +20,12 @@ FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferPar
     VkResult Result = vkCreateCommandPool(pDevice->GetDevice(), &CommandPoolInfo, nullptr, &pCommandBuffer->m_CommandPool);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateCommandPool failed. Error: " << Result << '\n';
+        LOG("vkCreateCommandPool failed. Error: %d\n", Result);
         return nullptr;
     }
     else
     {
-        std::cout << "Created CommandPool\n";
+        LOG("Created CommandPool\n");
     }
 
     VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {};
@@ -39,12 +39,12 @@ FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferPar
     Result = vkAllocateCommandBuffers(pDevice->GetDevice(), &CommandBufferAllocateInfo, &pCommandBuffer->m_CommandBuffer);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkAllocateCommandBuffers failed. Error: " << Result << '\n';
+        LOG("vkAllocateCommandBuffers failed. Error: %d\n", Result);
         return nullptr;
     }
     else
     {
-        std::cout << "Allocated CommandBuffer\n";
+        LOG("Allocated CommandBuffer\n");
     }
 
     VkFenceCreateInfo FenceInfo;
@@ -56,12 +56,12 @@ FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferPar
     Result = vkCreateFence(pDevice->GetDevice(), &FenceInfo, nullptr, &pCommandBuffer->m_Fence);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateFence failed. Error: " << Result << '\n';
+        LOG("vkCreateFence failed. Error: %d\n", Result);
         return nullptr;
     }
     else
     {
-        std::cout << "Created Fence for CommandBuffer\n";
+        LOG("Created Fence for CommandBuffer\n");
     }
     
     return pCommandBuffer;
@@ -107,7 +107,7 @@ void FCommandBuffer::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }
@@ -216,7 +216,7 @@ void FCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkI
     }
     else
     {
-        std::cout << "Unsupported layout transition!\n";
+        LOG("Unsupported layout transition!\n");
         assert(false);
         return;
     }

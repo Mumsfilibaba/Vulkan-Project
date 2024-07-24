@@ -49,12 +49,12 @@ FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPool
     
     if (vkCreateDescriptorPool(pDevice->GetDevice(), &DescriptorPoolCreateInfo, nullptr, &pDescriptorPool->m_DescriptorPool) != VK_SUCCESS)
     {
-        std::cout << "vkCreateDescriptorPool failed\n";
+        LOG("vkCreateDescriptorPool failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created DescriptorPool\n";
+        LOG("Created DescriptorPool\n");
         return pDescriptorPool;
     }
 }
@@ -89,7 +89,7 @@ void FDescriptorPool::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

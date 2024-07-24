@@ -23,12 +23,12 @@ FFramebuffer* FFramebuffer::Create(FDevice* pDevice, const FFramebufferParams& P
     VkResult Result = vkCreateFramebuffer(pDevice->GetDevice(), &FramebufferCreateInfo, nullptr, &pFramebuffer->m_Framebuffer);
     if (Result != VK_SUCCESS)
     {
-        std::cout << "vkCreateFramebuffer failed\n";
+        LOG("vkCreateFramebuffer failed\n");
         return nullptr;
     }
     else
     {
-        std::cout << "Created Framebuffer\n";
+        LOG("Created Framebuffer\n");
 
         pFramebuffer->m_Width  = Params.Width;
         pFramebuffer->m_Height = Params.Height;
@@ -67,7 +67,7 @@ void FFramebuffer::SetDebugName(const char* DebugName)
         VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
-            std::cout << "Failed to set name '" << DebugNameInfo.pObjectName << "'.Error: " << Result << std::endl;
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
     }
 }

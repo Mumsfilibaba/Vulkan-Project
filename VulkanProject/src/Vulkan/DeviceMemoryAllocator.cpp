@@ -35,10 +35,10 @@ FDeviceMemoryPage::~FDeviceMemoryPage()
     #if defined(ALLOCATOR_DEBUG)
         {
             FDeviceMemoryBlock* pDebug = m_pHead;
-            std::cout << "Allocated blocks left in MemoryPage '" << m_ID << "'" << std::endl;
+            LOG("Allocated blocks left in MemoryPage '" << m_ID << "'\n");
             while (pDebug)
             {
-                std::cout << "    Block: ID=" << pDebug->ID << ", Offset=" << pDebug->DeviceMemoryOffset << ", Size=" << pDebug->SizeInBytes << ", IsFree=" << std::boolalpha << pDebug->IsFree << std::endl;
+                LOG("    Block: ID=" << pDebug->ID << ", Offset=" << pDebug->DeviceMemoryOffset << ", Size=" << pDebug->SizeInBytes << ", IsFree=" << std::boolalpha << pDebug->IsFree << std::endl;
                 pDebug = pDebug->pNext;
             }
         }
@@ -59,7 +59,7 @@ FDeviceMemoryPage::~FDeviceMemoryPage()
         vkFreeMemory(m_Device, m_DeviceMemory, nullptr);
         m_DeviceMemory = VK_NULL_HANDLE;
 
-        std::cout << "Deallocated MemoryPage" << std::endl;
+        LOG("Deallocated MemoryPage\n");
     }
 }
 
@@ -74,12 +74,12 @@ void FDeviceMemoryPage::Init()
 
     if (vkAllocateMemory(m_Device, &AllocateInfo, nullptr, &m_DeviceMemory) != VK_SUCCESS)
     {
-        std::cout << "vkAllocateMemory failed" << std::endl;
+        LOG("vkAllocateMemory failed\n");
         return;
     }
     else
     {
-        std::cout << "Allocated '" << m_SizeInBytes << "' bytes for MemoryPage" << std::endl;
+        LOG("Allocated '%llu' bytes for MemoryPage\n", m_SizeInBytes);
     }
 
     // Setup first block
@@ -210,28 +210,28 @@ bool FDeviceMemoryPage::Allocate(FDeviceAllocation& Allocation, VkDeviceSize Siz
 
 #if defined (ALLOCATOR_DEBUG)
     {
-        std::cout << "Memory Page '" << m_ID << "'" << std::endl;
+        LOG("Memory Page '" << m_ID << "'\n");
         for (FDeviceMemoryBlock* pCurrent = m_pHead; pCurrent != nullptr; pCurrent = pCurrent->pNext)
         {
-            std::cout << "----Block " << pCurrent->ID << "----" << std::endl;
-            std::cout << "Starts at: Dec=" << pCurrent->DeviceMemoryOffset << ", Hex=" << std::hex << pCurrent->DeviceMemoryOffset << std::dec << std::endl;
-            std::cout << "Free: " << std::boolalpha << pCurrent->IsFree << std::endl;
+            LOG("----Block " << pCurrent->ID << "----\n");
+            LOG("Starts at: Dec=" << pCurrent->DeviceMemoryOffset << ", Hex=" << std::hex << pCurrent->DeviceMemoryOffset << std::dec << std::endl;
+            LOG("Free: " << std::boolalpha << pCurrent->IsFree << std::endl;
             
             if (pCurrent->pPrevious)
             {
                 FDeviceMemoryBlock* pPrevious = pCurrent->pPrevious;
                 if ((pPrevious->DeviceMemoryOffset + pPrevious->PaddedSizeInBytes) > pCurrent->DeviceMemoryOffset)
                 {
-                    std::cout << "Overlapping memory in page '" << m_ID << "' between blocks '" << pPrevious->ID << "' and '" << pCurrent->ID << std::endl;
+                    LOG("Overlapping memory in page '" << m_ID << "' between blocks '" << pPrevious->ID << "' and '" << pCurrent->ID << std::endl;
                 }
             }
 
-            std::cout << "Padding=" << pCurrent->PaddedSizeInBytes - pCurrent->SizeInBytes << std::endl;
-            std::cout << "SizeInBytes=" << pCurrent->PaddedSizeInBytes << std::endl;
+            LOG("Padding=" << pCurrent->PaddedSizeInBytes - pCurrent->SizeInBytes << std::endl;
+            LOG("SizeInBytes=" << pCurrent->PaddedSizeInBytes << std::endl;
 
             VkDeviceSize end = pCurrent->DeviceMemoryOffset + pCurrent->PaddedSizeInBytes;
-            std::cout << "End at: Dec=" << end << ", Hex=" << std::hex << end << std::dec << std::endl;
-            std::cout << "----------------" << std::endl;
+            LOG("End at: Dec=" << end << ", Hex=" << std::hex << end << std::dec << std::endl;
+            LOG("----------------\n");
         }
     }
 #endif
@@ -281,11 +281,11 @@ void FDeviceMemoryPage::Deallocate(FDeviceAllocation& Allocation)
     FDeviceMemoryBlock* pCurrent = Allocation.pBlock;
     if (!pCurrent)
     {
-        std::cout << "Block owning allocation was not found" << std::endl;
+        LOG("Block owning allocation was not found\n");
         return;
     }
 
-    std::cout << "Deallocating Block ID=" << pCurrent->ID << std::endl;
+    LOG("Deallocating Block ID=%u\n", pCurrent->ID);
 
     // Set this block to free
     pCurrent->IsFree = true;
@@ -368,13 +368,14 @@ FDeviceMemoryAllocator::~FDeviceMemoryAllocator()
     }
 
     // Delete allocator
-    std::cout << "Deleting DeviceAllocator. Number of Pages: " << m_Pages.size() << std::endl;
+    LOG("Deleting DeviceAllocator. Number of Pages: %u\n", m_Pages.size());
+
     for (FDeviceMemoryPage* page : m_Pages)
     {
         delete page;
     }
 
-    std::cout << "Destroyed DeviceAllocator" << std::endl;
+    LOG("Destroyed DeviceAllocator\n");
 }
 
 bool FDeviceMemoryAllocator::Allocate(FDeviceAllocation& Allocation, const VkMemoryRequirements& MemoryRequirements, VkMemoryPropertyFlags Properties)
@@ -389,7 +390,7 @@ bool FDeviceMemoryAllocator::Allocate(FDeviceAllocation& Allocation, const VkMem
         {
             if (Page->Allocate(Allocation, MemoryRequirements.size, MemoryRequirements.alignment, m_BufferImageGranularity))
             {
-                std::cout << "Allocated '" << MemoryRequirements.size << "' bytes. Memory-Type=" << MemoryType  << ", Total Allocated: " << float(m_TotalAllocated) / mb <<  "  MB. Total Reserved " << float(m_TotalReserved) / mb << " MB" << std::endl;
+                LOG("Allocated '%llu' bytes. Memory-Type=%u, Total Allocated: %.4f MB. Total Reserved: %.4f MB\n", MemoryRequirements.size, MemoryType, float(m_TotalAllocated) / mb, float(m_TotalReserved) / mb);
                 return true;
             }
         }
@@ -411,8 +412,7 @@ bool FDeviceMemoryAllocator::Allocate(FDeviceAllocation& Allocation, const VkMem
     FDeviceMemoryPage* pPage = new FDeviceMemoryPage(GetDevice()->GetDevice(), GetDevice()->GetPhysicalDevice(), uint32_t(m_Pages.size()), BytesToReserve, MemoryType, Properties);
     m_Pages.emplace_back(pPage);
 
-    std::cout << "Allocated Memory-Page. Allocationcount: ' " << m_Pages.size() << "/" << m_MaxAllocations << "'. Memory-Type=" << MemoryType << ". Total Allocated: " << float(m_TotalAllocated) / mb << " MB. Total Reserved " << float(m_TotalReserved) / mb << " MB"<< std::endl;
-
+    LOG("Allocated Memory-Page. Allocationcount: '%llu/%llu'. Memory-Type=%u, Total Allocated: %.4f MB. Total Reserved: %.4f MB\n", m_Pages.size(), m_MaxAllocations, MemoryType, float(m_TotalAllocated) / mb, float(m_TotalReserved) / mb);
     return pPage->Allocate(Allocation, MemoryRequirements.size, MemoryRequirements.alignment, m_BufferImageGranularity);
 }
 
@@ -450,8 +450,7 @@ void FDeviceMemoryAllocator::EmptyGarbageMemory()
                 pPage->Deallocate(Memory);
 
                 m_TotalAllocated -= Memory.SizeInBytes;
-
-                std::cout << "Deallocated '" << Memory.SizeInBytes << "' bytes. Total Allocated: " << float(m_TotalAllocated) / mb << " MB. Total Reserved " << float(m_TotalReserved) / mb << " MB" << std::endl;
+                LOG("Allocated '%llu' bytes. Total Allocated: %.4f MB. Total Reserved: %.4f MB\n", Memory.SizeInBytes, float(m_TotalAllocated) / mb, float(m_TotalReserved) / mb);
             }
         }
 
@@ -471,7 +470,7 @@ void FDeviceMemoryAllocator::EmptyGarbageMemory()
                 delete *it;
                 it = m_Pages.erase(it);
 
-                std::cout << "Destroyed Memory-Page. Allocationcount: '" << m_Pages.size() << "/" << m_MaxAllocations << "'. Total Allocated: " << float(m_TotalAllocated) / mb << " MB. Total Reserved " << float(m_TotalReserved) / mb << " MB" << std::endl;
+                LOG("Destroyed Memory-Page. Allocationcount: '%llu/%llu'. Total Allocated: %.4f MB. Total Reserved: %.4f MB\n", m_Pages.size(), m_MaxAllocations, float(m_TotalAllocated) / mb, float(m_TotalReserved) / mb);
             }
             else
             {
