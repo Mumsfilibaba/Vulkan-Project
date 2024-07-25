@@ -168,11 +168,6 @@ void FBvhBuilder::BuildHierarchy()
                         BestCost  = PlaneCost;
                     }
                 }
-
-                if (BestAxis < 0 && Axis == 2)
-                {
-                    DEBUG_BREAK();
-                }
             #endif
             }
 
