@@ -4,8 +4,22 @@
 #include <queue>
 
 #define SAH_PER_TRIANGLE 0
-#define SAH_OPTIMIZED 1
-#define SAH_NUM_SPLITS 8
+#define SAH_OPTIMIZED 0
+#define SAH_BINNED 1
+#define SAH_NUM_SPLITS 512
+#define SAH_NUM_BINS SAH_NUM_SPLITS
+
+struct FBin
+{
+    FBin()
+        : AABB()
+        , TriangleCount(0)
+    {
+    }
+
+    FAABB    AABB;
+    uint32_t TriangleCount;
+};
 
 FBvhBuilder::FBvhBuilder(uint32_t InMaxDepth)
     : BoundingBoxes()
@@ -41,10 +55,6 @@ void FBvhBuilder::BuildHierarchy()
             int32_t BestAxis  = -1;
             float   BestCost  = std::numeric_limits<float>::max();
 
-        #if SAH_OPTIMIZED
-            const size_t NumSplits = SAH_NUM_SPLITS;
-        #endif
-
             const std::vector<uint32_t>& TriangleIndices = BoundingBoxes[CurrentIndex].Triangles;
             for (size_t Axis = 0; Axis < 3; Axis++)
             {
@@ -76,8 +86,8 @@ void FBvhBuilder::BuildHierarchy()
                 }
 
                 const float Extent = BoxMax - BoxMin;
-                const float Scale  = Extent / static_cast<float>(NumSplits);
-                for (size_t i = 0; i < NumSplits; i++)
+                const float Scale  = Extent / static_cast<float>(SAH_NUM_SPLITS);
+                for (size_t i = 0; i < SAH_NUM_SPLITS; i++)
                 {
                     const float SplitPos = BoxMin + (static_cast<float>(i) * Scale);
                     const float Cost = EvaluateCost(CurrentIndex, Axis, SplitPos);
@@ -87,6 +97,81 @@ void FBvhBuilder::BuildHierarchy()
                         BestSplit = SplitPos;
                         BestCost  = Cost;
                     }
+                }
+            #elif SAH_BINNED
+                float BoxMin = std::numeric_limits<float>::max();
+                float BoxMax = std::numeric_limits<float>::lowest();
+
+                for (uint32_t TriangleIndex : TriangleIndices)
+                {
+                    const float Center = Triangles[TriangleIndex].Center[Axis];
+                    BoxMin = std::min(BoxMin, Center);
+                    BoxMax = std::max(BoxMax, Center);
+                }
+
+                if (BoxMin == BoxMax)
+                {
+                    continue;
+                }
+
+                FBin Bins[SAH_NUM_BINS];
+                float Scale = SAH_NUM_BINS / (BoxMax - BoxMin);
+                for (uint32_t TriangleIndex : TriangleIndices)
+                {
+                    FBvhTriangle& Triangle = Triangles[TriangleIndex];
+
+                    const int32_t BinIndex = std::min(SAH_NUM_BINS - 1, static_cast<int32_t>(((Triangle.Center[Axis] - BoxMin) * Scale)));
+                    Bins[BinIndex].TriangleCount++;
+                    for (size_t i = 0; i < 3; i++)
+                    {
+                        Bins[BinIndex].AABB.FitAroundPoint(Triangle.Positions[i]);
+                    }
+                }
+
+                struct FBinInfo
+                {
+                    float   LeftArea   = 0.0f;
+                    float   RightArea  = 0.0f;
+                    int32_t LeftCount  = 0;
+                    int32_t RightCount = 0;
+                };
+
+                int32_t LeftSum  = 0;
+                int32_t RightSum = 0;
+
+                FAABB    LeftBox;
+                FAABB    RightBox;
+                FBinInfo BinInfos[SAH_NUM_BINS - 1];
+                for (int32_t i = 0; i < SAH_NUM_BINS - 1; i++)
+                {
+                    LeftSum += Bins[i].TriangleCount;
+
+                    LeftBox.Grow(Bins[i].AABB);
+                    BinInfos[i].LeftArea  = LeftBox.GetArea();
+                    BinInfos[i].LeftCount = LeftSum;
+
+                    RightSum += Bins[SAH_NUM_BINS - 1 - i].TriangleCount;
+
+                    RightBox.Grow(Bins[SAH_NUM_BINS - 1 - i].AABB);
+                    BinInfos[SAH_NUM_BINS - 2 - i].RightArea  = RightBox.GetArea();
+                    BinInfos[SAH_NUM_BINS - 2 - i].RightCount = RightSum;
+                }
+
+                Scale = (BoxMax - BoxMin) / SAH_NUM_BINS;
+                for (int32_t i = 0; i < SAH_NUM_BINS - 1; i++)
+                {
+                    const float PlaneCost = (BinInfos[i].LeftCount * BinInfos[i].LeftArea) + (BinInfos[i].RightCount * BinInfos[i].RightArea);
+                    if (PlaneCost < BestCost)
+                    {
+                        BestAxis  = Axis;
+                        BestSplit = BoxMin + Scale * (i + 1);
+                        BestCost  = PlaneCost;
+                    }
+                }
+
+                if (BestAxis < 0 && Axis == 2)
+                {
+                    DEBUG_BREAK();
                 }
             #endif
             }

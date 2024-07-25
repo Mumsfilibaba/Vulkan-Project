@@ -26,6 +26,19 @@ struct FAABB
     {
     }
     
+    void Grow(const FAABB& AABB)
+    {
+        if (AABB.Min.x != std::numeric_limits<float>::max() && AABB.Min.y != std::numeric_limits<float>::max() && AABB.Min.z != std::numeric_limits<float>::max())
+        {
+            FitAroundPoint(AABB.Min);
+        }
+
+        if (AABB.Max.x != std::numeric_limits<float>::lowest() && AABB.Max.y != std::numeric_limits<float>::lowest() && AABB.Max.z != std::numeric_limits<float>::lowest())
+        {
+            FitAroundPoint(AABB.Max);
+        }
+    }
+
     void FitAroundPoint(const glm::vec3& Point)
     {
         Min = glm::min(Min, Point);
