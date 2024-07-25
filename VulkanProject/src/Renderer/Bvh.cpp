@@ -190,33 +190,33 @@ void FBvhBuilder::BuildHierarchy()
                     RightIndicies.emplace_back(TriangleIndex);
                 }
             }
-            
+
             // Ensure all the triangles are assigned a single time
             assert(TriangleIndices.size() == LeftIndicies.size() + RightIndicies.size());
-            
+
             // Abort if one child gets zero triangles
             if (LeftIndicies.size() == 0 || RightIndicies.size() == 0)
             {
                 continue;
             }
-            
+
             // Delete the old triangles
             BoundingBoxes[CurrentIndex].Triangles.clear();
-            
+
             // Generate the new child-index
             const uint32_t NewIndex = BoundingBoxes.size();
             BoundingBoxes[CurrentIndex].ChildIndex = NewIndex;
             Queue.push(NewIndex);
             Queue.push(NewIndex + 1);
-                        
+
             // Create the new nodes
             BoundingBoxes.emplace_back();
             BoundingBoxes.emplace_back();
-            
+
             // Assign the triangle indices
             BoundingBoxes[NewIndex].Triangles = std::move(LeftIndicies);
             BoundingBoxes[NewIndex + 1].Triangles = std::move(RightIndicies);
-            
+
             // Grow the new boxes to ensure that all the triangles fully fit inside the boxes
             RecalculateBounds(NewIndex);
             RecalculateBounds(NewIndex + 1);
@@ -225,7 +225,7 @@ void FBvhBuilder::BuildHierarchy()
         // Move to next depth
         CurrentDepth++;
     }
-    
+
     // Save the depth for stats
     Depth = CurrentDepth;
 }
@@ -234,7 +234,7 @@ void FBvhBuilder::Finalize()
 {
     std::vector<FBvhTriangle> NewTriangles;
     NewTriangles.reserve(Triangles.size());
-    
+
     for (FBvhBoundingBox& Box : BoundingBoxes)
     {
         // Only process leaf-nodes
@@ -242,25 +242,25 @@ void FBvhBuilder::Finalize()
         {
             continue;
         }
-        
+
         // Avoid boxes without triangles
         const size_t NumTriangles = Box.Triangles.size();
         if (!NumTriangles)
         {
             continue;
         }
-        
+
         // Setup triangle information
         Box.NumTriangles       = NumTriangles;
         Box.FirstTriangleIndex = NewTriangles.size();
-        
+
         // Insert triangles into the new array in the new order
         for (uint32_t TriangleIndex : Box.Triangles)
         {
             NewTriangles.push_back(Triangles[TriangleIndex]);
         }
     }
-    
+
     // Replace the old triangles with the new ones
     Triangles = std::move(NewTriangles);
 }
@@ -269,7 +269,7 @@ void FBvhBuilder::RecalculateBounds(size_t VolumeIndex)
 {
     glm::vec3 BoxMin = glm::vec3(std::numeric_limits<float>::max());
     glm::vec3 BoxMax = glm::vec3(std::numeric_limits<float>::lowest());
-    
+
     FBvhBoundingBox& BoundingBox = BoundingBoxes[VolumeIndex];
     for (uint32_t TriangleIndex : BoundingBox.Triangles)
     {
@@ -280,7 +280,7 @@ void FBvhBuilder::RecalculateBounds(size_t VolumeIndex)
         BoxMax = glm::max(BoxMax, Triangle.BoundsMin);
         BoxMax = glm::max(BoxMax, Triangle.BoundsMax);
     }
-    
+
     BoundingBox.BoxMin = BoxMin;
     BoundingBox.BoxMax = BoxMax;
 }
@@ -291,7 +291,7 @@ float FBvhBuilder::EvaluateCost(size_t VolumeIndex, size_t AxisIndex, float Spli
     FAABB RightBox;
     size_t LeftCount  = 0;
     size_t RightCount = 0;
-    
+
     FBvhBoundingBox& BoundingBox = BoundingBoxes[VolumeIndex];
     for (uint32_t TriangleIndex : BoundingBox.Triangles)
     {
@@ -309,7 +309,7 @@ float FBvhBuilder::EvaluateCost(size_t VolumeIndex, size_t AxisIndex, float Spli
             RightCount++;
         }
     }
-    
+
     const float Cost = LeftCount * LeftBox.GetArea() + RightCount * RightBox.GetArea();
     return Cost > 0 ? Cost : std::numeric_limits<float>::max();
 }
