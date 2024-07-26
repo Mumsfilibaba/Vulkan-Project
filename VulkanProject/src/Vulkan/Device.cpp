@@ -54,7 +54,7 @@ FDevice::FDevice()
     , m_DeviceMemoryProperties()
     , m_QueueFamilyIndices()
     , m_bValidationEnabled(false)
-    , m_bRayTracingEnabled(false)
+    , m_bRayTracingSupported(false)
     , m_bBindlessSupported(false)
 {
 }
@@ -415,7 +415,7 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
         m_QueueFamilyIndices.Presentation,
         m_QueueFamilyIndices.Compute,
         m_QueueFamilyIndices.Transfer);
-    
+
     if (m_DeviceProperties.limits.timestampComputeAndGraphics)
     {
         LOG("    Timestamps Supported\n");
@@ -424,10 +424,10 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
     {
         LOG("    Timestamps NOT Supported\n");
     }
-    
+
     std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
     const float DefaultQueuePriority = 0.0f;
-    
+
     std::set<uint32_t> UniqueQueueFamilies =
     {
         m_QueueFamilyIndices.Graphics,
@@ -435,7 +435,7 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
         m_QueueFamilyIndices.Presentation,
         m_QueueFamilyIndices.Transfer
     };
-    
+
     for (int32_t QueueFamiliy : UniqueQueueFamilies)
     {
         VkDeviceQueueCreateInfo QueueInfo = {};
@@ -448,13 +448,13 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
         
         QueueCreateInfos.push_back(QueueInfo);
     }
-    
+
     // Get device extensions
     uint32_t DeviceExtensionCount;
     vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &DeviceExtensionCount, nullptr);
     std::vector<VkExtensionProperties> AvailableDeviceExtension(DeviceExtensionCount);
     vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &DeviceExtensionCount, AvailableDeviceExtension.data());
-    
+
     bool bEnableDeviceSubset = false;
     for (VkExtensionProperties Extension : AvailableDeviceExtension)
     {
@@ -463,7 +463,7 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
             bEnableDeviceSubset = true;
         }
     }
-    
+
     if (Params.bVerbose)
     {
         LOG("Available device extensions:\n");
@@ -473,44 +473,62 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
             LOG("   %s\n", Extension.extensionName);
         }
     }
-    
+
     // Enable device extensions
     std::vector<const char*> DeviceExtensions = GetRequiredDeviceExtensions();
     if (bEnableDeviceSubset)
     {
         DeviceExtensions.push_back("VK_KHR_portability_subset");
     }
-    
+
     if (Params.bEnableRayTracing)
     {
-        DeviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
-        DeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
-        m_bRayTracingEnabled = true;
+        bool bRayTracingPipelinesSupported    = false;
+        bool bAccelerationStructuresSupported = false;
+        bool bDeferredHostOPerationsSupported = false;
+        for (VkExtensionProperties Extension : AvailableDeviceExtension)
+        {
+            if (strcmp(Extension.extensionName, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0)
+                bRayTracingPipelinesSupported = true;
+            if (strcmp(Extension.extensionName, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) == 0)
+                bAccelerationStructuresSupported = true;
+            if (strcmp(Extension.extensionName, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) == 0)
+                bDeferredHostOPerationsSupported = true;
+        }
+
+        if (bRayTracingPipelinesSupported && bAccelerationStructuresSupported && bDeferredHostOPerationsSupported)
+        {
+            DeviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+            DeviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+            DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+            DeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
+            m_bRayTracingSupported = true;
+        }
     }
-    
+
     // Enable wanted features here
     ZERO_STRUCT(&m_EnabledDeviceFeatures);
     m_EnabledDeviceFeatures.sType                      = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     m_EnabledDeviceFeatures.pNext                      = &m_HostQueryFeatures;
     m_EnabledDeviceFeatures.features.fillModeNonSolid  = VK_TRUE;
     m_EnabledDeviceFeatures.features.samplerAnisotropy = VK_TRUE;
-    
+
     const bool bBindlessSupported =
         m_DescriptorIndexFeatures.descriptorBindingPartiallyBound && m_DescriptorIndexFeatures.runtimeDescriptorArray &&
         m_DescriptorIndexFeatures.descriptorBindingSampledImageUpdateAfterBind && m_DescriptorIndexFeatures.shaderSampledImageArrayNonUniformIndexing &&
         m_DescriptorIndexFeatures.descriptorBindingVariableDescriptorCount;
-    
+
     VkPhysicalDeviceDescriptorIndexingFeatures DescriptorIndexingFeatures;
     if (bBindlessSupported)
     {
         ZERO_STRUCT(&DescriptorIndexingFeatures);
         DescriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
         DescriptorIndexingFeatures.pNext = nullptr;
-        DescriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
-        DescriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
+        DescriptorIndexingFeatures.descriptorBindingPartiallyBound              = VK_TRUE;
+        DescriptorIndexingFeatures.runtimeDescriptorArray                       = VK_TRUE;
         DescriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
-        DescriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-        DescriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
+        DescriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing    = VK_TRUE;
+        DescriptorIndexingFeatures.descriptorBindingVariableDescriptorCount     = VK_TRUE;
         m_HostQueryFeatures.pNext = &DescriptorIndexingFeatures;
     }
 

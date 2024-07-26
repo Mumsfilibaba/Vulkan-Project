@@ -1,6 +1,9 @@
 #include "Application.h"
-#include "Renderer/RayTracer.h"
+#include "Renderer/SoftwareRayTracer.h"
 #include "Renderer/GUI.h"
+#include "Renderer/RayTracer.h"
+
+#define ENABLE_HW_RT 0
 
 extern bool GIsRunning = false;
 
@@ -70,7 +73,17 @@ bool FApplication::Init()
     // Initialize ImGui
     GUI::InitializeImgui(m_pWindow, m_pDevice, m_pSwapchain);
 
-    m_pRenderer = new FRayTracer();
+#if ENABLE_HW_RT
+    if (m_pDevice->IsRayTracingSupported())
+    {
+        m_pRenderer = new FRayTracer();
+    }
+    else
+#endif
+    {
+        m_pRenderer = new FSoftwareRayTracer();
+    }
+
     m_pRenderer->Init(m_pDevice, m_pSwapchain);
     
     // Show window

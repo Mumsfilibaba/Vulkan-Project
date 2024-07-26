@@ -45,7 +45,7 @@ public:
     void WaitForIdle();
     void Destroy();
     uint32_t GetQueueFamilyIndex(ECommandQueueType Type);
-    
+
     VkDevice         GetDevice()         const { return m_Device; }
     VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
     VkInstance       GetInstance()       const { return m_Instance; }
@@ -57,12 +57,17 @@ public:
         return m_pBindlessManager != nullptr;
     }
 
+    bool IsRayTracingSupported() const 
+    {
+        return m_bRayTracingSupported;
+    }
+
     FBindlessManager& GetBindlessManager() const
     {
         assert(IsBindlessSupported());
         return *m_pBindlessManager;
     }
-    
+
     const VkPhysicalDeviceLimits& GetDeviceLimits() const
     {
         return m_DeviceProperties.limits;
@@ -72,7 +77,7 @@ public:
     {
         return m_DeviceProperties.limits.timestampPeriod;
     }
-    
+
 private:
     bool Init(const FDeviceParams& props);
     bool CreateInstance(const FDeviceParams& props);
@@ -83,21 +88,21 @@ private:
     std::vector<const char*> GetRequiredDeviceExtensions();
     FQueueFamilyIndices GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
     void QueryPhysicalDeviceFeatures();
-    
+
     VkInstance               m_Instance;
     VkDebugUtilsMessengerEXT m_DebugMessenger;
     VkPhysicalDevice         m_PhysicalDevice;
     VkDevice                 m_Device;
-    
+
     // Bindless
     FBindlessManager* m_pBindlessManager;
-    
+
     // Queues
     VkQueue m_GraphicsQueue;
     VkQueue m_ComputeQueue;
     VkQueue m_TransferQueue;
     VkQueue m_PresentationQueue;
-    
+
     // Device Features
     VkPhysicalDeviceFeatures2                  m_EnabledDeviceFeatures;
     VkPhysicalDeviceDescriptorIndexingFeatures m_DescriptorIndexFeatures;
@@ -106,8 +111,8 @@ private:
     VkPhysicalDeviceHostQueryResetFeatures     m_HostQueryFeatures;
     VkPhysicalDeviceMemoryProperties           m_DeviceMemoryProperties;
     FQueueFamilyIndices                        m_QueueFamilyIndices;
-          
-    bool m_bValidationEnabled : 1;
-    bool m_bRayTracingEnabled : 1;
-    bool m_bBindlessSupported : 1;
+
+    bool m_bValidationEnabled   : 1;
+    bool m_bRayTracingSupported : 1;
+    bool m_bBindlessSupported   : 1;
 };

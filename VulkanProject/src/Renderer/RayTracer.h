@@ -1,173 +1,19 @@
 #pragma once
-#include "Core.h"
-#include "IRenderer.h"
-#include "Camera.h"
-#include "Scene.h"
-#include "Bvh.h"
+#include "BaseRenderer.h"
 
-class FBuffer;
-class FDescriptorSet;
-class FTexture;
-class FTextureView;
-class FPipelineLayout;
-class FDescriptorSetLayout;
-class FGraphicsPipeline;
-class FRenderPass;
-class FSampler;
-class FCommandBuffer;
-class FComputePipeline;
-class FFramebuffer;
-class FQuery;
-class FBindlessManager;
-
-struct FRandomBuffer
-{
-    // 0-8
-    uint32_t FrameIndex  = 0;
-    uint32_t HaltonIndex = 0;
-
-    // Padding
-    uint32_t Padding0 = 0;
-    uint32_t Padding1 = 0;
-};
-
-struct FSceneBuffer
-{
-    // 0-16
-    uint32_t NumQuads = 0;
-    uint32_t NumSpheres = 0;
-    uint32_t NumMeshes = 0;
-    uint32_t NumMaterials = 0;
-    // 16-32
-    uint32_t NumBvhNodes = 0;
-    uint32_t NumTriangles = 0;
-    uint32_t BackgroundType = 0;
-    uint32_t NumBounces = 4;
-    // 32-40
-    uint32_t ViewMode = 0;
-    float    GradientLightStrength = 1.0f;
-    
-    // Padding
-    uint32_t Padding0;
-    uint32_t Padding1;
-};
-
-struct FTonemappingBuffer
-{
-    // 0-4
-    float Exposure = 0.5f;
-    
-    // Padding
-    uint32_t Padding0 = 0;
-    uint32_t Padding1 = 0;
-    uint32_t Padding2 = 0;
-};
-
-class FRayTracer : public IRenderer
+class FRayTracer : public FBaseRenderer
 {
 public:
     FRayTracer();
     ~FRayTracer();
-    
+
     virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override;
     virtual void Release() override;
     virtual void Tick(float DeltaTime) override;
-    
-    virtual void OnRenderUI() override;
-    virtual void OnWindowResize(uint32_t Width, uint32_t Height) override;
-    
+
+    virtual void RenderSceneUI() override;
+
 private:
-    void CreateRayTracingResources();
-    void CreateTonemappingResources();
-    void CreateDebugViewResources();
-    void CreateGlobalBuffers();
-    void CreateDescriptorSet();
-    void ReleaseDescriptorSets();
-    void CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height);
-    void ReloadShader();
-    void UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer);
-    void PerformRayTracing(FCommandBuffer* pCommandBuffer);
-    void PerformTonemapping(FCommandBuffer* pCommandBuffer);
-    void PerformDebugPass(FCommandBuffer* pCommandBuffer);
-    
-    FDevice*                       m_pDevice;
-    FSwapchain*                    m_pSwapchain;
-    FDeviceMemoryAllocator*        m_pDeviceAllocator;
-    FDescriptorPool*               m_pDescriptorPool;
-
-    std::vector<FCommandBuffer*> m_CommandBuffers;
-    std::vector<FQuery*>         m_TimestampQueries;
-
-    // RayTracing
-    std::atomic<FComputePipeline*> m_pRayTracingPipeline;
-    FPipelineLayout*               m_pRayTracingPipelineLayout;
-    FDescriptorSetLayout*          m_pRayTracingDescriptorSetLayout;
-    FDescriptorSet*                m_pRayTracingDescriptorSet0;
-    FDescriptorSet*                m_pRayTracingDescriptorSet1;
-    
-    // ToneMapping
-    FGraphicsPipeline*    m_pTonemappingPipeline;
-    FRenderPass*          m_pTonemappingRenderPass;
-    FPipelineLayout*      m_pTonemappingPipelineLayout;
-    FDescriptorSetLayout* m_pTonemappingDescriptorSetLayout;
-    FDescriptorSet*       m_pTonemappingDescriptorSet0;
-    FDescriptorSet*       m_pTonemappingDescriptorSet1;
-    FFramebuffer*         m_pTonemappingFramebuffer;
-    
-    // DebugPass
-    FGraphicsPipeline*    m_pDebugPipeline;
-    FGraphicsPipeline*    m_pDebugPipelineWireframe;
-    FGraphicsPipeline*    m_pDebugAABBPipeline;
-    FRenderPass*          m_pDebugRenderPass;
-    FPipelineLayout*      m_pDebugPipelineLayout;
-    FPipelineLayout*      m_pDebugAABBPipelineLayout;
-    FDescriptorSetLayout* m_pDebugDescriptorSetLayout;
-    FDescriptorSet*       m_pDebugDescriptorSet0;
-    FDescriptorSet*       m_pDebugDescriptorSet1;
-    FFramebuffer*         m_pDebugFramebuffer;
-    size_t                m_AABBIndexCount;
-    int32_t               m_DebugDepth;
-    
-    // Buffers
-    FBuffer* m_pCameraBuffer;
-    FBuffer* m_pRandomBuffer;
-    FBuffer* m_pSceneBuffer;
-    FBuffer* m_pTonemappingBuffer;
-    FBuffer* m_pSphereBuffer;
-    FBuffer* m_pQuadBuffer;
-    FBuffer* m_pTriangleBuffer;
-    FBuffer* m_pMeshBuffer;
-    FBuffer* m_pVertexBuffer;
-    FBuffer* m_pVertexExBuffer;
-    FBuffer* m_pMaterialBuffer;
-    FBuffer* m_pBvhBuffer;
-    
-    FBuffer* m_pAABBVertexBuffer;
-    FBuffer* m_pAABBIndexBuffer;
-    FBuffer* m_pAABBInstanceBuffer;
-
-    // SceneTexture
-    FTexture*       m_pSceneTexture0;
-    FTexture*       m_pSceneTexture1;
-    FTexture*       m_pOutputTexture;
-    FTexture*       m_pDepthBufferTexture;
-    FTextureView*   m_pSceneTextureView0;
-    FTextureView*   m_pSceneTextureView1;
-    FTextureView*   m_pOutputTextureView;
-    FTextureView*   m_pDepthBufferTextureView;
-    FDescriptorSet* m_pOutputTextureDescriptorSet;
-
-    // Skybox
-    class FTextureResource* m_pSkybox;
-    uint32_t m_SkyboxBindlessIndex;
-    
-    // Samplers
-    FSampler* m_pSkyboxSampler;
-    FSampler* m_pTonemapSampler;
-    
-    // Scene
-    FScene* m_pScene;
-    
     // Samples
     std::atomic_bool m_bResetImage;
     uint64_t         m_FrameIndex;
