@@ -1,8 +1,8 @@
 #include "BaseRenderer.h"
 #include "GUI.h"
-#include "Scene.h"
 #include "TextureResource.h"
 #include "Input.h"
+#include "Camera.h"
 #include "MathHelper.h"
 #include "Vulkan/CommandBuffer.h"
 #include "Vulkan/SwapChain.h"
@@ -159,8 +159,16 @@ void FBaseRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     // Init Common Stages
     CreateTonemappingResources();
 
+    // Let the renderer create it's resources
+    CreateResources();
+
+    // Create all buffers
+    CreateGlobalBuffers();
+
+    // Create the scene texture
     m_ViewportWidth  = 0;
     m_ViewportHeight = 0;
+    CreateOrResizeSceneTexture(1280, 720);
 }
 
 void FBaseRenderer::CreateTonemappingResources()

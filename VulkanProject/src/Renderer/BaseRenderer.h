@@ -46,7 +46,7 @@ public:
     ~FBaseRenderer();
 
     // IRenderer Interface
-    virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override;
+    virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override final;
     virtual void Release() override;
 
     virtual void Tick(float DeltaTime) override final;
@@ -59,6 +59,8 @@ public:
 
     // BaseRenderer Interface
     virtual bool CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height);
+
+    virtual void CreateResources() = 0;
 
     virtual void RenderSceneUI() = 0;
     virtual void ReloadShaders() = 0;

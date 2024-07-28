@@ -1,8 +1,8 @@
 #pragma once
+#include "IScene.h"
 #include "Vulkan/Device.h"
 #include "Vulkan/DescriptorPool.h"
 
-struct IScene;
 class FDeviceMemoryAllocator;
 
 struct IRenderer

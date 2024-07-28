@@ -1,4 +1,4 @@
-#include "Scene.h"
+#include "SoftwareScene.h"
 #include "Model.h"
 #include "Application.h"
 #include "TextureResource.h"
@@ -13,7 +13,7 @@ static void ZeroVector(std::vector<T>& OutVector)
     memset(OutVector.data(), 0, Size);
 }
 
-FScene::FScene()
+FSoftwareScene::FSoftwareScene()
     : m_Quads()
     , m_Spheres()
     , m_GpuMaterials()
@@ -55,7 +55,7 @@ FScene::FScene()
     m_bUpdateBuffers = true;
 }
 
-FScene::~FScene()
+FSoftwareScene::~FSoftwareScene()
 {
     if (FDevice* pDevice = FApplication::Get().GetDevice())
     {

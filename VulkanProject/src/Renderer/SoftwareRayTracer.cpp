@@ -59,10 +59,8 @@ FSoftwareRayTracer::~FSoftwareRayTracer()
 {
 }
 
-void FSoftwareRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
+void FSoftwareRayTracer::CreateResources()
 {
-    FBaseRenderer::Init(pDevice, pSwapchain);
-
     // Create scene
     m_pScene = new FSphereScene(ESphereSceneType::Default);
     m_pScene->Initialize();
@@ -70,12 +68,6 @@ void FSoftwareRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     // RenderPasses
     CreateRayTracingResources();
     CreateDebugViewResources();
-    
-    // Create all buffers
-    CreateGlobalBuffers();
-
-    // Create the scene texture
-    CreateOrResizeSceneTexture(1280, 720);
 }
 
 void FSoftwareRayTracer::Render(FCommandBuffer* pCommandBuffer)

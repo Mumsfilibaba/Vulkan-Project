@@ -1,7 +1,7 @@
 #pragma once
 #include "BaseRenderer.h"
 #include "Camera.h"
-#include "Scene.h"
+#include "SoftwareScene.h"
 #include "Bvh.h"
 
 struct FSceneBuffer
@@ -32,7 +32,6 @@ public:
     ~FSoftwareRayTracer();
 
     // IRenderer Interface
-    virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override;
     virtual void Release() override;
 
     virtual IScene* GetScene() const override final
@@ -42,6 +41,8 @@ public:
 
     // BaseRenderer Interface
     virtual bool CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height) override;
+
+    virtual void CreateResources() override;
 
     virtual void CreateDescriptorSets() override;
     virtual void ReleaseDescriptorSets() override;
@@ -100,5 +101,5 @@ private:
     FBuffer* m_pAABBInstanceBuffer;
 
     // Scene
-    FScene*  m_pScene;
+    FSoftwareScene*  m_pScene;
 };

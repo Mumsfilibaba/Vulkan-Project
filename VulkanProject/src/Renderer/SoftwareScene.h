@@ -43,10 +43,10 @@ struct FSceneSettings
     float     CameraSpeed;
 };
 
-struct FScene : public IScene
+struct FSoftwareScene : public IScene
 {
-    FScene();
-    virtual ~FScene();
+    FSoftwareScene();
+    virtual ~FSoftwareScene();
 
     // IScene Interface
     virtual void Initialize() override { }
@@ -103,7 +103,7 @@ enum class EModelSceneType
     Sponza = 2,
 };
 
-struct FModelScene : public FScene
+struct FModelScene : public FSoftwareScene
 {
     FModelScene(EModelSceneType InType)
         : Type(InType)
@@ -124,7 +124,7 @@ enum class ESphereSceneType
     RoughGlass = 4, 
 };
 
-struct FSphereScene : public FScene
+struct FSphereScene : public FSoftwareScene
 {
     FSphereScene(ESphereSceneType InType)
         : Type(InType)
@@ -137,7 +137,7 @@ struct FSphereScene : public FScene
     const ESphereSceneType Type;
 };
 
-struct FCornellBoxScene : public FScene
+struct FCornellBoxScene : public FSoftwareScene
 {
     virtual void Initialize() override;
     virtual void Reset() override;

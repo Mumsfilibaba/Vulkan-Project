@@ -1,5 +1,5 @@
 #include "Bvh.h"
-#include "Scene.h"
+#include "SoftwareScene.h"
 #include "Model.h"
 #include <queue>
 

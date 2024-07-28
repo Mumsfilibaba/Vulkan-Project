@@ -1,6 +1,5 @@
 #include "RayTracer.h"
 #include "GUI.h"
-#include "Scene.h"
 
 FRayTracer::FRayTracer()
     : FBaseRenderer()
@@ -11,14 +10,17 @@ FRayTracer::~FRayTracer()
 {
 }
 
-void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
+void FRayTracer::CreateResources()
 {
-    FBaseRenderer::Init(pDevice, pSwapchain);
 }
 
 void FRayTracer::Release()
 {
     FBaseRenderer::Release();
+}
+
+void FRayTracer::Render(FCommandBuffer* pCommandBuffer)
+{
 }
 
 void FRayTracer::RenderSceneUI()
