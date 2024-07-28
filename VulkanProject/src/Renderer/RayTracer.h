@@ -1,5 +1,6 @@
 #pragma once
 #include "BaseRenderer.h"
+#include "Scene.h"
 
 class FRayTracer : public FBaseRenderer
 {
@@ -8,18 +9,20 @@ public:
     ~FRayTracer();
 
     // IRenderer Interface
-    virtual void Release() override;
-
     virtual IScene* GetScene() const override final
     {
-        return nullptr;
+        return m_pScene;
     }
 
     // BaseRenderer Interface
     virtual void Render(FCommandBuffer* pCommandBuffer) override;
 
     virtual void CreateResources() override;
+    virtual void ReleaseResources() override;
 
     virtual void RenderSceneUI() override;
     virtual void ReloadShaders() override;
+
+private:
+    FScene* m_pScene;
 };

@@ -47,7 +47,7 @@ public:
 
     // IRenderer Interface
     virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override final;
-    virtual void Release() override;
+    virtual void Release() override final;
 
     virtual void Tick(float DeltaTime) override final;
 
@@ -61,6 +61,7 @@ public:
     virtual bool CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height);
 
     virtual void CreateResources() = 0;
+    virtual void ReleaseResources() = 0;
 
     virtual void RenderSceneUI() = 0;
     virtual void ReloadShaders() = 0;

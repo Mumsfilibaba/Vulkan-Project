@@ -32,8 +32,6 @@ public:
     ~FSoftwareRayTracer();
 
     // IRenderer Interface
-    virtual void Release() override;
-
     virtual IScene* GetScene() const override final
     {
         return m_pScene;
@@ -43,6 +41,7 @@ public:
     virtual bool CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height) override;
 
     virtual void CreateResources() override;
+    virtual void ReleaseResources() override;
 
     virtual void CreateDescriptorSets() override;
     virtual void ReleaseDescriptorSets() override;

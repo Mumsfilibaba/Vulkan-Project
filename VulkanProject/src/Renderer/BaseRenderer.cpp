@@ -558,8 +558,11 @@ void FBaseRenderer::Release()
     m_CommandBuffers.clear();
     m_TimestampQueries.clear();
 
-    SAFE_DELETE(m_pDescriptorPool);
-    SAFE_DELETE(m_pDeviceAllocator);
+    // Release DescriptorSets
+    ReleaseDescriptorSets();
+
+    // Release Renderer Specific resources
+    ReleaseResources();
 
     SAFE_DELETE(m_pSkybox);
 
@@ -581,6 +584,9 @@ void FBaseRenderer::Release()
     SAFE_DELETE(m_pCameraBuffer);
     SAFE_DELETE(m_pRandomBuffer);
     SAFE_DELETE(m_pTonemappingBuffer);
+
+    SAFE_DELETE(m_pDescriptorPool);
+    SAFE_DELETE(m_pDeviceAllocator);
 }
 
 bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)

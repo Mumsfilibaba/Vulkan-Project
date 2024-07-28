@@ -12,11 +12,11 @@ FRayTracer::~FRayTracer()
 
 void FRayTracer::CreateResources()
 {
+    m_pScene = new FScene();
 }
 
-void FRayTracer::Release()
+void FRayTracer::ReleaseResources()
 {
-    FBaseRenderer::Release();
 }
 
 void FRayTracer::Render(FCommandBuffer* pCommandBuffer)

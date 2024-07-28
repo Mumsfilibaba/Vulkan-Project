@@ -70,6 +70,40 @@ void FSoftwareRayTracer::CreateResources()
     CreateDebugViewResources();
 }
 
+void FSoftwareRayTracer::ReleaseResources()
+{
+    SAFE_DELETE(m_pSceneBuffer);
+    SAFE_DELETE(m_pQuadBuffer);
+    SAFE_DELETE(m_pSphereBuffer);
+    SAFE_DELETE(m_pVertexBuffer);
+    SAFE_DELETE(m_pVertexExBuffer);
+    SAFE_DELETE(m_pTriangleBuffer);
+    SAFE_DELETE(m_pMeshBuffer);
+    SAFE_DELETE(m_pMaterialBuffer);
+    SAFE_DELETE(m_pBvhBuffer);
+    SAFE_DELETE(m_pAABBVertexBuffer);
+    SAFE_DELETE(m_pAABBIndexBuffer);
+    SAFE_DELETE(m_pAABBInstanceBuffer);
+
+    SAFE_DELETE(m_pRayTracingPipeline);
+    SAFE_DELETE(m_pRayTracingPipelineLayout);
+    SAFE_DELETE(m_pRayTracingDescriptorSetLayout);
+
+    SAFE_DELETE(m_pDebugPipeline);
+    SAFE_DELETE(m_pDebugPipelineWireframe);
+    SAFE_DELETE(m_pDebugAABBPipeline);
+    SAFE_DELETE(m_pDebugRenderPass);
+    SAFE_DELETE(m_pDebugPipelineLayout);
+    SAFE_DELETE(m_pDebugDescriptorSetLayout);
+    SAFE_DELETE(m_pDebugAABBPipelineLayout);
+
+    SAFE_DELETE(m_pDepthBufferTexture);
+    SAFE_DELETE(m_pDepthBufferTextureView);
+    SAFE_DELETE(m_pDebugFramebuffer);
+
+    SAFE_DELETE(m_pScene);
+}
+
 void FSoftwareRayTracer::Render(FCommandBuffer* pCommandBuffer)
 {
     // Update global buffers
@@ -588,47 +622,6 @@ void FSoftwareRayTracer::RenderSceneUI()
     }
 
     ImGui::End();
-}
-
-void FSoftwareRayTracer::Release()
-{
-    // Wait for device before we destroy anything
-    GetDevice()->WaitForIdle();
-
-    ReleaseDescriptorSets();
-
-    SAFE_DELETE(m_pSceneBuffer);
-    SAFE_DELETE(m_pQuadBuffer);
-    SAFE_DELETE(m_pSphereBuffer);
-    SAFE_DELETE(m_pVertexBuffer);
-    SAFE_DELETE(m_pVertexExBuffer);
-    SAFE_DELETE(m_pTriangleBuffer);
-    SAFE_DELETE(m_pMeshBuffer);
-    SAFE_DELETE(m_pMaterialBuffer);
-    SAFE_DELETE(m_pBvhBuffer);
-    SAFE_DELETE(m_pAABBVertexBuffer);
-    SAFE_DELETE(m_pAABBIndexBuffer);
-    SAFE_DELETE(m_pAABBInstanceBuffer);
-
-    SAFE_DELETE(m_pRayTracingPipeline);
-    SAFE_DELETE(m_pRayTracingPipelineLayout);
-    SAFE_DELETE(m_pRayTracingDescriptorSetLayout);
-
-    SAFE_DELETE(m_pDebugPipeline);
-    SAFE_DELETE(m_pDebugPipelineWireframe);
-    SAFE_DELETE(m_pDebugAABBPipeline);
-    SAFE_DELETE(m_pDebugRenderPass);
-    SAFE_DELETE(m_pDebugPipelineLayout);
-    SAFE_DELETE(m_pDebugDescriptorSetLayout);
-    SAFE_DELETE(m_pDebugAABBPipelineLayout);
-
-    SAFE_DELETE(m_pDepthBufferTexture);
-    SAFE_DELETE(m_pDepthBufferTextureView);
-    SAFE_DELETE(m_pDebugFramebuffer);
-    
-    SAFE_DELETE(m_pScene);
-
-    FBaseRenderer::Release();
 }
 
 void FSoftwareRayTracer::CreateRayTracingResources()
