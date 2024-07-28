@@ -154,9 +154,6 @@ void FApplication::OnWindowResize(GLFWwindow* pWindow, uint32_t Width, uint32_t 
 
         // Ensure that ImGui can create necessary resources for the main window
         GUI::OnSwapchainRecreated();
-
-        // Let the renderer know about the resize
-        m_pRenderer->OnWindowResize(m_Width, m_Height);
     }
 }
 

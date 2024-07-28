@@ -20,7 +20,7 @@ public:
     static FBuffer* Create(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator);
     static FBuffer* CreateWithData(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator, const void* pSource);
 
-    FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator);
+    FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator = nullptr);
     ~FBuffer();
     
     void* Map();

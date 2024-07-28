@@ -257,5 +257,14 @@ void FTexture::SetDebugName(const char* DebugName)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
         }
+
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_DEVICE_MEMORY;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Memory);
+
+        Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
+        }
     }
 }

@@ -7,23 +7,16 @@ public:
     FRayTracer();
     ~FRayTracer();
 
+    // IRenderer Interface
     virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override;
     virtual void Release() override;
-    virtual void Tick(float DeltaTime) override;
 
+    virtual IScene* GetScene() const override final
+    {
+        return nullptr;
+    }
+
+    // BaseRenderer Interface
     virtual void RenderSceneUI() override;
-
-private:
-    // Samples
-    std::atomic_bool m_bResetImage;
-    uint64_t         m_FrameIndex;
-    
-    // Stats
-    float    m_LastCPUTime;
-    float    m_LastGPUTime;
-    
-    // Viewport
-    uint32_t m_ViewportWidth;
-    uint32_t m_ViewportHeight;
-    bool     m_bViewportHasFocus;
+    virtual void ReloadShaders() override;
 };

@@ -4,32 +4,6 @@
 #include "Scene.h"
 #include "Bvh.h"
 
-class FBuffer;
-class FDescriptorSet;
-class FTexture;
-class FTextureView;
-class FPipelineLayout;
-class FDescriptorSetLayout;
-class FGraphicsPipeline;
-class FRenderPass;
-class FSampler;
-class FCommandBuffer;
-class FComputePipeline;
-class FFramebuffer;
-class FQuery;
-class FBindlessManager;
-
-struct FRandomBuffer
-{
-    // 0-8
-    uint32_t FrameIndex  = 0;
-    uint32_t HaltonIndex = 0;
-
-    // Padding
-    uint32_t Padding0 = 0;
-    uint32_t Padding1 = 0;
-};
-
 struct FSceneBuffer
 {
     // 0-16
@@ -51,44 +25,39 @@ struct FSceneBuffer
     uint32_t Padding1;
 };
 
-struct FTonemappingBuffer
-{
-    // 0-4
-    float Exposure = 0.5f;
-    
-    // Padding
-    uint32_t Padding0 = 0;
-    uint32_t Padding1 = 0;
-    uint32_t Padding2 = 0;
-};
-
 class FSoftwareRayTracer : public FBaseRenderer
 {
 public:
     FSoftwareRayTracer();
     ~FSoftwareRayTracer();
 
+    // IRenderer Interface
     virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override;
     virtual void Release() override;
-    virtual void Tick(float DeltaTime) override;
 
-    virtual void OnRenderUI() override;
-    virtual void OnWindowResize(uint32_t Width, uint32_t Height) override;
+    virtual IScene* GetScene() const override final
+    {
+        return m_pScene;
+    }
+
+    // BaseRenderer Interface
+    virtual bool CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height) override;
+
+    virtual void CreateDescriptorSets() override;
+    virtual void ReleaseDescriptorSets() override;
 
     virtual void RenderSceneUI() override;
+    virtual void ReloadShaders() override;
+
+    virtual void Render(FCommandBuffer* pCommandBuffer) override;
+
+    virtual void CreateGlobalBuffers() override;
 
 private:
     void CreateRayTracingResources();
-    void CreateTonemappingResources();
     void CreateDebugViewResources();
-    void CreateGlobalBuffers();
-    void CreateDescriptorSet();
-    void ReleaseDescriptorSets();
-    void CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height);
-    void ReloadShader();
     void UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer);
     void PerformRayTracing(FCommandBuffer* pCommandBuffer);
-    void PerformTonemapping(FCommandBuffer* pCommandBuffer);
     void PerformDebugPass(FCommandBuffer* pCommandBuffer);
 
     // RayTracing
@@ -98,15 +67,10 @@ private:
     FDescriptorSet*                m_pRayTracingDescriptorSet0;
     FDescriptorSet*                m_pRayTracingDescriptorSet1;
 
-    // ToneMapping
-    FGraphicsPipeline*    m_pTonemappingPipeline;
-    FRenderPass*          m_pTonemappingRenderPass;
-    FPipelineLayout*      m_pTonemappingPipelineLayout;
-    FDescriptorSetLayout* m_pTonemappingDescriptorSetLayout;
-    FDescriptorSet*       m_pTonemappingDescriptorSet0;
-    FDescriptorSet*       m_pTonemappingDescriptorSet1;
-    FFramebuffer*         m_pTonemappingFramebuffer;
-
+    // DebugPass require a DepthBuffer
+    FTexture*     m_pDepthBufferTexture;
+    FTextureView* m_pDepthBufferTextureView;
+    
     // DebugPass
     FGraphicsPipeline*    m_pDebugPipeline;
     FGraphicsPipeline*    m_pDebugPipelineWireframe;
@@ -122,54 +86,19 @@ private:
     int32_t               m_DebugDepth;
 
     // Buffers
-    FBuffer*              m_pCameraBuffer;
-    FBuffer*              m_pRandomBuffer;
-    FBuffer*              m_pSceneBuffer;
-    FBuffer*              m_pTonemappingBuffer;
-    FBuffer*              m_pSphereBuffer;
-    FBuffer*              m_pQuadBuffer;
-    FBuffer*              m_pTriangleBuffer;
-    FBuffer*              m_pMeshBuffer;
-    FBuffer*              m_pVertexBuffer;
-    FBuffer*              m_pVertexExBuffer;
-    FBuffer*              m_pMaterialBuffer;
-    FBuffer*              m_pBvhBuffer;
-    FBuffer*              m_pAABBVertexBuffer;
-    FBuffer*              m_pAABBIndexBuffer;
-    FBuffer*              m_pAABBInstanceBuffer;
-
-    // SceneTexture
-    FTexture*             m_pSceneTexture0;
-    FTexture*             m_pSceneTexture1;
-    FTexture*             m_pOutputTexture;
-    FTexture*             m_pDepthBufferTexture;
-    FTextureView*         m_pSceneTextureView0;
-    FTextureView*         m_pSceneTextureView1;
-    FTextureView*         m_pOutputTextureView;
-    FTextureView*         m_pDepthBufferTextureView;
-    FDescriptorSet*       m_pOutputTextureDescriptorSet;
-
-    // Skybox
-    class FTextureResource* m_pSkybox;
-    uint32_t m_SkyboxBindlessIndex;
-
-    // Samplers
-    FSampler* m_pSkyboxSampler;
-    FSampler* m_pTonemapSampler;
+    FBuffer* m_pSceneBuffer;
+    FBuffer* m_pSphereBuffer;
+    FBuffer* m_pQuadBuffer;
+    FBuffer* m_pTriangleBuffer;
+    FBuffer* m_pMeshBuffer;
+    FBuffer* m_pVertexBuffer;
+    FBuffer* m_pVertexExBuffer;
+    FBuffer* m_pMaterialBuffer;
+    FBuffer* m_pBvhBuffer;
+    FBuffer* m_pAABBVertexBuffer;
+    FBuffer* m_pAABBIndexBuffer;
+    FBuffer* m_pAABBInstanceBuffer;
 
     // Scene
-    FScene* m_pScene;
-
-    // Samples
-    std::atomic_bool m_bResetImage;
-    uint64_t m_FrameIndex;
-
-    // Stats
-    float    m_LastCPUTime;
-    float    m_LastGPUTime;
-
-    // Viewport
-    uint32_t m_ViewportWidth;
-    uint32_t m_ViewportHeight;
-    bool     m_bViewportHasFocus;
+    FScene*  m_pScene;
 };

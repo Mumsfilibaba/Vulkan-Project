@@ -3,6 +3,7 @@
 #include "Model.h"
 #include "Bvh.h"
 #include "ScenePrimitives.h"
+#include "IScene.h"
 
 #define MAX_QUADS 128
 #define MAX_SPHERES 32
@@ -42,13 +43,23 @@ struct FSceneSettings
     float     CameraSpeed;
 };
 
-struct FScene
+struct FScene : public IScene
 {
     FScene();
     virtual ~FScene();
 
-    virtual void Initialize() {}
-    virtual void Reset() {}
+    // IScene Interface
+    virtual void Initialize() override { }
+    virtual void Reset() override { }
+
+    virtual void OnRenderUI() override { }
+
+    virtual float GetCameraSpeed() const override { return m_Settings.CameraSpeed; }
+    virtual float GetFieldOfView() const override { return m_Settings.FieldOfView; }
+    virtual float GetExposure() const override { return m_Settings.Exposure; }
+
+    virtual FCamera& GetCamera() override { return m_Camera; }
+    virtual const FCamera& GetCamera() const override { return m_Camera; }
 
     FCamera        m_Camera;
     FSceneSettings m_Settings;
@@ -67,7 +78,7 @@ struct FScene
     std::vector<FShaderSphere>  m_Spheres;
     std::vector<FShaderQuad>    m_Quads;
 
-    // Bvh Container
+    // BVH Container
     FBvhAccelerationStructure m_AccelerationStructure;
     
     // CPU Buffers

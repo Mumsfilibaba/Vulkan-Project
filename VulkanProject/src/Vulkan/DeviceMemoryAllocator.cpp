@@ -80,6 +80,24 @@ void FDeviceMemoryPage::Init()
     else
     {
         LOG("Allocated '%llu' bytes for MemoryPage\n", m_SizeInBytes);
+
+        if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+        {
+            const std::string DebugName = "DeviceMemoryPage[" + std::to_string(m_ID) + "]";
+            VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+            ZERO_STRUCT(&DebugNameInfo);
+
+            DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+            DebugNameInfo.objectType   = VK_OBJECT_TYPE_DEVICE_MEMORY;
+            DebugNameInfo.pObjectName  = DebugName.c_str();
+            DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_DeviceMemory);
+
+            VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(m_Device, &DebugNameInfo);
+            if (Result != VK_SUCCESS)
+            {
+                LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
+            }
+        }
     }
 
     // Setup first block

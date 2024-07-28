@@ -16,15 +16,15 @@ void FRayTracer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     FBaseRenderer::Init(pDevice, pSwapchain);
 }
 
-void FRayTracer::Tick(float DeltaTime)
-{
-}
-
 void FRayTracer::Release()
 {
     FBaseRenderer::Release();
 }
 
 void FRayTracer::RenderSceneUI()
+{
+}
+
+void FRayTracer::ReloadShaders()
 {
 }

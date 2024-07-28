@@ -101,7 +101,7 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& Params, 
                 return nullptr;
             }
 
-            pUploadBuffer->SetDebugName("Upload-Buffer");
+            pUploadBuffer->SetDebugName("FBuffer::CreateWithData Upload-Buffer");
 
             FCommandBufferParams CommandBufferParams = {};
             CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -160,17 +160,15 @@ FBuffer::~FBuffer()
         m_Buffer = VK_NULL_HANDLE;
     }
 
-    if (m_pAllocator)
+    if (m_DeviceMemory != VK_NULL_HANDLE)
     {
-        m_pAllocator->Deallocate(m_Allocation);
+        vkFreeMemory(GetDevice()->GetDevice(), m_DeviceMemory, nullptr);
+        m_DeviceMemory = VK_NULL_HANDLE;
     }
     else
     {
-        if (m_DeviceMemory != VK_NULL_HANDLE)
-        {
-            vkFreeMemory(GetDevice()->GetDevice(), m_DeviceMemory, nullptr);
-            m_DeviceMemory = VK_NULL_HANDLE;
-        }
+        assert(m_pAllocator != nullptr);
+        m_pAllocator->Deallocate(m_Allocation);
     }
 }
 
@@ -239,6 +237,18 @@ void FBuffer::SetDebugName(const char* DebugName)
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
+        }
+
+        if (m_DeviceMemory != VK_NULL_HANDLE)
+        {
+            DebugNameInfo.objectType = VK_OBJECT_TYPE_DEVICE_MEMORY;
+            DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_DeviceMemory);
+
+            Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+            if (Result != VK_SUCCESS)
+            {
+                LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
+            }
         }
     }
 }

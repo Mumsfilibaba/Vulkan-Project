@@ -712,12 +712,13 @@ vec3 GetNormalForRay(in FRay Ray)
 vec3 GetBarycentricsForRay(in FRay Ray)
 {
     FRayPayLoad PayLoad;
-    PayLoad.MinT        = 0.0001;
-    PayLoad.MaxT        = 100000.0;
-    PayLoad.T           = PayLoad.MaxT;
-    PayLoad.bFrontFace  = false;
-    PayLoad.bFromInside = false;
-
+    PayLoad.MinT         = 0.0001;
+    PayLoad.MaxT         = 100000.0;
+    PayLoad.T            = PayLoad.MaxT;
+    PayLoad.bFrontFace   = false;
+    PayLoad.bFromInside  = false;
+    PayLoad.BaryCentrics = vec3(0.0, 0.0, 0.0);
+    
     // Stats: x=NumBoxTests, y=NumTriangleTests
     ivec2 Stats;
     if (TraceRay(Ray, PayLoad, Stats))
@@ -738,7 +739,8 @@ vec3 GetTexCoordsForRay(in FRay Ray)
     PayLoad.T           = PayLoad.MaxT;
     PayLoad.bFrontFace  = false;
     PayLoad.bFromInside = false;
-
+    PayLoad.TexCoords   = vec2(0.0, 0.0);
+    
     // Stats: x=NumBoxTests, y=NumTriangleTests
     ivec2 Stats;
     if (TraceRay(Ray, PayLoad, Stats))

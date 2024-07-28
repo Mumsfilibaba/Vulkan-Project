@@ -9,6 +9,7 @@ public:
     FDeviceChild(FDevice* pDevice)
         : m_pDevice(pDevice)
     {
+        assert(pDevice != nullptr);
     }
 
     ~FDeviceChild()
