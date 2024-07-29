@@ -25,7 +25,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSev
     #if BREAK_ON_ERROR
         if (MessageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
         {
-            DEBUG_BREAK();
+            DEBUG_BREAK;
         }
     #endif
     }
@@ -156,7 +156,7 @@ void FDevice::WaitForIdle()
     VkResult Result = vkDeviceWaitIdle(m_Device);
     if (Result != VK_SUCCESS)
     {
-        DEBUG_BREAK();
+        DEBUG_BREAK;
     }
 }
 

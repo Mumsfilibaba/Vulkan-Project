@@ -137,7 +137,7 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
 
         FBufferParams TransformBufferParams = { };
         TransformBufferParams.Size             = sizeof(VkTransformMatrixKHR);
-        TransformBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+        TransformBufferParams.Usage            = VK_BUFFER_USAGE_RAY_TRACING_INPUT;
         TransformBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
 
         pTransformBuffer = pTempTransformBuffer = FBuffer::CreateWithData(pDevice, TransformBufferParams, nullptr, &TransformMatrix);
@@ -158,8 +158,10 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
     AccelerationStructureBuildGeometryInfo.flags         = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
     AccelerationStructureBuildGeometryInfo.geometryCount = 1;
     AccelerationStructureBuildGeometryInfo.pGeometries   = &AccelerationStructureGeometry;
-    
-    const uint32_t NumTriangles = 1;
+
+    const uint32_t NumTriangles = Params.VertexCount / 3;
+    assert((Params.VertexCount % 3) == 0);
+
     VkAccelerationStructureBuildSizesInfoKHR AccelerationStructureBuildSizesInfo = { };
     AccelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
     FExtensions::vkGetAccelerationStructureBuildSizesKHR(pDevice->GetDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &AccelerationStructureBuildGeometryInfo, &NumTriangles, &AccelerationStructureBuildSizesInfo);
@@ -332,11 +334,11 @@ FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, con
 
     // Buffer for instance data
     FBufferParams InstanceBufferParams = { };
-    InstanceBufferParams.Size             = sizeof(VkTransformMatrixKHR);
+    InstanceBufferParams.Size             = sizeof(VkAccelerationStructureInstanceKHR);
     InstanceBufferParams.Usage            = VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     InstanceBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
 
-    FBuffer* pInstanceBuffer = FBuffer::CreateWithData(pDevice, InstanceBufferParams, nullptr, &TransformMatrix);
+    FBuffer* pInstanceBuffer = FBuffer::CreateWithData(pDevice, InstanceBufferParams, nullptr, &Instance);
     if (!pInstanceBuffer)
     {
         LOG("Failed to create InstanceBuffer\n");
@@ -389,7 +391,7 @@ FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, con
     MemoryAllocateFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
     MemoryAllocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
 
-    VkMemoryAllocateInfo MemoryAllocateInfo = {};
+    VkMemoryAllocateInfo MemoryAllocateInfo = { };
     MemoryAllocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     MemoryAllocateInfo.pNext           = &MemoryAllocateFlagsInfo;
     MemoryAllocateInfo.allocationSize  = MemoryRequirements.size;
@@ -427,9 +429,19 @@ FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, con
     AccelerationStructureCreateInfo.size   = AccelerationStructureBuildSizesInfo.accelerationStructureSize;
     AccelerationStructureCreateInfo.type   = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
 
-    FExtensions::vkCreateAccelerationStructureKHR(pDevice->GetDevice(), &AccelerationStructureCreateInfo, nullptr, &pAccelerationStructure->m_AccelerationStructure);
+    Result = FExtensions::vkCreateAccelerationStructureKHR(pDevice->GetDevice(), &AccelerationStructureCreateInfo, nullptr, &pAccelerationStructure->m_AccelerationStructure);
+    if (Result != VK_SUCCESS)
+    {
+        LOG("vkCreateAccelerationStructureKHR failed. Error: %d\n", Result);
+        SAFE_DELETE(pAccelerationStructure);
+        SAFE_DELETE(pInstanceBuffer);
+        return nullptr;
+    }
+    else
+    {
+        LOG("Created AccelerationStructure\n");
+    }
 
-    // Create a small scratch buffer used during build of the top level acceleration structure
     FScratchBuffer ScratchBuffer = CreateScratchBuffer(pDevice, AccelerationStructureBuildSizesInfo.buildScratchSize);
     if (!ScratchBuffer.IsValid())
     {

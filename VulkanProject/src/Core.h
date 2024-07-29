@@ -37,15 +37,26 @@
 #endif
 
 // GLFW
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#ifndef EXLUDE_GLFW
+    #define GLFW_INCLUDE_VULKAN
+    #include <GLFW/glfw3.h>
+#endif
 
 // Helper Defines
 #define ZERO_MEMORY(dst, size) memset(dst, 0, size)
 #define ZERO_STRUCT(dst) memset(dst, 0, sizeof(std::remove_pointer_t<decltype(dst)>))
 
 #if PLATFORM_WINDOWS
-    #define DEBUG_BREAK __debugbreak
+    bool HACK_IsDebuggerPresent();
+
+    #define DEBUG_BREAK \
+        do \
+        { \
+            if (HACK_IsDebuggerPresent()) \
+            { \
+                __debugbreak; \
+            } \
+        } while(false)
 #elif PLATFORM_MAC
     #define DEBUG_BREAK __builtin_trap
 #endif
