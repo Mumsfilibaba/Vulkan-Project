@@ -2,6 +2,8 @@
 #include "BaseRenderer.h"
 #include "Scene.h"
 
+class FRayTracingPipeline;
+
 class FRayTracer : public FBaseRenderer
 {
 public:
@@ -24,5 +26,8 @@ public:
     virtual void ReloadShaders() override;
 
 private:
-    FScene* m_pScene;
+    FScene*               m_pScene;
+    FRayTracingPipeline*  m_pRayTracingPipeline;
+    FPipelineLayout*      m_pRayTracingPipelineLayout;
+    FDescriptorSetLayout* m_pRayTracingDescriptorSetLayout;
 };

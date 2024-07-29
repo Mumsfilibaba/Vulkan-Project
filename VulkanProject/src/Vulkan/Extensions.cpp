@@ -20,3 +20,10 @@ PFN_vkGetAccelerationStructureDeviceAddressKHR       FExtensions::vkGetAccelerat
 PFN_vkCmdWriteAccelerationStructuresPropertiesKHR    FExtensions::vkCmdWriteAccelerationStructuresPropertiesKHR    = nullptr;
 PFN_vkGetDeviceAccelerationStructureCompatibilityKHR FExtensions::vkGetDeviceAccelerationStructureCompatibilityKHR = nullptr;
 PFN_vkGetAccelerationStructureBuildSizesKHR          FExtensions::vkGetAccelerationStructureBuildSizesKHR          = nullptr;
+
+PFN_vkCmdTraceRaysKHR                                 FExtensions::vkCmdTraceRaysKHR                                 = nullptr;
+PFN_vkCreateRayTracingPipelinesKHR                    FExtensions::vkCreateRayTracingPipelinesKHR                    = nullptr;
+PFN_vkGetRayTracingCaptureReplayShaderGroupHandlesKHR FExtensions::vkGetRayTracingCaptureReplayShaderGroupHandlesKHR = nullptr;
+PFN_vkCmdTraceRaysIndirectKHR                         FExtensions::vkCmdTraceRaysIndirectKHR                         = nullptr;
+PFN_vkGetRayTracingShaderGroupStackSizeKHR            FExtensions::vkGetRayTracingShaderGroupStackSizeKHR            = nullptr;
+PFN_vkCmdSetRayTracingPipelineStackSizeKHR            FExtensions::vkCmdSetRayTracingPipelineStackSizeKHR            = nullptr;

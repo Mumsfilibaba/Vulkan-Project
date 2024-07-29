@@ -28,4 +28,7 @@ set GLSLC_PATH=%VULKAN_SDK_PATH%\Bin\glslc.exe
 %GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=fragment shaders/tonemap.glsl       -o shaders/tonemap.spv
 %GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=compute  shaders/raytracer.glsl     -o shaders/raytracer.spv
 %GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=compute  shaders/cubemapgen.glsl    -o shaders/cubemapgen.spv
+%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rgen     shaders/raygen.glsl        -o shaders/raygen.spv
+%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rmiss    shaders/miss.glsl          -o shaders/miss.spv
+%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rchit    shaders/closesthit.glsl    -o shaders/closesthit.spv
 :: pause

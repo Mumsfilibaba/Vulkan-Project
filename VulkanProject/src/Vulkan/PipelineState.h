@@ -59,8 +59,26 @@ struct FComputePipelineStateParams
 class FComputePipeline : public FBasePipeline
 {
 public:
-    static FComputePipeline* Create(class FDevice* pDevice, const FComputePipelineStateParams& params);
+    static FComputePipeline* Create(class FDevice* pDevice, const FComputePipelineStateParams& Params);
     
     FComputePipeline(FDevice* pDevice);
     ~FComputePipeline() = default;
+};
+
+struct FRayTracingPipelineStateParams
+{
+    FShaderModule*   pRayGenShader                = nullptr;
+    FShaderModule*   pRayMissShader               = nullptr;
+    FShaderModule*   pRayClosestHitShader         = nullptr;
+    FPipelineLayout* pPipelineLayout              = nullptr;
+    uint32_t         MaxPipelineRayRecursionDepth = 1;
+};
+
+class FRayTracingPipeline : public FBasePipeline
+{
+public:
+    static FRayTracingPipeline* Create(class FDevice* pDevice, const FRayTracingPipelineStateParams& Params);
+
+    FRayTracingPipeline(FDevice* pDevice);
+    ~FRayTracingPipeline() = default;
 };

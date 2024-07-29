@@ -8,3 +8,6 @@ cd "${DIR}"
 /usr/local/bin/glslc -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=fragment shaders/tonemap.glsl       -o shaders/tonemap.spv
 /usr/local/bin/glslc -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=compute  shaders/raytracer.glsl     -o shaders/raytracer.spv
 /usr/local/bin/glslc -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=compute  shaders/cubemapgen.glsl    -o shaders/cubemapgen.spv
+/usr/local/bin/glslc -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rgen     shaders/raygen.glsl        -o shaders/raygen.spv
+/usr/local/bin/glslc -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rmiss    shaders/miss.glsl          -o shaders/miss.spv
+/usr/local/bin/glslc -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rchit    shaders/closesthit.glsl    -o shaders/closesthit.spv

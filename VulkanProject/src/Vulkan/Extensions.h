@@ -25,4 +25,11 @@ struct FExtensions
     static PFN_vkCmdWriteAccelerationStructuresPropertiesKHR    vkCmdWriteAccelerationStructuresPropertiesKHR;
     static PFN_vkGetDeviceAccelerationStructureCompatibilityKHR vkGetDeviceAccelerationStructureCompatibilityKHR;
     static PFN_vkGetAccelerationStructureBuildSizesKHR          vkGetAccelerationStructureBuildSizesKHR;
+
+    static PFN_vkCmdTraceRaysKHR                                 vkCmdTraceRaysKHR;
+    static PFN_vkCreateRayTracingPipelinesKHR                    vkCreateRayTracingPipelinesKHR;
+    static PFN_vkGetRayTracingCaptureReplayShaderGroupHandlesKHR vkGetRayTracingCaptureReplayShaderGroupHandlesKHR;
+    static PFN_vkCmdTraceRaysIndirectKHR                         vkCmdTraceRaysIndirectKHR;
+    static PFN_vkGetRayTracingShaderGroupStackSizeKHR            vkGetRayTracingShaderGroupStackSizeKHR;
+    static PFN_vkCmdSetRayTracingPipelineStackSizeKHR            vkCmdSetRayTracingPipelineStackSizeKHR;
 };

@@ -2,6 +2,8 @@
 #include "Model.h"
 #include "Application.h"
 
+#define SPONZA 1
+
 FScene::FScene()
     : m_Camera()
     , pTopLevelAS(nullptr)
@@ -23,7 +25,12 @@ FScene::~FScene()
 void FScene::Initialize()
 {
     FModel Model;
+
+#if SPONZA
+    Model.LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj", FApplication::Get().GetDevice());
+#else
     Model.LoadFromFile(RESOURCE_PATH"/models/queen.obj", FApplication::Get().GetDevice());
+#endif
 
     FAccelerationStructureBLASParams BLASParams;
     BLASParams.pVertexBuffer = Model.GetVertexBuffer();

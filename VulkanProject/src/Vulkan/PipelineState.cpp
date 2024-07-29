@@ -205,10 +205,9 @@ FGraphicsPipeline::FGraphicsPipeline(FDevice* pDevice)
 {
 }
 
-
 FComputePipeline* FComputePipeline::Create(FDevice* pDevice, const FComputePipelineStateParams& Params)
 {
-    FComputePipeline* pNewPipeline = new FComputePipeline(pDevice);
+    FComputePipeline* pPipeline = new FComputePipeline(pDevice);
     assert(Params.pShader != nullptr);
     assert(Params.pPipelineLayout != nullptr);
 
@@ -228,7 +227,7 @@ FComputePipeline* FComputePipeline::Create(FDevice* pDevice, const FComputePipel
     PipelineCreateInfo.layout            = Params.pPipelineLayout->GetPipelineLayout();
     PipelineCreateInfo.stage             = ShaderStageInfo;
 
-    VkResult Result = vkCreateComputePipelines(pDevice->GetDevice(), VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &pNewPipeline->m_Pipeline);
+    VkResult Result = vkCreateComputePipelines(pDevice->GetDevice(), VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &pPipeline->m_Pipeline);
     if (Result != VK_SUCCESS)
     {
         LOG("vkCreateComputePipelines failed\n");
@@ -239,10 +238,104 @@ FComputePipeline* FComputePipeline::Create(FDevice* pDevice, const FComputePipel
         LOG("Created Compute-Pipeline\n");
     }
     
-    return pNewPipeline;
+    return pPipeline;
 }
 
 FComputePipeline::FComputePipeline(FDevice* pDevice)
+    : FBasePipeline(pDevice)
+{
+}
+
+FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const FRayTracingPipelineStateParams& Params)
+{
+    FRayTracingPipeline* pPipeline = new FRayTracingPipeline(pDevice);
+
+    std::vector<VkPipelineShaderStageCreateInfo>      ShaderStages;
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;
+
+    // Ray generation group
+    {
+        VkPipelineShaderStageCreateInfo ShaderStage = { };
+        ShaderStage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        ShaderStage.stage  = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+        ShaderStage.module = Params.pRayGenShader->GetModule();
+        ShaderStage.pName  = Params.pRayGenShader->GetEntryPoint();
+        ShaderStages.push_back(ShaderStage);
+
+        VkRayTracingShaderGroupCreateInfoKHR ShaderGroup = { };
+        ShaderGroup.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+        ShaderGroup.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+        ShaderGroup.generalShader      = static_cast<uint32_t>(ShaderStages.size()) - 1;
+        ShaderGroup.closestHitShader   = VK_SHADER_UNUSED_KHR;
+        ShaderGroup.anyHitShader       = VK_SHADER_UNUSED_KHR;
+        ShaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
+        ShaderGroups.push_back(ShaderGroup);
+    }
+
+    // Miss group
+    {
+        VkPipelineShaderStageCreateInfo ShaderStage = { };
+        ShaderStage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        ShaderStage.stage  = VK_SHADER_STAGE_MISS_BIT_KHR;
+        ShaderStage.module = Params.pRayMissShader->GetModule();
+        ShaderStage.pName  = Params.pRayMissShader->GetEntryPoint();
+        ShaderStages.push_back(ShaderStage);
+
+        VkRayTracingShaderGroupCreateInfoKHR ShaderGroup = { };
+        ShaderGroup.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+        ShaderGroup.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+        ShaderGroup.generalShader      = static_cast<uint32_t>(ShaderStages.size()) - 1;
+        ShaderGroup.closestHitShader   = VK_SHADER_UNUSED_KHR;
+        ShaderGroup.anyHitShader       = VK_SHADER_UNUSED_KHR;
+        ShaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
+        ShaderGroups.push_back(ShaderGroup);
+    }
+
+    // Closest hit group
+    {
+        VkPipelineShaderStageCreateInfo ShaderStage = { };
+        ShaderStage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        ShaderStage.stage  = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+        ShaderStage.module = Params.pRayClosestHitShader->GetModule();
+        ShaderStage.pName  = Params.pRayClosestHitShader->GetEntryPoint();
+        ShaderStages.push_back(ShaderStage);
+
+        VkRayTracingShaderGroupCreateInfoKHR ShaderGroup = { };
+        ShaderGroup.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+        ShaderGroup.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+        ShaderGroup.generalShader      = VK_SHADER_UNUSED_KHR;
+        ShaderGroup.closestHitShader   = static_cast<uint32_t>(ShaderStages.size()) - 1;
+        ShaderGroup.anyHitShader       = VK_SHADER_UNUSED_KHR;
+        ShaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
+        ShaderGroups.push_back(ShaderGroup);
+    }
+
+    VkRayTracingPipelineCreateInfoKHR PipelineCreateInfo;
+    ZERO_STRUCT(&PipelineCreateInfo);
+
+    PipelineCreateInfo.sType                        = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+    PipelineCreateInfo.stageCount                   = static_cast<uint32_t>(ShaderStages.size());
+    PipelineCreateInfo.pStages                      = ShaderStages.data();
+    PipelineCreateInfo.groupCount                   = static_cast<uint32_t>(ShaderGroups.size());
+    PipelineCreateInfo.pGroups                      = ShaderGroups.data();
+    PipelineCreateInfo.maxPipelineRayRecursionDepth = Params.MaxPipelineRayRecursionDepth;
+    PipelineCreateInfo.layout                       = Params.pPipelineLayout->GetPipelineLayout();
+
+    VkResult Result = FExtensions::vkCreateRayTracingPipelinesKHR(pDevice->GetDevice(), VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &pPipeline->m_Pipeline);
+    if (Result != VK_SUCCESS)
+    {
+        LOG("vkCreateRayTracingPipelinesKHR failed\n");
+        return nullptr;
+    }
+    else
+    {
+        LOG("Created Graphics-Pipeline\n");
+    }
+
+    return pPipeline;
+}
+
+FRayTracingPipeline::FRayTracingPipeline(FDevice* pDevice)
     : FBasePipeline(pDevice)
 {
 }
