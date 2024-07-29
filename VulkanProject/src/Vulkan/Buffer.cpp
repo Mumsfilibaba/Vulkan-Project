@@ -20,6 +20,7 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceM
     if (Result != VK_SUCCESS)
     {
         LOG("vkCreateBuffer failed. Error: %d\n", Result);
+        SAFE_DELETE(pBuffer);
         return nullptr;
     }
     else
@@ -47,10 +48,19 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceM
     {
         VkMemoryAllocateInfo AllocInfo;
         ZERO_STRUCT(&AllocInfo);
-        
+
         AllocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         AllocInfo.allocationSize  = MemoryRequirements.size;
-        AllocInfo.memoryTypeIndex = FindMemoryType(pDevice->GetPhysicalDevice(), MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        AllocInfo.memoryTypeIndex = FindMemoryType(pDevice->GetPhysicalDevice(), MemoryRequirements.memoryTypeBits, Params.MemoryProperties);
+
+        VkMemoryAllocateFlagsInfo MemoryAllocateFlagsInfo = { };
+        if (Params.Usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+        {
+            ZERO_STRUCT(&MemoryAllocateFlagsInfo);
+            MemoryAllocateFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+            MemoryAllocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+            AllocInfo.pNext = &MemoryAllocateFlagsInfo;
+        }
 
         Result = vkAllocateMemory(pDevice->GetDevice(), &AllocInfo, nullptr, &pBuffer->m_DeviceMemory);
         if (Result != VK_SUCCESS)
@@ -65,6 +75,16 @@ FBuffer* FBuffer::Create(FDevice* pDevice, const FBufferParams& Params, FDeviceM
 
             LOG("Allocated %llu bytes\n", MemoryRequirements.size);
         }
+
+        if (Params.Usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+        {
+            VkBufferDeviceAddressInfoKHR BufferDeviceAddressInfo = { };
+            BufferDeviceAddressInfo.sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+            BufferDeviceAddressInfo.buffer = pBuffer->m_Buffer;
+
+            VkDeviceAddress DeviceAddress = vkGetBufferDeviceAddress(pDevice->GetDevice(), &BufferDeviceAddressInfo);
+            pBuffer->m_DeviceAddress.deviceAddress = DeviceAddress;
+        }
     }
     
     return pBuffer;
@@ -77,7 +97,7 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& Params, 
     {
         return nullptr;
     }
-    
+
     if (pSource)
     {
         if (Params.MemoryProperties == VK_CPU_BUFFER_USAGE)
@@ -93,7 +113,7 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& Params, 
             BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
             BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
             BufferParams.Size             = Params.Size;
-            
+
             FBuffer* pUploadBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, pSource);
             if (!pUploadBuffer)
             {
@@ -101,12 +121,12 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& Params, 
                 return nullptr;
             }
 
-            pUploadBuffer->SetDebugName("FBuffer::CreateWithData Upload-Buffer");
+            pUploadBuffer->SetDebugName("FBuffer::CreateWithData UploadBuffer");
 
             FCommandBufferParams CommandBufferParams = {};
             CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
             CommandBufferParams.QueueType = ECommandQueueType::Graphics;
-            
+
             FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
             if (!pCommandBuffer)
             {
@@ -118,21 +138,21 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& Params, 
             {
                 pCommandBuffer->SetDebugName("FBuffer::CreateWithData UploadCommandBuffer");
             }
-            
+
             pCommandBuffer->Reset();
             pCommandBuffer->Begin();
-            
+
             VkBufferCopy BufferCopy;
             BufferCopy.size      = pUploadBuffer->GetSize();
             BufferCopy.dstOffset = 0;
             BufferCopy.srcOffset = 0;
-            
+
             pCommandBuffer->CopyBuffer(pUploadBuffer->GetBuffer(), pBuffer->GetBuffer(), 1, &BufferCopy);
             pCommandBuffer->End();
-            
+
             pDevice->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
             pDevice->WaitForIdle();
-            
+
             SAFE_DELETE(pUploadBuffer);
             SAFE_DELETE(pCommandBuffer);
         }
@@ -241,7 +261,7 @@ void FBuffer::SetDebugName(const char* DebugName)
 
         if (m_DeviceMemory != VK_NULL_HANDLE)
         {
-            DebugNameInfo.objectType = VK_OBJECT_TYPE_DEVICE_MEMORY;
+            DebugNameInfo.objectType   = VK_OBJECT_TYPE_DEVICE_MEMORY;
             DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_DeviceMemory);
 
             Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);

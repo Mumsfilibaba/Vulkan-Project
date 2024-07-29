@@ -44,6 +44,7 @@ public:
     void ExecuteGraphics(FCommandBuffer* pCommandBuffer, FSwapchain* pSwapchain, VkPipelineStageFlags* pWaitStages);
     void WaitForIdle();
     void Destroy();
+
     uint32_t GetQueueFamilyIndex(ECommandQueueType Type);
 
     VkDevice         GetDevice()         const { return m_Device; }
@@ -84,6 +85,7 @@ private:
     bool CreateDebugMessenger();
     bool CreateDeviceAndQueues(const FDeviceParams& props);
     bool QueryPhysicalDevice(const FDeviceParams& props);
+    bool QueryDeviceExtensionFunctions();
     void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     std::vector<const char*> GetRequiredDeviceExtensions();
     FQueueFamilyIndices GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
@@ -103,14 +105,22 @@ private:
     VkQueue m_TransferQueue;
     VkQueue m_PresentationQueue;
 
+    // Enable Device Features
+    VkPhysicalDeviceFeatures2                        m_EnabledDeviceFeatures;
+    VkPhysicalDeviceVulkan12Features                 m_EnabledDeviceFeatures12;
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR    m_EnabledDeviceRayTracingFeatures;
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR m_EnabledDeviceAccelerationStructureFeatures;
+
     // Device Features
-    VkPhysicalDeviceFeatures2                  m_EnabledDeviceFeatures;
-    VkPhysicalDeviceDescriptorIndexingFeatures m_DescriptorIndexFeatures;
-    VkPhysicalDeviceProperties                 m_DeviceProperties;
-    VkPhysicalDeviceFeatures2                  m_DeviceFeatures;
-    VkPhysicalDeviceHostQueryResetFeatures     m_HostQueryFeatures;
-    VkPhysicalDeviceMemoryProperties           m_DeviceMemoryProperties;
-    FQueueFamilyIndices                        m_QueueFamilyIndices;
+    VkPhysicalDeviceProperties                       m_DeviceProperties;
+    VkPhysicalDeviceFeatures2                        m_DeviceFeatures;
+    VkPhysicalDeviceVulkan12Features                 m_DeviceFeatures12;
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR    m_DeviceRayTracingFeatures;
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR m_DeviceAccelerationStructureFeatures;
+    
+    // Device Properties
+    VkPhysicalDeviceMemoryProperties                 m_DeviceMemoryProperties;
+    FQueueFamilyIndices                              m_QueueFamilyIndices;
 
     bool m_bValidationEnabled   : 1;
     bool m_bRayTracingSupported : 1;

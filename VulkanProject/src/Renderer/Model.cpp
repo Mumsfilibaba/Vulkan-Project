@@ -40,59 +40,79 @@ FModel::~FModel()
     SAFE_DELETE(m_pIndexBuffer);
 }
 
-bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice, FDeviceMemoryAllocator* pAllocator)
+bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
 {
-    tinyobj::attrib_t                Attrib;
-    std::vector<tinyobj::shape_t>    Shapes;
-    std::vector<tinyobj::material_t> Materials;
-    std::string                      Warning;
-    std::string                      Error;
+    tinyobj::attrib_t                TinyObjAttrib;
+    std::vector<tinyobj::shape_t>    TinyObjShapes;
+    std::vector<tinyobj::material_t> TinyObjMaterials;
+    std::string                      TinyObjWarning;
+    std::string                      TinyObjError;
 
-    if (!tinyobj::LoadObj(&Attrib, &Shapes, &Materials, &Warning, &Error, Filepath.c_str()))
+    const std::string MaterialPath = ExtractPath(Filepath);
+    if (!tinyobj::LoadObj(&TinyObjAttrib, &TinyObjShapes, &TinyObjMaterials, &TinyObjWarning, &TinyObjError, Filepath.c_str(), MaterialPath.c_str(), true))
     {
         LOG("Failed to load model '%s'\n", Filepath.c_str());
-        if (!Warning.empty())
+        if (!TinyObjWarning.empty())
         {
-            LOG("  Warning: %s\n", Warning.c_str());
+            LOG("  Warning: %s\n", TinyObjWarning.c_str());
         }
-        if (!Error.empty())
+        if (!TinyObjError.empty())
         {
-            LOG("  Error: %s\n", Error.c_str());
+            LOG("  Error: %s\n", TinyObjError.c_str());
         }
-        
+
         return false;
     }
     else
     {
-        LOG("Loaded model '%s'\n", Filepath.c_str());
-        if (!Warning.empty())
+        LOG("Loading model... '%s'\n", Filepath.c_str());
+        if (!TinyObjWarning.empty())
         {
-            LOG("  Warning: %s\n", Warning.c_str());
+            LOG("Warning: %s\n", TinyObjWarning.c_str());
         }
     }
     
     std::vector<FVertex>  Vertices;
-    std::vector<uint16_t> Indices;
-    std::unordered_map<FVertex, uint16_t, FVertexHasher> UniqueVertices = {};
-    for (const auto& Shape : Shapes)
+    std::vector<uint32_t> Indices;
+    std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices = {};
+    for (const tinyobj::shape_t& Shape : TinyObjShapes)
     {
-        for (const auto& Index : Shape.mesh.indices)
+        for (const tinyobj::index_t& Index : Shape.mesh.indices)
         {
-            const size_t BaseIndex = 3 * Index.vertex_index;
-            
-            FVertex Vertex{};
+            // Positions must be present
+            const size_t BasePositionIndex = 3 * Index.vertex_index;
+            assert(BasePositionIndex >= 0);
+
+            FVertex Vertex;
             Vertex.Position =
             {
-                Attrib.vertices[BaseIndex + 0],
-                Attrib.vertices[BaseIndex + 1],
-                Attrib.vertices[BaseIndex + 2]
+                TinyObjAttrib.vertices[BasePositionIndex + 0],
+                TinyObjAttrib.vertices[BasePositionIndex + 1],
+                TinyObjAttrib.vertices[BasePositionIndex + 2],
             };
 
-            Vertex.TexCoord =
+            // Check for normals
+            if (Index.normal_index >= 0)
             {
-                Attrib.texcoords[2 * Index.texcoord_index + 0],
-                1.0f - Attrib.texcoords[2 * Index.texcoord_index + 1]
-            };
+                const size_t BaseNormalIndex = 3 * Index.normal_index;
+                Vertex.Normal =
+                {
+                    TinyObjAttrib.normals[BaseNormalIndex + 0],
+                    TinyObjAttrib.normals[BaseNormalIndex + 1],
+                    TinyObjAttrib.normals[BaseNormalIndex + 2],
+                };
+            }
+
+            // Check for UVs
+            if (Index.texcoord_index >= 0)
+            {
+                const size_t BaseTexCoordIndex = 2 * Index.texcoord_index;
+                Vertex.TexCoord =
+                {
+                    TinyObjAttrib.texcoords[BaseTexCoordIndex + 0],
+                    1.0f - TinyObjAttrib.texcoords[BaseTexCoordIndex + 1]
+                };
+            }
 
             if (UniqueVertices.count(Vertex) == 0)
             {
@@ -104,28 +124,24 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice, FDevice
         }
     }
     
-    assert(Indices.size() < UINT16_MAX);
+    assert(Indices.size() < UINT32_MAX);
     
     FBufferParams VertexBufferParams = {};
     VertexBufferParams.Size             = Vertices.size() * sizeof(FVertex);
-    VertexBufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    VertexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    m_pVertexBuffer = FBuffer::Create(pDevice, VertexBufferParams, pAllocator);
+    VertexBufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING;
+    VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
-    void* pCPUMem = m_pVertexBuffer->Map();
-    memcpy(pCPUMem, Vertices.data(), VertexBufferParams.Size);
-    m_pVertexBuffer->Unmap();
+    m_pVertexBuffer = FBuffer::CreateWithData(pDevice, VertexBufferParams, nullptr, Vertices.data());
+    assert(m_pVertexBuffer != nullptr);
 
     FBufferParams IndexBufferParams = {};
-    IndexBufferParams.Size             = Indices.size() * sizeof(uint16_t);
-    IndexBufferParams.Usage            = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    IndexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    m_pIndexBuffer = FBuffer::Create(pDevice, IndexBufferParams, pAllocator);
+    IndexBufferParams.Size             = Indices.size() * sizeof(uint32_t);
+    IndexBufferParams.Usage            = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING;
+    IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
-    pCPUMem = m_pIndexBuffer->Map();
-    memcpy(pCPUMem, Indices.data(), IndexBufferParams.Size);
-    m_pIndexBuffer->Unmap();
-    
+    m_pIndexBuffer = FBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, Indices.data());
+    assert(m_pVertexBuffer != nullptr);
+
     m_VertexCount = Vertices.size();
     m_IndexCount  = Indices.size();
     return true;
@@ -210,11 +226,11 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     std::vector<uint32_t>       MaterialIndicies;
 
     std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices;
-    for (const auto& Shape : TinyObjShapes)
+    for (const tinyobj::shape_t& Shape : TinyObjShapes)
     {
         size_t CurrentIndex      = 0;
         size_t VerticesProcessed = 0;
-        for (const auto& Index : Shape.mesh.indices)
+        for (const tinyobj::index_t& Index : Shape.mesh.indices)
         {
             FVertex Vertex;
 

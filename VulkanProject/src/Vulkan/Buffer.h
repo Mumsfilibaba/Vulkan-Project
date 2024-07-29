@@ -5,6 +5,8 @@
 #define VK_CPU_BUFFER_USAGE (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
 #define VK_GPU_BUFFER_USAGE (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 
+#define VK_BUFFER_USAGE_RAY_TRACING (VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR)
+
 class FDevice;
 
 struct FBufferParams
@@ -37,12 +39,18 @@ public:
     {
         return m_Size;
     }
-    
+
+    VkDeviceOrHostAddressConstKHR GetDeviceAddress() const
+    {
+        return m_DeviceAddress;
+    }
+
 private:
-    FDeviceMemoryAllocator* m_pAllocator;
-    VkBuffer                m_Buffer;
-    VkDeviceMemory          m_DeviceMemory;
-    VkDeviceSize            m_Size;
-    VkDeviceSize            m_AllocatedSize;
-    FDeviceAllocation       m_Allocation;
+    FDeviceMemoryAllocator*       m_pAllocator;
+    VkBuffer                      m_Buffer;
+    VkDeviceMemory                m_DeviceMemory;
+    VkDeviceOrHostAddressConstKHR m_DeviceAddress;
+    VkDeviceSize                  m_Size;
+    VkDeviceSize                  m_AllocatedSize;
+    FDeviceAllocation             m_Allocation;
 };

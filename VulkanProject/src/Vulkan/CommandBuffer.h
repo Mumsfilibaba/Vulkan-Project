@@ -7,7 +7,7 @@
 #include "DescriptorSet.h"
 #include "Query.h"
 #include "PipelineLayout.h"
-#include <vulkan/vulkan.h>
+#include "Extensions.h"
 
 struct FCommandBufferParams
 {
@@ -84,6 +84,14 @@ public:
     {
         assert(pQuery != nullptr);
         vkCmdWriteTimestamp(m_CommandBuffer, PipelineStage, pQuery->GetQueryPool(), QueryIndex);
+        m_NumCommands++;
+    }
+
+    void BuildAccelerationStructures(uint32_t InfoCount, const VkAccelerationStructureBuildGeometryInfoKHR* pInfos, const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos)
+    {
+        assert(pInfos != nullptr);
+        assert(ppBuildRangeInfos != nullptr);
+        FExtensions::vkCmdBuildAccelerationStructuresKHR(m_CommandBuffer, InfoCount, pInfos, ppBuildRangeInfos);
         m_NumCommands++;
     }
 

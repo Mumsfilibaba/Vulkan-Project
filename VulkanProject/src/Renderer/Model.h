@@ -150,7 +150,7 @@ public:
     FModel();
     ~FModel();
     
-    bool LoadFromFile(const std::string& filepath, FDevice* pDevice, FDeviceMemoryAllocator* pAllocator);
+    bool LoadFromFile(const std::string& filepath, FDevice* pDevice);
     
     FBuffer* GetVertexBuffer() const
     {

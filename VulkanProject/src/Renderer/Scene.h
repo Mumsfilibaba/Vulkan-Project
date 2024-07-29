@@ -2,6 +2,7 @@
 #include "Camera.h"
 #include "Model.h"
 #include "IScene.h"
+#include "Vulkan/AccelerationStructure.h"
 
 struct FScene : public IScene
 {
@@ -9,7 +10,7 @@ struct FScene : public IScene
     virtual ~FScene();
 
     // IScene Interface
-    virtual void Initialize() override { }
+    virtual void Initialize() override;
     virtual void Reset() override { }
 
     virtual void OnRenderUI() override { }
@@ -22,4 +23,6 @@ struct FScene : public IScene
     virtual const FCamera& GetCamera() const override { return m_Camera; }
 
     FCamera m_Camera;
+
+    FAccelerationStructure* pBLAS;
 };
