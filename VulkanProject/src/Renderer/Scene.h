@@ -24,5 +24,6 @@ struct FScene : public IScene
 
     FCamera m_Camera;
 
-    FAccelerationStructure* pBLAS;
+    FAccelerationStructure* pTopLevelAS;
+    FAccelerationStructure* pBottomLevelAS;
 };

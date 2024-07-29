@@ -137,7 +137,7 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
 
         FBufferParams TransformBufferParams = { };
         TransformBufferParams.Size             = sizeof(VkTransformMatrixKHR);
-        TransformBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING;
+        TransformBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
         TransformBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
 
         pTransformBuffer = pTempTransformBuffer = FBuffer::CreateWithData(pDevice, TransformBufferParams, nullptr, &TransformMatrix);
@@ -189,7 +189,7 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
     MemoryAllocateFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
     MemoryAllocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
 
-    VkMemoryAllocateInfo MemoryAllocateInfo = {};
+    VkMemoryAllocateInfo MemoryAllocateInfo = { };
     MemoryAllocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     MemoryAllocateInfo.pNext           = &MemoryAllocateFlagsInfo;
     MemoryAllocateInfo.allocationSize  = MemoryRequirements.size;
@@ -221,7 +221,7 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
         LOG("Created AccelerationStructure\n");
     }
 
-    VkAccelerationStructureCreateInfoKHR AccelerationStructureCreateInfo = {};
+    VkAccelerationStructureCreateInfoKHR AccelerationStructureCreateInfo = { };
     AccelerationStructureCreateInfo.sType  = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
     AccelerationStructureCreateInfo.buffer = pAccelerationStructure->m_Buffer;
     AccelerationStructureCreateInfo.size   = AccelerationStructureBuildSizesInfo.accelerationStructureSize;
@@ -244,6 +244,7 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
     if (!ScratchBuffer.IsValid())
     {
         SAFE_DELETE(pAccelerationStructure);
+        SAFE_DELETE(pTempTransformBuffer);
         return nullptr;
     }
 
@@ -294,7 +295,7 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
     pDevice->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
     pDevice->WaitForIdle();
 
-    VkAccelerationStructureDeviceAddressInfoKHR AccelerationDeviceAddressInfo = {};
+    VkAccelerationStructureDeviceAddressInfoKHR AccelerationDeviceAddressInfo = { };
     AccelerationDeviceAddressInfo.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
     AccelerationDeviceAddressInfo.accelerationStructure = pAccelerationStructure->m_AccelerationStructure;
     pAccelerationStructure->m_DeviceAddress = FExtensions::vkGetAccelerationStructureDeviceAddressKHR(pDevice->GetDevice(), &AccelerationDeviceAddressInfo);
@@ -306,7 +307,189 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
 
 FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, const FAccelerationStructureTLASParams& Params)
 {
-    return nullptr;
+    if (!Params.pAccelerationStructures)
+    {
+        LOG("No valid AccelerationStructures");
+        return nullptr;
+    }
+
+    FAccelerationStructure* pAccelerationStructure = new FAccelerationStructure(pDevice);
+
+    VkTransformMatrixKHR TransformMatrix = 
+    {
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f
+    };
+
+    VkAccelerationStructureInstanceKHR Instance = { };
+    Instance.transform                              = TransformMatrix;
+    Instance.instanceCustomIndex                    = 0;
+    Instance.mask                                   = 0xff;
+    Instance.instanceShaderBindingTableRecordOffset = 0;
+    Instance.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+    Instance.accelerationStructureReference         = Params.pAccelerationStructures->GetDeviceAddress();
+
+    // Buffer for instance data
+    FBufferParams InstanceBufferParams = { };
+    InstanceBufferParams.Size             = sizeof(VkTransformMatrixKHR);
+    InstanceBufferParams.Usage            = VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+    InstanceBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+
+    FBuffer* pInstanceBuffer = FBuffer::CreateWithData(pDevice, InstanceBufferParams, nullptr, &TransformMatrix);
+    if (!pInstanceBuffer)
+    {
+        LOG("Failed to create InstanceBuffer\n");
+        SAFE_DELETE(pAccelerationStructure);
+        return nullptr;
+    }
+
+    VkAccelerationStructureGeometryKHR AccelerationStructureGeometry = { };
+    AccelerationStructureGeometry.sType                              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+    AccelerationStructureGeometry.geometryType                       = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+    AccelerationStructureGeometry.flags                              = VK_GEOMETRY_OPAQUE_BIT_KHR;
+    AccelerationStructureGeometry.geometry.instances.sType           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+    AccelerationStructureGeometry.geometry.instances.arrayOfPointers = VK_FALSE;
+    AccelerationStructureGeometry.geometry.instances.data            = pInstanceBuffer->GetDeviceAddress();
+
+    VkAccelerationStructureBuildGeometryInfoKHR AccelerationStructureBuildGeometryInfo = { };
+    AccelerationStructureBuildGeometryInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    AccelerationStructureBuildGeometryInfo.type          = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+    AccelerationStructureBuildGeometryInfo.flags         = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+    AccelerationStructureBuildGeometryInfo.geometryCount = 1;
+    AccelerationStructureBuildGeometryInfo.pGeometries   = &AccelerationStructureGeometry;
+
+    uint32_t PrimitiveCount = 1;
+    VkAccelerationStructureBuildSizesInfoKHR AccelerationStructureBuildSizesInfo = { };
+    AccelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+    FExtensions::vkGetAccelerationStructureBuildSizesKHR(pDevice->GetDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &AccelerationStructureBuildGeometryInfo, &PrimitiveCount, &AccelerationStructureBuildSizesInfo);
+
+    VkBufferCreateInfo BufferCreateInfo = { };
+    BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    BufferCreateInfo.size  = AccelerationStructureBuildSizesInfo.accelerationStructureSize;
+    BufferCreateInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+    VkResult Result = vkCreateBuffer(pDevice->GetDevice(), &BufferCreateInfo, nullptr, &pAccelerationStructure->m_Buffer);
+    if (Result != VK_SUCCESS)
+    {
+        LOG("AccelerationStructure vkCreateBuffer failed. Error: %d\n", Result);
+        SAFE_DELETE(pAccelerationStructure);
+        SAFE_DELETE(pInstanceBuffer);
+        return nullptr;
+    }
+    else
+    {
+        LOG("Created AccelerationStructure Buffer\n");
+    }
+
+    VkMemoryRequirements MemoryRequirements = { };
+    vkGetBufferMemoryRequirements(pDevice->GetDevice(), pAccelerationStructure->m_Buffer, &MemoryRequirements);
+
+    VkMemoryAllocateFlagsInfo MemoryAllocateFlagsInfo = { };
+    MemoryAllocateFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+    MemoryAllocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+    VkMemoryAllocateInfo MemoryAllocateInfo = {};
+    MemoryAllocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    MemoryAllocateInfo.pNext           = &MemoryAllocateFlagsInfo;
+    MemoryAllocateInfo.allocationSize  = MemoryRequirements.size;
+    MemoryAllocateInfo.memoryTypeIndex = FindMemoryType(pDevice->GetPhysicalDevice(), MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    Result = vkAllocateMemory(pDevice->GetDevice(), &MemoryAllocateInfo, nullptr, &pAccelerationStructure->m_DeviceMemory);
+    if (Result != VK_SUCCESS)
+    {
+        LOG("AccelerationStructure vkAllocateMemory failed. Error: %d\n", Result);
+        SAFE_DELETE(pAccelerationStructure);
+        SAFE_DELETE(pInstanceBuffer);
+        return nullptr;
+    }
+    else
+    {
+        LOG("Allocated AccelerationStructure Memory\n");
+    }
+
+    Result = vkBindBufferMemory(pDevice->GetDevice(), pAccelerationStructure->m_Buffer, pAccelerationStructure->m_DeviceMemory, 0);
+    if (Result != VK_SUCCESS)
+    {
+        LOG("AccelerationStructure vkBindBufferMemory failed. Error: %d\n", Result);
+        SAFE_DELETE(pAccelerationStructure);
+        SAFE_DELETE(pInstanceBuffer);
+        return nullptr;
+    }
+    else
+    {
+        LOG("Created AccelerationStructure\n");
+    }
+
+    VkAccelerationStructureCreateInfoKHR AccelerationStructureCreateInfo = { };
+    AccelerationStructureCreateInfo.sType  = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+    AccelerationStructureCreateInfo.buffer = pAccelerationStructure->m_Buffer;
+    AccelerationStructureCreateInfo.size   = AccelerationStructureBuildSizesInfo.accelerationStructureSize;
+    AccelerationStructureCreateInfo.type   = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+
+    FExtensions::vkCreateAccelerationStructureKHR(pDevice->GetDevice(), &AccelerationStructureCreateInfo, nullptr, &pAccelerationStructure->m_AccelerationStructure);
+
+    // Create a small scratch buffer used during build of the top level acceleration structure
+    FScratchBuffer ScratchBuffer = CreateScratchBuffer(pDevice, AccelerationStructureBuildSizesInfo.buildScratchSize);
+    if (!ScratchBuffer.IsValid())
+    {
+        SAFE_DELETE(pAccelerationStructure);
+        SAFE_DELETE(pInstanceBuffer);
+        return nullptr;
+    }
+
+    VkAccelerationStructureBuildGeometryInfoKHR AccelerationBuildGeometryInfo = { };
+    AccelerationBuildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    AccelerationBuildGeometryInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+    AccelerationBuildGeometryInfo.flags                     = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+    AccelerationBuildGeometryInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+    AccelerationBuildGeometryInfo.dstAccelerationStructure  = pAccelerationStructure->m_AccelerationStructure;
+    AccelerationBuildGeometryInfo.geometryCount             = 1;
+    AccelerationBuildGeometryInfo.pGeometries               = &AccelerationStructureGeometry;
+    AccelerationBuildGeometryInfo.scratchData.deviceAddress = ScratchBuffer.DeviceAddress;
+
+    VkAccelerationStructureBuildRangeInfoKHR AccelerationStructureBuildRangeInfo = { };
+    AccelerationStructureBuildRangeInfo.primitiveCount  = 1;
+    AccelerationStructureBuildRangeInfo.primitiveOffset = 0;
+    AccelerationStructureBuildRangeInfo.firstVertex     = 0;
+    AccelerationStructureBuildRangeInfo.transformOffset = 0;
+
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR*> AccelerationBuildStructureRangeInfos = { &AccelerationStructureBuildRangeInfo };
+
+    FCommandBufferParams CommandBufferParams = { };
+    CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    CommandBufferParams.QueueType = ECommandQueueType::Graphics;
+
+    FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
+    if (!pCommandBuffer)
+    {
+        SAFE_DELETE(pAccelerationStructure);
+        SAFE_DELETE(pInstanceBuffer);
+        return nullptr;
+    }
+    else
+    {
+        pCommandBuffer->SetDebugName("BLAS Build CommandBuffer");
+    }
+
+    pCommandBuffer->Reset();
+    pCommandBuffer->Begin();
+
+    pCommandBuffer->BuildAccelerationStructures(1, &AccelerationBuildGeometryInfo, AccelerationBuildStructureRangeInfos.data());
+
+    pCommandBuffer->End();
+
+    pDevice->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
+    pDevice->WaitForIdle();
+
+    VkAccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo{};
+    accelerationDeviceAddressInfo.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+    accelerationDeviceAddressInfo.accelerationStructure = pAccelerationStructure->m_AccelerationStructure;
+    pAccelerationStructure->m_DeviceAddress = FExtensions::vkGetAccelerationStructureDeviceAddressKHR(pDevice->GetDevice(), &accelerationDeviceAddressInfo);
+
+    SAFE_DELETE(pCommandBuffer);
+    SAFE_DELETE(pInstanceBuffer);
+    return pAccelerationStructure;
 }
 
 FAccelerationStructure::FAccelerationStructure(FDevice* pDevice)

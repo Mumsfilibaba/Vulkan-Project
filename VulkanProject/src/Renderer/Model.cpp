@@ -128,7 +128,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
     
     FBufferParams VertexBufferParams = {};
     VertexBufferParams.Size             = Vertices.size() * sizeof(FVertex);
-    VertexBufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING;
+    VertexBufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
     m_pVertexBuffer = FBuffer::CreateWithData(pDevice, VertexBufferParams, nullptr, Vertices.data());
@@ -136,7 +136,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
 
     FBufferParams IndexBufferParams = {};
     IndexBufferParams.Size             = Indices.size() * sizeof(uint32_t);
-    IndexBufferParams.Usage            = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING;
+    IndexBufferParams.Usage            = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
     m_pIndexBuffer = FBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, Indices.data());

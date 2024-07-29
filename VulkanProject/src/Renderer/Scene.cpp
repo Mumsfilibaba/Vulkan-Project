@@ -4,7 +4,8 @@
 
 FScene::FScene()
     : m_Camera()
-    , pBLAS(nullptr)
+    , pTopLevelAS(nullptr)
+    , pBottomLevelAS(nullptr)
 {
 }
 
@@ -15,7 +16,8 @@ FScene::~FScene()
         pDevice->WaitForIdle();
     }
 
-    SAFE_DELETE(pBLAS);
+    SAFE_DELETE(pBottomLevelAS);
+    SAFE_DELETE(pTopLevelAS);
 }
 
 void FScene::Initialize()
@@ -29,7 +31,12 @@ void FScene::Initialize()
     BLASParams.VertexCount   = Model.GetIndexCount();
     BLASParams.VertexStride  = sizeof(FVertex);
 
-    pBLAS = FAccelerationStructure::CreateBLAS(FApplication::Get().GetDevice(), BLASParams);
-    assert(pBLAS != nullptr);
-    return;
+    pBottomLevelAS = FAccelerationStructure::CreateBLAS(FApplication::Get().GetDevice(), BLASParams);
+    assert(pBottomLevelAS != nullptr);
+
+    FAccelerationStructureTLASParams TLASParams;
+    TLASParams.pAccelerationStructures = pBottomLevelAS;
+
+    pTopLevelAS = FAccelerationStructure::CreateTLAS(FApplication::Get().GetDevice(), TLASParams);
+    assert(pTopLevelAS != nullptr);
 }

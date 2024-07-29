@@ -2,6 +2,7 @@
 #include "DeviceChild.h"
 
 class FBuffer;
+class FAccelerationStructure;
 
 struct FAccelerationStructureBLASParams
 {
@@ -14,6 +15,7 @@ struct FAccelerationStructureBLASParams
 
 struct FAccelerationStructureTLASParams
 {
+    FAccelerationStructure* pAccelerationStructures = nullptr;
 };
 
 class FAccelerationStructure : public FDeviceChild
