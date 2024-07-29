@@ -245,13 +245,13 @@ public:
         VkResult Result = vkWaitForFences(GetDevice()->GetDevice(), 1, &m_Fence, VK_TRUE, UINT64_MAX);
         if (Result != VK_SUCCESS)
         {
-            DEBUG_BREAK;
+            DEBUG_BREAK();
         }
 
         Result = vkResetFences(GetDevice()->GetDevice(), 1, &m_Fence);
         if (Result != VK_SUCCESS)
         {
-            DEBUG_BREAK;
+            DEBUG_BREAK();
         }
     }
 
@@ -264,7 +264,7 @@ public:
         VkResult Result = vkResetCommandPool(GetDevice()->GetDevice(), m_CommandPool, Flags);
         if (Result != VK_SUCCESS)
         {
-            DEBUG_BREAK;
+            DEBUG_BREAK();
         }
 
         // Reset CommandCount

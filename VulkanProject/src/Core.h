@@ -49,7 +49,7 @@
 #if PLATFORM_WINDOWS
     bool HACK_IsDebuggerPresent();
 
-    #define DEBUG_BREAK \
+    #define DEBUG_BREAK() \
         do \
         { \
             if (HACK_IsDebuggerPresent()) \
