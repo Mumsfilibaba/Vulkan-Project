@@ -4,6 +4,8 @@
 #include "Device.h"
 #include "PipelineLayout.h"
 #include "Extensions.h"
+#include "Helpers.h"
+#include "MathHelper.h"
 
 FBasePipeline::FBasePipeline(FDevice* pDevice)
     : FDeviceChild(pDevice)
@@ -332,10 +334,104 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
         LOG("Created Graphics-Pipeline\n");
     }
 
+    const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& RayTracingPipelineProperties = pDevice->GetRayTracingProperties();
+    const uint32_t HandleSize             = RayTracingPipelineProperties.shaderGroupHandleSize;
+    const uint32_t HandleSizeAligned      = Math::AlignUp(RayTracingPipelineProperties.shaderGroupHandleSize, RayTracingPipelineProperties.shaderGroupHandleAlignment);
+    const uint32_t GroupCount             = static_cast<uint32_t>(ShaderGroups.size());
+    const uint32_t ShaderBindingTableSize = GroupCount * HandleSizeAligned;
+
+    std::vector<uint8_t> ShaderHandleStorage(ShaderBindingTableSize);
+    Result = FExtensions::vkGetRayTracingShaderGroupHandlesKHR(pDevice->GetDevice(), pPipeline->m_Pipeline, 0, GroupCount, ShaderBindingTableSize, ShaderHandleStorage.data());
+
+    VkBufferCreateInfo BufferCreateInfo = { };
+    BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    BufferCreateInfo.size  = ShaderBindingTableSize;
+    BufferCreateInfo.usage = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+    Result = vkCreateBuffer(pDevice->GetDevice(), &BufferCreateInfo, nullptr, &pPipeline->m_SBTBuffer);
+    if (Result != VK_SUCCESS)
+    {
+        LOG("ShaderBindingTable vkCreateBuffer failed. Error: %d\n", Result);
+        SAFE_DELETE(pPipeline);
+        return nullptr;
+    }
+    else
+    {
+        LOG("Created ShaderBindingTable Buffer\n");
+    }
+
+    VkMemoryRequirements MemoryRequirements = { };
+    vkGetBufferMemoryRequirements(pDevice->GetDevice(), pPipeline->m_SBTBuffer, &MemoryRequirements);
+
+    VkMemoryAllocateFlagsInfo MemoryAllocateFlagsInfo = { };
+    MemoryAllocateFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+    MemoryAllocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+    VkMemoryAllocateInfo MemoryAllocateInfo = { };
+    MemoryAllocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    MemoryAllocateInfo.pNext           = &MemoryAllocateFlagsInfo;
+    MemoryAllocateInfo.allocationSize  = MemoryRequirements.size;
+    MemoryAllocateInfo.memoryTypeIndex = FindMemoryType(pDevice->GetPhysicalDevice(), MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    Result = vkAllocateMemory(pDevice->GetDevice(), &MemoryAllocateInfo, nullptr, &pPipeline->m_SBTDeviceMemory);
+    if (Result != VK_SUCCESS)
+    {
+        LOG("ShaderBindingTable vkAllocateMemory failed. Error: %d\n", Result);
+        SAFE_DELETE(pPipeline);
+        return nullptr;
+    }
+    else
+    {
+        LOG("Allocated ShaderBindingTable Memory\n");
+    }
+
+    Result = vkBindBufferMemory(pDevice->GetDevice(), pPipeline->m_SBTBuffer, pPipeline->m_SBTDeviceMemory, 0);
+    if (Result != VK_SUCCESS)
+    {
+        LOG("ShaderBindingTable vkBindBufferMemory failed. Error: %d\n", Result);
+        SAFE_DELETE(pPipeline);
+        return nullptr;
+    }
+    else
+    {
+        LOG("Created ShaderBindingTable\n");
+    }
+
+    Result = vkMapMemory(pDevice->GetDevice(), pPipeline->m_SBTDeviceMemory, 0, ShaderBindingTableSize, 0, &pPipeline->m_pShaderBindingTable);
+    if (Result != VK_SUCCESS)
+    {
+        LOG("vkMapMemory failed. Error: %d\n", Result);
+        SAFE_DELETE(pPipeline);
+        return nullptr;
+    }
+    else
+    {
+        memcpy(pPipeline->m_pShaderBindingTable, ShaderHandleStorage.data(), ShaderBindingTableSize);
+    }
+
     return pPipeline;
 }
 
 FRayTracingPipeline::FRayTracingPipeline(FDevice* pDevice)
     : FBasePipeline(pDevice)
+    , m_SBTBuffer(VK_NULL_HANDLE)
+    , m_SBTDeviceAddress(0)
+    , m_SBTDeviceMemory(VK_NULL_HANDLE)
+    , m_pShaderBindingTable(nullptr)
 {
+}
+
+FRayTracingPipeline::~FRayTracingPipeline()
+{
+    if (m_SBTBuffer != VK_NULL_HANDLE)
+    {
+        vkDestroyBuffer(GetDevice()->GetDevice(), m_SBTBuffer, nullptr);
+        m_SBTBuffer = VK_NULL_HANDLE;
+    }
+
+    if (m_SBTDeviceMemory != VK_NULL_HANDLE)
+    {
+        vkFreeMemory(GetDevice()->GetDevice(), m_SBTDeviceMemory, nullptr);
+        m_SBTDeviceMemory = VK_NULL_HANDLE;
+    }
 }

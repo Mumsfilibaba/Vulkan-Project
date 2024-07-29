@@ -191,7 +191,7 @@ bool FDevice::Init(const FDeviceParams& Params)
 
     if (QueryPhysicalDevice(Params))
     {
-        LOG("Queried physical device: %s\n", m_DeviceProperties.deviceName);
+        LOG("Queried physical device: %s\n", m_DeviceProperties.properties.deviceName);
     }
     else
     {
@@ -417,7 +417,7 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
         m_QueueFamilyIndices.Compute,
         m_QueueFamilyIndices.Transfer);
 
-    if (m_DeviceProperties.limits.timestampComputeAndGraphics)
+    if (m_DeviceProperties.properties.limits.timestampComputeAndGraphics)
     {
         LOG("    Timestamps Supported\n");
     }
@@ -758,6 +758,7 @@ bool FDevice::QueryDeviceExtensionFunctions()
         GET_DEVICE_EXTENTION_FUNC(vkCmdWriteAccelerationStructuresPropertiesKHR);
         GET_DEVICE_EXTENTION_FUNC(vkGetDeviceAccelerationStructureCompatibilityKHR);
         GET_DEVICE_EXTENTION_FUNC(vkGetAccelerationStructureBuildSizesKHR);
+        GET_DEVICE_EXTENTION_FUNC(vkGetRayTracingShaderGroupHandlesKHR);
 
         GET_DEVICE_EXTENTION_FUNC(vkCmdTraceRaysKHR);
         GET_DEVICE_EXTENTION_FUNC(vkCreateRayTracingPipelinesKHR);
@@ -788,8 +789,16 @@ void FDevice::QueryPhysicalDeviceFeatures()
     m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     m_DeviceFeatures.pNext = &m_DeviceFeatures12;
 
-    vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_DeviceProperties);
     vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &m_DeviceFeatures);
+    
+    ZERO_STRUCT(&m_DeviceRayTracingProperties);
+    m_DeviceRayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+
+    ZERO_STRUCT(&m_DeviceProperties);
+    m_DeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    m_DeviceProperties.pNext = &m_DeviceRayTracingProperties;
+
+    vkGetPhysicalDeviceProperties2(m_PhysicalDevice, &m_DeviceProperties);
     vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &m_DeviceMemoryProperties);
 }
 

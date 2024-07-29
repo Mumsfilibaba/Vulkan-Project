@@ -80,5 +80,11 @@ public:
     static FRayTracingPipeline* Create(class FDevice* pDevice, const FRayTracingPipelineStateParams& Params);
 
     FRayTracingPipeline(FDevice* pDevice);
-    ~FRayTracingPipeline() = default;
+    ~FRayTracingPipeline();
+
+private:
+    VkBuffer       m_SBTBuffer;
+    uint64_t       m_SBTDeviceAddress;
+    VkDeviceMemory m_SBTDeviceMemory;
+    void*          m_pShaderBindingTable;
 };

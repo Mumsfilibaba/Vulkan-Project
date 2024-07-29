@@ -71,12 +71,17 @@ public:
 
     const VkPhysicalDeviceLimits& GetDeviceLimits() const
     {
-        return m_DeviceProperties.limits;
+        return m_DeviceProperties.properties.limits;
+    }
+
+    const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& GetRayTracingProperties() const
+    {
+        return m_DeviceRayTracingProperties;
     }
 
     float GetTimestampPeriod() const
     {
-        return m_DeviceProperties.limits.timestampPeriod;
+        return m_DeviceProperties.properties.limits.timestampPeriod;
     }
 
 private:
@@ -112,7 +117,7 @@ private:
     VkPhysicalDeviceAccelerationStructureFeaturesKHR m_EnabledDeviceAccelerationStructureFeatures;
 
     // Device Features
-    VkPhysicalDeviceProperties                       m_DeviceProperties;
+    VkPhysicalDeviceProperties2                      m_DeviceProperties;
     VkPhysicalDeviceFeatures2                        m_DeviceFeatures;
     VkPhysicalDeviceVulkan12Features                 m_DeviceFeatures12;
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR    m_DeviceRayTracingFeatures;
@@ -120,6 +125,7 @@ private:
     
     // Device Properties
     VkPhysicalDeviceMemoryProperties                 m_DeviceMemoryProperties;
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR  m_DeviceRayTracingProperties;
     FQueueFamilyIndices                              m_QueueFamilyIndices;
 
     bool m_bValidationEnabled   : 1;

@@ -54,7 +54,7 @@
         { \
             if (HACK_IsDebuggerPresent()) \
             { \
-                __debugbreak; \
+                __debugbreak(); \
             } \
         } while(false)
 #elif PLATFORM_MAC

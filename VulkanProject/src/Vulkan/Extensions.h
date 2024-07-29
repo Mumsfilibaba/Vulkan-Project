@@ -3,7 +3,7 @@
 
 struct FExtensions
 {
-    // Debug Names
+    // SetDebugName
     static PFN_vkSetDebugUtilsObjectNameEXT    vkSetDebugUtilsObjectNameEXT;
     static PFN_vkCreateDebugUtilsMessengerEXT  vkCreateDebugUtilsMessengerEXT;
     static PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT;
@@ -25,6 +25,7 @@ struct FExtensions
     static PFN_vkCmdWriteAccelerationStructuresPropertiesKHR    vkCmdWriteAccelerationStructuresPropertiesKHR;
     static PFN_vkGetDeviceAccelerationStructureCompatibilityKHR vkGetDeviceAccelerationStructureCompatibilityKHR;
     static PFN_vkGetAccelerationStructureBuildSizesKHR          vkGetAccelerationStructureBuildSizesKHR;
+    static PFN_vkGetRayTracingShaderGroupHandlesKHR             vkGetRayTracingShaderGroupHandlesKHR;
 
     static PFN_vkCmdTraceRaysKHR                                 vkCmdTraceRaysKHR;
     static PFN_vkCreateRayTracingPipelinesKHR                    vkCreateRayTracingPipelinesKHR;

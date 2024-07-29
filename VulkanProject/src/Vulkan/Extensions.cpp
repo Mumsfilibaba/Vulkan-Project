@@ -1,9 +1,11 @@
 #include "Extensions.h"
 
+// SetDebugName
 PFN_vkSetDebugUtilsObjectNameEXT    FExtensions::vkSetDebugUtilsObjectNameEXT    = nullptr;
 PFN_vkCreateDebugUtilsMessengerEXT  FExtensions::vkCreateDebugUtilsMessengerEXT  = nullptr;
 PFN_vkDestroyDebugUtilsMessengerEXT FExtensions::vkDestroyDebugUtilsMessengerEXT = nullptr;
 
+// RayTracing
 PFN_vkCreateAccelerationStructureKHR                 FExtensions::vkCreateAccelerationStructureKHR                 = nullptr;
 PFN_vkDestroyAccelerationStructureKHR                FExtensions::vkDestroyAccelerationStructureKHR                = nullptr;
 PFN_vkCmdBuildAccelerationStructuresKHR              FExtensions::vkCmdBuildAccelerationStructuresKHR              = nullptr;
@@ -20,6 +22,7 @@ PFN_vkGetAccelerationStructureDeviceAddressKHR       FExtensions::vkGetAccelerat
 PFN_vkCmdWriteAccelerationStructuresPropertiesKHR    FExtensions::vkCmdWriteAccelerationStructuresPropertiesKHR    = nullptr;
 PFN_vkGetDeviceAccelerationStructureCompatibilityKHR FExtensions::vkGetDeviceAccelerationStructureCompatibilityKHR = nullptr;
 PFN_vkGetAccelerationStructureBuildSizesKHR          FExtensions::vkGetAccelerationStructureBuildSizesKHR          = nullptr;
+PFN_vkGetRayTracingShaderGroupHandlesKHR             FExtensions::vkGetRayTracingShaderGroupHandlesKHR             = nullptr;
 
 PFN_vkCmdTraceRaysKHR                                 FExtensions::vkCmdTraceRaysKHR                                 = nullptr;
 PFN_vkCreateRayTracingPipelinesKHR                    FExtensions::vkCreateRayTracingPipelinesKHR                    = nullptr;
