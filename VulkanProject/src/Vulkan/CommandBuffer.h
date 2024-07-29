@@ -108,6 +108,13 @@ public:
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineState->GetPipeline());
         m_NumCommands++;
     }
+
+    void BindRayTracingPipelineState(FRayTracingPipeline* pPipelineState)
+    {
+        assert(pPipelineState != nullptr);
+        vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pPipelineState->GetPipeline());
+        m_NumCommands++;
+    }
     
     void BindGraphicsDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet, uint32_t DescriptorSetIndex)
     {
@@ -124,6 +131,15 @@ public:
         assert(pPipelineLayout != nullptr);
         VkDescriptorSet DescriptorSet = pDescriptorSet->GetDescriptorSet();
         vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineLayout->GetPipelineLayout(), DescriptorSetIndex, 1, &DescriptorSet, 0, nullptr);
+        m_NumCommands++;
+    }
+
+    void BindRayTracingDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet, uint32_t DescriptorSetIndex)
+    {
+        assert(pDescriptorSet != nullptr);
+        assert(pPipelineLayout != nullptr);
+        VkDescriptorSet DescriptorSet = pDescriptorSet->GetDescriptorSet();
+        vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pPipelineLayout->GetPipelineLayout(), DescriptorSetIndex, 1, &DescriptorSet, 0, nullptr);
         m_NumCommands++;
     }
 
@@ -193,6 +209,13 @@ public:
     void Dispatch(uint32_t ThreadGroupsX, uint32_t ThreadGroupsY, uint32_t ThreadGroupsZ)
     {
         vkCmdDispatch(m_CommandBuffer, ThreadGroupsX, ThreadGroupsY, ThreadGroupsZ);
+        m_NumCommands++;
+    }
+
+    void TraceRays(FRayTracingPipeline* pPipelineState, uint32_t Width, uint32_t Height, uint32_t Depth)
+    {
+        assert(pPipelineState != nullptr);
+        FExtensions::vkCmdTraceRaysKHR(m_CommandBuffer, pPipelineState->GetRayGenSBT(), pPipelineState->GetRayMissSBT(), pPipelineState->GetRayHitSBT(), pPipelineState->GetRayCallableSBT(), Width, Height, Depth);
         m_NumCommands++;
     }
 

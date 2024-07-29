@@ -16,6 +16,7 @@ public:
     void BindCombinedImageSampler(VkImageView ImageView, VkSampler Sampler, uint32_t Binding);
     void BindUniformBuffer(VkBuffer Buffer, uint32_t Binding);
     void BindStorageBuffer(VkBuffer Buffer, uint32_t Binding);
+    void BindAccelerationStructure(VkAccelerationStructureKHR AccelerationStructure, uint32_t Binding);
 
     void SetDebugName(const char* DebugName);
 

@@ -15,7 +15,7 @@ struct FScene : public IScene
 
     virtual void OnRenderUI() override { }
 
-    virtual float GetCameraSpeed() const override { return 1.0f; }
+    virtual float GetCameraSpeed() const override { return m_CameraSpeed; }
     virtual float GetFieldOfView() const override { return 90.0f; }
     virtual float GetExposure() const override { return 1.0f; }
 
@@ -23,6 +23,7 @@ struct FScene : public IScene
     virtual const FCamera& GetCamera() const override { return m_Camera; }
 
     FCamera m_Camera;
+    float   m_CameraSpeed;
 
     FAccelerationStructure* pTopLevelAS;
     FAccelerationStructure* pBottomLevelAS;

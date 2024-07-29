@@ -1093,6 +1093,8 @@ void FSoftwareRayTracer::CreateDescriptorSets()
 
 void FSoftwareRayTracer::ReleaseDescriptorSets()
 {
+    FBaseRenderer::ReleaseDescriptorSets();
+
     SAFE_DELETE(m_pRayTracingDescriptorSet0);
     SAFE_DELETE(m_pRayTracingDescriptorSet1);
     SAFE_DELETE(m_pDebugDescriptorSet0);

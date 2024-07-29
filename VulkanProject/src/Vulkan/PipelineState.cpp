@@ -335,17 +335,18 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
     }
 
     const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& RayTracingPipelineProperties = pDevice->GetRayTracingProperties();
-    const uint32_t HandleSize             = RayTracingPipelineProperties.shaderGroupHandleSize;
-    const uint32_t HandleSizeAligned      = Math::AlignUp(RayTracingPipelineProperties.shaderGroupHandleSize, RayTracingPipelineProperties.shaderGroupHandleAlignment);
-    const uint32_t GroupCount             = static_cast<uint32_t>(ShaderGroups.size());
-    const uint32_t ShaderBindingTableSize = GroupCount * HandleSizeAligned;
+    const uint32_t HandleSize                   = RayTracingPipelineProperties.shaderGroupHandleSize;
+    const uint32_t HandleSizeAligned            = Math::AlignUp(RayTracingPipelineProperties.shaderGroupHandleSize, RayTracingPipelineProperties.shaderGroupHandleAlignment);
+    const uint32_t GroupCount                   = static_cast<uint32_t>(ShaderGroups.size());
+    const uint32_t ShaderBindingTableBufferSize = GroupCount * RayTracingPipelineProperties.shaderGroupBaseAlignment;
+    const uint32_t ShaderBindingTableSize       = GroupCount * HandleSizeAligned;
 
     std::vector<uint8_t> ShaderHandleStorage(ShaderBindingTableSize);
     Result = FExtensions::vkGetRayTracingShaderGroupHandlesKHR(pDevice->GetDevice(), pPipeline->m_Pipeline, 0, GroupCount, ShaderBindingTableSize, ShaderHandleStorage.data());
 
     VkBufferCreateInfo BufferCreateInfo = { };
     BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    BufferCreateInfo.size  = ShaderBindingTableSize;
+    BufferCreateInfo.size  = ShaderBindingTableBufferSize;
     BufferCreateInfo.usage = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
     Result = vkCreateBuffer(pDevice->GetDevice(), &BufferCreateInfo, nullptr, &pPipeline->m_SBTBuffer);
@@ -397,7 +398,7 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
         LOG("Created ShaderBindingTable\n");
     }
 
-    Result = vkMapMemory(pDevice->GetDevice(), pPipeline->m_SBTDeviceMemory, 0, ShaderBindingTableSize, 0, &pPipeline->m_pShaderBindingTable);
+    Result = vkMapMemory(pDevice->GetDevice(), pPipeline->m_SBTDeviceMemory, 0, ShaderBindingTableBufferSize, 0, &pPipeline->m_pShaderBindingTable);
     if (Result != VK_SUCCESS)
     {
         LOG("vkMapMemory failed. Error: %d\n", Result);
@@ -406,8 +407,42 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
     }
     else
     {
-        memcpy(pPipeline->m_pShaderBindingTable, ShaderHandleStorage.data(), ShaderBindingTableSize);
+
+        // RayGen
+        uint8_t* pSrcBytes = ShaderHandleStorage.data();
+        uint8_t* pDstBytes = reinterpret_cast<uint8_t*>(pPipeline->m_pShaderBindingTable);
+        memcpy(pDstBytes, pSrcBytes, HandleSizeAligned);
+
+        // RayMiss
+        pSrcBytes += HandleSizeAligned;
+        pDstBytes += RayTracingPipelineProperties.shaderGroupBaseAlignment;
+        memcpy(pDstBytes, pSrcBytes, HandleSizeAligned);
+
+        // RayHit
+        pSrcBytes += HandleSizeAligned;
+        pDstBytes += RayTracingPipelineProperties.shaderGroupBaseAlignment;
+        memcpy(pDstBytes, pSrcBytes, HandleSizeAligned);
     }
+
+    VkBufferDeviceAddressInfoKHR BufferDeviceAddressInfo = { };
+    BufferDeviceAddressInfo.sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    BufferDeviceAddressInfo.buffer = pPipeline->m_SBTBuffer;
+    pPipeline->m_SBTDeviceAddress  = vkGetBufferDeviceAddress(pDevice->GetDevice(), &BufferDeviceAddressInfo);
+
+    // RayGen
+    pPipeline->m_RayGenSBT.deviceAddress = pPipeline->m_SBTDeviceAddress;
+    pPipeline->m_RayGenSBT.stride        = HandleSizeAligned;
+    pPipeline->m_RayGenSBT.size          = HandleSizeAligned;
+
+    // RayMiss
+    pPipeline->m_RayMissSBT.deviceAddress = pPipeline->m_RayGenSBT.deviceAddress + RayTracingPipelineProperties.shaderGroupBaseAlignment;
+    pPipeline->m_RayMissSBT.stride        = HandleSizeAligned;
+    pPipeline->m_RayMissSBT.size          = HandleSizeAligned;
+
+    // RayHit
+    pPipeline->m_RayClosestHitSBT.deviceAddress = pPipeline->m_RayMissSBT.deviceAddress + RayTracingPipelineProperties.shaderGroupBaseAlignment;
+    pPipeline->m_RayClosestHitSBT.stride        = HandleSizeAligned;
+    pPipeline->m_RayClosestHitSBT.size          = HandleSizeAligned;
 
     return pPipeline;
 }
@@ -418,6 +453,10 @@ FRayTracingPipeline::FRayTracingPipeline(FDevice* pDevice)
     , m_SBTDeviceAddress(0)
     , m_SBTDeviceMemory(VK_NULL_HANDLE)
     , m_pShaderBindingTable(nullptr)
+    , m_RayGenSBT{ 0, 0, 0 }
+    , m_RayMissSBT{ 0, 0, 0 }
+    , m_RayClosestHitSBT{ 0, 0, 0 }
+    , m_RayCallableSBT{ 0, 0, 0 }
 {
 }
 

@@ -6,6 +6,7 @@
 
 FScene::FScene()
     : m_Camera()
+    , m_CameraSpeed(1.0f)
     , pTopLevelAS(nullptr)
     , pBottomLevelAS(nullptr)
 {
@@ -28,8 +29,10 @@ void FScene::Initialize()
 
 #if SPONZA
     Model.LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj", FApplication::Get().GetDevice());
+    m_CameraSpeed = 150.0f;
 #else
     Model.LoadFromFile(RESOURCE_PATH"/models/queen.obj", FApplication::Get().GetDevice());
+    m_CameraSpeed = 1.5f;
 #endif
 
     FAccelerationStructureBLASParams BLASParams;

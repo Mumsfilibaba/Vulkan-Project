@@ -84,11 +84,11 @@ static FScratchBuffer CreateScratchBuffer(FDevice* pDevice, VkDeviceSize size)
         return ScratchBuffer;
     }
 
-    VkBufferDeviceAddressInfoKHR bufferDeviceAddressInfo = { };
-    bufferDeviceAddressInfo.sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-    bufferDeviceAddressInfo.buffer = ScratchBuffer.Buffer;
+    VkBufferDeviceAddressInfoKHR BufferDeviceAddressInfo = { };
+    BufferDeviceAddressInfo.sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    BufferDeviceAddressInfo.buffer = ScratchBuffer.Buffer;
 
-    ScratchBuffer.DeviceAddress = vkGetBufferDeviceAddress(pDevice->GetDevice(), &bufferDeviceAddressInfo);
+    ScratchBuffer.DeviceAddress = vkGetBufferDeviceAddress(pDevice->GetDevice(), &BufferDeviceAddressInfo);
     return ScratchBuffer;
 }
 

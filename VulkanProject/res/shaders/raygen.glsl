@@ -31,8 +31,9 @@ layout(location = 0) rayPayloadEXT vec3 HitValue;
 
 void main() 
 {
-	const vec2 PixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-	const vec2 TexCoord    = PixelCenter / vec2(gl_LaunchSizeEXT.xy);
+	vec2 PixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+	vec2 TexCoord    = PixelCenter / vec2(gl_LaunchSizeEXT.xy);
+    TexCoord.y = 1.0 - TexCoord.y;
 
 	vec2 d = TexCoord * 2.0 - 1.0;
 

@@ -156,6 +156,33 @@ void FDescriptorSet::BindStorageBuffer(VkBuffer Buffer, uint32_t Binding)
     vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &DescriptorWrite, 0, nullptr);
 }
 
+void FDescriptorSet::BindAccelerationStructure(VkAccelerationStructureKHR AccelerationStructure, uint32_t Binding)
+{
+    assert(m_DescriptorSet != VK_NULL_HANDLE);
+    assert(Buffer != VK_NULL_HANDLE);
+
+    VkWriteDescriptorSetAccelerationStructureKHR DescriptorAccelerationStructureInfo = {};
+    DescriptorAccelerationStructureInfo.sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+    DescriptorAccelerationStructureInfo.accelerationStructureCount = 1;
+    DescriptorAccelerationStructureInfo.pAccelerationStructures    = &AccelerationStructure;
+
+    VkWriteDescriptorSet DescriptorWrite = {};
+    ZERO_STRUCT(&DescriptorWrite);
+
+    DescriptorWrite.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    DescriptorWrite.pNext            = &DescriptorAccelerationStructureInfo;
+    DescriptorWrite.dstSet           = m_DescriptorSet;
+    DescriptorWrite.dstBinding       = Binding;
+    DescriptorWrite.dstArrayElement  = 0;
+    DescriptorWrite.descriptorType   = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    DescriptorWrite.descriptorCount  = 1;
+    DescriptorWrite.pBufferInfo      = nullptr;
+    DescriptorWrite.pImageInfo       = nullptr;
+    DescriptorWrite.pTexelBufferView = nullptr;
+
+    vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &DescriptorWrite, 0, nullptr);
+}
+
 void FDescriptorSet::SetDebugName(const char* DebugName)
 {
     if (FExtensions::vkSetDebugUtilsObjectNameEXT)

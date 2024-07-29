@@ -4,6 +4,9 @@
 #include "Vulkan/ShaderModule.h"
 #include "Vulkan/DescriptorSetLayout.h"
 #include "Vulkan/PipelineLayout.h"
+#include "Vulkan/CommandBuffer.h"
+#include "Vulkan/Texture.h"
+#include "Vulkan/TextureView.h"
 
 FRayTracer::FRayTracer()
     : FBaseRenderer()
@@ -100,8 +103,69 @@ void FRayTracer::ReleaseResources()
     SAFE_DELETE(m_pRayTracingDescriptorSetLayout);
 }
 
+void FRayTracer::CreateDescriptorSets()
+{
+    // Create common DescriptorSets
+    FBaseRenderer::CreateDescriptorSets();
+
+    if (!m_pScene)
+    {
+        return;
+    }
+
+    // RayTracing Pass
+    m_pRayTracingDescriptorSet0 = FDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pRayTracingDescriptorSetLayout);
+    assert(m_pRayTracingDescriptorSet0 != nullptr);
+    m_pRayTracingDescriptorSet0->SetDebugName("RayTracingPass DescriptorSet0");
+
+    m_pRayTracingDescriptorSet0->BindAccelerationStructure(m_pScene->pTopLevelAS->GetAccelerationStructure(), 0);
+    m_pRayTracingDescriptorSet0->BindStorageImage(m_pSceneTextureView0->GetImageView(), 1);
+    m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 2);
+
+    m_pRayTracingDescriptorSet1 = FDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pRayTracingDescriptorSetLayout);
+    assert(m_pRayTracingDescriptorSet1 != nullptr);
+    m_pRayTracingDescriptorSet1->SetDebugName("RayTracingPass DescriptorSet1");
+
+    m_pRayTracingDescriptorSet1->BindAccelerationStructure(m_pScene->pTopLevelAS->GetAccelerationStructure(), 0);
+    m_pRayTracingDescriptorSet1->BindStorageImage(m_pSceneTextureView1->GetImageView(), 1);
+    m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 2);
+}
+
+void FRayTracer::ReleaseDescriptorSets()
+{
+    FBaseRenderer::ReleaseDescriptorSets();
+
+    SAFE_DELETE(m_pRayTracingDescriptorSet0);
+    SAFE_DELETE(m_pRayTracingDescriptorSet1);
+}
+
 void FRayTracer::Render(FCommandBuffer* pCommandBuffer)
 {
+    // Perform RayTracing
+    pCommandBuffer->BindRayTracingPipelineState(m_pRayTracingPipeline);
+    
+    const uint64_t Frame = GetFrameIndex() % 2;
+    if (Frame == 0)
+    {
+        pCommandBuffer->BindRayTracingDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet0, 0);
+    }
+    else
+    {
+        pCommandBuffer->BindRayTracingDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet1, 0);
+    }
+
+    pCommandBuffer->TraceRays(m_pRayTracingPipeline, m_pSceneTexture0->GetWidth(), m_pSceneTexture0->GetHeight(), 1);
+
+    // Scene textures are assumed to be in GENERAL when FBaseRenderer::Render is called
+    pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    // Tonemapping
+    PerformTonemapping(pCommandBuffer);
+
+    // Scene textures are assumed to be in GENERAL when FBaseRenderer::Render is called so let's put it back into the correct format
+    pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void FRayTracer::RenderSceneUI()

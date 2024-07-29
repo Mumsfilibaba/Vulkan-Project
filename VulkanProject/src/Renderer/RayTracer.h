@@ -22,12 +22,19 @@ public:
     virtual void CreateResources() override;
     virtual void ReleaseResources() override;
 
+    virtual void CreateDescriptorSets() override;
+    virtual void ReleaseDescriptorSets() override;
+
     virtual void RenderSceneUI() override;
     virtual void ReloadShaders() override;
 
 private:
     FScene*               m_pScene;
+
+    // RayTracing
     FRayTracingPipeline*  m_pRayTracingPipeline;
     FPipelineLayout*      m_pRayTracingPipelineLayout;
     FDescriptorSetLayout* m_pRayTracingDescriptorSetLayout;
+    FDescriptorSet*       m_pRayTracingDescriptorSet0;
+    FDescriptorSet*       m_pRayTracingDescriptorSet1;
 };

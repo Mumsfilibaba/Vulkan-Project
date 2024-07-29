@@ -12,16 +12,16 @@ struct FGraphicsPipelineStateParams
     uint32_t                           AttributeDescriptionCount = 0;
     VkVertexInputBindingDescription*   pBindingDescriptions      = nullptr;
     uint32_t                           BindingDescriptionCount   = 0;
-    VkCullModeFlagBits  CullMode        = VK_CULL_MODE_BACK_BIT;
-    VkFrontFace         FrontFace       = VK_FRONT_FACE_CLOCKWISE;
-    VkPrimitiveTopology Topology        = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    VkPolygonMode       PolygonMode     = VK_POLYGON_MODE_FILL;
-    bool                bBlendEnable    = false;
-    bool                bDepthEnable    = false;
-    FRenderPass*        pRenderPass     = nullptr;
-    FPipelineLayout*    pPipelineLayout = nullptr;
-    FShaderModule*      pVertexShader   = nullptr;
-    FShaderModule*      pFragmentShader = nullptr;
+    VkCullModeFlagBits                 CullMode                  = VK_CULL_MODE_BACK_BIT;
+    VkFrontFace                        FrontFace                 = VK_FRONT_FACE_CLOCKWISE;
+    VkPrimitiveTopology                Topology                  = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    VkPolygonMode                      PolygonMode               = VK_POLYGON_MODE_FILL;
+    bool                               bBlendEnable              = false;
+    bool                               bDepthEnable              = false;
+    FRenderPass*                       pRenderPass               = nullptr;
+    FPipelineLayout*                   pPipelineLayout           = nullptr;
+    FShaderModule*                     pVertexShader             = nullptr;
+    FShaderModule*                     pFragmentShader           = nullptr;
 };
 
 class FBasePipeline : public FDeviceChild
@@ -82,9 +82,18 @@ public:
     FRayTracingPipeline(FDevice* pDevice);
     ~FRayTracingPipeline();
 
+    const VkStridedDeviceAddressRegionKHR* GetRayGenSBT()      const { return &m_RayGenSBT; }
+    const VkStridedDeviceAddressRegionKHR* GetRayMissSBT()     const { return &m_RayMissSBT; }
+    const VkStridedDeviceAddressRegionKHR* GetRayHitSBT()      const { return &m_RayClosestHitSBT; }
+    const VkStridedDeviceAddressRegionKHR* GetRayCallableSBT() const { return &m_RayCallableSBT; }
+
 private:
-    VkBuffer       m_SBTBuffer;
-    uint64_t       m_SBTDeviceAddress;
-    VkDeviceMemory m_SBTDeviceMemory;
-    void*          m_pShaderBindingTable;
+    VkBuffer                        m_SBTBuffer;
+    uint64_t                        m_SBTDeviceAddress;
+    VkDeviceMemory                  m_SBTDeviceMemory;
+    void*                           m_pShaderBindingTable;
+    VkStridedDeviceAddressRegionKHR m_RayGenSBT;
+    VkStridedDeviceAddressRegionKHR m_RayMissSBT;
+    VkStridedDeviceAddressRegionKHR m_RayClosestHitSBT;
+    VkStridedDeviceAddressRegionKHR m_RayCallableSBT;
 };
