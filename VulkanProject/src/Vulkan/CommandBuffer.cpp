@@ -80,11 +80,6 @@ FCommandBuffer::~FCommandBuffer()
 {
     if (m_Fence != VK_NULL_HANDLE)
     {
-        if (m_NumCommands > 0)
-        {
-            WaitForAndResetFences();
-        }
-
         vkDestroyFence(GetDevice()->GetDevice(), m_Fence, nullptr);
         m_Fence = VK_NULL_HANDLE;
     }

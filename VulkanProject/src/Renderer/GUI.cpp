@@ -38,14 +38,14 @@ namespace GUI
             memset(KeyOwnerWindows, 0, sizeof(KeyOwnerWindows));
         }
         
-        GLFWwindow* Window;
-        double      Time;
-        GLFWwindow* MouseWindow;
-        GLFWcursor* MouseCursors[ImGuiMouseCursor_COUNT];
-        ImVec2      LastValidMousePos;
-        GLFWwindow* KeyOwnerWindows[GLFW_KEY_LAST];
-        bool        bInstalledCallbacks;
-        bool        bWantUpdateMonitors;
+        GLFWwindow*        Window;
+        double             Time;
+        GLFWwindow*        MouseWindow;
+        GLFWcursor*        MouseCursors[ImGuiMouseCursor_COUNT];
+        ImVec2             LastValidMousePos;
+        GLFWwindow*        KeyOwnerWindows[GLFW_KEY_LAST];
+        bool               bInstalledCallbacks;
+        bool               bWantUpdateMonitors;
         
         // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
         GLFWwindowfocusfun PrevUserCallbackWindowFocus;
@@ -98,7 +98,7 @@ namespace GUI
             SAFE_DELETE(pShaderModuleFrag);
         }
         
-        // Global objects
+        // Global Objects
         FDevice*              pDevice;
         FSwapchain*           pSwapchain;
         FRenderPass*          pRenderPass;
@@ -108,17 +108,17 @@ namespace GUI
         FGraphicsPipeline*    pPipeline;
         FShaderModule*        pShaderModuleVert;
         FShaderModule*        pShaderModuleFrag;
-        
-        // Font data
-        FSampler*       pFontSampler;
-        FSampler*       pImageSampler;
-        FTexture*       pFontTexture;
-        FTextureView*   pFontTextureView;
-        FDescriptorSet* pFontDescriptorSet;
 
-        // MainWindow data
-        uint32_t LastViewportWidth;
-        uint32_t LastViewportHeight;
+        // Font Data
+        FSampler*             pFontSampler;
+        FSampler*             pImageSampler;
+        FTexture*             pFontTexture;
+        FTextureView*         pFontTextureView;
+        FDescriptorSet*       pFontDescriptorSet;
+
+        // MainWindow Data
+        uint32_t              LastViewportWidth;
+        uint32_t              LastViewportHeight;
     };
     
     struct ImGuiFrameRenderData
@@ -157,17 +157,6 @@ namespace GUI
         ~ImGuiViewportData()
         {
             pWindow = nullptr;
-        }
-        
-        void WaitUntilIdle()
-        {
-            for (ImGuiFrameRenderData& RenderData : FrameData)
-            {
-                if (RenderData.pCommandBuffer && RenderData.pCommandBuffer->IsFinishedOnGPU())
-                {
-                    RenderData.pCommandBuffer->WaitForAndResetFences();
-                }
-            }
         }
 
         bool ValidateFramebuffers() const
@@ -210,12 +199,22 @@ namespace GUI
     
     static ImGuiBackendData* ImGuiGetBackendData()
     {
-        return ImGui::GetCurrentContext() ? reinterpret_cast<ImGuiBackendData*>(ImGui::GetIO().BackendPlatformUserData) : nullptr;
+        ImGuiBackendData* pBackend = ImGui::GetCurrentContext() ? 
+            reinterpret_cast<ImGuiBackendData*>(ImGui::GetIO().BackendPlatformUserData) : 
+            nullptr;
+
+        assert(pBackend != nullptr);
+        return pBackend;
     }
     
     static ImGuiRendererBackendData* ImGuiGetRendererBackendData()
     {
-        return ImGui::GetCurrentContext() ? reinterpret_cast<ImGuiRendererBackendData*>(ImGui::GetIO().BackendRendererUserData) : nullptr;
+        ImGuiRendererBackendData* pRendererBackend = ImGui::GetCurrentContext() ? 
+            reinterpret_cast<ImGuiRendererBackendData*>(ImGui::GetIO().BackendRendererUserData) : 
+            nullptr;
+
+        assert(pRendererBackend != nullptr);
+        return pRendererBackend;
     }
     
     static ImGuiViewportData* ImGuiGetMainViewportData()
@@ -355,7 +354,7 @@ namespace GUI
     static void ImGuiUpdateKeyModifiers()
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        
+
         ImGuiIO& UIState = ImGui::GetIO();
         UIState.AddKeyEvent(ImGuiMod_Ctrl,  (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS));
         UIState.AddKeyEvent(ImGuiMod_Shift, (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_SHIFT)   == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_SHIFT)   == GLFW_PRESS));
@@ -370,9 +369,9 @@ namespace GUI
         {
             pBackend->PrevUserCallbackMousebutton(pWindow, Button, Action, Mods);
         }
-        
+
         ImGuiUpdateKeyModifiers();
-        
+
         ImGuiIO& UIState = ImGui::GetIO();
         if (Button >= 0 && Button < ImGuiMouseButton_COUNT)
         {
@@ -387,7 +386,7 @@ namespace GUI
         {
             pBackend->PrevUserCallbackScroll(pWindow, OffsetX, OffsetY);
         }
-        
+
         ImGuiIO& UIState = ImGui::GetIO();
         UIState.AddMouseWheelEvent((float)OffsetX, (float)OffsetY);
     }
@@ -460,21 +459,21 @@ namespace GUI
         {
             pBackend->PrevUserCallbackKey(pWindow, Keycode, Scancode, Action, Mods);
         }
-        
+
         if (Action != GLFW_PRESS && Action != GLFW_RELEASE)
         {
             return;
         }
-        
+
         ImGuiUpdateKeyModifiers();
-        
+
         if (Keycode >= 0 && Keycode < IM_ARRAYSIZE(pBackend->KeyOwnerWindows))
         {
             pBackend->KeyOwnerWindows[Keycode] = (Action == GLFW_PRESS) ? pWindow : nullptr;
         }
-        
+
         Keycode = ImGuiTranslateUntranslatedKey(Keycode, Scancode);
-        
+
         ImGuiIO& UIState = ImGui::GetIO();
         ImGuiKey ConvertedKey = GLFWKeyToImGuiKey(Keycode);
         UIState.AddKeyEvent(ConvertedKey, (Action == GLFW_PRESS));
@@ -488,7 +487,7 @@ namespace GUI
         {
             pBackend->PrevUserCallbackWindowFocus(pWindow, Focused);
         }
-        
+
         ImGuiIO& UIState = ImGui::GetIO();
         UIState.AddFocusEvent(Focused != 0);
     }
@@ -500,23 +499,23 @@ namespace GUI
         {
             pBackend->PrevUserCallbackCursorPos(pWindow, PosX, PosY);
         }
-        
+
         if (glfwGetInputMode(pWindow, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         {
             return;
         }
-        
+
         ImGuiIO& UIState = ImGui::GetIO();
         if (UIState.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             int WindowPosX;
             int WindowPosY;
             glfwGetWindowPos(pWindow, &WindowPosX, &WindowPosY);
-            
+
             PosX += WindowPosX;
             PosY += WindowPosY;
         }
-        
+
         UIState.AddMousePosEvent((float)PosX, (float)PosY);
         pBackend->LastValidMousePos = ImVec2((float)PosX, (float)PosY);
     }
@@ -530,12 +529,12 @@ namespace GUI
         {
             pBackend->PrevUserCallbackCursorEnter(pWindow, Entered);
         }
-        
+
         if (glfwGetInputMode(pWindow, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         {
             return;
         }
-        
+
         ImGuiIO& UIState = ImGui::GetIO();
         if (Entered)
         {
@@ -557,7 +556,7 @@ namespace GUI
         {
             pBackend->PrevUserCallbackChar(pWindow, Char);
         }
-        
+
         ImGuiIO& UIState = ImGui::GetIO();
         UIState.AddInputCharacter(Char);
     }
@@ -588,7 +587,7 @@ namespace GUI
                     return;
                 }
             }
-            
+
             pViewport->PlatformRequestMove = true;
         }
     }
@@ -605,7 +604,7 @@ namespace GUI
                     return;
                 }
             }
-            
+
             pViewport->PlatformRequestResize = true;
         }
     }
@@ -621,7 +620,7 @@ namespace GUI
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
         assert(pBackend->bInstalledCallbacks == false && "Callbacks already installed!");
         assert(pBackend->Window == pWindow);
-        
+
         pBackend->PrevUserCallbackWindowFocus = glfwSetWindowFocusCallback(pWindow, ImGuiWindowFocusCallback);
         pBackend->PrevUserCallbackCursorEnter = glfwSetCursorEnterCallback(pWindow, ImGuiCursorEnterCallback);
         pBackend->PrevUserCallbackCursorPos   = glfwSetCursorPosCallback(pWindow, ImGuiCursorPosCallback);
@@ -630,7 +629,7 @@ namespace GUI
         pBackend->PrevUserCallbackKey         = glfwSetKeyCallback(pWindow, ImGuiKeyCallback);
         pBackend->PrevUserCallbackChar        = glfwSetCharCallback(pWindow, ImGuiCharCallback);
         pBackend->PrevUserCallbackMonitor     = glfwSetMonitorCallback(ImGuiMonitorCallback);
-        pBackend->bInstalledCallbacks          = true;
+        pBackend->bInstalledCallbacks         = true;
     }
     
     static void ImGuiRestoreCallbacks(GLFWwindow* pWindow)
@@ -638,7 +637,7 @@ namespace GUI
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
         assert(pBackend->bInstalledCallbacks == true && "Callbacks not installed!");
         assert(pBackend->Window == pWindow);
-        
+
         glfwSetWindowFocusCallback(pWindow, pBackend->PrevUserCallbackWindowFocus);
         glfwSetCursorEnterCallback(pWindow, pBackend->PrevUserCallbackCursorEnter);
         glfwSetCursorPosCallback(pWindow, pBackend->PrevUserCallbackCursorPos);
@@ -647,7 +646,7 @@ namespace GUI
         glfwSetKeyCallback(pWindow, pBackend->PrevUserCallbackKey);
         glfwSetCharCallback(pWindow, pBackend->PrevUserCallbackChar);
         glfwSetMonitorCallback(pBackend->PrevUserCallbackMonitor);
-        
+
         pBackend->PrevUserCallbackWindowFocus = nullptr;
         pBackend->PrevUserCallbackCursorEnter = nullptr;
         pBackend->PrevUserCallbackCursorPos   = nullptr;
@@ -663,45 +662,45 @@ namespace GUI
     {
         int MonitorsCount = 0;
         GLFWmonitor** ppGlfwMonitors = glfwGetMonitors(&MonitorsCount);
-        
+
         ImGuiPlatformIO& UIPlatformState = ImGui::GetPlatformIO();
         UIPlatformState.Monitors.resize(0);
-        
+
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
         pBackend->bWantUpdateMonitors = false;
-        
+
         for (int n = 0; n < MonitorsCount; n++)
         {
             int PosX;
             int PosY;
             glfwGetMonitorPos(ppGlfwMonitors[n], &PosX, &PosY);
-            
+
             const GLFWvidmode* videoMode = glfwGetVideoMode(ppGlfwMonitors[n]);
             if (videoMode == nullptr)
             {
                 continue;
             }
-            
+
             ImGuiPlatformMonitor Monitor;
             Monitor.MainPos  = Monitor.WorkPos  = ImVec2((float)PosX, (float)PosY);
             Monitor.MainSize = Monitor.WorkSize = ImVec2((float)videoMode->width, (float)videoMode->height);
-            
+
             int Width;
             int Height;
             glfwGetMonitorWorkarea(ppGlfwMonitors[n], &PosX, &PosY, &Width, &Height);
-            
+
             if (Width > 0 && Height > 0) // Workaround a small GLFW issue reporting zero on monitor changes: https://github.com/glfw/glfw/pull/1761
             {
                 Monitor.WorkPos  = ImVec2((float)PosX, (float)PosY);
                 Monitor.WorkSize = ImVec2((float)Width, (float)Height);
             }
-            
+
             // Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
             float ScaleX;
             float ScaleY;
             glfwGetMonitorContentScale(ppGlfwMonitors[n], &ScaleX, &ScaleY);
             Monitor.DpiScale = ScaleX;
-            
+
             UIPlatformState.Monitors.push_back(Monitor);
         }
     }
@@ -711,17 +710,16 @@ namespace GUI
         ImGuiBackendData*  pBackend      = ImGuiGetBackendData();
         ImGuiViewportData* pViewportData = new ImGuiViewportData();
         pViewport->PlatformUserData = pViewportData;
-        
+
         glfwWindowHint(GLFW_VISIBLE, false);
         glfwWindowHint(GLFW_FOCUSED, false);
         glfwWindowHint(GLFW_FOCUS_ON_SHOW, false);
         glfwWindowHint(GLFW_DECORATED, (pViewport->Flags & ImGuiViewportFlags_NoDecoration) ? false : true);
         glfwWindowHint(GLFW_FLOATING, (pViewport->Flags & ImGuiViewportFlags_TopMost) ? true : false);
-        
+
         pViewportData->pWindow      = glfwCreateWindow((int)pViewport->Size.x, (int)pViewport->Size.y, "No Title Yet", nullptr, nullptr);
         pViewportData->bWindowOwned = true;
         pViewport->PlatformHandle   = pViewportData->pWindow;
-        
         glfwSetWindowPos(pViewportData->pWindow, (int)pViewport->Pos.x, (int)pViewport->Pos.y);
 
     #ifdef PLATFORM_WINDOWS
@@ -729,7 +727,7 @@ namespace GUI
     #elif PLATFORM_MAC
         pViewport->PlatformHandleRaw = glfwGetCocoaWindow(pViewportData->pWindow);
     #endif
-                
+
         // Install GLFW callbacks for secondary Viewports
         glfwSetWindowFocusCallback(pViewportData->pWindow, ImGuiWindowFocusCallback);
         glfwSetCursorEnterCallback(pViewportData->pWindow, ImGuiCursorEnterCallback);
@@ -742,7 +740,7 @@ namespace GUI
         glfwSetWindowPosCallback(pViewportData->pWindow, ImGuiWindowPosCallback);
         glfwSetWindowSizeCallback(pViewportData->pWindow, ImGuiWindowSizeCallback);
     }
-    
+
     static void ImGuiDestroyWindow(ImGuiViewport* pViewport)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
@@ -759,17 +757,17 @@ namespace GUI
                         ImGuiKeyCallback(pViewportData->pWindow, i, 0, GLFW_RELEASE, 0); // Later params are only used for main pViewport, on which this function is never called.
                     }
                 }
-                
+
                 glfwDestroyWindow(pViewportData->pWindow);
             }
-            
+
             pViewportData->pWindow = nullptr;
             delete pViewportData;
         }
-        
+
         pViewport->PlatformUserData = pViewport->PlatformHandle = nullptr;
     }
-    
+
     static void ImGuiShowWindow(ImGuiViewport* pViewport)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
@@ -785,94 +783,94 @@ namespace GUI
             ::SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
         }
     #endif
-        
+
         glfwShowWindow(pViewportData->pWindow);
     }
-    
+
     static ImVec2 ImGuiGetWindowPos(ImGuiViewport* pViewport)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
-        
+
         int PosX = 0;
         int PosY = 0;
         glfwGetWindowPos(pViewportData->pWindow, &PosX, &PosY);
         return ImVec2((float)PosX, (float)PosY);
     }
-    
+
     static void ImGuiSetWindowPos(ImGuiViewport* pViewport, ImVec2 Pos)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         pViewportData->IgnoreWindowPosEventFrame = ImGui::GetFrameCount();
         glfwSetWindowPos(pViewportData->pWindow, (int)Pos.x, (int)Pos.y);
     }
-    
+
     static ImVec2 ImGuiGetWindowSize(ImGuiViewport* pViewport)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
-        
+
         int Width  = 0;
         int Height = 0;
         glfwGetWindowSize(pViewportData->pWindow, &Width, &Height);
         return ImVec2((float)Width, (float)Height);
     }
-    
+
     static void ImGuiSetWindowSize(ImGuiViewport* pViewport, ImVec2 Size)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         pViewportData->IgnoreWindowSizeEventFrame = ImGui::GetFrameCount();
         glfwSetWindowSize(pViewportData->pWindow, (int)Size.x, (int)Size.y);
     }
-    
+
     static void ImGuiSetWindowTitle(ImGuiViewport* pViewport, const char* Title)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         glfwSetWindowTitle(pViewportData->pWindow, Title);
     }
-    
+
     static void ImGuiSetWindowFocus(ImGuiViewport* pViewport)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         glfwFocusWindow(pViewportData->pWindow);
     }
-    
+
     static bool ImGuiGetWindowFocus(ImGuiViewport* pViewport)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         return glfwGetWindowAttrib(pViewportData->pWindow, GLFW_FOCUSED) != 0;
     }
-    
+
     static bool ImGuiGetWindowMinimized(ImGuiViewport* pViewport)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         return glfwGetWindowAttrib(pViewportData->pWindow, GLFW_ICONIFIED) != 0;
     }
-    
+
     static void ImGuiSetWindowAlpha(ImGuiViewport* pViewport, float Alpha)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         glfwSetWindowOpacity(pViewportData->pWindow, Alpha);
     }
-    
+
     static void ImGuiRenderWindow(ImGuiViewport* pViewport, void*)
     {
     }
-    
+
     static void ImGuiSwapBuffers(ImGuiViewport* pViewport, void*)
     {
     }
-    
+
     static int ImGuiCreateVkSurface(ImGuiViewport* pViewport, ImU64 Instance, const void* Allocator, ImU64* OutSurface)
     {
         ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
         VkResult Result = glfwCreateWindowSurface((VkInstance)Instance, pViewportData->pWindow, (const VkAllocationCallbacks*)Allocator, (VkSurfaceKHR*)OutSurface);
         return (int)Result;
     }
-    
+
     static void ImGuiInitPlatformInterface()
     {
         // Register platform interface (will be coupled with a renderer interface)
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        
+
         ImGuiPlatformIO& UIPlatformState = ImGui::GetPlatformIO();
         UIPlatformState.Platform_CreateWindow       = ImGuiCreateWindow;
         UIPlatformState.Platform_DestroyWindow      = ImGuiDestroyWindow;
@@ -889,13 +887,13 @@ namespace GUI
         UIPlatformState.Platform_SwapBuffers        = ImGuiSwapBuffers;
         UIPlatformState.Platform_SetWindowAlpha     = ImGuiSetWindowAlpha;
         UIPlatformState.Platform_CreateVkSurface    = ImGuiCreateVkSurface;
-        
+
         // Register main window handle (which is owned by the main application, not by us)
         // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
         ImGuiViewportData* pViewportData = new ImGuiViewportData();
         pViewportData->pWindow       = pBackend->Window;
         pViewportData->bWindowOwned = false;
-        
+
         ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
         pMainViewport->PlatformUserData = pViewportData;
         pMainViewport->PlatformHandle   = pBackend->Window;
@@ -907,20 +905,20 @@ namespace GUI
         pBackend->Window             = pWindow;
         pBackend->Time               = 0.0;
         pBackend->bWantUpdateMonitors = true;
-        
+
         ImGuiIO& UIState = ImGui::GetIO();
         UIState.BackendPlatformUserData = pBackend;
         UIState.BackendPlatformName     = "VulkanProject";
-        
+
         UIState.SetClipboardTextFn = ImGuiSetClipboardText;
         UIState.GetClipboardTextFn = ImGuiGetClipboardText;
         UIState.ClipboardUserData  = pBackend->Window;
-        
+
         UIState.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
         UIState.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
         UIState.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
         UIState.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can call io.AddMouseViewportEvent() with correct data (optional)
-        
+
         // Create mouse cursors
         // (By design, on X11 cursors are user configurable and some cursors may be missing. When a cursor doesn't exist,
         // GLFW will emit an error which will often be printed by the app, so we temporarily disable error reporting.
@@ -936,17 +934,17 @@ namespace GUI
         pBackend->MouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_RESIZE_NWSE_CURSOR);
         pBackend->MouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
         glfwSetErrorCallback(PrevErrorCallback);
-        
+
         // Eat errors
         (void)glfwGetError(0);
-        
+
         // Install main window callbacks
         ImguiInstallCallbacks(pWindow);
-        
+
         // Update monitors the first time (note: monitor callback are broken in GLFW 3.2 and earlier, see github.com/glfw/glfw/issues/784)
         ImGuiUpdateMonitors();
         glfwSetMonitorCallback(ImGuiMonitorCallback);
-        
+
         // Our mouse update function expect PlatformHandle to be filled for the main pViewport
         ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
         pMainViewport->PlatformHandle = pBackend->Window;
@@ -955,13 +953,13 @@ namespace GUI
     #elif PLATFORM_MAC
         pMainViewport->PlatformHandleRaw = glfwGetCocoaWindow(pBackend->Window);
     #endif
-        
+
         if (UIState.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGuiInitPlatformInterface();
         }
     }
-    
+
     bool ImGuiCreateFontsTexture()
     {
         if (ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData())
@@ -969,37 +967,41 @@ namespace GUI
             int Width;
             int Height;
             unsigned char* Pixels;
-            
+
             ImGuiIO& UIstate = ImGui::GetIO();
             UIstate.Fonts->GetTexDataAsRGBA32(&Pixels, &Width, &Height);
-            
+
             FTextureParams TextureParams = {};
             TextureParams.Format    = VK_FORMAT_R8G8B8A8_UNORM;
             TextureParams.ImageType = VK_IMAGE_TYPE_2D;
             TextureParams.Width     = Width;
             TextureParams.Height    = Height;
-            
+
             pRendererBackend->pFontTexture = FTexture::CreateWithData(pRendererBackend->pDevice, TextureParams, Pixels);
             if (!pRendererBackend->pFontTexture)
             {
                 return false;
             }
-            
-            pRendererBackend->pFontTexture->SetDebugName("Font Texture");
-            
+            else
+            {
+                pRendererBackend->pFontTexture->SetDebugName("Font Texture");
+            }
+
             FTextureViewParams TextureViewParams = {};
             TextureViewParams.pTexture = pRendererBackend->pFontTexture;
-            
+
             pRendererBackend->pFontTextureView = FTextureView::Create(pRendererBackend->pDevice, TextureViewParams);
             if (!pRendererBackend->pFontTextureView)
             {
                 return false;
             }
+            else
+            {
+                pRendererBackend->pFontTextureView->SetDebugName("Font TextureView");
+            }
 
-            pRendererBackend->pFontTextureView->SetDebugName("Font TextureView");
-            
             pRendererBackend->pFontDescriptorSet->BindCombinedImageSampler(pRendererBackend->pFontTextureView->GetImageView(), pRendererBackend->pFontSampler->GetSampler(), 0);
-            UIstate.Fonts->SetTexID((ImTextureID)pRendererBackend->pFontDescriptorSet);
+            UIstate.Fonts->SetTexID(reinterpret_cast<ImTextureID>(pRendererBackend->pFontDescriptorSet));
             return true;
         }
         else
@@ -1018,10 +1020,10 @@ namespace GUI
          layout(location = 1) in vec2 aUV;
          layout(location = 2) in vec4 aColor;
          layout(push_constant) uniform uPushConstant { vec2 uScale; vec2 uTranslate; } pc;
-         
+
          out gl_PerVertex { vec4 gl_Position; };
          layout(location = 0) out struct { vec4 Color; vec2 UV; } Out;
-         
+
          void main()
          {
          Out.Color = aColor;
@@ -1073,7 +1075,7 @@ namespace GUI
             0x00000028,0x00000029,0x00050041,0x00000011,0x0000002d,0x0000001b,0x0000000d,0x0003003e,
             0x0000002d,0x0000002c,0x000100fd,0x00010038
         };
-        
+
         // glsl_shader.frag, compiled with:
         // # glslangValidator -V -x -o glsl_shader.frag.u32 glsl_shader.frag
         /*
@@ -1114,7 +1116,7 @@ namespace GUI
             0x00000007,0x0000001d,0x00000012,0x0000001c,0x0003003e,0x00000009,0x0000001d,0x000100fd,
             0x00010038
         };
-        
+
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         if (!pRendererBackend->pShaderModuleVert)
         {
@@ -1122,7 +1124,7 @@ namespace GUI
             assert(pRendererBackend->pShaderModuleVert != nullptr);
             pRendererBackend->pShaderModuleVert->SetDebugName("ImGui VertexShader");
         }
-        
+
         if (!pRendererBackend->pShaderModuleFrag)
         {
             pRendererBackend->pShaderModuleFrag = FShaderModule::Create(pRendererBackend->pDevice, __glsl_shader_frag_spv, sizeof(__glsl_shader_frag_spv), "main");
@@ -1130,12 +1132,12 @@ namespace GUI
             pRendererBackend->pShaderModuleFrag->SetDebugName("ImGui FragmentShader");
         }
     }
-    
+
     static void ImGuiCreatePipeline()
     {
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         ImGuiCreateShaderModules();
-        
+
         if (!pRendererBackend->pPipeline)
         {
             FGraphicsPipelineStateParams GraphicsPipelineStateParams = {};
@@ -1143,11 +1145,11 @@ namespace GUI
             GraphicsPipelineStateParams.pFragmentShader = pRendererBackend->pShaderModuleFrag;
             GraphicsPipelineStateParams.pRenderPass     = pRendererBackend->pRenderPass;
             GraphicsPipelineStateParams.pPipelineLayout = pRendererBackend->pPipelineLayout;
-            
+
             VkVertexInputBindingDescription BindingDesc[1] = {};
             BindingDesc[0].stride    = sizeof(ImDrawVert);
             BindingDesc[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-            
+
             VkVertexInputAttributeDescription AttributeDesc[3] = {};
             AttributeDesc[0].location = 0;
             AttributeDesc[0].binding  = BindingDesc[0].binding;
@@ -1161,17 +1163,17 @@ namespace GUI
             AttributeDesc[2].binding  = BindingDesc[0].binding;
             AttributeDesc[2].format   = VK_FORMAT_R8G8B8A8_UNORM;
             AttributeDesc[2].offset   = IM_OFFSETOF(ImDrawVert, col);
-            
+
             GraphicsPipelineStateParams.AttributeDescriptionCount = 3;
             GraphicsPipelineStateParams.pAttributeDescriptions    = AttributeDesc;
-            
+
             GraphicsPipelineStateParams.BindingDescriptionCount = 1;
             GraphicsPipelineStateParams.pBindingDescriptions    = BindingDesc;
-            
+
             GraphicsPipelineStateParams.CullMode     = VK_CULL_MODE_NONE;
             GraphicsPipelineStateParams.FrontFace    = VK_FRONT_FACE_COUNTER_CLOCKWISE;
             GraphicsPipelineStateParams.bBlendEnable = true;
-            
+
             pRendererBackend->pPipeline = FGraphicsPipeline::Create(pRendererBackend->pDevice, GraphicsPipelineStateParams);
             assert(pRendererBackend->pPipeline != nullptr);
             pRendererBackend->pPipeline->SetDebugName("ImGui Pipeline");
@@ -1194,12 +1196,12 @@ namespace GUI
             SamplerParams.MinLod        = -1000;
             SamplerParams.MaxLod        = 1000;
             SamplerParams.MaxAnisotropy = 1.0f;
-            
+
             pRendererBackend->pFontSampler = FSampler::Create(pRendererBackend->pDevice, SamplerParams);
             assert(pRendererBackend->pFontSampler != nullptr);
             pRendererBackend->pFontSampler->SetDebugName("ImGui FontSampler");
         }
-        
+
         if (!pRendererBackend->pImageSampler)
         {
             FSamplerParams SamplerParams = {};
@@ -1212,7 +1214,7 @@ namespace GUI
             SamplerParams.MinLod        = 0;
             SamplerParams.MaxLod        = 1000;
             SamplerParams.MaxAnisotropy = 1.0f;
-            
+
             pRendererBackend->pImageSampler = FSampler::Create(pRendererBackend->pDevice, SamplerParams);
             assert(pRendererBackend->pImageSampler != nullptr);
             pRendererBackend->pImageSampler->SetDebugName("ImGui ImageSampler");
@@ -1224,22 +1226,22 @@ namespace GUI
             Binding[0].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             Binding[0].descriptorCount = 1;
             Binding[0].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
-            
+
             FDescriptorSetLayoutParams DescriptorSetLayoutParams = {};
             DescriptorSetLayoutParams.NumBindings = 1;
             DescriptorSetLayoutParams.pBindings   = Binding;
-            
+
             pRendererBackend->pDescriptorSetLayout = FDescriptorSetLayout::Create(pRendererBackend->pDevice, DescriptorSetLayoutParams);
             assert(pRendererBackend->pDescriptorSetLayout != nullptr);
             pRendererBackend->pDescriptorSetLayout->SetDebugName("ImGui DescriptorSetLayout");
         }
-        
+
         if (!pRendererBackend->pDescriptorPool)
         {
             FDescriptorPoolParams DescriptorPoolParams = {};
             DescriptorPoolParams.MaxSets                  = 1024;
             DescriptorPoolParams.NumCombinedImageSamplers = 1024;
-            
+
             pRendererBackend->pDescriptorPool = FDescriptorPool::Create(pRendererBackend->pDevice, DescriptorPoolParams);
             assert(pRendererBackend->pDescriptorPool != nullptr);
             pRendererBackend->pDescriptorPool->SetDebugName("ImGui DescriptorPool");
@@ -1251,19 +1253,19 @@ namespace GUI
             assert(pRendererBackend->pFontDescriptorSet != nullptr);
             pRendererBackend->pFontDescriptorSet->SetDebugName("ImGui FontDescriptorSet");
         }
-        
+
         if (!pRendererBackend->pPipelineLayout)
         {
             FPipelineLayoutParams PipelineLayoutParams = {};
             PipelineLayoutParams.ppLayouts        = &pRendererBackend->pDescriptorSetLayout;
             PipelineLayoutParams.NumLayouts       = 1;
             PipelineLayoutParams.NumPushConstants = 4;
-            
+
             pRendererBackend->pPipelineLayout = FPipelineLayout::Create(pRendererBackend->pDevice, PipelineLayoutParams);
             assert(pRendererBackend->pPipelineLayout != nullptr);
             pRendererBackend->pPipelineLayout->SetDebugName("ImGui PipelineLayout");
         }
-        
+
         if (!pRendererBackend->pRenderPass)
         {
             FRenderPassAttachment Attachment = {};
@@ -1272,7 +1274,7 @@ namespace GUI
             FRenderPassParams RenderPassParams = {};
             RenderPassParams.ColorAttachmentCount = 1;
             RenderPassParams.pColorAttachments    = &Attachment;
-            
+
             pRendererBackend->pRenderPass = FRenderPass::Create(pRendererBackend->pDevice, RenderPassParams);
             assert(pRendererBackend->pRenderPass != nullptr);
             pRendererBackend->pRenderPass->SetDebugName("ImGui RenderPass");
@@ -1281,14 +1283,13 @@ namespace GUI
         ImGuiCreatePipeline();
         return true;
     }
-    
-    
+
     //--------------------------------------------------------------------------------------------------------
     // MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
     // This is an _advanced_ and _optional_ feature, allowing the backend to create and handle multiple viewports simultaneously.
     // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
     //--------------------------------------------------------------------------------------------------------
-    
+
     static void ImGuiDestroyFramebuffers(ImGuiViewportData* pViewportData)
     {
         for (auto& pFramebuffer : pViewportData->Framebuffers)
@@ -1296,7 +1297,7 @@ namespace GUI
             SAFE_DELETE(pFramebuffer);
         }
     }
-    
+
     static void ImGuiDestroyWindowRenderBuffers(ImGuiViewportData* pViewportData)
     {
         pViewportData->FrameData.clear();
@@ -1304,28 +1305,28 @@ namespace GUI
 
     static void ImGuiCreateFramebuffers(FDevice* pDevice, ImGuiViewportData* pViewportData)
     {
-        // Swapchain extent
+        // SwapChain extent
         VkExtent2D extent = pViewportData->pSwapchain->GetExtent();
-        
+
         // Create Framebuffers
         FFramebufferParams FramebufferParams = {};
         FramebufferParams.pRenderPass     = pViewportData->pRenderPass;
         FramebufferParams.AttachmentCount = 1;
         FramebufferParams.Width           = extent.width;
         FramebufferParams.Height          = extent.height;
-        
+
         uint32_t NumBackbuffers = pViewportData->pSwapchain->GetNumBackBuffers();
         pViewportData->Framebuffers.resize(NumBackbuffers);
-        
+
         for (uint32_t i = 0; i < NumBackbuffers; i++)
         {
             VkImageView ImageView = pViewportData->pSwapchain->GetImageView(i);
             FramebufferParams.pAttachMents = &ImageView;
-            
+
             FFramebuffer* pFramebuffer = FFramebuffer::Create(pDevice, FramebufferParams);
             assert(pFramebuffer != nullptr);
-            pFramebuffer->SetDebugName("ImGui FrameBuffer");
 
+            pFramebuffer->SetDebugName("ImGui FrameBuffer");
             pViewportData->Framebuffers[i] = pFramebuffer;
         }
     }
@@ -1335,10 +1336,10 @@ namespace GUI
         FCommandBufferParams CommandBufferParams = {};
         CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         CommandBufferParams.QueueType = ECommandQueueType::Graphics;
-        
+
         uint32_t NumBackbuffers = pViewportData->pSwapchain->GetNumBackBuffers();
         pViewportData->FrameData.resize(NumBackbuffers);
-        
+
         for (uint32_t i = 0; i < NumBackbuffers; i++)
         {
             FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
@@ -1346,7 +1347,6 @@ namespace GUI
 
             const std::string DebugName = "ImGui CommandBuffer[" + std::to_string(i) + "]";
             pCommandBuffer->SetDebugName(DebugName.c_str());
-
             pViewportData->FrameData[i].pCommandBuffer = pCommandBuffer;
         }
     }
@@ -1358,10 +1358,10 @@ namespace GUI
         {
             // We have the same structure for platform and renderer- data
             pViewport->RendererUserData = pViewportData;
-            
+
             // Create Swapchain
             pViewportData->pSwapchain = FSwapchain::Create(pRendererBackend->pDevice, pViewportData->pWindow);
-            
+
             // Create RenderPass for this Viewport
             FRenderPassAttachment Attachment = {};
             Attachment.Format = pViewportData->pSwapchain->GetFormat();
@@ -1374,14 +1374,14 @@ namespace GUI
             FRenderPassParams RenderPassParams = {};
             RenderPassParams.ColorAttachmentCount = 1;
             RenderPassParams.pColorAttachments    = &Attachment;
-            
+
             pViewportData->pRenderPass = FRenderPass::Create(pRendererBackend->pDevice, RenderPassParams);
             assert(pViewportData->pRenderPass != nullptr);
             pViewportData->pRenderPass->SetDebugName("ImGui Viewport RenderPass");
 
             ImGuiCreateFramebuffers(pRendererBackend->pDevice, pViewportData);
             ImGuiCreateWindowRenderBuffers(pRendererBackend->pDevice, pViewportData);
-            
+
             pViewportData->bWindowOwned = true;
         }
     }
@@ -1393,18 +1393,18 @@ namespace GUI
         if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->RendererUserData))
         {
             // Ensure that we are finished with this viewport on the GPU
-            pViewportData->WaitUntilIdle();
-            
+            pRendererBackend->pDevice->WaitForIdle();
+
             if (pViewportData->bWindowOwned)
             {
                 SAFE_DELETE(pViewportData->pSwapchain);
                 SAFE_DELETE(pViewportData->pRenderPass);
                 ImGuiDestroyFramebuffers(pViewportData);
             }
-            
+
             ImGuiDestroyWindowRenderBuffers(pViewportData);
         }
-        
+
         pViewport->RendererUserData = nullptr;
     }
     
@@ -1430,18 +1430,18 @@ namespace GUI
     static void CreateOrResizeBuffer(FBuffer** ppBuffer, VkDeviceSize Size, VkBufferUsageFlags Usage)
     {
         assert(ppBuffer != nullptr);
-        
+
         // Delete the current buffer
         if (*ppBuffer)
         {
             delete *ppBuffer;
         }
-        
+
         FBufferParams BufferParams;
         BufferParams.Usage            = Usage;
         BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
         BufferParams.Size             = Size;
-     
+
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         FBuffer* pBuffer = FBuffer::Create(pRendererBackend->pDevice, BufferParams, nullptr);
         if (!pBuffer)
@@ -1449,7 +1449,7 @@ namespace GUI
             assert(false);
             return;
         }
-        
+
         pBuffer->SetDebugName("GUI Buffer");
         *ppBuffer = pBuffer;
     }
@@ -1477,7 +1477,7 @@ namespace GUI
             Viewport.height   = (float)Height;
             Viewport.minDepth = 0.0f;
             Viewport.maxDepth = 1.0f;
-            
+
             pCommandBuffer->SetViewport(Viewport);
         }
 
@@ -1487,11 +1487,11 @@ namespace GUI
             float Scale[2];
             Scale[0] = 2.0f / pDrawData->DisplaySize.x;
             Scale[1] = 2.0f / pDrawData->DisplaySize.y;
-            
+
             float Translate[2];
             Translate[0] = -1.0f - pDrawData->DisplayPos.x * Scale[0];
             Translate[1] = -1.0f - pDrawData->DisplayPos.y * Scale[1];
-            
+
             pCommandBuffer->PushConstants(pRendererbackend->pPipelineLayout, VK_SHADER_STAGE_ALL, sizeof(float) * 0, sizeof(float) * 2, Scale);
             pCommandBuffer->PushConstants(pRendererbackend->pPipelineLayout, VK_SHADER_STAGE_ALL, sizeof(float) * 2, sizeof(float) * 2, Translate);
         }
@@ -1501,7 +1501,7 @@ namespace GUI
     static void ImGuiRenderDrawData(ImDrawData* pDrawData, FCommandBuffer* pCommandBuffer)
     {
         ImGuiRendererBackendData* pRendererbackend = ImGuiGetRendererBackendData();
-        
+
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
         int FrameBufferWidth  = (int)(pDrawData->DisplaySize.x * pDrawData->FramebufferScale.x);
         int FrameBufferHeight = (int)(pDrawData->DisplaySize.y * pDrawData->FramebufferScale.y);
@@ -1524,7 +1524,7 @@ namespace GUI
             {
                 CreateOrResizeBuffer(&RenderData.pVertexBuffer, VertexSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
             }
-            
+
             const VkDeviceSize IndexSize  = pDrawData->TotalIdxCount * sizeof(ImDrawIdx);
             if (!RenderData.pIndexBuffer || RenderData.pIndexBuffer->GetSize() < IndexSize)
             {
@@ -1547,10 +1547,10 @@ namespace GUI
                 memcpy(pIndexDst, pCmdList->IdxBuffer.Data, pCmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
                 pIndexDst += pCmdList->IdxBuffer.Size;
             }
-            
+
             RenderData.pVertexBuffer->FlushMappedMemoryRange();
             RenderData.pVertexBuffer->Unmap();
-            
+
             RenderData.pIndexBuffer->FlushMappedMemoryRange();
             RenderData.pIndexBuffer->Unmap();
         }
@@ -1608,7 +1608,6 @@ namespace GUI
                     {
                         ClipMax.y = (float)FrameBufferHeight;
                     }
-                    
                     if (ClipMax.x <= ClipMin.x || ClipMax.y <= ClipMin.y)
                     {
                         continue;
@@ -1630,7 +1629,7 @@ namespace GUI
                         assert(pDrawCmd->TextureId == (ImTextureID)pRendererbackend->pFontDescriptorSet);
                         pDescriptorSet = pRendererbackend->pFontDescriptorSet;
                     }
-                    
+
                     // Bind DescriptorSet
                     pCommandBuffer->BindGraphicsDescriptorSet(pRendererbackend->pPipelineLayout, pDescriptorSet, 0);
 
@@ -1638,7 +1637,7 @@ namespace GUI
                     pCommandBuffer->DrawIndexInstanced(pDrawCmd->ElemCount, 1, pDrawCmd->IdxOffset + GlobalIdxOffset, pDrawCmd->VtxOffset + GlobalVtxOffset, 0);
                 }
             }
-            
+
             GlobalIdxOffset += pCmdList->IdxBuffer.Size;
             GlobalVtxOffset += pCmdList->VtxBuffer.Size;
         }
@@ -1665,24 +1664,24 @@ namespace GUI
 
         FSwapchain* pSwapchain = pViewportData->pSwapchain;
         const uint32_t FrameIndex = pSwapchain->GetCurrentBackBufferIndex();
-        
+
         ImGuiFrameRenderData& RenderData = pViewportData->FrameData[FrameIndex];
-        
+
         FCommandBuffer* pCommandBuffer = RenderData.pCommandBuffer;
         pCommandBuffer->Reset();
         pCommandBuffer->Begin();
-        
+
         const VkClearValue* pClearValues = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? nullptr : &pViewportData->ClearValues;
         const uint32_t ClearValueCount   = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? 0 : 1;
-        
+
         FFramebuffer* pFramebuffer = pViewportData->Framebuffers[FrameIndex];
         pCommandBuffer->BeginRenderPass(pViewportData->pRenderPass, pFramebuffer, pClearValues, ClearValueCount);
-        
+
         ImGuiRenderDrawData(pViewport->DrawData, pCommandBuffer);
-        
+
         pCommandBuffer->EndRenderPass();
         pCommandBuffer->End();
-        
+
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         VkPipelineStageFlags WaitStage[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         pRendererBackend->pDevice->ExecuteGraphics(pCommandBuffer, pSwapchain, WaitStage);
@@ -1695,7 +1694,7 @@ namespace GUI
         {
             return;
         }
-        
+
         VkResult Result = pViewportData->pSwapchain->Present();
         if (Result == VK_SUBOPTIMAL_KHR || Result == VK_ERROR_OUT_OF_DATE_KHR)
         {
@@ -1719,7 +1718,7 @@ namespace GUI
     {
         ImGuiIO& UIState = ImGui::GetIO();
         assert(UIState.BackendRendererUserData == nullptr);
-        
+
         ImGuiRendererBackendData* pRendererBackend = new ImGuiRendererBackendData();
         assert(pDevice != nullptr);
 
@@ -1730,7 +1729,7 @@ namespace GUI
         UIState.BackendRendererName     = "PathTracer";
         UIState.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset; // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
         UIState.BackendFlags |= ImGuiBackendFlags_RendererHasViewports; // We can create multi-viewports on the Renderer side (optional)
-        
+
         // Create pipelinelayout, renderpass, descriptorsetlayout, pipeline
         ImGuiCreateDeviceObjects();
 
@@ -1742,20 +1741,20 @@ namespace GUI
         {
             pViewportData->pSwapchain  = pRendererBackend->pSwapchain;
             pViewportData->pRenderPass = pRendererBackend->pRenderPass;
-            
+
             ImGuiCreateFramebuffers(pDevice, pViewportData);
             ImGuiCreateWindowRenderBuffers(pDevice, pViewportData);
         }
-        
+
         if (UIState.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGuiInitRendererPlatformInterface();
         }
-        
+
         // Create texture, descriptorset etc.
         ImGuiCreateFontsTexture();
     }
-    
+
     static void ImGuiUpdateMouseData()
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
@@ -1769,7 +1768,7 @@ namespace GUI
 
         ImGuiID MouseViewportID = 0;
         const ImVec2 MousePosPrev = UIState.MousePos;
-        
+
         ImGuiPlatformIO& UIPlatformState = ImGui::GetPlatformIO();
         for (int n = 0; n < UIPlatformState.Viewports.Size; n++)
         {
@@ -1792,7 +1791,7 @@ namespace GUI
                     double MouseX;
                     double MouseY;
                     glfwGetCursorPos(pWindow, &MouseX, &MouseY);
-                    
+
                     if (UIState.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
                     {
                         // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
@@ -1800,11 +1799,11 @@ namespace GUI
                         int window_x;
                         int window_y;
                         glfwGetWindowPos(pWindow, &window_x, &window_y);
-                        
+
                         MouseX += window_x;
                         MouseY += window_y;
                     }
-                    
+
                     pBackend->LastValidMousePos = ImVec2((float)MouseX, (float)MouseY);
                     UIState.AddMousePosEvent((float)MouseX, (float)MouseY);
                 }
@@ -1836,7 +1835,7 @@ namespace GUI
     static void ImGuiUpdateMouseCursor()
     {
         ImGuiIO& UIState = ImGui::GetIO();
-        
+
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
         if ((UIState.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(pBackend->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         {
@@ -1884,13 +1883,13 @@ namespace GUI
         {
             return;
         }
-        
+
     #define MAP_BUTTON(KEY_NO, BUTTON_NO, _UNUSED) \
         do \
         { \
             UIState.AddKeyEvent(KEY_NO, Gamepad.buttons[BUTTON_NO] != 0); \
         } while (0)
-        
+
     #define MAP_ANALOG(KEY_NO, AXIS_NO, _UNUSED, V0, V1) \
         do \
         { \
@@ -1900,30 +1899,30 @@ namespace GUI
         } while (0)
 
         UIState.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-        MAP_BUTTON(ImGuiKey_GamepadStart,       GLFW_GAMEPAD_BUTTON_START,          7);
-        MAP_BUTTON(ImGuiKey_GamepadBack,        GLFW_GAMEPAD_BUTTON_BACK,           6);
-        MAP_BUTTON(ImGuiKey_GamepadFaceLeft,    GLFW_GAMEPAD_BUTTON_X,              2);     // Xbox X, PS Square
-        MAP_BUTTON(ImGuiKey_GamepadFaceRight,   GLFW_GAMEPAD_BUTTON_B,              1);     // Xbox B, PS Circle
-        MAP_BUTTON(ImGuiKey_GamepadFaceUp,      GLFW_GAMEPAD_BUTTON_Y,              3);     // Xbox Y, PS Triangle
-        MAP_BUTTON(ImGuiKey_GamepadFaceDown,    GLFW_GAMEPAD_BUTTON_A,              0);     // Xbox A, PS Cross
-        MAP_BUTTON(ImGuiKey_GamepadDpadLeft,    GLFW_GAMEPAD_BUTTON_DPAD_LEFT,      13);
-        MAP_BUTTON(ImGuiKey_GamepadDpadRight,   GLFW_GAMEPAD_BUTTON_DPAD_RIGHT,     11);
-        MAP_BUTTON(ImGuiKey_GamepadDpadUp,      GLFW_GAMEPAD_BUTTON_DPAD_UP,        10);
-        MAP_BUTTON(ImGuiKey_GamepadDpadDown,    GLFW_GAMEPAD_BUTTON_DPAD_DOWN,      12);
-        MAP_BUTTON(ImGuiKey_GamepadL1,          GLFW_GAMEPAD_BUTTON_LEFT_BUMPER,    4);
-        MAP_BUTTON(ImGuiKey_GamepadR1,          GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER,   5);
-        MAP_ANALOG(ImGuiKey_GamepadL2,          GLFW_GAMEPAD_AXIS_LEFT_TRIGGER,     4,      -0.75f,  +1.0f);
-        MAP_ANALOG(ImGuiKey_GamepadR2,          GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER,    5,      -0.75f,  +1.0f);
-        MAP_BUTTON(ImGuiKey_GamepadL3,          GLFW_GAMEPAD_BUTTON_LEFT_THUMB,     8);
-        MAP_BUTTON(ImGuiKey_GamepadR3,          GLFW_GAMEPAD_BUTTON_RIGHT_THUMB,    9);
-        MAP_ANALOG(ImGuiKey_GamepadLStickLeft,  GLFW_GAMEPAD_AXIS_LEFT_X,           0,      -0.25f,  -1.0f);
-        MAP_ANALOG(ImGuiKey_GamepadLStickRight, GLFW_GAMEPAD_AXIS_LEFT_X,           0,      +0.25f,  +1.0f);
-        MAP_ANALOG(ImGuiKey_GamepadLStickUp,    GLFW_GAMEPAD_AXIS_LEFT_Y,           1,      -0.25f,  -1.0f);
-        MAP_ANALOG(ImGuiKey_GamepadLStickDown,  GLFW_GAMEPAD_AXIS_LEFT_Y,           1,      +0.25f,  +1.0f);
-        MAP_ANALOG(ImGuiKey_GamepadRStickLeft,  GLFW_GAMEPAD_AXIS_RIGHT_X,          2,      -0.25f,  -1.0f);
-        MAP_ANALOG(ImGuiKey_GamepadRStickRight, GLFW_GAMEPAD_AXIS_RIGHT_X,          2,      +0.25f,  +1.0f);
-        MAP_ANALOG(ImGuiKey_GamepadRStickUp,    GLFW_GAMEPAD_AXIS_RIGHT_Y,          3,      -0.25f,  -1.0f);
-        MAP_ANALOG(ImGuiKey_GamepadRStickDown,  GLFW_GAMEPAD_AXIS_RIGHT_Y,          3,      +0.25f,  +1.0f);
+        MAP_BUTTON(ImGuiKey_GamepadStart,       GLFW_GAMEPAD_BUTTON_START,        7);
+        MAP_BUTTON(ImGuiKey_GamepadBack,        GLFW_GAMEPAD_BUTTON_BACK,         6);
+        MAP_BUTTON(ImGuiKey_GamepadFaceLeft,    GLFW_GAMEPAD_BUTTON_X,            2); // Xbox X, PS Square
+        MAP_BUTTON(ImGuiKey_GamepadFaceRight,   GLFW_GAMEPAD_BUTTON_B,            1); // Xbox B, PS Circle
+        MAP_BUTTON(ImGuiKey_GamepadFaceUp,      GLFW_GAMEPAD_BUTTON_Y,            3); // Xbox Y, PS Triangle
+        MAP_BUTTON(ImGuiKey_GamepadFaceDown,    GLFW_GAMEPAD_BUTTON_A,            0); // Xbox A, PS Cross
+        MAP_BUTTON(ImGuiKey_GamepadDpadLeft,    GLFW_GAMEPAD_BUTTON_DPAD_LEFT,    13);
+        MAP_BUTTON(ImGuiKey_GamepadDpadRight,   GLFW_GAMEPAD_BUTTON_DPAD_RIGHT,   11);
+        MAP_BUTTON(ImGuiKey_GamepadDpadUp,      GLFW_GAMEPAD_BUTTON_DPAD_UP,      10);
+        MAP_BUTTON(ImGuiKey_GamepadDpadDown,    GLFW_GAMEPAD_BUTTON_DPAD_DOWN,    12);
+        MAP_BUTTON(ImGuiKey_GamepadL1,          GLFW_GAMEPAD_BUTTON_LEFT_BUMPER,  4);
+        MAP_BUTTON(ImGuiKey_GamepadR1,          GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER, 5);
+        MAP_ANALOG(ImGuiKey_GamepadL2,          GLFW_GAMEPAD_AXIS_LEFT_TRIGGER,   4,  -0.75f, +1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadR2,          GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER,  5,  -0.75f, +1.0f);
+        MAP_BUTTON(ImGuiKey_GamepadL3,          GLFW_GAMEPAD_BUTTON_LEFT_THUMB,   8);
+        MAP_BUTTON(ImGuiKey_GamepadR3,          GLFW_GAMEPAD_BUTTON_RIGHT_THUMB,  9);
+        MAP_ANALOG(ImGuiKey_GamepadLStickLeft,  GLFW_GAMEPAD_AXIS_LEFT_X,         0,  -0.25f, -1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadLStickRight, GLFW_GAMEPAD_AXIS_LEFT_X,         0,  +0.25f, +1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadLStickUp,    GLFW_GAMEPAD_AXIS_LEFT_Y,         1,  -0.25f, -1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadLStickDown,  GLFW_GAMEPAD_AXIS_LEFT_Y,         1,  +0.25f, +1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadRStickLeft,  GLFW_GAMEPAD_AXIS_RIGHT_X,        2,  -0.25f, -1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadRStickRight, GLFW_GAMEPAD_AXIS_RIGHT_X,        2,  +0.25f, +1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadRStickUp,    GLFW_GAMEPAD_AXIS_RIGHT_Y,        3,  -0.25f, -1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadRStickDown,  GLFW_GAMEPAD_AXIS_RIGHT_Y,        3,  +0.25f, +1.0f);
 
     #undef MAP_BUTTON
     #undef MAP_ANALOG
@@ -1975,7 +1974,7 @@ namespace GUI
         int Width;
         int Height;
         glfwGetWindowSize(pBackend->Window, &Width, &Height);
-        
+
         int DisplayWidth;
         int DisplayHeight;
         glfwGetFramebufferSize(pBackend->Window, &DisplayWidth, &DisplayHeight);
@@ -1986,7 +1985,6 @@ namespace GUI
         {
             UIConfig.DisplayFramebufferScale = ImVec2((float)DisplayWidth / (float)Width, (float)DisplayHeight / (float)Height);
         }
-        
         if (pBackend->bWantUpdateMonitors)
         {
             ImGuiUpdateMonitors();
@@ -2010,11 +2008,11 @@ namespace GUI
     void RenderImGui()
     {
         ImGui::Render();
-        
+
         // Render the main window
         ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
         ImGuiRendererRenderWindow(pMainViewport, nullptr);
-        
+
         // Update and Render additional Platform Windows
         ImGuiIO& UIConfig = ImGui::GetIO();
         if (UIConfig.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -2030,16 +2028,16 @@ namespace GUI
 
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
         assert(pBackend != nullptr);
-        
+
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         assert(pRendererBackend != nullptr);
-        
+
         ImGuiViewportData* pViewportData = ImGuiGetMainViewportData();
         assert(pViewportData != nullptr);
         ImGuiDestroyFramebuffers(pViewportData);
 
         ImGui::DestroyPlatformWindows();
-        
+
         if (pBackend->bInstalledCallbacks)
         {
             ImGuiRestoreCallbacks(pBackend->Window);
@@ -2058,7 +2056,7 @@ namespace GUI
         UIState.BackendRendererName     = nullptr;
         UIState.BackendRendererUserData = nullptr;
         SAFE_DELETE(pRendererBackend);
-        
+
         // Destroy the context last
         ImGui::DestroyContext();
     }
@@ -2066,16 +2064,16 @@ namespace GUI
     FDescriptorSet* AllocateTextureID(FTextureView* pTextureView)
     {
         assert(pTextureView != nullptr);
-        
+
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         assert(pRendererBackend != nullptr);
-        
+
         FDescriptorSet* pDescriptorSet = FDescriptorSet::Create(pRendererBackend->pDevice, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
         if (!pDescriptorSet)
         {
             return nullptr;
         }
-        
+
         pRendererBackend->pFontDescriptorSet->SetDebugName("ImGui Texture DescriptorSet");
 
         pDescriptorSet->BindCombinedImageSampler(pTextureView->GetImageView(), pRendererBackend->pImageSampler->GetSampler(), 0);
