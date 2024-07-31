@@ -1,11 +1,16 @@
 #version 460
-#extension GL_EXT_ray_tracing : enable
-#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_nonuniform_qualifier : require
 
-layout(binding = 0, set = 0)          uniform accelerationStructureEXT uAccelerationStructure;
-layout(binding = 1, set = 0, rgba32f) uniform image2D uOutput;
+#include "hw_ray_trace_common.glsl"
+#include "random.glsl"
 
-layout(binding = 2) uniform CameraBufferObject 
+layout(binding = 0) uniform accelerationStructureEXT uAccelerationStructure;
+
+layout (binding = 1, rgba32f) uniform image2D uOutput;
+layout (binding = 2, rgba32f) uniform image2D uPreviousFrame;
+
+layout(binding = 3) uniform CameraBufferObject 
 {
     // 0-64
     mat4 Projection;
@@ -27,16 +32,34 @@ layout(binding = 2) uniform CameraBufferObject
     uint Padding2;
 } uCamera;
 
-layout(location = 0) rayPayloadEXT vec3 HitValue;
+layout(binding = 5) uniform RandomBufferObject 
+{
+    // 0-8
+    uint FrameIndex;
+    uint HaltonIndex;
+
+    // Padding
+    uint Padding0;
+    uint Padding1;
+} uRandom;
+
+layout(location = 0) rayPayloadEXT FRayPayLoad RayPayLoad;
 
 void main() 
 {
+    // Initialize a random Seed
+    uint RandomSeed = InitRandom(uvec2(gl_LaunchIDEXT.xy), uint(gl_LaunchSizeEXT.x), uRandom.FrameIndex);
+
+    vec2 Jitter      = vec2(NextRandom(RandomSeed), NextRandom(RandomSeed)) - 0.5;
 	vec2 PixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-	vec2 TexCoord    = PixelCenter / vec2(gl_LaunchSizeEXT.xy);
+
+    // Calculate TexCoord with Jitter
+	vec2 TexCoord = (PixelCenter + Jitter) / vec2(gl_LaunchSizeEXT.xy);
     TexCoord.y = 1.0 - TexCoord.y;
 
 	vec2 d = TexCoord * 2.0 - 1.0;
 
+    // Calculate primary ray
 	vec4 Origin    = uCamera.InverseView       * vec4(0.0, 0.0, 0.0, 1.0);
 	vec4 Target    = uCamera.InverseProjection * vec4(d.x, d.y, 1.0, 1.0);
 	vec4 Direction = uCamera.InverseView       * vec4(normalize(Target.xyz), 0.0);
@@ -44,9 +67,27 @@ void main()
 	float MinT = 0.001;
 	float MaxT = 10000.0;
 
-    HitValue = vec3(0.0);
+    vec3 RayColor    = vec3(1.0);
+    vec3 SampleColor = vec3(0.0);
 
-    traceRayEXT(uAccelerationStructure, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
+    for (uint i = 0; i < 4; i++)
+    {
+        RayPayLoad.HitNormal   = vec3(0.0);
+        RayPayLoad.HitPosition = vec3(0.0);
+        RayPayLoad.HitAlbedo   = vec3(0.0);
+        RayPayLoad.HitEmissive = vec3(0.0);
 
-	imageStore(uOutput, ivec2(gl_LaunchIDEXT.xy), vec4(HitValue, 0.0));
+        traceRayEXT(uAccelerationStructure, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
+
+        Direction = vec4(normalize(RayPayLoad.HitNormal + NextRandomUnitSphereVec3(RandomSeed)), 0.0);
+        Origin    = vec4(RayPayLoad.HitPosition.xyz + (RayPayLoad.HitNormal * 0.001), 0.0);
+
+        SampleColor += RayPayLoad.HitEmissive * RayColor;
+        RayColor     = RayPayLoad.HitAlbedo * RayColor;
+    }
+	
+    // Accumulate samples over time
+    vec4 PreviousColor = imageLoad(uPreviousFrame, ivec2(gl_LaunchIDEXT.xy));
+    vec3 CurrentColor  = mix(PreviousColor.rgb, SampleColor, 1.0 / float(uRandom.FrameIndex + 1));
+    imageStore(uOutput, ivec2(gl_LaunchIDEXT.xy), vec4(CurrentColor, 0.0));
 }

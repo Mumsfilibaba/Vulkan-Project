@@ -21,6 +21,7 @@ class FBuffer : public FDeviceChild
 public:
     static FBuffer* Create(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator);
     static FBuffer* CreateWithData(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator, const void* pSource);
+    static FBuffer* CreateAndCopy(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator, FBuffer* pSrcBuffer);
 
     FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator = nullptr);
     ~FBuffer();

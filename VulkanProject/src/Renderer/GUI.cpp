@@ -20,6 +20,7 @@
 #elif PLATFORM_MAC
     #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
+
 #include <GLFW/glfw3native.h>
 
 namespace GUI
@@ -37,7 +38,7 @@ namespace GUI
             memset(MouseCursors, 0, sizeof(MouseCursors));
             memset(KeyOwnerWindows, 0, sizeof(KeyOwnerWindows));
         }
-        
+
         GLFWwindow*        Window;
         double             Time;
         GLFWwindow*        MouseWindow;
@@ -46,7 +47,7 @@ namespace GUI
         GLFWwindow*        KeyOwnerWindows[GLFW_KEY_LAST];
         bool               bInstalledCallbacks;
         bool               bWantUpdateMonitors;
-        
+
         // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
         GLFWwindowfocusfun PrevUserCallbackWindowFocus;
         GLFWcursorposfun   PrevUserCallbackCursorPos;
@@ -78,11 +79,11 @@ namespace GUI
             , LastViewportHeight(0)
         {
         }
-        
+
         ~ImGuiRendererBackendData()
         {
             pDevice = nullptr;
-            
+
             SAFE_DELETE(pFontDescriptorSet);
             SAFE_DELETE(pFontSampler);
             SAFE_DELETE(pImageSampler);
@@ -97,7 +98,7 @@ namespace GUI
             SAFE_DELETE(pShaderModuleVert);
             SAFE_DELETE(pShaderModuleFrag);
         }
-        
+
         // Global Objects
         FDevice*              pDevice;
         FSwapchain*           pSwapchain;
@@ -129,14 +130,14 @@ namespace GUI
             , pCommandBuffer(nullptr)
         {
         }
-        
+
         ~ImGuiFrameRenderData()
         {
             SAFE_DELETE(pVertexBuffer);
             SAFE_DELETE(pIndexBuffer);
             SAFE_DELETE(pCommandBuffer);
         }
-        
+
         FBuffer*        pVertexBuffer;
         FBuffer*        pIndexBuffer;
         FCommandBuffer* pCommandBuffer;
@@ -153,7 +154,7 @@ namespace GUI
             , IgnoreWindowSizeEventFrame(0)
         {
         }
-        
+
         ~ImGuiViewportData()
         {
             pWindow = nullptr;
@@ -191,12 +192,12 @@ namespace GUI
         std::vector<FFramebuffer*>        Framebuffers;
         std::vector<ImGuiFrameRenderData> FrameData;
         VkClearValue                      ClearValues;
-        
+
         bool bWindowOwned;
         int  IgnoreWindowSizeEventFrame;
         int  IgnoreWindowPosEventFrame;
     };
-    
+
     static ImGuiBackendData* ImGuiGetBackendData()
     {
         ImGuiBackendData* pBackend = ImGui::GetCurrentContext() ? 
@@ -206,7 +207,7 @@ namespace GUI
         assert(pBackend != nullptr);
         return pBackend;
     }
-    
+
     static ImGuiRendererBackendData* ImGuiGetRendererBackendData()
     {
         ImGuiRendererBackendData* pRendererBackend = ImGui::GetCurrentContext() ? 
@@ -216,7 +217,7 @@ namespace GUI
         assert(pRendererBackend != nullptr);
         return pRendererBackend;
     }
-    
+
     static ImGuiViewportData* ImGuiGetMainViewportData()
     {
         ImGuiViewport* pViewport = ImGui::GetMainViewport();
@@ -340,17 +341,17 @@ namespace GUI
             default:                     return ImGuiKey_None;
         }
     }
-    
+
     static const char* ImGuiGetClipboardText(void* pUserData)
     {
         return glfwGetClipboardString((GLFWwindow*)pUserData);
     }
-    
+
     static void ImGuiSetClipboardText(void* pUserData, const char* Text)
     {
         glfwSetClipboardString((GLFWwindow*)pUserData, Text);
     }
-    
+
     static void ImGuiUpdateKeyModifiers()
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
@@ -361,7 +362,7 @@ namespace GUI
         UIState.AddKeyEvent(ImGuiMod_Alt,   (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_ALT)     == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_ALT)     == GLFW_PRESS));
         UIState.AddKeyEvent(ImGuiMod_Super, (glfwGetKey(pBackend->Window, GLFW_KEY_LEFT_SUPER)   == GLFW_PRESS) || (glfwGetKey(pBackend->Window, GLFW_KEY_RIGHT_SUPER)   == GLFW_PRESS));
     }
-    
+
     void ImGuiMouseButtonCallback(GLFWwindow* pWindow, int Button, int Action, int Mods)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
@@ -378,7 +379,7 @@ namespace GUI
             UIState.AddMouseButtonEvent(Button, Action == GLFW_PRESS);
         }
     }
-    
+
     void ImGuiScrollCallback(GLFWwindow* pWindow, double OffsetX, double OffsetY)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
@@ -390,7 +391,7 @@ namespace GUI
         ImGuiIO& UIState = ImGui::GetIO();
         UIState.AddMouseWheelEvent((float)OffsetX, (float)OffsetY);
     }
-    
+
     static int ImGuiTranslateUntranslatedKey(int Key, int Scancode)
     {
         // GLFW 3.1+ attempts to "untranslate" keys, which goes the opposite of what every other framework does, making using lettered shortcuts difficult.
@@ -402,14 +403,14 @@ namespace GUI
         {
             return Key;
         }
-        
+
         GLFWerrorfun PrevErrorCallback = glfwSetErrorCallback(nullptr);
         const char* KeyName = glfwGetKeyName(Key, Scancode);
         glfwSetErrorCallback(PrevErrorCallback);
-        
+
         // Eat errors
         (void)glfwGetError(0);
-        
+
         if (KeyName && KeyName[0] != 0 && KeyName[1] == 0)
         {
             const int charKeys[] =
@@ -427,10 +428,10 @@ namespace GUI
                 GLFW_KEY_SLASH,
                 0
             };
-            
+
             const char CharNames[] = "`-=[]\\,;\'./";
             assert(IM_ARRAYSIZE(CharNames) == IM_ARRAYSIZE(charKeys));
-            
+
             if (KeyName[0] >= '0' && KeyName[0] <= '9')
             {
                 Key = GLFW_KEY_0 + (KeyName[0] - '0');

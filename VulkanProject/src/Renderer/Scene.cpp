@@ -4,12 +4,16 @@
 
 #define SPONZA 1
 
-FScene::FScene()
-    : m_Camera()
+FScene::FScene(FDevice* pDevice)
+    : m_pDevice(pDevice)
+    , m_Camera()
     , m_CameraSpeed(1.0f)
-    , pTopLevelAS(nullptr)
-    , pBottomLevelAS(nullptr)
+    , m_pVertexBuffer(nullptr)
+    , m_pIndexBuffer(nullptr)
+    , m_pTopLevelAS(nullptr)
+    , m_pBottomLevelAS(nullptr)
 {
+    assert(pDevice != nullptr);
 }
 
 FScene::~FScene()
@@ -19,8 +23,10 @@ FScene::~FScene()
         pDevice->WaitForIdle();
     }
 
-    SAFE_DELETE(pBottomLevelAS);
-    SAFE_DELETE(pTopLevelAS);
+    SAFE_DELETE(m_pVertexBuffer);
+    SAFE_DELETE(m_pIndexBuffer);
+    SAFE_DELETE(m_pBottomLevelAS);
+    SAFE_DELETE(m_pTopLevelAS);
 }
 
 void FScene::Initialize()
@@ -35,18 +41,40 @@ void FScene::Initialize()
     m_CameraSpeed = 1.5f;
 #endif
 
+    FBufferParams VertexBufferParams = {};
+    VertexBufferParams.Size             = Model.GetVertexCount() * sizeof(FVertex);
+    VertexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+    VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+
+    m_pVertexBuffer = FBuffer::CreateAndCopy(FApplication::Get().GetDevice(), VertexBufferParams, nullptr, Model.GetVertexBuffer());
+    assert(m_pVertexBuffer != nullptr);
+    m_pVertexBuffer->SetDebugName("Scene VertexBuffer");
+
+    FBufferParams IndexBufferParams = {};
+    IndexBufferParams.Size             = Model.GetIndexCount() * sizeof(uint32_t);
+    IndexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+    IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+
+    m_pIndexBuffer = FBuffer::CreateAndCopy(FApplication::Get().GetDevice(), IndexBufferParams, nullptr, Model.GetIndexBuffer());
+    assert(m_pIndexBuffer != nullptr);
+    m_pIndexBuffer->SetDebugName("Scene IndexBuffer");
+
+    FMeshInfo& MeshInfo = m_MeshInfoBuffer.emplace_back();
+    MeshInfo.VertexBufferAddress = m_pVertexBuffer->GetDeviceAddress().deviceAddress;
+    MeshInfo.IndexBufferAddress  = m_pIndexBuffer->GetDeviceAddress().deviceAddress;
+
     FAccelerationStructureBLASParams BLASParams;
-    BLASParams.pVertexBuffer = Model.GetVertexBuffer();
-    BLASParams.pIndexBuffer  = Model.GetIndexBuffer();
+    BLASParams.pVertexBuffer = m_pVertexBuffer;
+    BLASParams.pIndexBuffer  = m_pIndexBuffer;
     BLASParams.VertexCount   = Model.GetIndexCount();
     BLASParams.VertexStride  = sizeof(FVertex);
 
-    pBottomLevelAS = FAccelerationStructure::CreateBLAS(FApplication::Get().GetDevice(), BLASParams);
-    assert(pBottomLevelAS != nullptr);
+    m_pBottomLevelAS = FAccelerationStructure::CreateBLAS(FApplication::Get().GetDevice(), BLASParams);
+    assert(m_pBottomLevelAS != nullptr);
 
     FAccelerationStructureTLASParams TLASParams;
-    TLASParams.pAccelerationStructures = pBottomLevelAS;
+    TLASParams.pAccelerationStructures = m_pBottomLevelAS;
 
-    pTopLevelAS = FAccelerationStructure::CreateTLAS(FApplication::Get().GetDevice(), TLASParams);
-    assert(pTopLevelAS != nullptr);
+    m_pTopLevelAS = FAccelerationStructure::CreateTLAS(FApplication::Get().GetDevice(), TLASParams);
+    assert(m_pTopLevelAS != nullptr);
 }

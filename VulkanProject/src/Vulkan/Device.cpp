@@ -538,10 +538,15 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
     }
 
     ZERO_STRUCT(&m_EnabledDeviceFeatures);
-    m_EnabledDeviceFeatures.sType                      = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    m_EnabledDeviceFeatures.pNext                      = &m_EnabledDeviceFeatures12;
-    m_EnabledDeviceFeatures.features.fillModeNonSolid  = VK_TRUE;
-    m_EnabledDeviceFeatures.features.samplerAnisotropy = VK_TRUE;
+    m_EnabledDeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    m_EnabledDeviceFeatures.pNext = &m_EnabledDeviceFeatures12;
+
+    if (m_DeviceFeatures.features.fillModeNonSolid)
+        m_EnabledDeviceFeatures.features.fillModeNonSolid = VK_TRUE;
+    if (m_DeviceFeatures.features.samplerAnisotropy)
+        m_EnabledDeviceFeatures.features.samplerAnisotropy = VK_TRUE;
+    if (m_DeviceFeatures.features.shaderInt64)
+        m_EnabledDeviceFeatures.features.shaderInt64 = VK_TRUE;
 
     const bool bBindlessSupported =
         m_DeviceFeatures12.descriptorBindingPartiallyBound && m_DeviceFeatures12.runtimeDescriptorArray &&

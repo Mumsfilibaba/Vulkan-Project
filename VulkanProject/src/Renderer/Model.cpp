@@ -74,6 +74,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
     
     std::vector<FVertex>  Vertices;
     std::vector<uint32_t> Indices;
+
     std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices = {};
     for (const tinyobj::shape_t& Shape : TinyObjShapes)
     {
@@ -110,7 +111,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
                 Vertex.TexCoord =
                 {
                     TinyObjAttrib.texcoords[BaseTexCoordIndex + 0],
-                    1.0f - TinyObjAttrib.texcoords[BaseTexCoordIndex + 1]
+                    1.0f - TinyObjAttrib.texcoords[BaseTexCoordIndex + 1],
                 };
             }
 
@@ -128,7 +129,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
     
     FBufferParams VertexBufferParams = {};
     VertexBufferParams.Size             = Vertices.size() * sizeof(FVertex);
-    VertexBufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+    VertexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
     m_pVertexBuffer = FBuffer::CreateWithData(pDevice, VertexBufferParams, nullptr, Vertices.data());
@@ -136,11 +137,11 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
 
     FBufferParams IndexBufferParams = {};
     IndexBufferParams.Size             = Indices.size() * sizeof(uint32_t);
-    IndexBufferParams.Usage            = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+    IndexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
     m_pIndexBuffer = FBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, Indices.data());
-    assert(m_pVertexBuffer != nullptr);
+    assert(m_pIndexBuffer != nullptr);
 
     m_VertexCount = Vertices.size();
     m_IndexCount  = Indices.size();

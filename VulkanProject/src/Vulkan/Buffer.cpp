@@ -161,6 +161,53 @@ FBuffer* FBuffer::CreateWithData(FDevice* pDevice, const FBufferParams& Params, 
     return pBuffer;
 }
 
+FBuffer* FBuffer::CreateAndCopy(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator, FBuffer* pSrcBuffer)
+{
+    if (!pSrcBuffer)
+    {
+        LOG("SrcBuffer cannot be nullptr");
+        return nullptr;
+    }
+
+    FBuffer* pBuffer = FBuffer::Create(pDevice, Params, pAllocator);
+    if (!pBuffer)
+    {
+        return nullptr;
+    }
+
+    FCommandBufferParams CommandBufferParams = {};
+    CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    CommandBufferParams.QueueType = ECommandQueueType::Graphics;
+
+    FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
+    if (!pCommandBuffer)
+    {
+        SAFE_DELETE(pBuffer);
+        return nullptr;
+    }
+    else
+    {
+        pCommandBuffer->SetDebugName("FBuffer::CreateAndCopy CommandBuffer");
+    }
+
+    pCommandBuffer->Reset();
+    pCommandBuffer->Begin();
+
+    VkBufferCopy BufferCopy;
+    BufferCopy.size      = pSrcBuffer->GetSize();
+    BufferCopy.dstOffset = 0;
+    BufferCopy.srcOffset = 0;
+
+    pCommandBuffer->CopyBuffer(pSrcBuffer->GetBuffer(), pBuffer->GetBuffer(), 1, &BufferCopy);
+    pCommandBuffer->End();
+
+    pDevice->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
+    pDevice->WaitForIdle();
+
+    SAFE_DELETE(pCommandBuffer);
+    return pBuffer;
+}
+
 FBuffer::FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator)
     : FDeviceChild(pDevice)
     , m_pAllocator(pAllocator)

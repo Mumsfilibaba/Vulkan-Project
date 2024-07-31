@@ -4,9 +4,15 @@
 #include "IScene.h"
 #include "Vulkan/AccelerationStructure.h"
 
+struct FMeshInfo
+{
+    uint64_t VertexBufferAddress = 0;
+    uint64_t IndexBufferAddress  = 0;
+};
+
 struct FScene : public IScene
 {
-    FScene();
+    FScene(FDevice* pDevice);
     virtual ~FScene();
 
     // IScene Interface
@@ -22,9 +28,17 @@ struct FScene : public IScene
     virtual FCamera& GetCamera() override { return m_Camera; }
     virtual const FCamera& GetCamera() const override { return m_Camera; }
 
+    // Cache the device
+    FDevice* m_pDevice;
+
     FCamera m_Camera;
     float   m_CameraSpeed;
 
-    FAccelerationStructure* pTopLevelAS;
-    FAccelerationStructure* pBottomLevelAS;
+    // Vulkan Resources
+    FBuffer*                m_pVertexBuffer;
+    FBuffer*                m_pIndexBuffer;
+    FAccelerationStructure* m_pTopLevelAS;
+    FAccelerationStructure* m_pBottomLevelAS;
+
+    std::vector<FMeshInfo>  m_MeshInfoBuffer;
 };

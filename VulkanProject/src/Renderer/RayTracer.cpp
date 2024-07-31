@@ -11,9 +11,12 @@
 FRayTracer::FRayTracer()
     : FBaseRenderer()
     , m_pScene(nullptr)
+    , m_pMeshBuffer(nullptr)
     , m_pRayTracingPipeline(nullptr)
     , m_pRayTracingPipelineLayout(nullptr)
     , m_pRayTracingDescriptorSetLayout(nullptr)
+    , m_pRayTracingDescriptorSet0(nullptr)
+    , m_pRayTracingDescriptorSet1(nullptr)
 {
 }
 
@@ -23,11 +26,11 @@ FRayTracer::~FRayTracer()
 
 void FRayTracer::CreateResources()
 {
-    m_pScene = new FScene();
+    m_pScene = new FScene(GetDevice());
     m_pScene->Initialize();
 
     // Create RayTracing DescriptorSetLayout
-    constexpr uint32_t NumRayTracingBindings = 3;
+    constexpr uint32_t NumRayTracingBindings = 6;
     VkDescriptorSetLayoutBinding RayTracingBindings[NumRayTracingBindings];
     
     // Acceleration structure
@@ -43,13 +46,34 @@ void FRayTracer::CreateResources()
     RayTracingBindings[1].descriptorCount    = 1;
     RayTracingBindings[1].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
     RayTracingBindings[1].pImmutableSamplers = nullptr;
-    
-    // Camera Buffer
+
+    // Previous Image
     RayTracingBindings[2].binding            = 2;
-    RayTracingBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    RayTracingBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     RayTracingBindings[2].descriptorCount    = 1;
     RayTracingBindings[2].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
     RayTracingBindings[2].pImmutableSamplers = nullptr;
+    
+    // Camera Buffer
+    RayTracingBindings[3].binding            = 3;
+    RayTracingBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    RayTracingBindings[3].descriptorCount    = 1;
+    RayTracingBindings[3].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    RayTracingBindings[3].pImmutableSamplers = nullptr;
+
+    // MeshBuffer
+    RayTracingBindings[4].binding            = 4;
+    RayTracingBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    RayTracingBindings[4].descriptorCount    = 1;
+    RayTracingBindings[4].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    RayTracingBindings[4].pImmutableSamplers = nullptr;
+
+    // Random Buffer
+    RayTracingBindings[5].binding            = 5;
+    RayTracingBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    RayTracingBindings[5].descriptorCount    = 1;
+    RayTracingBindings[5].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    RayTracingBindings[5].pImmutableSamplers = nullptr;
 
     FDescriptorSetLayoutParams RayTracingDescriptorSetLayoutParams;
     RayTracingDescriptorSetLayoutParams.pBindings   = RayTracingBindings;
@@ -98,6 +122,7 @@ void FRayTracer::CreateResources()
 void FRayTracer::ReleaseResources()
 {
     SAFE_DELETE(m_pScene);
+    SAFE_DELETE(m_pMeshBuffer);
     SAFE_DELETE(m_pRayTracingPipeline);
     SAFE_DELETE(m_pRayTracingPipelineLayout);
     SAFE_DELETE(m_pRayTracingDescriptorSetLayout);
@@ -118,17 +143,23 @@ void FRayTracer::CreateDescriptorSets()
     assert(m_pRayTracingDescriptorSet0 != nullptr);
     m_pRayTracingDescriptorSet0->SetDebugName("RayTracingPass DescriptorSet0");
 
-    m_pRayTracingDescriptorSet0->BindAccelerationStructure(m_pScene->pTopLevelAS->GetAccelerationStructure(), 0);
+    m_pRayTracingDescriptorSet0->BindAccelerationStructure(m_pScene->m_pTopLevelAS->GetAccelerationStructure(), 0);
     m_pRayTracingDescriptorSet0->BindStorageImage(m_pSceneTextureView0->GetImageView(), 1);
-    m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 2);
+    m_pRayTracingDescriptorSet0->BindStorageImage(m_pSceneTextureView1->GetImageView(), 2);
+    m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 3);
+    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 4);
+    m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 5);
 
     m_pRayTracingDescriptorSet1 = FDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pRayTracingDescriptorSetLayout);
     assert(m_pRayTracingDescriptorSet1 != nullptr);
     m_pRayTracingDescriptorSet1->SetDebugName("RayTracingPass DescriptorSet1");
 
-    m_pRayTracingDescriptorSet1->BindAccelerationStructure(m_pScene->pTopLevelAS->GetAccelerationStructure(), 0);
+    m_pRayTracingDescriptorSet1->BindAccelerationStructure(m_pScene->m_pTopLevelAS->GetAccelerationStructure(), 0);
     m_pRayTracingDescriptorSet1->BindStorageImage(m_pSceneTextureView1->GetImageView(), 1);
-    m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 2);
+    m_pRayTracingDescriptorSet1->BindStorageImage(m_pSceneTextureView0->GetImageView(), 2);
+    m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 3);
+    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 4);
+    m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 5);
 }
 
 void FRayTracer::ReleaseDescriptorSets()
@@ -141,6 +172,9 @@ void FRayTracer::ReleaseDescriptorSets()
 
 void FRayTracer::Render(FCommandBuffer* pCommandBuffer)
 {
+    // Update necessary buffers
+    // UpdateGlobalBuffers(pCommandBuffer);
+
     // Perform RayTracing
     pCommandBuffer->BindRayTracingPipelineState(m_pRayTracingPipeline);
     
@@ -174,4 +208,29 @@ void FRayTracer::RenderSceneUI()
 
 void FRayTracer::ReloadShaders()
 {
+}
+
+void FRayTracer::CreateGlobalBuffers()
+{
+    FBaseRenderer::CreateGlobalBuffers();
+
+    FBufferParams MeshBufferParams = {};
+    MeshBufferParams.Size             = m_pScene->m_MeshInfoBuffer.size() * sizeof(FMeshInfo);
+    MeshBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    MeshBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+
+    m_pMeshBuffer = FBuffer::CreateWithData(GetDevice(), MeshBufferParams, nullptr, m_pScene->m_MeshInfoBuffer.data());
+    assert(m_pMeshBuffer != nullptr);
+    m_pMeshBuffer->SetDebugName("MeshInfo-Buffer");
+}
+
+void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
+{
+    // Update GPU buffers
+    if (!m_pScene->m_MeshInfoBuffer.empty())
+    {
+        pCommandBuffer->FillBuffer(m_pMeshBuffer, 0, m_pMeshBuffer->GetSize(), 0);
+        assert(sizeof(FMeshInfo) * m_pScene->m_MeshInfoBuffer.size() < m_pMeshBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(FMeshInfo) * m_pScene->m_MeshInfoBuffer.size(), m_pScene->m_MeshInfoBuffer.data());
+    }
 }
