@@ -19,12 +19,12 @@ class FApplication
 {
 public:
     static FApplication* Create();
-    
+
     static FApplication& Get()
     {
         return *GAppInstance;
     }
-    
+
     FApplication();
     ~FApplication();
 
@@ -32,7 +32,7 @@ public:
     void Tick();
     void Release();
     bool CreateWindow();
-    
+
     void OnWindowMinimized(GLFWwindow* pWindow, int32_t Minimized);
     void OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height);
     void OnWindowClose(GLFWwindow* pWindow);

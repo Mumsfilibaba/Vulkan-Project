@@ -23,13 +23,13 @@ class FSampler;
 
 enum class ESoftwareViewMode : uint32_t
 {
-    Render = 0,
-    Normals = 1,
-    Albedo = 2,
-    Barycentrics = 3,
-    TexCoords = 4,
+    Render          = 0,
+    Normals         = 1,
+    Albedo          = 2,
+    Barycentrics    = 3,
+    TexCoords       = 4,
     BVHIntersection = 5,
-    Debug = 6,
+    Debug           = 6,
 };
 
 struct FSoftwareSceneSettings
@@ -100,7 +100,7 @@ struct FSoftwareScene : public IScene
 enum class EModelSceneType
 {
     Default = 1,
-    Sponza = 2,
+    Sponza  = 2,
 };
 
 struct FModelScene : public FSoftwareScene
@@ -118,10 +118,10 @@ struct FModelScene : public FSoftwareScene
 
 enum class ESphereSceneType
 {
-    Default = 1,
+    Default           = 1,
     ColoredRoughGlass = 2,
-    PolishedGlass = 3,
-    RoughGlass = 4, 
+    PolishedGlass     = 3,
+    RoughGlass        = 4,
 };
 
 struct FSphereScene : public FSoftwareScene

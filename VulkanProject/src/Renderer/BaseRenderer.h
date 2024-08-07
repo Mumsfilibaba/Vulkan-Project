@@ -120,10 +120,10 @@ protected:
 private:
 
     // Base Objects
-    FDevice*                     m_pDevice;
-    FSwapchain*                  m_pSwapchain;
-    FDeviceMemoryAllocator*      m_pDeviceAllocator;
-    FDescriptorPool*             m_pDescriptorPool;
+    FDevice*                m_pDevice;
+    FSwapchain*             m_pSwapchain;
+    FDeviceMemoryAllocator* m_pDeviceAllocator;
+    FDescriptorPool*        m_pDescriptorPool;
 
     // Frame-Data
     std::vector<FCommandBuffer*> m_CommandBuffers;
@@ -134,8 +134,8 @@ private:
     uint64_t         m_FrameIndex;
 
     // Stats
-    float    m_LastCPUTime;
-    float    m_LastGPUTime;
+    float m_LastCPUTime;
+    float m_LastGPUTime;
 
     // Viewport
     uint32_t m_ViewportWidth;
@@ -143,12 +143,13 @@ private:
     bool     m_bViewportHasFocus;
 
     // Scene textures
-    FDescriptorSet*       m_pOutputTextureDescriptorSet;
+    FDescriptorSet* m_pOutputTextureDescriptorSet;
 
     // Samplers
-    FSampler*             m_pTonemapSampler;
+    FSampler* m_pTonemapSampler;
 
     // ToneMapping
+    FBuffer*              m_pTonemappingBuffer;
     FGraphicsPipeline*    m_pTonemappingPipeline;
     FRenderPass*          m_pTonemappingRenderPass;
     FPipelineLayout*      m_pTonemappingPipelineLayout;
@@ -156,7 +157,4 @@ private:
     FDescriptorSet*       m_pTonemappingDescriptorSet0;
     FDescriptorSet*       m_pTonemappingDescriptorSet1;
     FFramebuffer*         m_pTonemappingFramebuffer;
-
-    // Buffers
-    FBuffer*              m_pTonemappingBuffer;
 };

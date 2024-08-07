@@ -15,6 +15,6 @@ namespace GUI
     void ReleaseImGui();
 
     void OnSwapchainRecreated();
-    
+
     FDescriptorSet* AllocateTextureID(FTextureView* pTextureView);
 }

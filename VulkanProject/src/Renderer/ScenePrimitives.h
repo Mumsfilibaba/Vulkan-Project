@@ -4,9 +4,9 @@
 enum class EObjectType : uint32_t
 {
     RootNode = 0,
-    Sphere = 1,
-    Quad = 2,
-    Mesh = 3
+    Sphere   = 1,
+    Quad     = 2,
+    Mesh     = 3
 };
 
 struct FShaderSphere

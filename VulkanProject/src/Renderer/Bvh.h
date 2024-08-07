@@ -9,13 +9,11 @@ struct FShaderBoundingBox
 {
     // 0-16
     glm::vec3 BoxMin;
-    
-    // Depending on the context this is etiher first child index or frist triangle index
-    uint32_t PrimitiveIndex = 0;
-    
+    // Depending on the context this is either first child index or first triangle index
+    uint32_t PrimitiveIndex = 0; 
     // 16-32
     glm::vec3 BoxMax;
-    uint32_t NumTriangles = 0;
+    uint32_t  NumTriangles = 0;
 };
 
 struct FAABB

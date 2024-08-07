@@ -82,7 +82,7 @@ struct FVertexPosOnly
 
         return BindingDescriptions;
     }
-    
+
     static VkVertexInputAttributeDescription* GetAttributeDescriptions()
     {
         static VkVertexInputAttributeDescription AttributeDescriptions[1];
@@ -94,7 +94,7 @@ struct FVertexPosOnly
 
         return AttributeDescriptions;
     }
-    
+
     bool operator==(const FVertexPosOnly& Other) const
     {
         return Position == Other.Position;
@@ -135,7 +135,7 @@ struct FVertexAABB
 
         return AttributeDescriptions;
     }
-    
+
     bool operator==(const FVertexAABB& Other) const
     {
         return Position == Other.Position;
@@ -206,7 +206,7 @@ struct FTriangleInfo
 struct FMesh
 {
     bool LoadFromFile(const std::string& Filepath);
-    
+
     std::vector<FTriangleInfo>  TriangleInfo;
     std::vector<uint32_t>       Indicies;
     std::vector<FVertexPosOnly> Vertices;
