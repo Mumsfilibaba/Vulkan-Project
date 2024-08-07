@@ -203,7 +203,6 @@ void FApplication::Tick()
 void FApplication::Release()
 {
     m_pDevice->WaitForIdle();
-
     m_pRenderer->Release();
 
     GUI::ReleaseImGui();

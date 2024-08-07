@@ -344,12 +344,12 @@ namespace GUI
 
     static const char* ImGuiGetClipboardText(void* pUserData)
     {
-        return glfwGetClipboardString((GLFWwindow*)pUserData);
+        return glfwGetClipboardString(reinterpret_cast<GLFWwindow*>(pUserData));
     }
 
     static void ImGuiSetClipboardText(void* pUserData, const char* Text)
     {
-        glfwSetClipboardString((GLFWwindow*)pUserData, Text);
+        glfwSetClipboardString(reinterpret_cast<GLFWwindow*>(pUserData), Text);
     }
 
     static void ImGuiUpdateKeyModifiers()
@@ -580,7 +580,7 @@ namespace GUI
     {
         if (ImGuiViewport* pViewport = ImGui::FindViewportByPlatformHandle(pWindow))
         {
-            if (ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData)
+            if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData))
             {
                 bool bIgnoreEvent = ImGui::GetFrameCount() <= (pViewportData->IgnoreWindowPosEventFrame + 1);
                 if (bIgnoreEvent)
@@ -597,7 +597,7 @@ namespace GUI
     {
         if (ImGuiViewport* pViewport = ImGui::FindViewportByPlatformHandle(pWindow))
         {
-            if (ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData)
+            if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData))
             {
                 bool bIgnoreEvent = ImGui::GetFrameCount() <= (pViewportData->IgnoreWindowSizeEventFrame + 1);
                 if (bIgnoreEvent)
@@ -708,7 +708,9 @@ namespace GUI
     
     static void ImGuiCreateWindow(ImGuiViewport* pViewport)
     {
-        ImGuiBackendData*  pBackend      = ImGuiGetBackendData();
+        ImGuiBackendData* pBackend = ImGuiGetBackendData();
+        assert(pBackend != nullptr);
+
         ImGuiViewportData* pViewportData = new ImGuiViewportData();
         pViewport->PlatformUserData = pViewportData;
 
@@ -745,7 +747,7 @@ namespace GUI
     static void ImGuiDestroyWindow(ImGuiViewport* pViewport)
     {
         ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        if (ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData)
+        if (ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData))
         {
             if (pViewportData->bWindowOwned)
             {
@@ -771,7 +773,7 @@ namespace GUI
 
     static void ImGuiShowWindow(ImGuiViewport* pViewport)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
         
     #if PLATFORM_WINDOWS
         // GLFW hack: Hide icon from task bar
@@ -790,7 +792,7 @@ namespace GUI
 
     static ImVec2 ImGuiGetWindowPos(ImGuiViewport* pViewport)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
 
         int PosX = 0;
         int PosY = 0;
@@ -800,14 +802,14 @@ namespace GUI
 
     static void ImGuiSetWindowPos(ImGuiViewport* pViewport, ImVec2 Pos)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
         pViewportData->IgnoreWindowPosEventFrame = ImGui::GetFrameCount();
         glfwSetWindowPos(pViewportData->pWindow, (int)Pos.x, (int)Pos.y);
     }
 
     static ImVec2 ImGuiGetWindowSize(ImGuiViewport* pViewport)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
 
         int Width  = 0;
         int Height = 0;
@@ -817,38 +819,38 @@ namespace GUI
 
     static void ImGuiSetWindowSize(ImGuiViewport* pViewport, ImVec2 Size)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
         pViewportData->IgnoreWindowSizeEventFrame = ImGui::GetFrameCount();
         glfwSetWindowSize(pViewportData->pWindow, (int)Size.x, (int)Size.y);
     }
 
     static void ImGuiSetWindowTitle(ImGuiViewport* pViewport, const char* Title)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
         glfwSetWindowTitle(pViewportData->pWindow, Title);
     }
 
     static void ImGuiSetWindowFocus(ImGuiViewport* pViewport)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
         glfwFocusWindow(pViewportData->pWindow);
     }
 
     static bool ImGuiGetWindowFocus(ImGuiViewport* pViewport)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
         return glfwGetWindowAttrib(pViewportData->pWindow, GLFW_FOCUSED) != 0;
     }
 
     static bool ImGuiGetWindowMinimized(ImGuiViewport* pViewport)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
         return glfwGetWindowAttrib(pViewportData->pWindow, GLFW_ICONIFIED) != 0;
     }
 
     static void ImGuiSetWindowAlpha(ImGuiViewport* pViewport, float Alpha)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
         glfwSetWindowOpacity(pViewportData->pWindow, Alpha);
     }
 
@@ -862,7 +864,7 @@ namespace GUI
 
     static int ImGuiCreateVkSurface(ImGuiViewport* pViewport, ImU64 Instance, const void* Allocator, ImU64* OutSurface)
     {
-        ImGuiViewportData* pViewportData = (ImGuiViewportData*)pViewport->PlatformUserData;
+        ImGuiViewportData* pViewportData = reinterpret_cast<ImGuiViewportData*>(pViewport->PlatformUserData);
         VkResult Result = glfwCreateWindowSurface((VkInstance)Instance, pViewportData->pWindow, (const VkAllocationCallbacks*)Allocator, (VkSurfaceKHR*)OutSurface);
         return (int)Result;
     }
@@ -1293,7 +1295,7 @@ namespace GUI
 
     static void ImGuiDestroyFramebuffers(ImGuiViewportData* pViewportData)
     {
-        for (auto& pFramebuffer : pViewportData->Framebuffers)
+        for (FFramebuffer* pFramebuffer : pViewportData->Framebuffers)
         {
             SAFE_DELETE(pFramebuffer);
         }
@@ -1504,8 +1506,8 @@ namespace GUI
         ImGuiRendererBackendData* pRendererbackend = ImGuiGetRendererBackendData();
 
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-        int FrameBufferWidth  = (int)(pDrawData->DisplaySize.x * pDrawData->FramebufferScale.x);
-        int FrameBufferHeight = (int)(pDrawData->DisplaySize.y * pDrawData->FramebufferScale.y);
+        int FrameBufferWidth  = static_cast<int>(pDrawData->DisplaySize.x * pDrawData->FramebufferScale.x);
+        int FrameBufferHeight = static_cast<int>(pDrawData->DisplaySize.y * pDrawData->FramebufferScale.y);
         if (FrameBufferWidth <= 0 || FrameBufferHeight <= 0)
         {
             return;
@@ -1616,14 +1618,14 @@ namespace GUI
 
                     // Apply scissor/clipping rectangle
                     VkRect2D Scissor;
-                    Scissor.offset.x      = (int32_t)(ClipMin.x);
-                    Scissor.offset.y      = (int32_t)(ClipMin.y);
-                    Scissor.extent.width  = (uint32_t)(ClipMax.x - ClipMin.x);
-                    Scissor.extent.height = (uint32_t)(ClipMax.y - ClipMin.y);
+                    Scissor.offset.x      = static_cast<int32_t>(ClipMin.x);
+                    Scissor.offset.y      = static_cast<int32_t>(ClipMin.y);
+                    Scissor.extent.width  = static_cast<uint32_t>(ClipMax.x - ClipMin.x);
+                    Scissor.extent.height = static_cast<uint32_t>(ClipMax.y - ClipMin.y);
                     pCommandBuffer->SetScissorRect(Scissor);
 
                     // Retrieve DescriptorSet
-                    FDescriptorSet* pDescriptorSet = (FDescriptorSet*)pDrawCmd->TextureId;
+                    FDescriptorSet* pDescriptorSet = reinterpret_cast<FDescriptorSet*>(pDrawCmd->TextureId);
                     if constexpr (sizeof(ImTextureID) < sizeof(ImU64))
                     {
                         // We don't support texture switches if ImTextureID hasn't been redefined to be 64-bit. Do a flaky check that other textures haven't been used.
@@ -1651,7 +1653,7 @@ namespace GUI
         // In theory we should aim to backup/restore those values but I am not sure this is possible.
         // We perform a call to vkCmdSetScissor() to set back a full viewport which is likely to fix things for 99% users but technically this is not perfect. (See github #4644)
 
-        VkRect2D Scissor = { { 0, 0 }, { (uint32_t)FrameBufferWidth, (uint32_t)FrameBufferHeight } };
+        VkRect2D Scissor = { { 0, 0 }, { static_cast<uint32_t>(FrameBufferWidth), static_cast<uint32_t>(FrameBufferHeight) } };
         pCommandBuffer->SetScissorRect(Scissor);
     }
     
@@ -2026,18 +2028,14 @@ namespace GUI
     void ReleaseImGui()
     {
         // At this point the device should already be idle
-
-        ImGuiBackendData* pBackend = ImGuiGetBackendData();
-        assert(pBackend != nullptr);
-
+        ImGuiBackendData*         pBackend         = ImGuiGetBackendData();
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
-        assert(pRendererBackend != nullptr);
 
+        // Destroy MainWindow
         ImGuiViewportData* pViewportData = ImGuiGetMainViewportData();
         assert(pViewportData != nullptr);
-        ImGuiDestroyFramebuffers(pViewportData);
 
-        ImGui::DestroyPlatformWindows();
+        ImGuiDestroyFramebuffers(pViewportData);
 
         if (pBackend->bInstalledCallbacks)
         {
@@ -2049,17 +2047,13 @@ namespace GUI
             glfwDestroyCursor(pBackend->MouseCursors[n]);
         }
 
-        ImGuiIO& UIState = ImGui::GetIO();
-        UIState.BackendPlatformName     = nullptr;
-        UIState.BackendPlatformUserData = nullptr;
-        SAFE_DELETE(pBackend);
-
-        UIState.BackendRendererName     = nullptr;
-        UIState.BackendRendererUserData = nullptr;
-        SAFE_DELETE(pRendererBackend);
-
-        // Destroy the context last
+        // Destroy the context (This also destroys any remaining window) and any platform-window
+        ImGui::DestroyPlatformWindows();
         ImGui::DestroyContext();
+
+        // Last thing we do is to destroy the backends
+        SAFE_DELETE(pBackend);
+        SAFE_DELETE(pRendererBackend);
     }
     
     FDescriptorSet* AllocateTextureID(FTextureView* pTextureView)
