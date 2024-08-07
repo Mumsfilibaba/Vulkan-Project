@@ -144,39 +144,41 @@ struct FVertexAABBHasher
     }
 };
 
-class FModel
+struct FMaterial
 {
-public:
+    std::shared_ptr<FTextureResource> AlbedoTex;
+    std::shared_ptr<FTextureResource> NormalTex;
+};
+
+struct FModel
+{
+    struct FSubMesh
+    {
+        FSubMesh()
+            : IndexCount(0)
+            , IndexOffset(0)
+            , VertexCount(0)
+            , VertexOffset(0)
+        {
+        }
+
+        uint32_t IndexCount;
+        uint32_t IndexOffset;
+        uint32_t VertexCount;
+        uint32_t VertexOffset;
+    };
+
     FModel();
     ~FModel();
-    
+
     bool LoadFromFile(const std::string& filepath, FDevice* pDevice);
-    
-    FBuffer* GetVertexBuffer() const
-    {
-        return m_pVertexBuffer;
-    }
-    
-    FBuffer* GetIndexBuffer() const
-    {
-        return m_pIndexBuffer;
-    }
-    
-    uint32_t GetVertexCount() const
-    {
-        return m_VertexCount;
-    }
-    
-    uint32_t GetIndexCount() const
-    {
-        return m_IndexCount;
-    }
-    
-private:
-    FBuffer* m_pVertexBuffer;
-    FBuffer* m_pIndexBuffer;
-    uint32_t m_VertexCount;
-    uint32_t m_IndexCount;
+
+    FBuffer*               pVertexBuffer;
+    FBuffer*               pIndexBuffer;
+    uint32_t               VertexCount;
+    uint32_t               IndexCount;
+    std::vector<FSubMesh>  SubMeshes;
+    std::vector<FMaterial> Materials;
 };
 
 struct FVertexEx
@@ -189,12 +191,6 @@ struct FVertexEx
 struct FTriangleInfo
 {
     uint32_t MaterialIndex;
-};
-
-struct FMaterial
-{
-    std::shared_ptr<FTextureResource> AlbedoTex;
-    std::shared_ptr<FTextureResource> NormalTex;
 };
 
 struct FMesh

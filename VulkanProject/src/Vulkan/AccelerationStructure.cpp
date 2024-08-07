@@ -94,89 +94,115 @@ static FScratchBuffer CreateScratchBuffer(FDevice* pDevice, VkDeviceSize size)
 
 FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, const FAccelerationStructureBLASParams& Params)
 {
-    if (!Params.pVertexBuffer)
+    if (Params.Geometries.empty())
     {
-        LOG("No valid VertexBuffer");
+        LOG("No valid Geometries");
         return nullptr;
     }
 
-    FAccelerationStructure* pAccelerationStructure = new FAccelerationStructure(pDevice);
-
-    VkAccelerationStructureGeometryKHR AccelerationStructureGeometry = { };
-    AccelerationStructureGeometry.sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-    AccelerationStructureGeometry.flags                           = VK_GEOMETRY_OPAQUE_BIT_KHR;
-    AccelerationStructureGeometry.geometryType                    = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-    AccelerationStructureGeometry.geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-    AccelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-    AccelerationStructureGeometry.geometry.triangles.vertexData   = Params.pVertexBuffer->GetDeviceAddress();
-    AccelerationStructureGeometry.geometry.triangles.maxVertex    = Params.VertexCount;
-    AccelerationStructureGeometry.geometry.triangles.vertexStride = Params.VertexStride;
-    
-    if (Params.pIndexBuffer)
+    // Create a buffer for the transform-matrices
+    std::vector<VkTransformMatrixKHR> TransformMatrices;
+    for (const FBLASGeometry& Geometry : Params.Geometries)
     {
-        AccelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
-        AccelerationStructureGeometry.geometry.triangles.indexData = Params.pIndexBuffer->GetDeviceAddress();
+        TransformMatrices.emplace_back(Geometry.TransformMatrix);
+    }
+
+    FBufferParams TransformBufferParams = { };
+    TransformBufferParams.Size             = TransformMatrices.size() * sizeof(VkTransformMatrixKHR);
+    TransformBufferParams.Usage            = VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+    TransformBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+
+    FBuffer* pTransformBuffer = FBuffer::CreateWithData(pDevice, TransformBufferParams, nullptr, TransformMatrices.data());
+    if (!pTransformBuffer)
+    {
+        LOG("Failed to create TransformBuffer\n");
+        return nullptr;
     }
     else
     {
-        AccelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_NONE_KHR;
-        AccelerationStructureGeometry.geometry.triangles.indexData = VkDeviceOrHostAddressConstKHR{ 0 };
+        pTransformBuffer->SetDebugName("BLAS TransformBuffer");
     }
 
-    // Use the specified TransformBuffer or create a new "Identity" TransformBuffer
-    FBuffer* pTransformBuffer     = Params.pTransformBuffer;
-    FBuffer* pTempTransformBuffer = nullptr;
-    if (!pTransformBuffer)
+    // Create AccelerationStructure
+    FAccelerationStructure* pAccelerationStructure = new FAccelerationStructure(pDevice);
+
+    // Gather all geometries
+    std::vector<VkAccelerationStructureGeometryKHR>              AccelerationStructureGeometries;
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR>        AccelerationStructureRangeInfos;
+    std::vector<const VkAccelerationStructureBuildRangeInfoKHR*> AccelerationStructureRangeInfoPointers;
+    std::vector<uint32_t>                                        MaxPrimitiveCounts;
+
+    for (const FBLASGeometry& Geometry : Params.Geometries)
     {
-        VkTransformMatrixKHR TransformMatrix = 
-        {
-            1.0f, 0.0f, 0.0f, 0.0f,
-            0.0f, 1.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f
-        };
+        VkAccelerationStructureGeometryKHR AccelerationStructureGeometry = { };
+        AccelerationStructureGeometry.sType                                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        AccelerationStructureGeometry.flags                                           = VK_GEOMETRY_OPAQUE_BIT_KHR;
+        AccelerationStructureGeometry.geometryType                                    = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        AccelerationStructureGeometry.geometry.triangles.sType                        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+        AccelerationStructureGeometry.geometry.triangles.vertexFormat                 = VK_FORMAT_R32G32B32_SFLOAT;
+        AccelerationStructureGeometry.geometry.triangles.vertexData                   = Geometry.pVertexBuffer->GetDeviceAddress();
+        AccelerationStructureGeometry.geometry.triangles.maxVertex                    = Geometry.MaxVertexIndex;
+        AccelerationStructureGeometry.geometry.triangles.vertexStride                 = Geometry.VertexStride;
+        AccelerationStructureGeometry.geometry.triangles.transformData                = pTransformBuffer->GetDeviceAddress();
+        AccelerationStructureGeometry.geometry.triangles.transformData.deviceAddress += AccelerationStructureGeometries.size() * sizeof(VkTransformMatrixKHR);
 
-        FBufferParams TransformBufferParams = { };
-        TransformBufferParams.Size             = sizeof(VkTransformMatrixKHR);
-        TransformBufferParams.Usage            = VK_BUFFER_USAGE_RAY_TRACING_INPUT;
-        TransformBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-
-        pTransformBuffer = pTempTransformBuffer = FBuffer::CreateWithData(pDevice, TransformBufferParams, nullptr, &TransformMatrix);
-        if (!pTransformBuffer)
+        if (Geometry.pIndexBuffer)
         {
-            LOG("Failed to create TransformBuffer\n");
-            SAFE_DELETE(pAccelerationStructure);
-            return nullptr;
+            AccelerationStructureGeometry.geometry.triangles.indexType                = VK_INDEX_TYPE_UINT32;
+            AccelerationStructureGeometry.geometry.triangles.indexData                = Geometry.pIndexBuffer->GetDeviceAddress();
+            AccelerationStructureGeometry.geometry.triangles.indexData.deviceAddress += Geometry.IndexBufferOffset * sizeof(uint32_t);
         }
+        else
+        {
+            AccelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_NONE_KHR;
+            AccelerationStructureGeometry.geometry.triangles.indexData = VkDeviceOrHostAddressConstKHR{ 0 };
+        }
+
+        AccelerationStructureGeometries.push_back(AccelerationStructureGeometry);
+
+        // Number of triangles (Ensure that the VertexCount is a multiplier of 3)
+        const uint32_t NumTriangles = Geometry.IndexBufferCount / 3;
+        assert((Geometry.IndexBufferCount % 3) == 0);
+        MaxPrimitiveCounts.emplace_back(NumTriangles);
+
+        VkAccelerationStructureBuildRangeInfoKHR AccelerationStructureBuildRangeInfo = { };
+        AccelerationStructureBuildRangeInfo.primitiveCount  = NumTriangles;
+        AccelerationStructureBuildRangeInfo.primitiveOffset = 0;
+        AccelerationStructureBuildRangeInfo.firstVertex     = 0;
+        AccelerationStructureBuildRangeInfo.transformOffset = 0;
+        AccelerationStructureRangeInfos.push_back(AccelerationStructureBuildRangeInfo);
     }
 
-    assert(pTransformBuffer != nullptr);
-    AccelerationStructureGeometry.geometry.triangles.transformData = pTransformBuffer->GetDeviceAddress();
+    for (const VkAccelerationStructureBuildRangeInfoKHR& RangeInfo : AccelerationStructureRangeInfos)
+    {
+        AccelerationStructureRangeInfoPointers.emplace_back(&RangeInfo);
+    }
 
+    // Setup the build struct
     VkAccelerationStructureBuildGeometryInfoKHR AccelerationStructureBuildGeometryInfo = { };
     AccelerationStructureBuildGeometryInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
     AccelerationStructureBuildGeometryInfo.type          = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
     AccelerationStructureBuildGeometryInfo.flags         = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-    AccelerationStructureBuildGeometryInfo.geometryCount = 1;
-    AccelerationStructureBuildGeometryInfo.pGeometries   = &AccelerationStructureGeometry;
+    AccelerationStructureBuildGeometryInfo.pGeometries   = AccelerationStructureGeometries.data();
+    AccelerationStructureBuildGeometryInfo.geometryCount = AccelerationStructureGeometries.size();
 
-    const uint32_t NumTriangles = Params.VertexCount / 3;
-    assert((Params.VertexCount % 3) == 0);
-
+    // Retrieve the size of the AccelerationStructure
     VkAccelerationStructureBuildSizesInfoKHR AccelerationStructureBuildSizesInfo = { };
     AccelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
-    FExtensions::vkGetAccelerationStructureBuildSizesKHR(pDevice->GetDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &AccelerationStructureBuildGeometryInfo, &NumTriangles, &AccelerationStructureBuildSizesInfo);
+    FExtensions::vkGetAccelerationStructureBuildSizesKHR(pDevice->GetDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &AccelerationStructureBuildGeometryInfo, MaxPrimitiveCounts.data(), &AccelerationStructureBuildSizesInfo);
 
-    VkBufferCreateInfo BufferCreateInfo = { };
-    BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    BufferCreateInfo.size  = AccelerationStructureBuildSizesInfo.accelerationStructureSize;
-    BufferCreateInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    // Create the AccelerationStructureBuffer
+    VkBufferCreateInfo AccelerationStructureBufferCreateInfo = { };
+    AccelerationStructureBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    AccelerationStructureBufferCreateInfo.size  = AccelerationStructureBuildSizesInfo.accelerationStructureSize;
+    AccelerationStructureBufferCreateInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
-    VkResult Result = vkCreateBuffer(pDevice->GetDevice(), &BufferCreateInfo, nullptr, &pAccelerationStructure->m_Buffer);
+    VkResult Result = vkCreateBuffer(pDevice->GetDevice(), &AccelerationStructureBufferCreateInfo, nullptr, &pAccelerationStructure->m_Buffer);
     if (Result != VK_SUCCESS)
     {
         LOG("AccelerationStructure vkCreateBuffer failed. Error: %d\n", Result);
+        SAFE_DELETE(pTransformBuffer);
         SAFE_DELETE(pAccelerationStructure);
-        SAFE_DELETE(pTempTransformBuffer);
         return nullptr;
     }
     else
@@ -201,8 +227,8 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
     if (Result != VK_SUCCESS)
     {
         LOG("AccelerationStructure vkAllocateMemory failed. Error: %d\n", Result);
+        SAFE_DELETE(pTransformBuffer);
         SAFE_DELETE(pAccelerationStructure);
-        SAFE_DELETE(pTempTransformBuffer);
         return nullptr;
     }
     else
@@ -214,8 +240,8 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
     if (Result != VK_SUCCESS)
     {
         LOG("AccelerationStructure vkBindBufferMemory failed. Error: %d\n", Result);
+        SAFE_DELETE(pTransformBuffer);
         SAFE_DELETE(pAccelerationStructure);
-        SAFE_DELETE(pTempTransformBuffer);
         return nullptr;
     }
     else
@@ -223,6 +249,7 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
         LOG("Created AccelerationStructure\n");
     }
 
+    // Create AccelerationStructure
     VkAccelerationStructureCreateInfoKHR AccelerationStructureCreateInfo = { };
     AccelerationStructureCreateInfo.sType  = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
     AccelerationStructureCreateInfo.buffer = pAccelerationStructure->m_Buffer;
@@ -233,8 +260,8 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
     if (Result != VK_SUCCESS)
     {
         LOG("vkCreateAccelerationStructureKHR failed. Error: %d\n", Result);
+        SAFE_DELETE(pTransformBuffer);
         SAFE_DELETE(pAccelerationStructure);
-        SAFE_DELETE(pTempTransformBuffer);
         return nullptr;
     }
     else
@@ -242,35 +269,21 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
         LOG("Created AccelerationStructure\n");
     }
 
+    // Create ScratchBuffer
     FScratchBuffer ScratchBuffer = CreateScratchBuffer(pDevice, AccelerationStructureBuildSizesInfo.buildScratchSize);
     if (!ScratchBuffer.IsValid())
     {
+        SAFE_DELETE(pTransformBuffer);
         SAFE_DELETE(pAccelerationStructure);
-        SAFE_DELETE(pTempTransformBuffer);
         return nullptr;
     }
 
-    VkAccelerationStructureBuildGeometryInfoKHR AccelerationBuildGeometryInfo = { };
-    AccelerationBuildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-    AccelerationBuildGeometryInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-    AccelerationBuildGeometryInfo.flags                     = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-    AccelerationBuildGeometryInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-    AccelerationBuildGeometryInfo.dstAccelerationStructure  = pAccelerationStructure->m_AccelerationStructure;
-    AccelerationBuildGeometryInfo.geometryCount             = 1;
-    AccelerationBuildGeometryInfo.pGeometries               = &AccelerationStructureGeometry;
-    AccelerationBuildGeometryInfo.scratchData.deviceAddress = ScratchBuffer.DeviceAddress;
+    // Prepare for build
+    AccelerationStructureBuildGeometryInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+    AccelerationStructureBuildGeometryInfo.dstAccelerationStructure  = pAccelerationStructure->m_AccelerationStructure;
+    AccelerationStructureBuildGeometryInfo.scratchData.deviceAddress = ScratchBuffer.DeviceAddress;
 
-    VkAccelerationStructureBuildRangeInfoKHR AccelerationStructureBuildRangeInfo = { };
-    AccelerationStructureBuildRangeInfo.primitiveCount  = NumTriangles;
-    AccelerationStructureBuildRangeInfo.primitiveOffset = 0;
-    AccelerationStructureBuildRangeInfo.firstVertex     = 0;
-    AccelerationStructureBuildRangeInfo.transformOffset = 0;
-
-    VkAccelerationStructureBuildRangeInfoKHR* AccelerationBuildStructureRangeInfos[] =
-    { 
-        &AccelerationStructureBuildRangeInfo
-    };
-
+    // Build AccelerationStructure
     FCommandBufferParams CommandBufferParams = { };
     CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     CommandBufferParams.QueueType = ECommandQueueType::Graphics;
@@ -278,8 +291,8 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
     FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
     if (!pCommandBuffer)
     {
+        SAFE_DELETE(pTransformBuffer);
         SAFE_DELETE(pAccelerationStructure);
-        SAFE_DELETE(pTempTransformBuffer);
         return nullptr;
     }
     else
@@ -290,26 +303,27 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
     pCommandBuffer->Reset();
     pCommandBuffer->Begin();
 
-    pCommandBuffer->BuildAccelerationStructures(1, &AccelerationBuildGeometryInfo, AccelerationBuildStructureRangeInfos);
+    pCommandBuffer->BuildAccelerationStructures(1, &AccelerationStructureBuildGeometryInfo, AccelerationStructureRangeInfoPointers.data());
 
     pCommandBuffer->End();
 
     pDevice->ExecuteGraphics(pCommandBuffer, nullptr, nullptr);
     pDevice->WaitForIdle();
 
+    // Get AccelerationStructure DeviceAddress
     VkAccelerationStructureDeviceAddressInfoKHR AccelerationDeviceAddressInfo = { };
     AccelerationDeviceAddressInfo.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
     AccelerationDeviceAddressInfo.accelerationStructure = pAccelerationStructure->m_AccelerationStructure;
     pAccelerationStructure->m_DeviceAddress = FExtensions::vkGetAccelerationStructureDeviceAddressKHR(pDevice->GetDevice(), &AccelerationDeviceAddressInfo);
 
     SAFE_DELETE(pCommandBuffer);
-    SAFE_DELETE(pTempTransformBuffer);
+    SAFE_DELETE(pTransformBuffer);
     return pAccelerationStructure;
 }
 
 FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, const FAccelerationStructureTLASParams& Params)
 {
-    if (!Params.pAccelerationStructures)
+    if (!Params.pAccelerationStructure)
     {
         LOG("No valid AccelerationStructures");
         return nullptr;
@@ -330,7 +344,7 @@ FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, con
     Instance.mask                                   = 0xff;
     Instance.instanceShaderBindingTableRecordOffset = 0;
     Instance.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    Instance.accelerationStructureReference         = Params.pAccelerationStructures->GetDeviceAddress();
+    Instance.accelerationStructureReference         = Params.pAccelerationStructure->GetDeviceAddress();
 
     // Buffer for instance data
     FBufferParams InstanceBufferParams = { };

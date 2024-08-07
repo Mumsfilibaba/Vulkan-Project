@@ -233,4 +233,6 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         assert(sizeof(FMeshInfo) * m_pScene->m_MeshInfoBuffer.size() < m_pMeshBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(FMeshInfo) * m_pScene->m_MeshInfoBuffer.size(), m_pScene->m_MeshInfoBuffer.data());
     }
+
+    // TODO: We need a barrier here for the buffer
 }

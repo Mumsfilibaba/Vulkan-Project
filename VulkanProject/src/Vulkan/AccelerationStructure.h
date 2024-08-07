@@ -4,18 +4,29 @@
 class FBuffer;
 class FAccelerationStructure;
 
+struct FBLASGeometry
+{
+    VkTransformMatrixKHR TransformMatrix;
+
+    FBuffer* pVertexBuffer      = nullptr;
+    uint32_t VertexBufferOffset = 0;
+    uint32_t VertexBufferCount  = 0;
+    uint32_t VertexStride       = 0;
+    uint32_t MaxVertexIndex     = 0;
+
+    FBuffer* pIndexBuffer       = nullptr;
+    uint32_t IndexBufferOffset  = 0;
+    uint32_t IndexBufferCount   = 0;
+};
+
 struct FAccelerationStructureBLASParams
 {
-    FBuffer* pVertexBuffer    = nullptr;
-    FBuffer* pIndexBuffer     = nullptr;
-    FBuffer* pTransformBuffer = nullptr;
-    uint32_t VertexCount      = 0;
-    uint32_t VertexStride     = 0;
+    std::vector<FBLASGeometry> Geometries;
 };
 
 struct FAccelerationStructureTLASParams
 {
-    FAccelerationStructure* pAccelerationStructures = nullptr;
+    FAccelerationStructure* pAccelerationStructure = nullptr;
 };
 
 class FAccelerationStructure : public FDeviceChild
@@ -40,8 +51,8 @@ public:
     }
 
 private:
-	uint64_t                   m_DeviceAddress;
-	VkDeviceMemory             m_DeviceMemory;
-	VkBuffer                   m_Buffer;
-	VkAccelerationStructureKHR m_AccelerationStructure;
+    uint64_t                   m_DeviceAddress;
+    VkDeviceMemory             m_DeviceMemory;
+    VkBuffer                   m_Buffer;
+    VkAccelerationStructureKHR m_AccelerationStructure;
 };

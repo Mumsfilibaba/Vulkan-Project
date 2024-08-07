@@ -159,7 +159,7 @@ void FDescriptorSet::BindStorageBuffer(VkBuffer Buffer, uint32_t Binding)
 void FDescriptorSet::BindAccelerationStructure(VkAccelerationStructureKHR AccelerationStructure, uint32_t Binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
-    assert(Buffer != VK_NULL_HANDLE);
+    assert(AccelerationStructure != VK_NULL_HANDLE);
 
     VkWriteDescriptorSetAccelerationStructureKHR DescriptorAccelerationStructureInfo = {};
     DescriptorAccelerationStructureInfo.sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;

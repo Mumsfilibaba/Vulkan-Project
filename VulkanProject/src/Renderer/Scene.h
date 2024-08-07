@@ -4,6 +4,8 @@
 #include "IScene.h"
 #include "Vulkan/AccelerationStructure.h"
 
+class FSampler;
+
 struct FMeshInfo
 {
     uint64_t VertexBufferAddress = 0;
@@ -35,10 +37,13 @@ struct FScene : public IScene
     float   m_CameraSpeed;
 
     // Vulkan Resources
-    FBuffer*                m_pVertexBuffer;
-    FBuffer*                m_pIndexBuffer;
-    FAccelerationStructure* m_pTopLevelAS;
-    FAccelerationStructure* m_pBottomLevelAS;
+    FAccelerationStructure*              m_pTopLevelAS;
+    std::vector<FBuffer*>                m_VertexBuffers;
+    std::vector<FBuffer*>                m_IndexBuffers;
+    std::vector<FAccelerationStructure*> m_BottomLevelASs;
+    std::vector<FMeshInfo>               m_MeshInfoBuffer;
 
-    std::vector<FMeshInfo>  m_MeshInfoBuffer;
+    // Materials
+    FBuffer*  m_pMaterialBuffer;
+    FSampler* m_pMaterialSampler;
 };

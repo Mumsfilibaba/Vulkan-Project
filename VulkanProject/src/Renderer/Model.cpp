@@ -4,6 +4,8 @@
 #include "Vulkan/BindlessManager.h"
 #include <tiny_obj_loader.h>
 
+#pragma optimize("", off)
+
 static std::string ExtractPath(const std::string& Path)
 {
     const size_t Position = Path.find_last_of("/\\");
@@ -27,17 +29,19 @@ static void ReplaceBackslashes(std::string& Path)
 }
 
 FModel::FModel()
-    : m_pVertexBuffer(nullptr)
-    , m_pIndexBuffer(nullptr)
-    , m_VertexCount(0)
-    , m_IndexCount(0)
+    : pVertexBuffer(nullptr)
+    , pIndexBuffer(nullptr)
+    , VertexCount(0)
+    , IndexCount(0)
+    , SubMeshes()
+    , Materials()
 {
 }
 
 FModel::~FModel()
 {
-    SAFE_DELETE(m_pVertexBuffer);
-    SAFE_DELETE(m_pIndexBuffer);
+    SAFE_DELETE(pVertexBuffer);
+    SAFE_DELETE(pIndexBuffer);
 }
 
 bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
@@ -71,13 +75,55 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
             LOG("Warning: %s\n", TinyObjWarning.c_str());
         }
     }
-    
-    std::vector<FVertex>  Vertices;
-    std::vector<uint32_t> Indices;
+
+    // Parse Materials
+    std::unordered_map<std::string, std::shared_ptr<FTextureResource>> MaterialTextures;
+    const auto LoadMaterialTexture = [&](const std::string& TextureName)
+    {
+        std::shared_ptr<FTextureResource> Texture;
+        if (!TextureName.empty())
+        {
+            auto It = MaterialTextures.find(TextureName);
+            if (It == MaterialTextures.end())
+            {
+                std::string Path = MaterialPath + TextureName;
+                ReplaceBackslashes(Path);
+
+                Texture = std::shared_ptr<FTextureResource>(FTextureResource::LoadFromFile(pDevice, Path.c_str()));
+                if (Texture)
+                {
+                    MaterialTextures.insert(std::make_pair(TextureName, Texture));
+                }
+            }
+            else
+            {
+                Texture = It->second;
+            }
+        }
+
+        return Texture;
+    };
+
+    std::vector<FMaterial> NewMaterials;
+    for (const tinyobj::material_t& Material : TinyObjMaterials)
+    {
+        FMaterial NewMaterial;
+        NewMaterial.AlbedoTex = LoadMaterialTexture(Material.diffuse_texname);
+        NewMaterial.NormalTex = LoadMaterialTexture(Material.bump_texname);
+        NewMaterials.emplace_back(std::move(NewMaterial));
+    }
+
+    std::vector<FSubMesh> NewSubmeshes;
+    std::vector<FVertex>  NewVertices;
+    std::vector<uint32_t> NewIndices;
 
     std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices = {};
     for (const tinyobj::shape_t& Shape : TinyObjShapes)
     {
+        FSubMesh& SubMesh = NewSubmeshes.emplace_back();
+        SubMesh.VertexOffset = NewVertices.size();
+        SubMesh.IndexOffset  = NewIndices.size();
+
         for (const tinyobj::index_t& Index : Shape.mesh.indices)
         {
             // Positions must be present
@@ -117,34 +163,39 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
 
             if (UniqueVertices.count(Vertex) == 0)
             {
-                UniqueVertices[Vertex] = static_cast<uint32_t>(Vertices.size());
-                Vertices.push_back(Vertex);
+                UniqueVertices[Vertex] = static_cast<uint32_t>(NewVertices.size());
+                NewVertices.push_back(Vertex);
             }
 
-            Indices.push_back(UniqueVertices[Vertex]);
+            NewIndices.push_back(UniqueVertices[Vertex]);
         }
+
+        SubMesh.VertexCount = NewVertices.size() - SubMesh.VertexOffset;
+        SubMesh.IndexCount  = NewIndices.size()  - SubMesh.IndexOffset;
     }
-    
-    assert(Indices.size() < UINT32_MAX);
-    
-    FBufferParams VertexBufferParams = {};
-    VertexBufferParams.Size             = Vertices.size() * sizeof(FVertex);
-    VertexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+
+    assert(NewIndices.size() < UINT32_MAX);
+
+    FBufferParams VertexBufferParams = { };
+    VertexBufferParams.Size  = NewVertices.size() * sizeof(FVertex);
+    VertexBufferParams.Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
-    m_pVertexBuffer = FBuffer::CreateWithData(pDevice, VertexBufferParams, nullptr, Vertices.data());
-    assert(m_pVertexBuffer != nullptr);
+    pVertexBuffer = FBuffer::CreateWithData(pDevice, VertexBufferParams, nullptr, NewVertices.data());
+    assert(pVertexBuffer != nullptr);
+    VertexCount = NewVertices.size();
 
-    FBufferParams IndexBufferParams = {};
-    IndexBufferParams.Size             = Indices.size() * sizeof(uint32_t);
-    IndexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+    FBufferParams IndexBufferParams = { };
+    IndexBufferParams.Size  = NewIndices.size() * sizeof(uint32_t);
+    IndexBufferParams.Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
-    m_pIndexBuffer = FBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, Indices.data());
-    assert(m_pIndexBuffer != nullptr);
+    pIndexBuffer = FBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, NewIndices.data());
+    assert(pIndexBuffer != nullptr);
+    IndexCount = NewIndices.size();
 
-    m_VertexCount = Vertices.size();
-    m_IndexCount  = Indices.size();
+    SubMeshes = std::move(NewSubmeshes);
+    Materials = std::move(NewMaterials);
     return true;
 }
 
@@ -211,7 +262,7 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     };
 
     std::vector<FMaterial> NewMaterials;
-    for (const auto& Material : TinyObjMaterials)
+    for (const tinyobj::material_t& Material : TinyObjMaterials)
     {
         FMaterial NewMaterial;
         NewMaterial.AlbedoTex = LoadMaterialTexture(Material.diffuse_texname);

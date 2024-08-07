@@ -42,7 +42,8 @@ hitAttributeEXT vec2 Attribs;
 
 void main()
 {
-    FMeshInfo MeshInfo = MeshInfos[0];
+    const uint GeometryIndex = gl_GeometryIndexEXT;
+    FMeshInfo MeshInfo = MeshInfos[GeometryIndex];
 
     // Retrieve Buffers
     FIndexBuffer  IndexBuffer  = FIndexBuffer(MeshInfo.IndexBufferAddress);
@@ -62,12 +63,12 @@ void main()
 
     // Computing the coordinates of the hit position
     const vec3 Position      = (Vertices[0].Position * BarycentricCoords.x) + (Vertices[1].Position * BarycentricCoords.y) + (Vertices[2].Position * BarycentricCoords.z);
-    const vec3 WorldPosition = vec3(gl_ObjectToWorldEXT * vec4(Position, 1.0));  // Transforming the position to world space
+    const vec3 WorldPosition = vec3(gl_ObjectToWorldEXT * vec4(Position, 1.0)); // Transforming the position to world space
     RayPayLoad.HitPosition = WorldPosition;
 
     // Output Normal
     const vec3 Normal      = (Vertices[0].Normal * BarycentricCoords.x) + (Vertices[1].Normal * BarycentricCoords.y) + (Vertices[2].Normal * BarycentricCoords.z);
-    const vec3 WorldNormal = normalize(vec3(Normal * gl_WorldToObjectEXT));  // Transforming the normal to world space
+    const vec3 WorldNormal = normalize(vec3(Normal * gl_WorldToObjectEXT)); // Transforming the normal to world space
     RayPayLoad.HitNormal = WorldNormal;
 
     // Output Color
