@@ -6,6 +6,7 @@
 #include "random.glsl"
 
 #define RAY_OFFSET 0.001
+#define MAX_DEPTH 1024
 
 #define ENABLE_RUSSIAN_ROULETTE 1
 
@@ -47,6 +48,11 @@ layout(binding = 4) uniform RandomBufferObject
     uint Padding1;
 } uRandom;
 
+layout(binding = 5) uniform SceneBufferObject 
+{
+    FSceneSettings Settings;
+} uScene;
+
 layout(location = 0) rayPayloadEXT FRayPayLoad RayPayLoad;
 
 void main() 
@@ -74,7 +80,8 @@ void main()
     vec3 RayColor    = vec3(1.0);
     vec3 SampleColor = vec3(0.0);
 
-    const uint NumBounces = 4;
+    // Add one bounce (Primary ray)
+    const uint NumBounces = min(uScene.Settings.NumBounces, MAX_DEPTH) + 1;
     for (uint i = 0; i < NumBounces; i++)
     {
         RayPayLoad.HitNormal   = vec3(0.0);

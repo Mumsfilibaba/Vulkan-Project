@@ -2027,8 +2027,7 @@ namespace GUI
     
     void ReleaseImGui()
     {
-        // At this point the device should already be idle
-        ImGuiBackendData*         pBackend         = ImGuiGetBackendData();
+        ImGuiBackendData* pBackend = ImGuiGetBackendData();
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
 
         // Destroy MainWindow

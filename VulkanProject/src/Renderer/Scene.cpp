@@ -10,7 +10,7 @@
 FScene::FScene(FDevice* pDevice)
     : m_pDevice(pDevice)
     , m_Camera()
-    , m_CameraSpeed(1.0f)
+    , m_Settings()
     , m_VertexBuffers()
     , m_IndexBuffers()
     , m_pTopLevelAS(nullptr)
@@ -18,6 +18,13 @@ FScene::FScene(FDevice* pDevice)
     , m_pMaterialSampler(nullptr)
 {
     assert(pDevice != nullptr);
+
+    m_Settings.ViewMode              = EViewMode::Render;
+    m_Settings.Exposure              = 0.5f;
+    m_Settings.NumBounces            = 4;
+    m_Settings.FieldOfView           = 90.0f;
+    m_Settings.CameraSpeed           = 1.5f;
+    m_Settings.GradientLightStrength = 1.0f;
 }
 
 FScene::~FScene()
@@ -69,10 +76,10 @@ void FScene::Initialize()
 
 #if SPONZA
     Model->LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj", pDevice);
-    m_CameraSpeed = 150.0f;
+    m_Settings.CameraSpeed = 150.0f;
 #else
     Model->LoadFromFile(RESOURCE_PATH"/models/queen.obj", pDevice);
-    m_CameraSpeed = 1.5f;
+    m_Settings.CameraSpeed = 1.5f;
 #endif
 
     // Copy Materials
@@ -173,7 +180,7 @@ void FScene::Initialize()
         ShaderMaterial.IncidenceOfRefraction = 1.0f;
         ShaderMaterial.RefractionChance      = 0.0f;
         ShaderMaterial.RefractionRoughness   = 0.0f;
-        
+
         // Add texture to the BindlessManager if there is a texture for this material
         if (Material.AlbedoTex)
         {
@@ -193,4 +200,9 @@ void FScene::Initialize()
             ShaderMaterial.NormalTexIndex = FBindlessManager::InvalidBindlessID;
         }
     }
+}
+
+void FScene::Reset()
+{
+    m_Camera.Reset();
 }

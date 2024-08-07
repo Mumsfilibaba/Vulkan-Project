@@ -27,13 +27,13 @@ FSoftwareScene::FSoftwareScene()
     , m_pMeshIndexBuffer(nullptr)
     , m_pAABBInstanceBuffer(nullptr)
 {
-    m_Settings.ViewMode              = EViewMode::Render;
+    m_Settings.ViewMode              = ESoftwareViewMode::Render;
     m_Settings.Exposure              = 0.5f;
     m_Settings.NumBounces            = 4;
     m_Settings.FieldOfView           = 90.0f;
     m_Settings.CameraSpeed           = 1.5f;
     m_Settings.GradientLightStrength = 1.0f;
-    
+
     m_Quads.reserve(MAX_QUADS);
     ZeroVector(m_Quads);
 

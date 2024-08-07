@@ -9,4 +9,20 @@ struct FRayPayLoad
     vec3 HitEmissive;
 };
 
+struct FSceneSettings 
+{
+    // 0-16
+    uint NumMaterials;
+    uint BackgroundType;
+    uint NumBounces;
+    uint ViewMode;
+    // 16-20
+    float GradientLightStrength;
+
+    // Padding
+    uint Padding0;
+    uint Padding1;
+    uint Padding2;
+};
+
 #endif

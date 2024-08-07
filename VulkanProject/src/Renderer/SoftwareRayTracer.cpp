@@ -22,11 +22,25 @@
 
 FSoftwareRayTracer::FSoftwareRayTracer()
     : FBaseRenderer()
-    , m_pRayTracingPipeline()
+    , m_pScene(nullptr)
+    , m_pSceneSettingsBuffer(nullptr)
+    , m_pMaterialBuffer(nullptr)
+    , m_pSphereBuffer(nullptr)
+    , m_pQuadBuffer(nullptr)
+    , m_pTriangleBuffer(nullptr)
+    , m_pMeshBuffer(nullptr)
+    , m_pVertexBuffer(nullptr)
+    , m_pVertexExBuffer(nullptr)
+    , m_pBvhBuffer(nullptr)
+    , m_pAABBVertexBuffer(nullptr)
+    , m_pAABBIndexBuffer(nullptr)
+    , m_pAABBInstanceBuffer(nullptr)
+    , m_pRayTracingPipeline(nullptr)
     , m_pRayTracingPipelineLayout(nullptr)
     , m_pRayTracingDescriptorSetLayout(nullptr)
-    , m_pDepthBufferTexture(nullptr)
-    , m_pDepthBufferTextureView(nullptr)
+    , m_pRayTracingDescriptorSet0(nullptr)
+    , m_pRayTracingDescriptorSet1(nullptr)
+    , m_AABBIndexCount(0)
     , m_pDebugPipeline(nullptr)
     , m_pDebugPipelineWireframe(nullptr)
     , m_pDebugAABBPipeline(nullptr)
@@ -37,21 +51,8 @@ FSoftwareRayTracer::FSoftwareRayTracer()
     , m_pDebugDescriptorSet0(nullptr)
     , m_pDebugDescriptorSet1(nullptr)
     , m_pDebugFramebuffer(nullptr)
-    , m_DebugDepth(0)
-    , m_pRayTracingDescriptorSet0(nullptr)
-    , m_pSceneBuffer(nullptr)
-    , m_pSphereBuffer(nullptr)
-    , m_pQuadBuffer(nullptr)
-    , m_pTriangleBuffer(nullptr)
-    , m_pMeshBuffer(nullptr)
-    , m_pVertexBuffer(nullptr)
-    , m_pVertexExBuffer(nullptr)
-    , m_pMaterialBuffer(nullptr)
-    , m_pBvhBuffer(nullptr)
-    , m_pAABBVertexBuffer(nullptr)
-    , m_pAABBIndexBuffer(nullptr)
-    , m_pAABBInstanceBuffer(nullptr)
-    , m_pScene(nullptr)
+    , m_pDepthBufferTexture(nullptr)
+    , m_pDepthBufferTextureView(nullptr)
 {
 }
 
@@ -72,36 +73,40 @@ void FSoftwareRayTracer::CreateResources()
 
 void FSoftwareRayTracer::ReleaseResources()
 {
-    SAFE_DELETE(m_pSceneBuffer);
-    SAFE_DELETE(m_pQuadBuffer);
+    SAFE_DELETE(m_pScene);
+
+    SAFE_DELETE(m_pSceneSettingsBuffer);
+    SAFE_DELETE(m_pMaterialBuffer);
     SAFE_DELETE(m_pSphereBuffer);
-    SAFE_DELETE(m_pVertexBuffer);
-    SAFE_DELETE(m_pVertexExBuffer);
+    SAFE_DELETE(m_pQuadBuffer);
     SAFE_DELETE(m_pTriangleBuffer);
     SAFE_DELETE(m_pMeshBuffer);
-    SAFE_DELETE(m_pMaterialBuffer);
+    SAFE_DELETE(m_pVertexBuffer);
+    SAFE_DELETE(m_pVertexExBuffer);
     SAFE_DELETE(m_pBvhBuffer);
     SAFE_DELETE(m_pAABBVertexBuffer);
     SAFE_DELETE(m_pAABBIndexBuffer);
     SAFE_DELETE(m_pAABBInstanceBuffer);
-
+    
     SAFE_DELETE(m_pRayTracingPipeline);
     SAFE_DELETE(m_pRayTracingPipelineLayout);
     SAFE_DELETE(m_pRayTracingDescriptorSetLayout);
-
+    SAFE_DELETE(m_pRayTracingDescriptorSet0);
+    SAFE_DELETE(m_pRayTracingDescriptorSet1);
+    
     SAFE_DELETE(m_pDebugPipeline);
     SAFE_DELETE(m_pDebugPipelineWireframe);
     SAFE_DELETE(m_pDebugAABBPipeline);
     SAFE_DELETE(m_pDebugRenderPass);
     SAFE_DELETE(m_pDebugPipelineLayout);
-    SAFE_DELETE(m_pDebugDescriptorSetLayout);
     SAFE_DELETE(m_pDebugAABBPipelineLayout);
+    SAFE_DELETE(m_pDebugDescriptorSetLayout);
+    SAFE_DELETE(m_pDebugDescriptorSet0);
+    SAFE_DELETE(m_pDebugDescriptorSet1);
+    SAFE_DELETE(m_pDebugFramebuffer);
 
     SAFE_DELETE(m_pDepthBufferTexture);
     SAFE_DELETE(m_pDepthBufferTextureView);
-    SAFE_DELETE(m_pDebugFramebuffer);
-
-    SAFE_DELETE(m_pScene);
 }
 
 void FSoftwareRayTracer::Render(FCommandBuffer* pCommandBuffer)
@@ -109,7 +114,7 @@ void FSoftwareRayTracer::Render(FCommandBuffer* pCommandBuffer)
     // Update global buffers
     UpdateGlobalBuffers(pCommandBuffer);
 
-    if (m_pScene->m_Settings.ViewMode != EViewMode::Debug)
+    if (m_pScene->m_Settings.ViewMode != ESoftwareViewMode::Debug)
     {
         // Perform RayTracing
         PerformRayTracing(pCommandBuffer);
@@ -135,7 +140,7 @@ void FSoftwareRayTracer::Render(FCommandBuffer* pCommandBuffer)
 void FSoftwareRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
 {
     // Update Scene
-    FSceneBuffer SceneBuffer = {};
+    FSoftwareSceneBuffer SceneBuffer = {};
     SceneBuffer.NumQuads              = m_pScene->m_Quads.size();
     SceneBuffer.NumSpheres            = m_pScene->m_Spheres.size();
     SceneBuffer.NumMaterials          = m_pScene->m_GpuMaterials.size();
@@ -147,7 +152,16 @@ void FSoftwareRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
     SceneBuffer.ViewMode              = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
     SceneBuffer.GradientLightStrength = m_pScene->m_Settings.GradientLightStrength;
     
-    pCommandBuffer->UpdateBuffer(m_pSceneBuffer, 0, sizeof(FSceneBuffer), &SceneBuffer);
+    pCommandBuffer->UpdateBuffer(m_pSceneSettingsBuffer, 0, sizeof(FSoftwareSceneBuffer), &SceneBuffer);
+
+    // Barrier before reading the buffer from the shader
+    VkMemoryBarrier MemoryBarrier;
+    MemoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    MemoryBarrier.pNext         = nullptr;
+    MemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    MemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    pCommandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &MemoryBarrier, 0, nullptr, 0, nullptr);
 
     // Bind pipeline and descriptorSet
     pCommandBuffer->BindComputePipelineState(m_pRayTracingPipeline.load());
@@ -292,336 +306,331 @@ void FSoftwareRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
     pCommandBuffer->EndRenderPass();
 }
 
-void FSoftwareRayTracer::RenderSceneUI()
+void FSoftwareRayTracer::RenderUI()
 {
-    // Select the view-mode
+    if (ImGui::Begin("Scene Inspector"))
     {
-        static const char* ViewModes[] =
+        // Select the view-mode
         {
-            "Render",
-            "Normals",
-            "Albedo",
-            "Barycentrics",
-            "TexCoords",
-            "BVH Intersection",
-            "Debug"
-        };
-
-        static int CurrentViewMode = static_cast<int>(m_pScene->m_Settings.ViewMode);
-        static int PrevViewMode = CurrentViewMode;
-
-        ImGui::Combo("ViewMode", &CurrentViewMode, ViewModes, IM_ARRAYSIZE(ViewModes));
-
-        if (CurrentViewMode != PrevViewMode)
-        {
-            if (CurrentViewMode == 0)
+            static const char* ViewModes[] =
             {
-                m_pScene->m_Settings.ViewMode = EViewMode::Render;
-            }
-            else if (CurrentViewMode == 1)
-            {
-                m_pScene->m_Settings.ViewMode = EViewMode::Normals;
-            }
-            else if (CurrentViewMode == 2)
-            {
-                m_pScene->m_Settings.ViewMode = EViewMode::Albedo;
-            }
-            else if (CurrentViewMode == 3)
-            {
-                m_pScene->m_Settings.ViewMode = EViewMode::Barycentrics;
-            }
-            else if (CurrentViewMode == 4)
-            {
-                m_pScene->m_Settings.ViewMode = EViewMode::TexCoords;
-            }
-            else if (CurrentViewMode == 5)
-            {
-                m_pScene->m_Settings.ViewMode = EViewMode::BVHIntersection;
-            }
-            else if (CurrentViewMode == 6)
-            {
-                m_pScene->m_Settings.ViewMode = EViewMode::Debug;
-            }
+                "Render",
+                "Normals",
+                "Albedo",
+                "Barycentrics",
+                "TexCoords",
+                "BVH Intersection",
+                "Debug"
+            };
 
-            PrevViewMode = CurrentViewMode;
-            ResetImage();
-        }
+            static int CurrentViewMode = static_cast<int>(m_pScene->m_Settings.ViewMode);
+            static int PrevViewMode = CurrentViewMode;
 
-        if (CurrentViewMode == 3)
-        {
-            ImGui::DragInt("Debug Depth", &m_DebugDepth, 1, 0, m_pScene->m_AccelerationStructure.Stats.Depth, "%d", ImGuiSliderFlags_AlwaysClamp);
-        }
-    }
-
-    // Clear the image
-    if (ImGui::Button("Clear Image"))
-    {
-        ResetImage();
-    }
-
-    ImGui::NewLine();
-
-    ImGui::Text("Scene:");
-    ImGui::Separator();
-
-    // Scene selector
-    {
-        static const char* Scenes[] =
-        {
-            "Spheres Default",
-            "CornellBox",
-            "Triangles",
-            "Sponza",
-            "Polished Glass Spheres",
-            "Rough Colored Glass Spheres",
-            "Rough Transparent Glass Spheres",
-        };
-
-        static int CurrentScene = 0;
-        static int PrevScene = 0;
-        ImGui::Combo("Current Scene", &CurrentScene, Scenes, IM_ARRAYSIZE(Scenes));
-
-        if (PrevScene != CurrentScene)
-        {
-            const EViewMode ViewMode = m_pScene->m_Settings.ViewMode;
-            if (CurrentScene == 0) // Change to Sphere-scene
-            {
-                SAFE_DELETE(m_pScene);
-                m_pScene = new FSphereScene(ESphereSceneType::Default);
-            }
-            else if (CurrentScene == 1) // Change to CornellBox-scene
-            {
-                SAFE_DELETE(m_pScene);
-                m_pScene = new FCornellBoxScene();
-            }
-            else if (CurrentScene == 2) // Change to Triangles-scene
-            {
-                SAFE_DELETE(m_pScene);
-                m_pScene = new FModelScene(EModelSceneType::Default);
-            }
-            else if (CurrentScene == 3) // Change to "Polished Glass Sphere"-scene
-            {
-                SAFE_DELETE(m_pScene);
-                m_pScene = new FModelScene(EModelSceneType::Sponza);
-            }
-            else if (CurrentScene == 4) // Change to "Polished Glass Sphere"-scene
-            {
-                SAFE_DELETE(m_pScene);
-                m_pScene = new FSphereScene(ESphereSceneType::PolishedGlass);
-            }
-            else if (CurrentScene == 5) // Change to "Rough Colored Glass Spheres"-scene
-            {
-                SAFE_DELETE(m_pScene);
-                m_pScene = new FSphereScene(ESphereSceneType::ColoredRoughGlass);
-            }
-            else if (CurrentScene == 6) // Change to "Rough Transparent Glass Spheres"-scene
-            {
-                SAFE_DELETE(m_pScene);
-                m_pScene = new FSphereScene(ESphereSceneType::RoughGlass);
-            }
-
-            assert(m_pScene != nullptr);
-            m_pScene->Initialize();
-            ResetImage();
-
-            m_pScene->m_Settings.ViewMode = ViewMode;
-            PrevScene = CurrentScene;
-        }
-
-        // Background
-        static const char* Background[] =
-        {
-            "None",
-            "Gradient",
-            "Skybox",
-        };
-
-        int CurrentBG = m_pScene->m_Settings.BackgroundType;
-        static int PrevBG = CurrentBG;
-        ImGui::Combo("Background", &CurrentBG, Background, IM_ARRAYSIZE(Background));
-
-        if (PrevBG != CurrentBG)
-        {
-            if (CurrentBG == 0)
-            {
-                m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_NONE;
-            }
-            else if (CurrentBG == 1)
-            {
-                m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
-            }
-            else if (CurrentBG == 2)
-            {
-                m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_SKYBOX;
-            }
-
-            ResetImage();
-            PrevBG = CurrentBG;
-        }
-
-        if (CurrentBG == 1)
-        {
-            float Strength = m_pScene->m_Settings.GradientLightStrength;
-            if (ImGui::DragFloat("Gradient Strength", &Strength, 0.1f, 1.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
-            {
-                m_pScene->m_Settings.GradientLightStrength = Strength;
-                ResetImage();
-            }
-        }
-
-        float Exposure = m_pScene->m_Settings.Exposure;
-        if (ImGui::DragFloat("Exposure", &Exposure, 0.01f, 0.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
-        {
-            m_pScene->m_Settings.Exposure = Exposure;
-            ResetImage();
-        }
-
-        float FieldOfView = m_pScene->m_Settings.FieldOfView;
-        if (ImGui::DragFloat("FieldOfView", &FieldOfView, 0.1f, 30.0f, 120.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
-        {
-            m_pScene->m_Settings.FieldOfView = FieldOfView;
-            ResetImage();
-        }
-
-        int NumBounces = m_pScene->m_Settings.NumBounces;
-        if (ImGui::DragInt("Num Bounces", &NumBounces, 1, 1, 1024, "%d", ImGuiSliderFlags_AlwaysClamp))
-        {
-            m_pScene->m_Settings.NumBounces = NumBounces;
-            ResetImage();
-        }
-    }
-
-    // Reset the scene
-    if (ImGui::Button("Reset Camera"))
-    {
-        m_pScene->Reset();
-        ResetImage();
-    }
-
-    ImGui::NewLine();
-
-    ImGui::Text("Objects:");
-    ImGui::Separator();
-
-    uint32_t ImguiID = 0;
-    {
-        uint32_t Index = 1;
-        for (FShaderSphere& Sphere : m_pScene->m_Spheres)
-        {
-            ImGui::PushID(ImguiID++);
-
-            ImGui::Text("Sphere %d", Index++);
-            if (ImGui::DragFloat3("Position", glm::value_ptr(Sphere.Position), 0.1f))
-            {
-                ResetImage();
-            }
-            if (ImGui::DragFloat("Radius", &Sphere.Radius, 0.01f))
-            {
-                ResetImage();
-            }
-
-            ImGui::PopID();
+            ImGui::Text("Renderer View:");
             ImGui::Separator();
-        }
-    }
 
-    {
-        uint32_t Index = 1;
-        for (FShaderQuad& Quad : m_pScene->m_Quads)
+            ImGui::Combo("ViewMode", &CurrentViewMode, ViewModes, IM_ARRAYSIZE(ViewModes));
+
+            if (CurrentViewMode != PrevViewMode)
+            {
+                if (CurrentViewMode == 0)
+                {
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Render;
+                }
+                else if (CurrentViewMode == 1)
+                {
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Normals;
+                }
+                else if (CurrentViewMode == 2)
+                {
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Albedo;
+                }
+                else if (CurrentViewMode == 3)
+                {
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Barycentrics;
+                }
+                else if (CurrentViewMode == 4)
+                {
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::TexCoords;
+                }
+                else if (CurrentViewMode == 5)
+                {
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::BVHIntersection;
+                }
+                else if (CurrentViewMode == 6)
+                {
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Debug;
+                }
+
+                PrevViewMode = CurrentViewMode;
+                ResetImage();
+            }
+        }
+
+        ImGui::NewLine();
+
+        ImGui::Text("Scene:");
+        ImGui::Separator();
+
+        // Scene selector
         {
-            ImGui::PushID(ImguiID++);
+            static const char* Scenes[] =
+            {
+                "Spheres Default",
+                "CornellBox",
+                "Triangles",
+                "Sponza",
+                "Polished Glass Spheres",
+                "Rough Colored Glass Spheres",
+                "Rough Transparent Glass Spheres",
+            };
 
-            ImGui::Text("Quad %d", Index++);
-            if (ImGui::DragFloat3("Position", glm::value_ptr(Quad.Position), 0.1f))
+            static int CurrentScene = 0;
+            static int PrevScene = 0;
+            ImGui::Combo("Current Scene", &CurrentScene, Scenes, IM_ARRAYSIZE(Scenes));
+
+            if (PrevScene != CurrentScene)
             {
+                const ESoftwareViewMode ViewMode = m_pScene->m_Settings.ViewMode;
+                if (CurrentScene == 0) // Change to Sphere-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FSphereScene(ESphereSceneType::Default);
+                }
+                else if (CurrentScene == 1) // Change to CornellBox-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FCornellBoxScene();
+                }
+                else if (CurrentScene == 2) // Change to Triangles-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FModelScene(EModelSceneType::Default);
+                }
+                else if (CurrentScene == 3) // Change to "Polished Glass Sphere"-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FModelScene(EModelSceneType::Sponza);
+                }
+                else if (CurrentScene == 4) // Change to "Polished Glass Sphere"-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FSphereScene(ESphereSceneType::PolishedGlass);
+                }
+                else if (CurrentScene == 5) // Change to "Rough Colored Glass Spheres"-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FSphereScene(ESphereSceneType::ColoredRoughGlass);
+                }
+                else if (CurrentScene == 6) // Change to "Rough Transparent Glass Spheres"-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = new FSphereScene(ESphereSceneType::RoughGlass);
+                }
+
+                assert(m_pScene != nullptr);
+                m_pScene->Initialize();
                 ResetImage();
+
+                m_pScene->m_Settings.ViewMode = ViewMode;
+                PrevScene = CurrentScene;
             }
-            if (ImGui::DragFloat3("Edge0", glm::value_ptr(Quad.Edge0), 0.1f))
+
+            // Background
+            static const char* Background[] =
             {
+                "None",
+                "Gradient",
+                "Skybox",
+            };
+
+            int CurrentBG = m_pScene->m_Settings.BackgroundType;
+            static int PrevBG = CurrentBG;
+            ImGui::Combo("Background", &CurrentBG, Background, IM_ARRAYSIZE(Background));
+
+            if (PrevBG != CurrentBG)
+            {
+                if (CurrentBG == 0)
+                {
+                    m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_NONE;
+                }
+                else if (CurrentBG == 1)
+                {
+                    m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
+                }
+                else if (CurrentBG == 2)
+                {
+                    m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_SKYBOX;
+                }
+
                 ResetImage();
+                PrevBG = CurrentBG;
             }
-            if (ImGui::DragFloat3("Edge1", glm::value_ptr(Quad.Edge1), 0.1f))
+
+            if (CurrentBG == 1)
             {
+                float Strength = m_pScene->m_Settings.GradientLightStrength;
+                if (ImGui::DragFloat("Gradient Strength", &Strength, 0.1f, 1.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+                {
+                    m_pScene->m_Settings.GradientLightStrength = Strength;
+                    ResetImage();
+                }
+            }
+
+            float Exposure = m_pScene->m_Settings.Exposure;
+            if (ImGui::DragFloat("Exposure", &Exposure, 0.01f, 0.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+            {
+                m_pScene->m_Settings.Exposure = Exposure;
                 ResetImage();
             }
 
-            ImGui::PopID();
-            ImGui::Separator();
+            float FieldOfView = m_pScene->m_Settings.FieldOfView;
+            if (ImGui::DragFloat("FieldOfView", &FieldOfView, 0.1f, 30.0f, 120.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+            {
+                m_pScene->m_Settings.FieldOfView = FieldOfView;
+                ResetImage();
+            }
+
+            int NumBounces = m_pScene->m_Settings.NumBounces;
+            if (ImGui::DragInt("Num Bounces", &NumBounces, 1, 1, 1024, "%d", ImGuiSliderFlags_AlwaysClamp))
+            {
+                m_pScene->m_Settings.NumBounces = NumBounces;
+                ResetImage();
+            }
         }
-    }
 
-    {
-        uint32_t Index = 1;
-        for (FShaderMesh& Mesh : m_pScene->m_Meshes)
+        // Reset the scene
+        if (ImGui::Button("Reset Camera"))
         {
-            ImGui::PushID(ImguiID++);
-
-            ImGui::Text("TriangleMesh %d", Index++);
-
-            ImGui::PopID();
-            ImGui::Separator();
+            m_pScene->Reset();
+            ResetImage();
         }
-    }
 
-    ImGui::NewLine();
+        ImGui::NewLine();
 
-    ImGui::Text("Materials:");
-    ImGui::Separator();
+        ImGui::Text("Objects:");
+        ImGui::Separator();
 
-    {
-        uint32_t Index = 1;
-        for (FShaderMaterial& Material : m_pScene->m_GpuMaterials)
+        uint32_t ImguiID = 0;
         {
-            ImGui::PushID(ImguiID++);
-            ImGui::Text("Material %d", Index++);
+            uint32_t Index = 1;
+            for (FShaderSphere& Sphere : m_pScene->m_Spheres)
+            {
+                ImGui::PushID(ImguiID++);
 
-            // if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
-            if (ImGui::InputFloat3("AlbedoColor", glm::value_ptr(Material.AlbedoColor)))
-            {
-                ResetImage();
-            }
-            // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.Emissive)))
-            if (ImGui::InputFloat3("EmissiveColor", glm::value_ptr(Material.EmissiveColor)))
-            {
-                ResetImage();
-            }
-            // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.Emissive)))
-            if (ImGui::InputFloat3("SpecularColor", glm::value_ptr(Material.SpecularColor)))
-            {
-                ResetImage();
-            }
-            // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.AbsorbtionColor)))
-            if (ImGui::InputFloat3("AbsorbtionColor", glm::value_ptr(Material.AbsorbtionColor)))
-            {
-                ResetImage();
-            }
-            if (ImGui::DragFloat("SpecularChance", &Material.SpecularChance, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
-            {
-                ResetImage();
-            }
-            if (ImGui::DragFloat("SpecularRoughness", &Material.SpecularRoughness, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
-            {
-                ResetImage();
-            }
-            if (ImGui::DragFloat("RefractionChance", &Material.RefractionChance, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
-            {
-                ResetImage();
-            }
-            if (ImGui::DragFloat("RefractionRoughness", &Material.RefractionRoughness, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
-            {
-                ResetImage();
-            }
-            if (ImGui::DragFloat("IncidenceOfRefraction", &Material.IncidenceOfRefraction, 0.1f, 0.5f, 2.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
-            {
-                ResetImage();
-            }
+                ImGui::Text("Sphere %d", Index++);
+                if (ImGui::DragFloat3("Position", glm::value_ptr(Sphere.Position), 0.1f))
+                {
+                    ResetImage();
+                }
+                if (ImGui::DragFloat("Radius", &Sphere.Radius, 0.01f))
+                {
+                    ResetImage();
+                }
 
-            ImGui::PopID();
-            ImGui::Separator();
+                ImGui::PopID();
+                ImGui::Separator();
+            }
         }
-    }
 
-    ImGui::End();
+        {
+            uint32_t Index = 1;
+            for (FShaderQuad& Quad : m_pScene->m_Quads)
+            {
+                ImGui::PushID(ImguiID++);
+
+                ImGui::Text("Quad %d", Index++);
+                if (ImGui::DragFloat3("Position", glm::value_ptr(Quad.Position), 0.1f))
+                {
+                    ResetImage();
+                }
+                if (ImGui::DragFloat3("Edge0", glm::value_ptr(Quad.Edge0), 0.1f))
+                {
+                    ResetImage();
+                }
+                if (ImGui::DragFloat3("Edge1", glm::value_ptr(Quad.Edge1), 0.1f))
+                {
+                    ResetImage();
+                }
+
+                ImGui::PopID();
+                ImGui::Separator();
+            }
+        }
+
+        {
+            uint32_t Index = 1;
+            for (FShaderMesh& Mesh : m_pScene->m_Meshes)
+            {
+                ImGui::PushID(ImguiID++);
+
+                ImGui::Text("TriangleMesh %d", Index++);
+
+                ImGui::PopID();
+                ImGui::Separator();
+            }
+        }
+
+        ImGui::NewLine();
+
+        ImGui::Text("Materials:");
+        ImGui::Separator();
+
+        {
+            uint32_t Index = 1;
+            for (FShaderMaterial& Material : m_pScene->m_GpuMaterials)
+            {
+                ImGui::PushID(ImguiID++);
+                ImGui::Text("Material %d", Index++);
+
+                // if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo)))
+                if (ImGui::InputFloat3("AlbedoColor", glm::value_ptr(Material.AlbedoColor)))
+                {
+                    ResetImage();
+                }
+                // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.Emissive)))
+                if (ImGui::InputFloat3("EmissiveColor", glm::value_ptr(Material.EmissiveColor)))
+                {
+                    ResetImage();
+                }
+                // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.Emissive)))
+                if (ImGui::InputFloat3("SpecularColor", glm::value_ptr(Material.SpecularColor)))
+                {
+                    ResetImage();
+                }
+                // if (ImGui::ColorEdit3("Emissive", glm::value_ptr(material.AbsorbtionColor)))
+                if (ImGui::InputFloat3("AbsorbtionColor", glm::value_ptr(Material.AbsorbtionColor)))
+                {
+                    ResetImage();
+                }
+                if (ImGui::DragFloat("SpecularChance", &Material.SpecularChance, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+                {
+                    ResetImage();
+                }
+                if (ImGui::DragFloat("SpecularRoughness", &Material.SpecularRoughness, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+                {
+                    ResetImage();
+                }
+                if (ImGui::DragFloat("RefractionChance", &Material.RefractionChance, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+                {
+                    ResetImage();
+                }
+                if (ImGui::DragFloat("RefractionRoughness", &Material.RefractionRoughness, 0.1f, 0.0f, 1.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+                {
+                    ResetImage();
+                }
+                if (ImGui::DragFloat("IncidenceOfRefraction", &Material.IncidenceOfRefraction, 0.1f, 0.5f, 2.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+                {
+                    ResetImage();
+                }
+
+                ImGui::PopID();
+                ImGui::Separator();
+            }
+        }
+
+        ImGui::End();
+    }
 }
 
 void FSoftwareRayTracer::CreateRayTracingResources()
@@ -936,13 +945,13 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
 
     // SceneBuffer
     FBufferParams SceneBufferParams;
-    SceneBufferParams.Size             = sizeof(FSceneBuffer);
+    SceneBufferParams.Size             = sizeof(FSoftwareSceneBuffer);
     SceneBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     SceneBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pSceneBuffer = FBuffer::Create(GetDevice(), SceneBufferParams, GetDeviceAllocator());
-    assert(m_pSceneBuffer != nullptr);
-    m_pSceneBuffer->SetDebugName("Scene-Buffer");
+    m_pSceneSettingsBuffer = FBuffer::Create(GetDevice(), SceneBufferParams, GetDeviceAllocator());
+    assert(m_pSceneSettingsBuffer != nullptr);
+    m_pSceneSettingsBuffer->SetDebugName("Scene-Buffer");
     
     // QuadBuffer
     FBufferParams QuadBufferParams;
@@ -1046,7 +1055,7 @@ void FSoftwareRayTracer::CreateDescriptorSets()
     m_pRayTracingDescriptorSet0->BindCombinedImageSampler(m_pSkybox->GetTextureView()->GetImageView(), m_pSkyboxSampler->GetSampler(), 2);
     m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 3);
     m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 4);
-    m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pSceneBuffer->GetBuffer(), 5);
+    m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pSceneSettingsBuffer->GetBuffer(), 5);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pQuadBuffer->GetBuffer(), 6);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 7);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
@@ -1065,7 +1074,7 @@ void FSoftwareRayTracer::CreateDescriptorSets()
     m_pRayTracingDescriptorSet1->BindCombinedImageSampler(m_pSkybox->GetTextureView()->GetImageView(), m_pSkyboxSampler->GetSampler(), 2);
     m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 3);
     m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 4);
-    m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pSceneBuffer->GetBuffer(), 5);
+    m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pSceneSettingsBuffer->GetBuffer(), 5);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pQuadBuffer->GetBuffer(), 6);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 7);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);

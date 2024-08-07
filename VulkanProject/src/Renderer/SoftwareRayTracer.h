@@ -4,7 +4,7 @@
 #include "SoftwareScene.h"
 #include "Bvh.h"
 
-struct FSceneBuffer
+struct FSoftwareSceneBuffer
 {
     // 0-16
     uint32_t NumQuads     = 0;
@@ -17,7 +17,7 @@ struct FSceneBuffer
     uint32_t BackgroundType = 0;
     uint32_t NumBounces     = 4;
     // 32-40
-    uint32_t ViewMode = 0;
+    uint32_t ViewMode              = 0;
     float    GradientLightStrength = 1.0f;
     
     // Padding
@@ -46,7 +46,7 @@ public:
     virtual void CreateDescriptorSets() override;
     virtual void ReleaseDescriptorSets() override;
 
-    virtual void RenderSceneUI() override;
+    virtual void RenderUI() override;
     virtual void ReloadShaders() override;
 
     virtual void Render(FCommandBuffer* pCommandBuffer) override;
@@ -60,18 +60,32 @@ private:
     void PerformRayTracing(FCommandBuffer* pCommandBuffer);
     void PerformDebugPass(FCommandBuffer* pCommandBuffer);
 
-    // RayTracing
+    // Scene
+    FSoftwareScene* m_pScene;
+
+    // Buffers
+    FBuffer* m_pSceneSettingsBuffer;
+    FBuffer* m_pMaterialBuffer;
+    FBuffer* m_pSphereBuffer;
+    FBuffer* m_pQuadBuffer;
+    FBuffer* m_pTriangleBuffer;
+    FBuffer* m_pMeshBuffer;
+    FBuffer* m_pVertexBuffer;
+    FBuffer* m_pVertexExBuffer;
+    FBuffer* m_pBvhBuffer;
+    FBuffer* m_pAABBVertexBuffer;
+    FBuffer* m_pAABBIndexBuffer;
+    FBuffer* m_pAABBInstanceBuffer;
+
+    // RayTracing Pass
     std::atomic<FComputePipeline*> m_pRayTracingPipeline;
     FPipelineLayout*               m_pRayTracingPipelineLayout;
     FDescriptorSetLayout*          m_pRayTracingDescriptorSetLayout;
     FDescriptorSet*                m_pRayTracingDescriptorSet0;
     FDescriptorSet*                m_pRayTracingDescriptorSet1;
 
-    // DebugPass require a DepthBuffer
-    FTexture*     m_pDepthBufferTexture;
-    FTextureView* m_pDepthBufferTextureView;
-    
     // DebugPass
+    size_t                m_AABBIndexCount;
     FGraphicsPipeline*    m_pDebugPipeline;
     FGraphicsPipeline*    m_pDebugPipelineWireframe;
     FGraphicsPipeline*    m_pDebugAABBPipeline;
@@ -82,23 +96,6 @@ private:
     FDescriptorSet*       m_pDebugDescriptorSet0;
     FDescriptorSet*       m_pDebugDescriptorSet1;
     FFramebuffer*         m_pDebugFramebuffer;
-    size_t                m_AABBIndexCount;
-    int32_t               m_DebugDepth;
-
-    // Buffers
-    FBuffer* m_pSceneBuffer;
-    FBuffer* m_pSphereBuffer;
-    FBuffer* m_pQuadBuffer;
-    FBuffer* m_pTriangleBuffer;
-    FBuffer* m_pMeshBuffer;
-    FBuffer* m_pVertexBuffer;
-    FBuffer* m_pVertexExBuffer;
-    FBuffer* m_pMaterialBuffer;
-    FBuffer* m_pBvhBuffer;
-    FBuffer* m_pAABBVertexBuffer;
-    FBuffer* m_pAABBIndexBuffer;
-    FBuffer* m_pAABBInstanceBuffer;
-
-    // Scene
-    FSoftwareScene*  m_pScene;
+    FTexture*             m_pDepthBufferTexture;
+    FTextureView*         m_pDepthBufferTextureView;
 };

@@ -471,7 +471,7 @@ void FBaseRenderer::OnRenderUI()
     // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("DockSpace Demo", nullptr, WindowFlags);
+    ImGui::Begin("DockSpace", nullptr, WindowFlags);
 
     ImGui::PopStyleVar();
     ImGui::PopStyleVar(2);
@@ -513,14 +513,6 @@ void FBaseRenderer::OnRenderUI()
             m_bResetImage = true;
         }
 
-        ImGui::NewLine();
-
-        ImGui::Text("Scene:");
-        ImGui::Separator();
-
-        // Render renderer-specific stuff regarding the scene
-        RenderSceneUI();
-
         ImGui::End();
     }
     
@@ -537,6 +529,9 @@ void FBaseRenderer::OnRenderUI()
     }
 
     ImGui::End();
+
+    // Renderer Specifics
+    RenderUI();
 }
 
 void FBaseRenderer::Release()

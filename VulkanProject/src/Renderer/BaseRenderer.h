@@ -63,7 +63,7 @@ public:
     virtual void CreateResources() = 0;
     virtual void ReleaseResources() = 0;
 
-    virtual void RenderSceneUI() = 0;
+    virtual void RenderUI() = 0;
     virtual void ReloadShaders() = 0;
 
     virtual void CreateDescriptorSets();

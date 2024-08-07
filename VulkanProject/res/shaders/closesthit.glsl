@@ -34,12 +34,12 @@ layout(buffer_reference, scalar) readonly buffer FIndexBuffer
     ivec3 Indices[];
 };
 
-layout(binding = 5) readonly buffer FMeshInfoBuffer 
+layout(binding = 6) readonly buffer FMeshInfoBuffer 
 { 
     FMeshInfo MeshInfos[]; 
 };
 
-layout(binding = 6) buffer MaterialBuffer
+layout(binding = 7) buffer MaterialBuffer
 {
     FMaterial Materials[];
 };

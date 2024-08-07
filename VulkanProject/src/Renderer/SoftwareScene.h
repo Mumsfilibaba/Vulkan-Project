@@ -21,7 +21,7 @@
 class FBuffer;
 class FSampler;
 
-enum class EViewMode : uint32_t
+enum class ESoftwareViewMode : uint32_t
 {
     Render = 0,
     Normals = 1,
@@ -32,15 +32,15 @@ enum class EViewMode : uint32_t
     Debug = 6,
 };
 
-struct FSceneSettings
+struct FSoftwareSceneSettings
 {
-    EViewMode ViewMode;
-    uint32_t  BackgroundType;
-    float     GradientLightStrength;
-    float     Exposure;
-    uint32_t  NumBounces;
-    float     FieldOfView;
-    float     CameraSpeed;
+    ESoftwareViewMode ViewMode;
+    uint32_t          BackgroundType;
+    float             GradientLightStrength;
+    float             Exposure;
+    uint32_t          NumBounces;
+    float             FieldOfView;
+    float             CameraSpeed;
 };
 
 struct FSoftwareScene : public IScene
@@ -61,8 +61,8 @@ struct FSoftwareScene : public IScene
     virtual FCamera& GetCamera() override { return m_Camera; }
     virtual const FCamera& GetCamera() const override { return m_Camera; }
 
-    FCamera        m_Camera;
-    FSceneSettings m_Settings;
+    FCamera                m_Camera;
+    FSoftwareSceneSettings m_Settings;
 
     // Materials
     std::vector<FMaterial>       m_Materials;

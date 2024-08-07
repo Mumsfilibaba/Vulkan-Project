@@ -13,6 +13,26 @@ struct FMeshInfo
     uint64_t MaterialIndex       = 0;
 };
 
+enum class EViewMode : uint32_t
+{
+    Render       = 0,
+    Normals      = 1,
+    Albedo       = 2,
+    Barycentrics = 3,
+    TexCoords    = 4,
+};
+
+struct FSceneSettings
+{
+    EViewMode ViewMode;
+    uint32_t  BackgroundType;
+    float     GradientLightStrength;
+    float     Exposure;
+    uint32_t  NumBounces;
+    float     FieldOfView;
+    float     CameraSpeed;
+};
+
 struct FScene : public IScene
 {
     FScene(FDevice* pDevice);
@@ -20,13 +40,13 @@ struct FScene : public IScene
 
     // IScene Interface
     virtual void Initialize() override;
-    virtual void Reset() override { }
+    virtual void Reset() override;
 
     virtual void OnRenderUI() override { }
 
-    virtual float GetCameraSpeed() const override { return m_CameraSpeed; }
-    virtual float GetFieldOfView() const override { return 90.0f; }
-    virtual float GetExposure() const override { return 1.0f; }
+    virtual float GetCameraSpeed() const override { return m_Settings.CameraSpeed; }
+    virtual float GetFieldOfView() const override { return m_Settings.FieldOfView; }
+    virtual float GetExposure() const override { return m_Settings.Exposure; }
 
     virtual FCamera& GetCamera() override { return m_Camera; }
     virtual const FCamera& GetCamera() const override { return m_Camera; }
@@ -35,8 +55,8 @@ struct FScene : public IScene
     FDevice* m_pDevice;
 
     // Camera
-    FCamera m_Camera;
-    float   m_CameraSpeed;
+    FCamera        m_Camera;
+    FSceneSettings m_Settings;
 
     // Vulkan Resources
     FAccelerationStructure*              m_pTopLevelAS;
