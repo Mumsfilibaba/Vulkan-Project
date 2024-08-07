@@ -24,7 +24,7 @@ FScene::FScene(FDevice* pDevice)
     m_Settings.NumBounces            = 4;
     m_Settings.FieldOfView           = 90.0f;
     m_Settings.CameraSpeed           = 1.5f;
-    m_Settings.GradientLightStrength = 1.0f;
+    m_Settings.GradientLightStrength = 4.0f;
 }
 
 FScene::~FScene()
