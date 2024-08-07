@@ -253,14 +253,14 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
     if (!m_pScene->m_MeshInfoBuffer.empty())
     {
         pCommandBuffer->FillBuffer(m_pMeshBuffer, 0, m_pMeshBuffer->GetSize(), 0);
-        assert(sizeof(FMeshInfo) * m_pScene->m_MeshInfoBuffer.size() < m_pMeshBuffer->GetSize());
+        assert((sizeof(FMeshInfo) * m_pScene->m_MeshInfoBuffer.size()) <= m_pMeshBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(FMeshInfo) * m_pScene->m_MeshInfoBuffer.size(), m_pScene->m_MeshInfoBuffer.data());
     }
 
     if (!m_pScene->m_GpuMaterials.empty())
     {
         pCommandBuffer->FillBuffer(m_pMaterialBuffer, 0, m_pMaterialBuffer->GetSize(), 0);
-        assert(sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size() < m_pMaterialBuffer->GetSize());
+        assert((sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
     }
 

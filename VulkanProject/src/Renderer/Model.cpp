@@ -4,8 +4,6 @@
 #include "Vulkan/BindlessManager.h"
 #include <tiny_obj_loader.h>
 
-#pragma optimize("", off)
-
 static std::string ExtractPath(const std::string& Path)
 {
     const size_t Position = Path.find_last_of("/\\");
@@ -113,6 +111,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
         NewMaterials.emplace_back(std::move(NewMaterial));
     }
 
+    // Parse Vertices
     std::vector<FSubMesh> NewSubmeshes;
     std::vector<FVertex>  NewVertices;
     std::vector<uint32_t> NewIndices;
@@ -120,64 +119,88 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
     std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices;
     for (const tinyobj::shape_t& Shape : TinyObjShapes)
     {
-        FSubMesh& SubMesh = NewSubmeshes.emplace_back();
-        SubMesh.VertexOffset  = NewVertices.size();
-        SubMesh.IndexOffset   = NewIndices.size();
-        SubMesh.MaterialIndex = Shape.mesh.material_ids[0];
+        // Start at index zero for each mesh and loop until all indices are processed
+        uint32_t CurrentIndex = 0;
 
-        for (const tinyobj::index_t& Index : Shape.mesh.indices)
+        const uint32_t MeshIndexCount = static_cast<uint32_t>(Shape.mesh.indices.size());
+        while (CurrentIndex < MeshIndexCount)
         {
-            // Positions must be present
-            const size_t BasePositionIndex = 3 * Index.vertex_index;
-            assert(BasePositionIndex >= 0);
+            const int32_t TriangleIndex        = CurrentIndex / 3;
+            const int32_t CurrentMaterialIndex = Shape.mesh.material_ids[TriangleIndex];
 
-            FVertex Vertex;
-            Vertex.Position =
-            {
-                TinyObjAttrib.vertices[BasePositionIndex + 0],
-                TinyObjAttrib.vertices[BasePositionIndex + 1],
-                TinyObjAttrib.vertices[BasePositionIndex + 2],
-            };
+            FSubMesh& SubMesh = NewSubmeshes.emplace_back();
+            SubMesh.VertexOffset  = NewVertices.size();
+            SubMesh.IndexOffset   = NewIndices.size();
+            SubMesh.MaterialIndex = CurrentMaterialIndex;
 
-            // Check for normals
-            if (Index.normal_index >= 0)
+            for (; CurrentIndex < MeshIndexCount; ++CurrentIndex)
             {
-                const size_t BaseNormalIndex = 3 * Index.normal_index;
-                Vertex.Normal =
+                // Break if material is not the same
+                const int32_t CurrentTriangleIndex = CurrentIndex / 3;
+                if (Shape.mesh.material_ids[CurrentTriangleIndex] != CurrentMaterialIndex)
                 {
-                    TinyObjAttrib.normals[BaseNormalIndex + 0],
-                    TinyObjAttrib.normals[BaseNormalIndex + 1],
-                    TinyObjAttrib.normals[BaseNormalIndex + 2],
-                };
-            }
+                    break;
+                }
 
-            // Check for UVs
-            if (Index.texcoord_index >= 0)
-            {
-                const size_t BaseTexCoordIndex = 2 * Index.texcoord_index;
-                Vertex.TexCoord =
+                // Current Index
+                const tinyobj::index_t& Index = Shape.mesh.indices[CurrentIndex];
+
+                // Positions must be present
+                const size_t BasePositionIndex = 3 * Index.vertex_index;
+                assert(BasePositionIndex >= 0);
+
+                FVertex Vertex;
+                Vertex.Position =
                 {
-                    TinyObjAttrib.texcoords[BaseTexCoordIndex + 0],
-                    1.0f - TinyObjAttrib.texcoords[BaseTexCoordIndex + 1],
+                    TinyObjAttrib.vertices[BasePositionIndex + 0],
+                    TinyObjAttrib.vertices[BasePositionIndex + 1],
+                    TinyObjAttrib.vertices[BasePositionIndex + 2],
                 };
+
+                // Check for normals
+                if (Index.normal_index >= 0)
+                {
+                    const size_t BaseNormalIndex = 3 * Index.normal_index;
+                    Vertex.Normal =
+                    {
+                        TinyObjAttrib.normals[BaseNormalIndex + 0],
+                        TinyObjAttrib.normals[BaseNormalIndex + 1],
+                        TinyObjAttrib.normals[BaseNormalIndex + 2],
+                    };
+                }
+
+                // Check for UVs
+                if (Index.texcoord_index >= 0)
+                {
+                    const size_t BaseTexCoordIndex = 2 * Index.texcoord_index;
+                    Vertex.TexCoord =
+                    {
+                        TinyObjAttrib.texcoords[BaseTexCoordIndex + 0],
+                        1.0f - TinyObjAttrib.texcoords[BaseTexCoordIndex + 1],
+                    };
+                }
+
+                if (UniqueVertices.count(Vertex) == 0)
+                {
+                    UniqueVertices[Vertex] = static_cast<uint32_t>(NewVertices.size());
+                    NewVertices.push_back(Vertex);
+                }
+
+                NewIndices.push_back(UniqueVertices[Vertex]);
             }
 
-            if (UniqueVertices.count(Vertex) == 0)
-            {
-                UniqueVertices[Vertex] = static_cast<uint32_t>(NewVertices.size());
-                NewVertices.push_back(Vertex);
-            }
+            SubMesh.VertexCount = NewVertices.size() - SubMesh.VertexOffset;
+            SubMesh.IndexCount  = NewIndices.size()  - SubMesh.IndexOffset;
 
-            NewIndices.push_back(UniqueVertices[Vertex]);
+            // Ensure that there a re a valid triangle-count
+            const size_t TriangleCount = SubMesh.IndexCount / 3;
+            assert((SubMesh.IndexCount % 3) == 0);
         }
-
-        SubMesh.VertexCount = NewVertices.size() - SubMesh.VertexOffset;
-        SubMesh.IndexCount  = NewIndices.size()  - SubMesh.IndexOffset;
     }
 
     // Ensure everything is correct
     const size_t TriangleCount = NewIndices.size() / 3;
-    assert(TriangleCount == NewTriangleInfo.size());
+    assert((NewIndices.size() % 3) == 0);
 
     LOG("... finished loading model '%s'\n", Filepath.c_str());
     LOG("Calculating Tangents...\n");
@@ -198,7 +221,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
         glm::vec2 DeltaUV2 = NewVertices[Index2].TexCoord - NewVertices[Index0].TexCoord;
 
         float Denom = DeltaUV1.x * DeltaUV2.y - DeltaUV2.x * DeltaUV1.y;
-        float f     = std::abs(Denom) > 0.0f ? 1.0f / Denom : 0.0f;
+        float f     = (std::abs(Denom) > 0.0f) ? (1.0f / Denom) : 0.0f;
 
         glm::vec3 Tangent;
         Tangent.x = f * (DeltaUV2.y * Edge1.x - DeltaUV1.y * Edge2.x);

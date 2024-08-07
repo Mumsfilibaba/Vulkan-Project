@@ -5,6 +5,8 @@
 #include "hw_ray_trace_common.glsl"
 #include "random.glsl"
 
+#define RAY_OFFSET 0.001
+
 #define ENABLE_RUSSIAN_ROULETTE 1
 
 layout(binding = 0) uniform accelerationStructureEXT uAccelerationStructure;
@@ -85,7 +87,7 @@ void main()
 
         // Prepare next ray
         Direction = vec4(normalize(RayPayLoad.HitNormal + NextRandomUnitSphereVec3(RandomSeed)), 0.0);
-        Origin    = vec4(RayPayLoad.HitPosition.xyz + (RayPayLoad.HitNormal * 0.001), 0.0);
+        Origin    = vec4(RayPayLoad.HitPosition.xyz + (RayPayLoad.HitNormal * RAY_OFFSET), 0.0);
 
         // Add to the sample
         SampleColor += RayPayLoad.HitEmissive * RayColor;
