@@ -545,7 +545,7 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
 
                 if (any(isnan(Normal)) || any(isinf(Normal)))
                 {
-                    Normal = PayLoad.Normal;                 
+                    Normal = PayLoad.Normal;
                 }
             }
             else

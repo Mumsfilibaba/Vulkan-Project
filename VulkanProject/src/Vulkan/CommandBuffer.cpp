@@ -239,6 +239,5 @@ void FCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkI
         return;
     }
 
-    vkCmdPipelineBarrier(m_CommandBuffer, SourceStage, DestinationStage, 0, 0, nullptr, 0, nullptr, 1, &Barrier);
-    m_NumCommands++;
+    PipelineBarrier(SourceStage, DestinationStage, 0, 0, nullptr, 0, nullptr, 1, &Barrier);
 }

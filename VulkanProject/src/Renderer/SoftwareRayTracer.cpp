@@ -151,7 +151,7 @@ void FSoftwareRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
 
     // Bind pipeline and descriptorSet
     pCommandBuffer->BindComputePipelineState(m_pRayTracingPipeline.load());
-    
+
     const uint64_t Frame = GetFrameIndex() % 2;
     if (Frame == 0)
     {
@@ -161,7 +161,7 @@ void FSoftwareRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
     {
         pCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet1, 0);
     }
-    
+
     pCommandBuffer->BindBindlessDescriptors(m_pRayTracingPipelineLayout, VK_PIPELINE_BIND_POINT_COMPUTE);
 
     // Dispatch RayTracing
@@ -1225,53 +1225,53 @@ void FSoftwareRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         BufferCopy.size      = m_pScene->m_pVertexBuffer->GetSize();
         BufferCopy.dstOffset = 0;
         BufferCopy.srcOffset = 0;
-        
+
         pCommandBuffer->CopyBuffer(m_pScene->m_pVertexBuffer->GetBuffer(), m_pVertexBuffer->GetBuffer(), 1, &BufferCopy);
     }
-    
+
     if (m_pScene->m_bUpdateBuffers && m_pScene->m_pVertexExBuffer)
     {
         VkBufferCopy BufferCopy;
         BufferCopy.size      = m_pScene->m_pVertexExBuffer->GetSize();
         BufferCopy.dstOffset = 0;
         BufferCopy.srcOffset = 0;
-        
+
         pCommandBuffer->CopyBuffer(m_pScene->m_pVertexExBuffer->GetBuffer(), m_pVertexExBuffer->GetBuffer(), 1, &BufferCopy);
     }
-    
+
     if (m_pScene->m_bUpdateBuffers && m_pScene->m_pTriangleBuffer)
     {
         VkBufferCopy BufferCopy;
         BufferCopy.size      = m_pScene->m_pTriangleBuffer->GetSize();
         BufferCopy.dstOffset = 0;
         BufferCopy.srcOffset = 0;
-        
+
         pCommandBuffer->CopyBuffer(m_pScene->m_pTriangleBuffer->GetBuffer(), m_pTriangleBuffer->GetBuffer(), 1, &BufferCopy);
     }
-    
+
     if (m_pScene->m_bUpdateBuffers && m_pScene->m_pBoundingBoxBuffer)
     {
         VkBufferCopy BufferCopy;
         BufferCopy.size      = m_pScene->m_pBoundingBoxBuffer->GetSize();
         BufferCopy.dstOffset = 0;
         BufferCopy.srcOffset = 0;
-        
+
         pCommandBuffer->CopyBuffer(m_pScene->m_pBoundingBoxBuffer->GetBuffer(), m_pBvhBuffer->GetBuffer(), 1, &BufferCopy);
     }
-    
+
     if (m_pScene->m_bUpdateBuffers && m_pScene->m_pAABBInstanceBuffer)
     {
         VkBufferCopy BufferCopy;
         BufferCopy.size      = m_pScene->m_pAABBInstanceBuffer->GetSize();
         BufferCopy.dstOffset = 0;
         BufferCopy.srcOffset = 0;
-        
+
         pCommandBuffer->CopyBuffer(m_pScene->m_pAABBInstanceBuffer->GetBuffer(), m_pAABBInstanceBuffer->GetBuffer(), 1, &BufferCopy);
     }
-    
+
     // Do not update next frame
     m_pScene->m_bUpdateBuffers = false;
-    
+
     // Update smaller buffers
     if (!m_pScene->m_Quads.empty())
     {
@@ -1279,25 +1279,34 @@ void FSoftwareRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         assert(sizeof(FShaderQuad) * m_pScene->m_Quads.size() < m_pQuadBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pQuadBuffer, 0, sizeof(FShaderQuad) * m_pScene->m_Quads.size(), m_pScene->m_Quads.data());
     }
-    
+
     if (!m_pScene->m_Spheres.empty())
     {
         pCommandBuffer->FillBuffer(m_pSphereBuffer, 0, m_pSphereBuffer->GetSize(), 0);
         assert(sizeof(FShaderSphere) * m_pScene->m_Spheres.size() < m_pSphereBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(FShaderSphere) * m_pScene->m_Spheres.size(), m_pScene->m_Spheres.data());
     }
-    
+
     if (!m_pScene->m_Meshes.empty())
     {
         pCommandBuffer->FillBuffer(m_pMeshBuffer, 0, m_pMeshBuffer->GetSize(), 0);
         assert(sizeof(FShaderMesh) * m_pScene->m_Meshes.size() < m_pMeshBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(FShaderMesh) * m_pScene->m_Meshes.size(), m_pScene->m_Meshes.data());
     }
-    
+
     if (!m_pScene->m_GpuMaterials.empty())
     {
         pCommandBuffer->FillBuffer(m_pMaterialBuffer, 0, m_pMaterialBuffer->GetSize(), 0);
         assert(sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size() < m_pMaterialBuffer->GetSize());
         pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
     }
+
+    // Barrier before reading the buffer from the shader
+    VkMemoryBarrier MemoryBarrier;
+    MemoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    MemoryBarrier.pNext         = nullptr;
+    MemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    MemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    pCommandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &MemoryBarrier, 0, nullptr, 0, nullptr);
 }

@@ -10,6 +10,7 @@ struct FMeshInfo
 {
     uint64_t VertexBufferAddress = 0;
     uint64_t IndexBufferAddress  = 0;
+    uint64_t MaterialIndex       = 0;
 };
 
 struct FScene : public IScene
@@ -33,6 +34,7 @@ struct FScene : public IScene
     // Cache the device
     FDevice* m_pDevice;
 
+    // Camera
     FCamera m_Camera;
     float   m_CameraSpeed;
 
@@ -44,6 +46,7 @@ struct FScene : public IScene
     std::vector<FMeshInfo>               m_MeshInfoBuffer;
 
     // Materials
-    FBuffer*  m_pMaterialBuffer;
-    FSampler* m_pMaterialSampler;
+    FSampler*                    m_pMaterialSampler;
+    std::vector<FMaterial>       m_Materials;
+    std::vector<FShaderMaterial> m_GpuMaterials;
 };

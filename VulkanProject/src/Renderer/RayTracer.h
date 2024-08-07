@@ -42,4 +42,7 @@ private:
     FDescriptorSetLayout* m_pRayTracingDescriptorSetLayout;
     FDescriptorSet*       m_pRayTracingDescriptorSet0;
     FDescriptorSet*       m_pRayTracingDescriptorSet1;
+
+    // Materials
+    FBuffer*              m_pMaterialBuffer;
 };

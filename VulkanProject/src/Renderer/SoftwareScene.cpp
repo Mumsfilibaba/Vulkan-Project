@@ -62,7 +62,7 @@ FSoftwareScene::~FSoftwareScene()
         pDevice->WaitForIdle();
 
         // Cleanup any textures from the BindlessManager
-        for (const auto& Material : m_Materials)
+        for (const FMaterial& Material : m_Materials)
         {
             if (Material.AlbedoTex)
             {
@@ -218,7 +218,7 @@ void FModelScene::Initialize()
     m_pMaterialSampler->SetDebugName("Material Sampler");
     
     // Create materials for the materials
-    for (const auto& Material : m_Materials)
+    for (const FMaterial& Material : m_Materials)
     {
         FShaderMaterial& ShaderMaterial = m_GpuMaterials.emplace_back();
         ShaderMaterial.AlbedoColor           = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);

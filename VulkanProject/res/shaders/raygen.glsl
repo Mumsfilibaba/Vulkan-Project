@@ -5,6 +5,8 @@
 #include "hw_ray_trace_common.glsl"
 #include "random.glsl"
 
+#define ENABLE_RUSSIAN_ROULETTE 1
+
 layout(binding = 0) uniform accelerationStructureEXT uAccelerationStructure;
 
 layout (binding = 1, rgba32f) uniform image2D uOutput;
@@ -32,7 +34,7 @@ layout(binding = 3) uniform CameraBufferObject
     uint Padding2;
 } uCamera;
 
-layout(binding = 5) uniform RandomBufferObject 
+layout(binding = 4) uniform RandomBufferObject 
 {
     // 0-8
     uint FrameIndex;
@@ -70,20 +72,37 @@ void main()
     vec3 RayColor    = vec3(1.0);
     vec3 SampleColor = vec3(0.0);
 
-    for (uint i = 0; i < 4; i++)
+    const uint NumBounces = 4;
+    for (uint i = 0; i < NumBounces; i++)
     {
         RayPayLoad.HitNormal   = vec3(0.0);
         RayPayLoad.HitPosition = vec3(0.0);
         RayPayLoad.HitAlbedo   = vec3(0.0);
         RayPayLoad.HitEmissive = vec3(0.0);
 
+        // Trace-Ray
         traceRayEXT(uAccelerationStructure, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
 
+        // Prepare next ray
         Direction = vec4(normalize(RayPayLoad.HitNormal + NextRandomUnitSphereVec3(RandomSeed)), 0.0);
         Origin    = vec4(RayPayLoad.HitPosition.xyz + (RayPayLoad.HitNormal * 0.001), 0.0);
 
+        // Add to the sample
         SampleColor += RayPayLoad.HitEmissive * RayColor;
-        RayColor     = RayPayLoad.HitAlbedo * RayColor;
+
+        // Modify ray-color for next hit
+        RayColor = RayPayLoad.HitAlbedo * RayColor;
+
+    #if ENABLE_RUSSIAN_ROULETTE
+        float Probability = max(RayColor.r, max(RayColor.g, RayColor.b));
+        if (NextRandom(RandomSeed) > Probability)
+        {
+            break;
+        }
+
+        // Add the energy we 'lose' by randomly terminating paths
+        RayColor /= Probability;
+    #endif
     }
 	
     // Accumulate samples over time

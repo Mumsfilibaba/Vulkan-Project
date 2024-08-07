@@ -117,12 +117,13 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
     std::vector<FVertex>  NewVertices;
     std::vector<uint32_t> NewIndices;
 
-    std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices = {};
+    std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices;
     for (const tinyobj::shape_t& Shape : TinyObjShapes)
     {
         FSubMesh& SubMesh = NewSubmeshes.emplace_back();
-        SubMesh.VertexOffset = NewVertices.size();
-        SubMesh.IndexOffset  = NewIndices.size();
+        SubMesh.VertexOffset  = NewVertices.size();
+        SubMesh.IndexOffset   = NewIndices.size();
+        SubMesh.MaterialIndex = Shape.mesh.material_ids[0];
 
         for (const tinyobj::index_t& Index : Shape.mesh.indices)
         {
@@ -173,6 +174,49 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
         SubMesh.VertexCount = NewVertices.size() - SubMesh.VertexOffset;
         SubMesh.IndexCount  = NewIndices.size()  - SubMesh.IndexOffset;
     }
+
+    // Ensure everything is correct
+    const size_t TriangleCount = NewIndices.size() / 3;
+    assert(TriangleCount == NewTriangleInfo.size());
+
+    LOG("... finished loading model '%s'\n", Filepath.c_str());
+    LOG("Calculating Tangents...\n");
+
+    // Calculate tangents for each triangle
+    std::vector<glm::vec3> TangentAccumulation;
+    TangentAccumulation.resize(NewVertices.size());
+
+    for (size_t i = 0; i < NewIndices.size(); i += 3)
+    {
+        uint32_t Index0 = NewIndices[i + 0];
+        uint32_t Index1 = NewIndices[i + 1];
+        uint32_t Index2 = NewIndices[i + 2];
+
+        glm::vec3 Edge1    = NewVertices[Index1].Position - NewVertices[Index0].Position;
+        glm::vec3 Edge2    = NewVertices[Index2].Position - NewVertices[Index0].Position;
+        glm::vec2 DeltaUV1 = NewVertices[Index1].TexCoord - NewVertices[Index0].TexCoord;
+        glm::vec2 DeltaUV2 = NewVertices[Index2].TexCoord - NewVertices[Index0].TexCoord;
+
+        float Denom = DeltaUV1.x * DeltaUV2.y - DeltaUV2.x * DeltaUV1.y;
+        float f     = std::abs(Denom) > 0.0f ? 1.0f / Denom : 0.0f;
+
+        glm::vec3 Tangent;
+        Tangent.x = f * (DeltaUV2.y * Edge1.x - DeltaUV1.y * Edge2.x);
+        Tangent.y = f * (DeltaUV2.y * Edge1.y - DeltaUV1.y * Edge2.y);
+        Tangent.z = f * (DeltaUV2.y * Edge1.z - DeltaUV1.y * Edge2.z);
+
+        TangentAccumulation[Index0] += Tangent;
+        TangentAccumulation[Index1] += Tangent;
+        TangentAccumulation[Index2] += Tangent;
+    }
+
+    for (size_t i = 0; i < NewVertices.size(); i++)
+    {
+        glm::vec3 Tangent = glm::normalize(TangentAccumulation[i]);
+        NewVertices[i].Tangent = glm::vec4(Tangent, 0.0);
+    }
+
+    LOG("... Finished calculating Tangents\n");
 
     assert(NewIndices.size() < UINT32_MAX);
 

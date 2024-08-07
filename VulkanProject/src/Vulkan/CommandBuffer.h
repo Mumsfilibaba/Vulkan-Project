@@ -28,6 +28,12 @@ public:
 
     void SetDebugName(const char* DebugName);
 
+    void PipelineBarrier(VkPipelineStageFlags SrcStageMask, VkPipelineStageFlags DstStageMask, VkDependencyFlags DependencyFlags, uint32_t MemoryBarrierCount, const VkMemoryBarrier* pMemoryBarriers, uint32_t BufferMemoryBarrierCount, const VkBufferMemoryBarrier* pBufferMemoryBarriers, uint32_t ImageMemoryBarrierCount, const VkImageMemoryBarrier* pImageMemoryBarriers)
+    {
+        vkCmdPipelineBarrier(m_CommandBuffer, SrcStageMask, DstStageMask, DependencyFlags, MemoryBarrierCount, pMemoryBarriers, BufferMemoryBarrierCount, pBufferMemoryBarriers, ImageMemoryBarrierCount, pImageMemoryBarriers);
+        m_NumCommands++;
+    }
+
     void Begin(VkCommandBufferUsageFlags Flags = 0)
     {
         VkCommandBufferBeginInfo BeginInfo = {};
