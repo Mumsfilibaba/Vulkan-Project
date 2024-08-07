@@ -693,7 +693,7 @@ vec3 GetNormalForRay(in FRay Ray)
 
             if (any(isnan(Normal)) || any(isinf(Normal)))
             {
-                Normal = PayLoad.Normal;                 
+                Normal = PayLoad.Normal;
             }
         }
         else

@@ -3,10 +3,15 @@
 
 struct FRayPayLoad
 {
-    vec3 HitNormal;
-    vec3 HitPosition;
-    vec3 HitAlbedo;
-    vec3 HitEmissive;
+    vec3  HitNormal;
+    vec3  HitTangent;
+    vec3  HitPosition;
+    vec3  HitBarycentrics;
+    vec3  MissEmissive;
+    vec2  HitTexCoord;
+    uint  HitMaterialIndex;
+    float HitT;
+    bool  bFromInside;
 };
 
 struct FSceneSettings 

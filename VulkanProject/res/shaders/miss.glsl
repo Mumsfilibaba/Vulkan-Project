@@ -21,7 +21,7 @@ void main()
 {
     if (uScene.Settings.BackgroundType == BACKGROUND_TYPE_NONE)
     {
-        RayPayLoad.HitEmissive = vec3(0.0, 0.0, 0.0);
+        RayPayLoad.MissEmissive = vec3(0.0, 0.0, 0.0);
     }
     else if (uScene.Settings.BackgroundType == BACKGROUND_TYPE_GRADIENT)
     {
@@ -30,12 +30,12 @@ void main()
         const vec3  Color  = (1.0 - Alpha) * vec3(1.0, 1.0, 1.0) + Alpha * vec3(0.5, 0.7, 1.0);
         
         const float Strength = max(1.0, uScene.Settings.GradientLightStrength);
-        RayPayLoad.HitEmissive = Color * Strength;
+        RayPayLoad.MissEmissive = Color * Strength;
     }
     else if (uScene.Settings.BackgroundType == BACKGROUND_TYPE_SKYBOX)
     {
         const vec3 RayDir      = normalize(gl_WorldRayDirectionEXT);
         const vec4 SkyboxColor = texture(uCubeTextures[0], RayDir);
-        RayPayLoad.HitEmissive = SkyboxColor.rgb;
+        RayPayLoad.MissEmissive = SkyboxColor.rgb;
     }
 }

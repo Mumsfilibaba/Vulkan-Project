@@ -39,13 +39,6 @@ layout(binding = 6) readonly buffer FMeshInfoBuffer
     FMeshInfo MeshInfos[]; 
 };
 
-layout(binding = 7) buffer MaterialBuffer
-{
-    FMaterial Materials[];
-};
-
-layout (set = 1, binding = 0) uniform sampler2D uTextures[];
-
 layout(location = 0) rayPayloadInEXT FRayPayLoad RayPayLoad;
 
 hitAttributeEXT vec2 Attribs;
@@ -70,47 +63,28 @@ void main()
 
     // Output the normal
     const vec3 BarycentricCoords = vec3(1.0 - Attribs.x - Attribs.y, Attribs.x, Attribs.y);
-
+    RayPayLoad.HitBarycentrics = BarycentricCoords;
+    
     // Attributes
     const vec3 Position = (Vertices[0].Position * BarycentricCoords.x) + (Vertices[1].Position * BarycentricCoords.y) + (Vertices[2].Position * BarycentricCoords.z);
     const vec3 Normal   = (Vertices[0].Normal   * BarycentricCoords.x) + (Vertices[1].Normal   * BarycentricCoords.y) + (Vertices[2].Normal   * BarycentricCoords.z);
     const vec3 Tangent  = (Vertices[0].Tangent  * BarycentricCoords.x) + (Vertices[1].Tangent  * BarycentricCoords.y) + (Vertices[2].Tangent  * BarycentricCoords.z);
     const vec2 TexCoord = (Vertices[0].TexCoord * BarycentricCoords.x) + (Vertices[1].TexCoord * BarycentricCoords.y) + (Vertices[2].TexCoord * BarycentricCoords.z);
 
-    // Sample Material
-    FMaterial Material = Materials[uint(MeshInfo.MaterialIndex)];
-    if (Material.AlbedoTexIndex != INVALID_BINDLESS_ID)
+    RayPayLoad.HitNormal = normalize(vec3(Normal * gl_WorldToObjectEXT));
+    if (any(isnan(RayPayLoad.HitNormal)) || any(isinf(RayPayLoad.HitNormal)))
     {
-        RayPayLoad.HitAlbedo = texture(uTextures[Material.AlbedoTexIndex], TexCoord).rgb;
-    }
-    else
-    {
-        RayPayLoad.HitAlbedo = vec3(0.9, 0.9, 0.9);
+        RayPayLoad.HitNormal = Normal;
     }
 
-    if (Material.NormalTexIndex != INVALID_BINDLESS_ID)
+    RayPayLoad.HitTangent = normalize(vec3(Tangent * gl_WorldToObjectEXT));
+    if (any(isnan(RayPayLoad.HitTangent)) || any(isinf(RayPayLoad.HitTangent)))
     {
-        vec3 NormalMap = texture(uTextures[Material.NormalTexIndex], TexCoord).rgb;
-        NormalMap = normalize(NormalMap * 2.0 - 1.0); // Transform from [0,1] range to [-1,1]
-
-        const vec3 BiTangent = cross(Normal, Tangent);
-        const mat3 TBNMatrix = mat3(Tangent, BiTangent, Normal);
-        vec3 MappedNormal = normalize(TBNMatrix * NormalMap);
-
-        if (any(isnan(MappedNormal)) || any(isinf(MappedNormal)))
-        {
-            MappedNormal = Normal;
-        }
-
-        const vec3 WorldNormal = normalize(vec3(MappedNormal * gl_WorldToObjectEXT)); // Transforming the normal to world space
-        RayPayLoad.HitNormal = WorldNormal;
-    }
-    else
-    {
-        const vec3 WorldNormal = normalize(vec3(Normal * gl_WorldToObjectEXT)); // Transforming the normal to world space
-        RayPayLoad.HitNormal = WorldNormal;
+        RayPayLoad.HitTangent = Tangent;
     }
 
-    const vec3 WorldPosition = vec3(gl_ObjectToWorldEXT * vec4(Position, 1.0)); // Transforming the position to world space
-    RayPayLoad.HitPosition = WorldPosition;
+    RayPayLoad.HitPosition      = vec3(gl_ObjectToWorldEXT * vec4(Position, 1.0)); // Transforming the position to world space;
+    RayPayLoad.HitTexCoord      = TexCoord;
+    RayPayLoad.HitMaterialIndex = uint(MeshInfo.MaterialIndex);
+    RayPayLoad.HitT             = gl_HitTEXT; 
 }
