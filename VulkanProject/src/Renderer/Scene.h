@@ -22,15 +22,22 @@ enum class EViewMode : uint32_t
     TexCoords    = 4,
 };
 
+enum class EBackgroundType : uint32_t
+{
+    None     = 0,
+    Gradient = 1, 
+    Skybox   = 2,
+};
+
 struct FSceneSettings
 {
-    EViewMode ViewMode;
-    uint32_t  BackgroundType;
-    float     GradientLightStrength;
-    float     Exposure;
-    uint32_t  NumBounces;
-    float     FieldOfView;
-    float     CameraSpeed;
+    EViewMode       ViewMode;
+    EBackgroundType BackgroundType;
+    float           GradientLightStrength;
+    float           Exposure;
+    uint32_t        NumBounces;
+    float           FieldOfView;
+    float           CameraSpeed;
 };
 
 struct FScene : public IScene

@@ -20,6 +20,7 @@ FScene::FScene(FDevice* pDevice)
     assert(pDevice != nullptr);
 
     m_Settings.ViewMode              = EViewMode::Render;
+    m_Settings.BackgroundType        = EBackgroundType::Gradient;
     m_Settings.Exposure              = 0.5f;
     m_Settings.NumBounces            = 4;
     m_Settings.FieldOfView           = 90.0f;

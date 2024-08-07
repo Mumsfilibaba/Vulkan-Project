@@ -204,7 +204,7 @@ void FRayTracer::Render(FCommandBuffer* pCommandBuffer)
     // Update Scene
     FSceneBuffer SceneBuffer = {};
     SceneBuffer.NumMaterials          = m_pScene->m_GpuMaterials.size();
-    SceneBuffer.BackgroundType        = m_pScene->m_Settings.BackgroundType;
+    SceneBuffer.BackgroundType        = static_cast<uint32_t>(m_pScene->m_Settings.BackgroundType);
     SceneBuffer.NumBounces            = m_pScene->m_Settings.NumBounces;
     SceneBuffer.ViewMode              = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
     SceneBuffer.GradientLightStrength = m_pScene->m_Settings.GradientLightStrength;
@@ -305,11 +305,46 @@ void FRayTracer::RenderUI()
         ImGui::Text("Scene:");
         ImGui::Separator();
 
-        float Strength = m_pScene->m_Settings.GradientLightStrength;
-        if (ImGui::DragFloat("Gradient Strength", &Strength, 0.1f, 1.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+        // Background
+        static const char* Background[] =
         {
-            m_pScene->m_Settings.GradientLightStrength = Strength;
+            "None",
+            "Gradient",
+            "Skybox",
+        };
+
+        int CurrentBG = static_cast<int>(m_pScene->m_Settings.BackgroundType);
+
+        static int PrevBG = CurrentBG;
+        ImGui::Combo("Background", &CurrentBG, Background, IM_ARRAYSIZE(Background));
+
+        if (PrevBG != CurrentBG)
+        {
+            if (CurrentBG == 0)
+            {
+                m_pScene->m_Settings.BackgroundType = EBackgroundType::None;
+            }
+            else if (CurrentBG == 1)
+            {
+                m_pScene->m_Settings.BackgroundType = EBackgroundType::Gradient;
+            }
+            else if (CurrentBG == 2)
+            {
+                m_pScene->m_Settings.BackgroundType = EBackgroundType::Skybox;
+            }
+
             ResetImage();
+            PrevBG = CurrentBG;
+        }
+
+        if (CurrentBG == 1)
+        {
+            float Strength = m_pScene->m_Settings.GradientLightStrength;
+            if (ImGui::DragFloat("Gradient Strength", &Strength, 0.1f, 1.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+            {
+                m_pScene->m_Settings.GradientLightStrength = Strength;
+                ResetImage();
+            }
         }
 
         float Exposure = m_pScene->m_Settings.Exposure;
