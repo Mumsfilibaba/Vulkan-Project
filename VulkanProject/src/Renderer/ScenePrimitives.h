@@ -53,7 +53,6 @@ struct FShaderMesh
 {
     // 0-8
     uint32_t BoundingBoxIndex;
-    uint32_t MaterialIndex;
 };
 
 struct FShaderMaterial
