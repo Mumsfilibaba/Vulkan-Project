@@ -952,7 +952,7 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
     m_pSceneSettingsBuffer = FBuffer::Create(GetDevice(), SceneBufferParams, GetDeviceAllocator());
     assert(m_pSceneSettingsBuffer != nullptr);
     m_pSceneSettingsBuffer->SetDebugName("Scene-Buffer");
-    
+
     // QuadBuffer
     FBufferParams QuadBufferParams;
     QuadBufferParams.Size             = sizeof(FShaderQuad) * MAX_QUADS;
@@ -962,7 +962,7 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
     m_pQuadBuffer = FBuffer::Create(GetDevice(), QuadBufferParams, GetDeviceAllocator());
     assert(m_pQuadBuffer != nullptr);
     m_pQuadBuffer->SetDebugName("Quad-Buffer");
-    
+
     // SphereBuffer
     FBufferParams SphereBufferParams;
     SphereBufferParams.Size             = sizeof(FShaderSphere) * MAX_SPHERES;
@@ -972,7 +972,7 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
     m_pSphereBuffer = FBuffer::Create(GetDevice(), SphereBufferParams, GetDeviceAllocator());
     assert(m_pSphereBuffer != nullptr);
     m_pSphereBuffer->SetDebugName("Sphere-Buffer");
-    
+
     // VertexBuffer
     FBufferParams VertexBufferParams;
     VertexBufferParams.Size             = sizeof(FVertexPosOnly) * MAX_VERTICES;
@@ -982,13 +982,13 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
     m_pVertexBuffer = FBuffer::Create(GetDevice(), VertexBufferParams, GetDeviceAllocator());
     assert(m_pVertexBuffer != nullptr);
     m_pVertexBuffer->SetDebugName("Vertex-Buffer");
-    
-    VertexBufferParams.Size = sizeof(FVertexEx) * MAX_VERTICES;
-    
+
+    VertexBufferParams.Size = sizeof(FVertex) * MAX_VERTICES;
+
     m_pVertexExBuffer = FBuffer::Create(GetDevice(), VertexBufferParams, GetDeviceAllocator());
     assert(m_pVertexExBuffer != nullptr);
     m_pVertexExBuffer->SetDebugName("VertexEx-Buffer");
-    
+
     // TriangleBuffer
     FBufferParams TriangleBufferParams;
     TriangleBufferParams.Size             = sizeof(FShaderTriangle) * MAX_TRIANGLES;
@@ -998,7 +998,7 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
     m_pTriangleBuffer = FBuffer::Create(GetDevice(), TriangleBufferParams, GetDeviceAllocator());
     assert(m_pTriangleBuffer != nullptr);
     m_pTriangleBuffer->SetDebugName("Triangle-Buffer");
-    
+
     // TriangleMeshesBuffer
     FBufferParams MeshBufferParams;
     MeshBufferParams.Size             = sizeof(FShaderMesh) * MAX_TRIANGLEMESHES;
@@ -1008,7 +1008,7 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
     m_pMeshBuffer = FBuffer::Create(GetDevice(), MeshBufferParams, GetDeviceAllocator());
     assert(m_pMeshBuffer != nullptr);
     m_pMeshBuffer->SetDebugName("TriangleMeshes-Buffer");
-    
+
     // MaterialBuffer
     FBufferParams MaterialBufferParams;
     MaterialBufferParams.Size             = sizeof(FShaderMaterial) * MAX_MATERIALS;
@@ -1018,7 +1018,7 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
     m_pMaterialBuffer = FBuffer::Create(GetDevice(), MaterialBufferParams, GetDeviceAllocator());
     assert(m_pMaterialBuffer != nullptr);
     m_pMaterialBuffer->SetDebugName("Material-Buffer");
-    
+
     // BoundingBoxBuffer
     FBufferParams BoundingBoxBufferParams;
     BoundingBoxBufferParams.Size             = sizeof(FShaderBoundingBox) * MAX_BVH_NODES;
@@ -1028,7 +1028,7 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
     m_pBvhBuffer = FBuffer::Create(GetDevice(), BoundingBoxBufferParams, GetDeviceAllocator());
     assert(m_pBvhBuffer != nullptr);
     m_pBvhBuffer->SetDebugName("BVH-Buffer");
-    
+
     // Debug AABB instance buffer
     FBufferParams AABBInstanceBufferParams;
     AABBInstanceBufferParams.Size             = sizeof(glm::mat4) * MAX_BVH_NODES;
@@ -1228,6 +1228,17 @@ void FSoftwareRayTracer::ReloadShaders()
 void FSoftwareRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
 {
     // Update GPU buffers
+    if (m_pScene->m_bUpdateBuffers && m_pScene->m_pVertexPositionsBuffer)
+    {
+        VkBufferCopy BufferCopy;
+        BufferCopy.size      = m_pScene->m_pVertexPositionsBuffer->GetSize();
+        BufferCopy.dstOffset = 0;
+        BufferCopy.srcOffset = 0;
+
+        assert(m_pVertexBuffer->GetSize() >= m_pScene->m_pVertexPositionsBuffer->GetSize());
+        pCommandBuffer->CopyBuffer(m_pScene->m_pVertexPositionsBuffer->GetBuffer(), m_pVertexBuffer->GetBuffer(), 1, &BufferCopy);
+    }
+
     if (m_pScene->m_bUpdateBuffers && m_pScene->m_pVertexBuffer)
     {
         VkBufferCopy BufferCopy;
@@ -1235,19 +1246,8 @@ void FSoftwareRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         BufferCopy.dstOffset = 0;
         BufferCopy.srcOffset = 0;
 
-        assert(m_pVertexBuffer->GetSize() >= m_pScene->m_pVertexBuffer->GetSize());
-        pCommandBuffer->CopyBuffer(m_pScene->m_pVertexBuffer->GetBuffer(), m_pVertexBuffer->GetBuffer(), 1, &BufferCopy);
-    }
-
-    if (m_pScene->m_bUpdateBuffers && m_pScene->m_pVertexExBuffer)
-    {
-        VkBufferCopy BufferCopy;
-        BufferCopy.size      = m_pScene->m_pVertexExBuffer->GetSize();
-        BufferCopy.dstOffset = 0;
-        BufferCopy.srcOffset = 0;
-
-        assert(m_pVertexExBuffer->GetSize() >= m_pScene->m_pVertexExBuffer->GetSize());
-        pCommandBuffer->CopyBuffer(m_pScene->m_pVertexExBuffer->GetBuffer(), m_pVertexExBuffer->GetBuffer(), 1, &BufferCopy);
+        assert(m_pVertexExBuffer->GetSize() >= m_pScene->m_pVertexBuffer->GetSize());
+        pCommandBuffer->CopyBuffer(m_pScene->m_pVertexBuffer->GetBuffer(), m_pVertexExBuffer->GetBuffer(), 1, &BufferCopy);
     }
 
     if (m_pScene->m_bUpdateBuffers && m_pScene->m_pTriangleBuffer)

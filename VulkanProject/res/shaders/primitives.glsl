@@ -63,20 +63,17 @@ struct FSphere
     uint Padding2;
 };
 
-struct FVertex
+struct FVertexPosOnly
 {
-    // 0-16
-    vec4 Position;
+    vec3 Position;
 };
 
-struct FVertexEx
+struct FVertex
 {
-    // 0-16
-    vec4 Normal;
-    // 16-32
-    vec4 Tangent;
-    // 32-48
-    vec4 TexCoords;
+    vec3 Position;
+    vec3 Normal;
+    vec3 Tangent;
+    vec2 TexCoord;
 };
 
 struct FTriangle
@@ -92,7 +89,6 @@ struct FMesh
 {
     // 0-8
     uint BoundingBoxIndex;
-    uint MaterialIndex;
 };
 
 struct FHitInfo

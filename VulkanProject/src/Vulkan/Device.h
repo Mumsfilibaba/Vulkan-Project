@@ -122,7 +122,7 @@ private:
     VkPhysicalDeviceVulkan12Features                 m_DeviceFeatures12;
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR    m_DeviceRayTracingFeatures;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR m_DeviceAccelerationStructureFeatures;
-    
+
     // Device Properties
     VkPhysicalDeviceMemoryProperties                 m_DeviceMemoryProperties;
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR  m_DeviceRayTracingProperties;

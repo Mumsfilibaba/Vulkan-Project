@@ -516,20 +516,24 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
     ZERO_STRUCT(&m_EnabledDeviceAccelerationStructureFeatures);
     m_EnabledDeviceAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 
+    if (m_DeviceAccelerationStructureFeatures.accelerationStructure)
+        m_EnabledDeviceAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
+
     ZERO_STRUCT(&m_EnabledDeviceRayTracingFeatures);
     m_EnabledDeviceRayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
     m_EnabledDeviceRayTracingFeatures.pNext = &m_EnabledDeviceAccelerationStructureFeatures;
 
     ZERO_STRUCT(&m_EnabledDeviceFeatures12);
     m_EnabledDeviceFeatures12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+
     if (m_DeviceFeatures12.bufferDeviceAddress)
         m_EnabledDeviceFeatures12.bufferDeviceAddress = VK_TRUE;
     if (m_DeviceFeatures12.hostQueryReset)
         m_EnabledDeviceFeatures12.hostQueryReset = VK_TRUE;
     if (m_DeviceFeatures12.descriptorIndexing)
         m_EnabledDeviceFeatures12.descriptorIndexing = VK_TRUE;
-    if (m_DeviceAccelerationStructureFeatures.accelerationStructure)
-        m_EnabledDeviceAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
+    if (m_DeviceFeatures12.scalarBlockLayout)
+        m_EnabledDeviceFeatures12.scalarBlockLayout = VK_TRUE;
 
     if (m_DeviceRayTracingFeatures.rayTracingPipeline)
     {
@@ -565,7 +569,7 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
     // Create the logical device
     VkDeviceCreateInfo DeviceCreateInfo;
     ZERO_STRUCT(&DeviceCreateInfo);
-    
+
     DeviceCreateInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     DeviceCreateInfo.pNext                = &m_EnabledDeviceFeatures;
     DeviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(QueueCreateInfos.size());
@@ -690,7 +694,7 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
         vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionCount, nullptr);
         std::vector<VkExtensionProperties> AvailableDeviceExtension(DeviceExtensionCount);
         vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionCount, AvailableDeviceExtension.data());
-        
+
         if (Params.bVerbose)
         {
             LOG("      Available extensions:\n");
@@ -699,7 +703,7 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
                 LOG("         %s\n", Extension.extensionName);
             }
         }
-        
+
         bool bExtensionsFound = false;
         for (const auto& ExtensionName : DeviceExtensions)
         {
@@ -712,7 +716,7 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
                     break;
                 }
             }
-            
+
             if (!bExtensionsFound)
             {
                 LOG("'%s' is not supported\n", ExtensionName);

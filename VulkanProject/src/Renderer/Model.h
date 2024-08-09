@@ -100,14 +100,14 @@ struct FVertexPosOnly
         return Position == Other.Position;
     }
 
-    glm::vec4 Position;
+    glm::vec3 Position;
 };
 
 struct FVertexPosOnlyHasher
 {
     size_t operator()(const FVertexPosOnly& Vertex) const
     {
-        return std::hash<glm::vec4>()(Vertex.Position);
+        return std::hash<glm::vec3>()(Vertex.Position);
     }
 };
 
@@ -152,6 +152,11 @@ struct FVertexAABBHasher
     }
 };
 
+struct FTriangleInfo
+{
+    uint32_t MaterialIndex;
+};
+
 struct FMaterial
 {
     std::shared_ptr<FTextureResource> AlbedoTex;
@@ -190,20 +195,11 @@ struct FModel
     FBuffer*               pIndexBuffer;
     uint32_t               VertexCount;
     uint32_t               IndexCount;
+
     std::vector<FSubMesh>  SubMeshes;
+    std::vector<uint32_t>  Indicies;
+    std::vector<FVertex>   Vertices;
     std::vector<FMaterial> Materials;
-};
-
-struct FVertexEx
-{
-    glm::vec4 Normal;
-    glm::vec4 Tangent;
-    glm::vec4 TexCoords;
-};
-
-struct FTriangleInfo
-{
-    uint32_t MaterialIndex;
 };
 
 struct FMesh
@@ -212,7 +208,6 @@ struct FMesh
 
     std::vector<FTriangleInfo>  TriangleInfo;
     std::vector<uint32_t>       Indicies;
-    std::vector<FVertexPosOnly> Vertices;
-    std::vector<FVertexEx>      VerticesEx;
+    std::vector<FVertex>        VerticesEx;
     std::vector<FMaterial>      Materials;
 };

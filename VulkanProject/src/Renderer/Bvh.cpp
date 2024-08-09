@@ -276,7 +276,6 @@ void FBvhBuilder::RecalculateBounds(size_t VolumeIndex)
         FBvhTriangle& Triangle = Triangles[TriangleIndex];
         BoxMin = glm::min(BoxMin, Triangle.BoundsMin);
         BoxMin = glm::min(BoxMin, Triangle.BoundsMax);
-        
         BoxMax = glm::max(BoxMax, Triangle.BoundsMin);
         BoxMax = glm::max(BoxMax, Triangle.BoundsMax);
     }
@@ -323,7 +322,7 @@ FBvhAccelerationStructure::FBvhAccelerationStructure()
 void FBvhAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
 {
     FBvhBuilder BoundingBoxBuilder(MaxDepth);
-    
+
     // Create all triangles
     for (uint32_t i = 0, TriangleIndex = 0; i < Mesh.Indicies.size(); i += 3)
     {
@@ -332,42 +331,42 @@ void FBvhAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
         Triangle.Indicies[0] = Mesh.Indicies[i + 0];
         Triangle.Indicies[1] = Mesh.Indicies[i + 1];
         Triangle.Indicies[2] = Mesh.Indicies[i + 2];
-        
-        Triangle.Positions[0] = Mesh.Vertices[Triangle.Indicies[0]].Position;
-        Triangle.Positions[1] = Mesh.Vertices[Triangle.Indicies[1]].Position;
-        Triangle.Positions[2] = Mesh.Vertices[Triangle.Indicies[2]].Position;
-        
+
+        Triangle.Positions[0] = Mesh.VerticesEx[Triangle.Indicies[0]].Position;
+        Triangle.Positions[1] = Mesh.VerticesEx[Triangle.Indicies[1]].Position;
+        Triangle.Positions[2] = Mesh.VerticesEx[Triangle.Indicies[2]].Position;
+
         // Calculate center of the triangle
         Triangle.Center = (Triangle.Positions[0] + Triangle.Positions[1] + Triangle.Positions[2]) / 3.0f;
-        
+
         // Cache the bounds of the triangle
         Triangle.BoundsMin = glm::vec3(std::numeric_limits<float>::max());
         Triangle.BoundsMax = glm::vec3(std::numeric_limits<float>::lowest());
-        
+
         for (size_t j = 0; j < 3; j++)
         {
             Triangle.BoundsMin = glm::min(Triangle.BoundsMin, Triangle.Positions[j]);
             Triangle.BoundsMax = glm::max(Triangle.BoundsMax, Triangle.Positions[j]);
         }
-        
+
         // Set the MaterialIndex for this triangle
         Triangle.MaterialIndex = Mesh.TriangleInfo[TriangleIndex].MaterialIndex;
         TriangleIndex++;
     }
-    
+
     // Create root-node and insert all triangles into it
     BoundingBoxBuilder.BoundingBoxes.emplace_back();
     for (size_t i = 0; i < BoundingBoxBuilder.Triangles.size(); i++)
     {
         BoundingBoxBuilder.BoundingBoxes[0].Triangles.push_back(i);
     }
-    
+
     BoundingBoxBuilder.RecalculateBounds(0);
-    
+
     // Subdivide and build all the bounding boxes
     BoundingBoxBuilder.BuildHierarchy();
     BoundingBoxBuilder.Finalize();
-    
+
     // Convert triangles into shader-compatible structure
     m_Triangles.reserve(BoundingBoxBuilder.Triangles.size());
     for (const FBvhTriangle& Triangle : BoundingBoxBuilder.Triangles)
@@ -389,7 +388,7 @@ void FBvhAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
             assert(Box.FirstTriangleIndex == 0);
             assert(Box.NumTriangles == 0);
         }
-        
+
         FShaderBoundingBox& ShaderBox = m_BoundingBoxes.emplace_back();
         ShaderBox.BoxMin         = Box.BoxMin;
         ShaderBox.BoxMax         = Box.BoxMax;
@@ -403,8 +402,8 @@ void FBvhAccelerationStructure::Build(const FMesh& Mesh, uint32_t MaxDepth)
             MaxTriangleCount = std::max(static_cast<uint32_t>(ShaderBox.NumTriangles), MaxTriangleCount);
         }
     }
-    
+
     // Setup the stats
-    Stats.Depth = BoundingBoxBuilder.Depth;
+    Stats.Depth                  = BoundingBoxBuilder.Depth;
     Stats.MaxTrianglesInLeafNode = MaxTriangleCount;
 }

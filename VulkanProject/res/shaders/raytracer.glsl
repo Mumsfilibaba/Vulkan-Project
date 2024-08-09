@@ -1,5 +1,7 @@
 #version 450
-#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_GOOGLE_include_directive : require
 
 #include "halton.glsl"
 #include "random.glsl"
@@ -21,7 +23,7 @@
 #define VIEW_MODE_BVH_INTERSECTION 5
 
 #define NUM_THREADS 16
-#define MAX_DEPTH 1024
+#define MAX_NUM_BOUNCES 1024
 #define SIGMA 0.0001
 #define RAY_OFFSET 0.001
 #define GAMMA 2.2
@@ -114,14 +116,14 @@ layout(std430, binding = 8) buffer MaterialBuffer
     FMaterial Materials[];
 };
 
-layout(std430, binding = 9) buffer VertexBuffer
+layout(scalar, binding = 9) buffer VertexPositionsBuffer
 {
-    FVertex Vertices[];
+    FVertexPosOnly VertexPositions[];
 };
 
-layout(std430, binding = 10) buffer VertexExBuffer
+layout(scalar, binding = 10) buffer VertexBuffer
 {
-    FVertexEx VerticesEx[];
+    FVertex Vertices[];
 };
 
 layout(std430, binding = 11) buffer TriangleBuffer
@@ -299,7 +301,7 @@ FHitInfo HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in vec3 
     return HitInfo;
 }
 
-void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint MaterialIndex, inout ivec2 Stats)
+void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, inout ivec2 Stats)
 {
     // Create a stack for checking all the nodes
     const uint MaxDepth = BVH_MAX_DEPTH;
@@ -326,9 +328,9 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
             for (uint TriangleIndex = floatBitsToUint(Node.BoxMinAndIndex.w); TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
                 FTriangle Triangle = Triangles[TriangleIndex];
-                vec3 Position0 = Vertices[Triangle.Index0].Position.xyz;
-                vec3 Position1 = Vertices[Triangle.Index1].Position.xyz;
-                vec3 Position2 = Vertices[Triangle.Index2].Position.xyz;
+                vec3 Position0 = VertexPositions[Triangle.Index0].Position.xyz;
+                vec3 Position1 = VertexPositions[Triangle.Index1].Position.xyz;
+                vec3 Position2 = VertexPositions[Triangle.Index2].Position.xyz;
 
                 FHitInfo HitInfo = HitTriangle(Position0, Position1, Position2, Ray.Origin, Ray.Direction);
                 Stats[1]++;
@@ -373,17 +375,17 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, uint Mat
     {
         FTriangle Triangle = Triangles[LastTriangleHitIndex];
 
-        vec2 TexCoords0 = VerticesEx[Triangle.Index0].TexCoords.xy;
-        vec2 TexCoords1 = VerticesEx[Triangle.Index1].TexCoords.xy;
-        vec2 TexCoords2 = VerticesEx[Triangle.Index2].TexCoords.xy;
+        vec2 TexCoords0 = Vertices[Triangle.Index0].TexCoord.xy;
+        vec2 TexCoords1 = Vertices[Triangle.Index1].TexCoord.xy;
+        vec2 TexCoords2 = Vertices[Triangle.Index2].TexCoord.xy;
 
-        vec3 Normal0 = VerticesEx[Triangle.Index0].Normal.xyz;
-        vec3 Normal1 = VerticesEx[Triangle.Index1].Normal.xyz;
-        vec3 Normal2 = VerticesEx[Triangle.Index2].Normal.xyz;
+        vec3 Normal0 = Vertices[Triangle.Index0].Normal.xyz;
+        vec3 Normal1 = Vertices[Triangle.Index1].Normal.xyz;
+        vec3 Normal2 = Vertices[Triangle.Index2].Normal.xyz;
 
-        vec3 Tangent0 = VerticesEx[Triangle.Index0].Tangent.xyz;
-        vec3 Tangent1 = VerticesEx[Triangle.Index1].Tangent.xyz;
-        vec3 Tangent2 = VerticesEx[Triangle.Index2].Tangent.xyz;
+        vec3 Tangent0 = Vertices[Triangle.Index0].Tangent.xyz;
+        vec3 Tangent1 = Vertices[Triangle.Index1].Tangent.xyz;
+        vec3 Tangent2 = Vertices[Triangle.Index2].Tangent.xyz;
 
         PayLoad.BaryCentrics  = vec3(LastHitInfo.BaryCentrics, 1.0 - (LastHitInfo.BaryCentrics.x + LastHitInfo.BaryCentrics.y));
         PayLoad.Normal        = normalize((PayLoad.BaryCentrics.x * Normal1)  + (PayLoad.BaryCentrics.y * Normal2)  + (PayLoad.BaryCentrics.z * Normal0));
@@ -422,7 +424,7 @@ bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad, inout ivec2 Stats)
     for (uint i = 0; i < uScene.NumMeshes; i++)
     {
         FMesh Mesh = Meshes[i];
-        HitMesh(Mesh.BoundingBoxIndex, Ray, PayLoad, Mesh.MaterialIndex, Stats);
+        HitMesh(Mesh.BoundingBoxIndex, Ray, PayLoad, Stats);
     }
 
     return PayLoad.T < PayLoad.MaxT;
@@ -518,7 +520,7 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
     ivec2 Stats;
 
     // Add one bounce (Primary ray)
-    const uint MaxBounces = min(uScene.NumBounces, MAX_DEPTH) + 1;
+    const uint MaxBounces = min(uScene.NumBounces, MAX_NUM_BOUNCES) + 1;
     for (uint i = 0; i < MaxBounces; i++)
     {
         FRayPayLoad PayLoad;

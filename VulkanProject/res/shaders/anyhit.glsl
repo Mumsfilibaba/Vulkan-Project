@@ -1,8 +1,8 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
-#extension GL_EXT_nonuniform_qualifier : enable
-#extension GL_EXT_scalar_block_layout : enable
-#extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_buffer_reference2 : require
 
@@ -16,17 +16,9 @@ struct FMeshInfo
     uint64_t MaterialIndex;
 };
 
-struct FHWVertex
-{
-    vec3 Position;
-    vec3 Normal;
-    vec3 Tangent;
-    vec2 TexCoord;
-};
-
 layout(buffer_reference, scalar) readonly buffer FVertexBuffer
 {
-    FHWVertex Vertices[];
+    FVertex Vertices[];
 };
 
 layout(buffer_reference, scalar) readonly buffer FIndexBuffer
@@ -66,7 +58,7 @@ void main()
     const ivec3 Indices = IndexBuffer.Indices[gl_PrimitiveID];
 
     // Gather vertices
-    FHWVertex Vertices[3];
+    FVertex Vertices[3];
     Vertices[0] = VertexBuffer.Vertices[Indices.x];
     Vertices[1] = VertexBuffer.Vertices[Indices.y];
     Vertices[2] = VertexBuffer.Vertices[Indices.z];

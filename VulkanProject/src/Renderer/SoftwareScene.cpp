@@ -18,8 +18,8 @@ FSoftwareScene::FSoftwareScene()
     , m_Spheres()
     , m_GpuMaterials()
     , m_Settings()
+    , m_pVertexPositionsBuffer(nullptr)
     , m_pVertexBuffer(nullptr)
-    , m_pVertexExBuffer(nullptr)
     , m_pTriangleBuffer(nullptr)
     , m_pBoundingBoxBuffer(nullptr)
     , m_pMaterialSampler(nullptr)
@@ -32,7 +32,7 @@ FSoftwareScene::FSoftwareScene()
     m_Settings.NumBounces            = 4;
     m_Settings.FieldOfView           = 90.0f;
     m_Settings.CameraSpeed           = 1.5f;
-    m_Settings.GradientLightStrength = 4.0f;
+    m_Settings.GradientLightStrength = 1.0f;
 
     m_Quads.reserve(MAX_QUADS);
     ZeroVector(m_Quads);
@@ -43,8 +43,8 @@ FSoftwareScene::FSoftwareScene()
     m_GpuMaterials.reserve(MAX_MATERIALS);
     ZeroVector(m_GpuMaterials);
 
-    m_Vertices.reserve(MAX_VERTICES);
-    ZeroVector(m_Vertices);
+    m_VertexPositions.reserve(MAX_VERTICES);
+    ZeroVector(m_VertexPositions);
 
     m_VerticesEx.reserve(MAX_VERTICES);
     ZeroVector(m_VerticesEx);
@@ -77,8 +77,8 @@ FSoftwareScene::~FSoftwareScene()
     
     SAFE_DELETE(m_pBoundingBoxBuffer);
     SAFE_DELETE(m_pTriangleBuffer);
+    SAFE_DELETE(m_pVertexPositionsBuffer);
     SAFE_DELETE(m_pVertexBuffer);
-    SAFE_DELETE(m_pVertexExBuffer);
     SAFE_DELETE(m_pMaterialSampler);
 
     SAFE_DELETE(m_pMeshVertexBuffer);
@@ -107,14 +107,21 @@ void FModelScene::Initialize()
     else if (Type == EModelSceneType::Sponza)
     {
         Mesh.LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj");
-        m_Settings.CameraSpeed = 150.0f;
+        m_Settings.CameraSpeed           = 150.0f;
+        m_Settings.GradientLightStrength = 4.0f;
     }
 
     // Copy data to the scene
-    m_Vertices   = Mesh.Vertices;
     m_VerticesEx = Mesh.VerticesEx;
     m_Indicies   = Mesh.Indicies;
     m_Materials  = Mesh.Materials;
+
+    // Create position only buffer
+    m_VertexPositions.resize(m_VerticesEx.size());
+    for (size_t i = 0; i < m_VerticesEx.size(); i++)
+    {
+        m_VertexPositions[i].Position = m_VerticesEx[i].Position;
+    }
 
     // Build BVH
     m_AccelerationStructure.Build(Mesh, 32);
@@ -127,7 +134,6 @@ void FModelScene::Initialize()
     m_Meshes.push_back(
     {
         0, // BoundingBoxIndex
-        4, // MaterialIndex
     });
 
     // Cache Device
@@ -149,21 +155,21 @@ void FModelScene::Initialize()
     assert(m_pTriangleBuffer != nullptr);
     m_pTriangleBuffer->SetDebugName("CPU Triangle Buffer");
 
-    BufferParams.Size = sizeof(FVertexPosOnly) * m_Vertices.size();
-    m_pVertexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_Vertices.data());
+    BufferParams.Size = sizeof(FVertexPosOnly) * m_VertexPositions.size();
+    m_pVertexPositionsBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_VertexPositions.data());
+    assert(m_pVertexPositionsBuffer != nullptr);
+    m_pVertexPositionsBuffer->SetDebugName("CPU Vertex Buffer");
+
+    BufferParams.Size = sizeof(FVertex) * m_VerticesEx.size();
+    m_pVertexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_VerticesEx.data());
     assert(m_pVertexBuffer != nullptr);
-    m_pVertexBuffer->SetDebugName("CPU Vertex Buffer");
+    m_pVertexBuffer->SetDebugName("CPU VertexEx Buffer");
 
-    BufferParams.Size = sizeof(FVertexEx) * m_VerticesEx.size();
-    m_pVertexExBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_VerticesEx.data());
-    assert(m_pVertexExBuffer != nullptr);
-    m_pVertexExBuffer->SetDebugName("CPU VertexEx Buffer");
-
-    BufferParams.Size             = sizeof(FVertexPosOnly) * Mesh.Vertices.size();
+    BufferParams.Size             = sizeof(FVertexPosOnly) * m_VertexPositions.size();
     BufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pMeshVertexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, Mesh.Vertices.data());
+    m_pMeshVertexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_VertexPositions.data());
     assert(m_pMeshVertexBuffer != nullptr);
     m_pMeshVertexBuffer->SetDebugName("CPU Debug Vertex Buffer");
 
@@ -185,7 +191,7 @@ void FModelScene::Initialize()
         {
             glm::vec3 Scale    = glm::vec3(BoundingBox.BoxMax) - glm::vec3(BoundingBox.BoxMin);
             glm::vec3 Position = glm::vec3(BoundingBox.BoxMin) + (Scale * 0.5f);
-            
+
             glm::mat4 TransformMatrix = glm::identity<glm::mat4>();
             TransformMatrix = glm::translate(TransformMatrix, Position);
             TransformMatrix = glm::scale(TransformMatrix, Scale);
@@ -215,7 +221,7 @@ void FModelScene::Initialize()
 
     m_pMaterialSampler = FSampler::Create(pDevice, SamplerParams);
     assert(m_pMaterialSampler != nullptr);
-    m_pMaterialSampler->SetDebugName("Material Sampler");
+    m_pMaterialSampler->SetDebugName("MaterialSampler");
 
     // Create ShaderMaterials for each materials
     const auto AddImageViewToBindlessManager = [](const std::shared_ptr<FTextureResource>& Texture, FSampler* pSampler)

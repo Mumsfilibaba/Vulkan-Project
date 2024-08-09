@@ -264,6 +264,8 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
     assert(pIndexBuffer != nullptr);
     IndexCount = NewIndices.size();
 
+    Indicies  = std::move(NewIndices);
+    Vertices  = std::move(NewVertices);
     SubMeshes = std::move(NewSubmeshes);
     Materials = std::move(NewMaterials);
     return true;
@@ -344,11 +346,10 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     }
 
     // Parse the vertices
-    std::vector<FTriangleInfo>  NewTriangleInfo;
-    std::vector<uint32_t>       NewIndices;
-    std::vector<FVertexPosOnly> NewVertices;
-    std::vector<FVertexEx>      NewVerticesEx;
-    std::vector<uint32_t>       MaterialIndicies;
+    std::vector<FTriangleInfo> NewTriangleInfo;
+    std::vector<uint32_t>      NewIndices;
+    std::vector<FVertex>       NewVerticesEx;
+    std::vector<uint32_t>      MaterialIndicies;
 
     std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices;
     for (const tinyobj::shape_t& Shape : TinyObjShapes)
@@ -396,15 +397,8 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
             // Add unique vertex data
             if (UniqueVertices.count(Vertex) == 0)
             {
-                UniqueVertices[Vertex] = static_cast<uint32_t>(NewVertices.size());
-
-                // Convert this massive vertex into the two "lighter" vertices
-                FVertexPosOnly& NewVertex = NewVertices.emplace_back();
-                NewVertex.Position = glm::vec4(Vertex.Position, 0.0f);
-
-                FVertexEx& NewVertexEx = NewVerticesEx.emplace_back();
-                NewVertexEx.Normal    = glm::vec4(Vertex.Normal, 0.0f);
-                NewVertexEx.TexCoords = glm::vec4(Vertex.TexCoord, 0.0f, 0.0f);
+                UniqueVertices[Vertex] = static_cast<uint32_t>(NewVerticesEx.size());
+                NewVerticesEx.push_back(Vertex);
             }
 
             NewIndices.push_back(UniqueVertices[Vertex]);
@@ -441,31 +435,30 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
 
     // Calculate tangents for each triangle
     std::vector<glm::vec3> TangentAccumulation;
-    TangentAccumulation.resize(NewVertices.size());
+    TangentAccumulation.resize(NewVerticesEx.size());
 
     for (size_t i = 0; i < NewIndices.size(); i += 3)
     {
-        uint32_t i0 = NewIndices[i + 0];
-        uint32_t i1 = NewIndices[i + 1];
-        uint32_t i2 = NewIndices[i + 2];
+        uint32_t Index0 = NewIndices[i + 0];
+        uint32_t Index1 = NewIndices[i + 1];
+        uint32_t Index2 = NewIndices[i + 2];
 
-        glm::vec3 edge1 = NewVertices[i1].Position - NewVertices[i0].Position;
-        glm::vec3 edge2 = NewVertices[i2].Position - NewVertices[i0].Position;
+        glm::vec3 Edge1    = NewVerticesEx[Index1].Position - NewVerticesEx[Index0].Position;
+        glm::vec3 Edge2    = NewVerticesEx[Index2].Position - NewVerticesEx[Index0].Position;
+        glm::vec2 DeltaUV1 = NewVerticesEx[Index1].TexCoord - NewVerticesEx[Index0].TexCoord;
+        glm::vec2 DeltaUV2 = NewVerticesEx[Index2].TexCoord - NewVerticesEx[Index0].TexCoord;
 
-        glm::vec2 deltaUV1 = NewVerticesEx[i1].TexCoords - NewVerticesEx[i0].TexCoords;
-        glm::vec2 deltaUV2 = NewVerticesEx[i2].TexCoords - NewVerticesEx[i0].TexCoords;
+        float Denom = DeltaUV1.x * DeltaUV2.y - DeltaUV2.x * DeltaUV1.y;
+        float f     = std::abs(Denom) > 0.0f ? 1.0f / Denom : 0.0f;
 
-        float denom = deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y;
-        float f     = std::abs(denom) > 0.0f ? 1.0f / denom : 0.0f;
+        glm::vec3 Tangent;
+        Tangent.x = f * (DeltaUV2.y * Edge1.x - DeltaUV1.y * Edge2.x);
+        Tangent.y = f * (DeltaUV2.y * Edge1.y - DeltaUV1.y * Edge2.y);
+        Tangent.z = f * (DeltaUV2.y * Edge1.z - DeltaUV1.y * Edge2.z);
 
-        glm::vec3 tangent;
-        tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
-        tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
-        tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
-
-        TangentAccumulation[i0] += tangent;
-        TangentAccumulation[i1] += tangent;
-        TangentAccumulation[i2] += tangent;
+        TangentAccumulation[Index0] += Tangent;
+        TangentAccumulation[Index1] += Tangent;
+        TangentAccumulation[Index2] += Tangent;
     }
 
     for (size_t i = 0; i < NewVerticesEx.size(); i++)
@@ -478,7 +471,6 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
 
     // Setup the vertices
     TriangleInfo = std::move(NewTriangleInfo);
-    Vertices     = std::move(NewVertices);
     VerticesEx   = std::move(NewVerticesEx);
     Indicies     = std::move(NewIndices);
     Materials    = std::move(NewMaterials);
