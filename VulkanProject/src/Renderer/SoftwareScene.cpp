@@ -115,69 +115,69 @@ void FModelScene::Initialize()
     m_VerticesEx = Mesh.VerticesEx;
     m_Indicies   = Mesh.Indicies;
     m_Materials  = Mesh.Materials;
-    
+
     // Build BVH
     m_AccelerationStructure.Build(Mesh, 32);
-    
+
     LOG("Depth: %u\n", m_AccelerationStructure.Stats.Depth);
     LOG("MaxTrianglesInLeafNode: %u\n", m_AccelerationStructure.Stats.MaxTrianglesInLeafNode);
     LOG("Num BoundingBoxes: %u\n", m_AccelerationStructure.m_BoundingBoxes.size());
-    
+
     // Mesh Data
     m_Meshes.push_back(
     {
         0, // BoundingBoxIndex
         4, // MaterialIndex
     });
-    
+
     // Cache Device
     FDevice* pDevice = FApplication::Get().GetDevice();
-    
+
     // BVH Buffers
     FBufferParams BufferParams;
     BufferParams.Size             = sizeof(FShaderBoundingBox) * m_AccelerationStructure.m_BoundingBoxes.size();
     BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    
+
     assert(m_AccelerationStructure.m_BoundingBoxes.size() < MAX_BVH_NODES);
     m_pBoundingBoxBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_AccelerationStructure.m_BoundingBoxes.data());
     assert(m_pBoundingBoxBuffer != nullptr);
     m_pBoundingBoxBuffer->SetDebugName("CPU Bounding Box Buffer");
-    
+
     BufferParams.Size = sizeof(FShaderTriangle) * m_AccelerationStructure.m_Triangles.size();
     m_pTriangleBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_AccelerationStructure.m_Triangles.data());
     assert(m_pTriangleBuffer != nullptr);
     m_pTriangleBuffer->SetDebugName("CPU Triangle Buffer");
-    
+
     BufferParams.Size = sizeof(FVertexPosOnly) * m_Vertices.size();
     m_pVertexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_Vertices.data());
     assert(m_pVertexBuffer != nullptr);
     m_pVertexBuffer->SetDebugName("CPU Vertex Buffer");
-    
+
     BufferParams.Size = sizeof(FVertexEx) * m_VerticesEx.size();
     m_pVertexExBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_VerticesEx.data());
     assert(m_pVertexExBuffer != nullptr);
     m_pVertexExBuffer->SetDebugName("CPU VertexEx Buffer");
-    
+
     BufferParams.Size             = sizeof(FVertexPosOnly) * Mesh.Vertices.size();
     BufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    
+
     m_pMeshVertexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, Mesh.Vertices.data());
     assert(m_pMeshVertexBuffer != nullptr);
     m_pMeshVertexBuffer->SetDebugName("CPU Debug Vertex Buffer");
-    
+
     BufferParams.Size  = sizeof(uint32_t) * Mesh.Indicies.size();
     BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    
+
     m_pMeshIndexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, Mesh.Indicies.data());
     assert(m_pMeshIndexBuffer != nullptr);
     m_pMeshIndexBuffer->SetDebugName("CPU Debug Index Buffer");
-    
+
     // Create a matrix for each AABB
     std::vector<glm::mat4> AABBMatrices;
     AABBMatrices.reserve(m_AccelerationStructure.m_BoundingBoxes.size());
-    
+
     for (size_t i = 0; i < m_AccelerationStructure.m_BoundingBoxes.size(); i++)
     {
         const FShaderBoundingBox& BoundingBox = m_AccelerationStructure.m_BoundingBoxes[i];
@@ -192,15 +192,15 @@ void FModelScene::Initialize()
             AABBMatrices.push_back(TransformMatrix);
         }
     }
-    
+
     BufferParams.Size             = sizeof(glm::mat4) * AABBMatrices.size();
     BufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    
+
     m_pAABBInstanceBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, AABBMatrices.data());
     assert(m_pAABBInstanceBuffer != nullptr);
     m_pAABBInstanceBuffer->SetDebugName("CPU Debug AABB Instance Buffer");
-    
+
     // Create Sampler for materials
     FSamplerParams SamplerParams = {};
     SamplerParams.MagFilter     = VK_FILTER_LINEAR;
@@ -212,12 +212,25 @@ void FModelScene::Initialize()
     SamplerParams.MinLod        = 0;
     SamplerParams.MaxLod        = 1000;
     SamplerParams.MaxAnisotropy = 1.0f;
-    
+
     m_pMaterialSampler = FSampler::Create(pDevice, SamplerParams);
     assert(m_pMaterialSampler != nullptr);
     m_pMaterialSampler->SetDebugName("Material Sampler");
-    
-    // Create materials for the materials
+
+    // Create ShaderMaterials for each materials
+    const auto AddImageViewToBindlessManager = [](const std::shared_ptr<FTextureResource>& Texture, FSampler* pSampler)
+    {
+        if (Texture)
+        {
+            FDevice* pDevice = FApplication::Get().GetDevice();
+            return pDevice->GetBindlessManager().AddImageView(Texture->GetTextureView()->GetImageView(), pSampler->GetSampler());
+        }
+        else
+        {
+            return FBindlessManager::InvalidBindlessID;
+        }
+    };
+
     for (const FMaterial& Material : m_Materials)
     {
         FShaderMaterial& ShaderMaterial = m_GpuMaterials.emplace_back();
@@ -230,27 +243,15 @@ void FModelScene::Initialize()
         ShaderMaterial.IncidenceOfRefraction = 1.0f;
         ShaderMaterial.RefractionChance      = 0.0f;
         ShaderMaterial.RefractionRoughness   = 0.0f;
-        
-        // Add texture to the BindlessManager if there is a texture for this material
-        if (Material.AlbedoTex)
-        {
-            ShaderMaterial.AlbedoTexIndex = pDevice->GetBindlessManager().AddImageView(Material.AlbedoTex->GetTextureView()->GetImageView(), m_pMaterialSampler->GetSampler());
-        }
-        else
-        {
-            ShaderMaterial.AlbedoTexIndex = FBindlessManager::InvalidBindlessID;
-        }
 
-        if (Material.NormalTex)
-        {
-            ShaderMaterial.NormalTexIndex = pDevice->GetBindlessManager().AddImageView(Material.NormalTex->GetTextureView()->GetImageView(), m_pMaterialSampler->GetSampler());
-        }
-        else
-        {
-            ShaderMaterial.NormalTexIndex = FBindlessManager::InvalidBindlessID;
-        }
+        // Add texture to the BindlessManager if there is a texture for this material
+        ShaderMaterial.AlbedoTexIndex    = AddImageViewToBindlessManager(Material.AlbedoTex, m_pMaterialSampler);
+        ShaderMaterial.NormalTexIndex    = AddImageViewToBindlessManager(Material.NormalTex, m_pMaterialSampler);
+        ShaderMaterial.AlphaMaskTexIndex = AddImageViewToBindlessManager(Material.AlphaMaskTex, m_pMaterialSampler);
+        ShaderMaterial.RoughnessTexIndex = AddImageViewToBindlessManager(Material.RoughnessTex, m_pMaterialSampler);
+        ShaderMaterial.MetallicTexIndex  = AddImageViewToBindlessManager(Material.MetallicTex, m_pMaterialSampler);
     }
-    
+
     // Quads
 #if 1
     if (Type == EModelSceneType::Default)
@@ -269,7 +270,7 @@ void FModelScene::Initialize()
         m_Quads.push_back({ glm::vec4(0.5f, 1.999f, 0.2f, 0.0f), glm::vec4(0.0f, 0.0f, -0.4f, 0.0f), glm::vec4(0.4f, 0.0f, 0.0f, 0.0f), 3 });
     }
 #endif
-    
+
     // Materials
     m_GpuMaterials.push_back(
     {
@@ -284,10 +285,13 @@ void FModelScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
-    
+
     m_GpuMaterials.push_back(
     {
         glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
@@ -301,10 +305,13 @@ void FModelScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
-    
+
     m_GpuMaterials.push_back(
     {
         glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
@@ -318,10 +325,13 @@ void FModelScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
-    
+
     // Light
     m_GpuMaterials.push_back(
     {
@@ -336,10 +346,13 @@ void FModelScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
-    
+
     m_GpuMaterials.push_back(
     {
         glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
@@ -353,8 +366,11 @@ void FModelScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
 }
 
@@ -381,16 +397,16 @@ void FSphereScene::Initialize()
     {
         // Settings
         m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
-        
+
         // Spheres
         m_Spheres.push_back({ glm::vec3( 1.0f, 0.0f, 1.0f), 0.49f, 0 });
         m_Spheres.push_back({ glm::vec3(0.0f, 0.0f, 1.0f), 0.49f, 1 });
         m_Spheres.push_back({ glm::vec3(-1.0f, 0.0f, 1.0f), 0.49f, 2 });
-        
+
         m_Spheres.push_back({ glm::vec3(0.0f, -100.5f, 0.0f), 100.0f, 3 });
-        
+
         // Materials
-        
+
         // Right Ball (Golden Ball)
         m_GpuMaterials.push_back(
         {
@@ -405,10 +421,13 @@ void FSphereScene::Initialize()
             0.0f,
             FBindlessManager::InvalidBindlessID,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0
+            0, 0
         });
-        
+
         // Middle Ball (Pink Ball)
         m_GpuMaterials.push_back(
         {
@@ -423,10 +442,13 @@ void FSphereScene::Initialize()
             0.0f,
             FBindlessManager::InvalidBindlessID,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0
+            0, 0
         });
-        
+
         // Left Ball (White Ball)
         m_GpuMaterials.push_back(
         {
@@ -441,10 +463,13 @@ void FSphereScene::Initialize()
             0.0f,
             FBindlessManager::InvalidBindlessID,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0
+            0, 0
         });
-        
+
         // Large Ball (Green Ball)
         m_GpuMaterials.push_back(
         {
@@ -459,8 +484,11 @@ void FSphereScene::Initialize()
             0.0f,
             FBindlessManager::InvalidBindlessID,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0
+            0, 0
         });
     }
     else
@@ -473,10 +501,10 @@ void FSphereScene::Initialize()
         constexpr float SphereFootPrint     = SphereHalfFootPrint * 2.0f;
         constexpr float Width               = SphereFootPrint * NumSpheres;
         constexpr float HalfWidth           = Width / 2.0f;
-        
+
         // Settings
         m_Settings.BackgroundType = BACKGROUND_TYPE_SKYBOX;
-        
+
         // Roof Quad
         constexpr float RoofPos        = 23.0f;
         constexpr float RoofWidth      = 15.0f;
@@ -488,14 +516,14 @@ void FSphereScene::Initialize()
         constexpr float LightWidth     = 10.0f;
         constexpr float LightHalfWidth = LightWidth / 2.0;
         m_Quads.push_back({ glm::vec4(-LightHalfWidth, LightPos, LightHalfWidth, 0.0f), glm::vec4(0.0f, 0.0f, -LightWidth, 0.0f), glm::vec4(LightWidth, 0.0f, 0.0f, 0.0f), 2 });
-        
+
         // Floor Quad
         constexpr float FloorWidth     = Width + (SphereFootPrint * 2.0f);
         constexpr float FloorHalfWidth = FloorWidth / 2.0f;
         constexpr float FloorDepth     = SphereFootPrint + SphereRadius;
         constexpr float FloorHalfDepth = FloorDepth / 2.0f;
         m_Quads.push_back({ glm::vec4(-FloorHalfWidth, -2.0f, -FloorHalfDepth, 0.0f), glm::vec4(0.0f, 0.0f, FloorDepth, 0.0f), glm::vec4(FloorWidth, 0.0f, 0.0f, 0.0f), 0 });
-        
+
         // Wall Quad
     #if 1
         constexpr uint32_t NumQuads = 100;
@@ -512,9 +540,8 @@ void FSphereScene::Initialize()
                 MaterialIndex
             });
         }
-        
     #endif
-        
+
         // Roof-, Floor- and Wall- Material
         m_GpuMaterials.push_back(
         {
@@ -529,10 +556,13 @@ void FSphereScene::Initialize()
             0.0f,
             FBindlessManager::InvalidBindlessID,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0
+            0, 0
         });
-        
+
         // Wall- Material
         m_GpuMaterials.push_back(
         {
@@ -547,10 +577,13 @@ void FSphereScene::Initialize()
             0.0f,
             FBindlessManager::InvalidBindlessID,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0
+            0, 0
         });
-        
+
         // Light Material
         m_GpuMaterials.push_back(
         {
@@ -565,10 +598,13 @@ void FSphereScene::Initialize()
             0.0f,
             FBindlessManager::InvalidBindlessID,
             FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
+            FBindlessManager::InvalidBindlessID,
             // padding
-            0
+            0, 0
         });
-        
+
         // Spheres
         const uint32_t StartMaterialIndex = static_cast<uint32_t>(m_GpuMaterials.size());
         for (int32_t i = 0; i < NumSpheres; i++)
@@ -581,7 +617,7 @@ void FSphereScene::Initialize()
                 StartMaterialIndex + static_cast<uint32_t>(i)
             });
         }
-        
+
         if (Type == ESphereSceneType::PolishedGlass)
         {
             for (int32_t i = 0; i < NumSpheres; i++)
@@ -600,8 +636,11 @@ void FSphereScene::Initialize()
                     0.0f,
                     FBindlessManager::InvalidBindlessID,
                     FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
                     // padding
-                    0
+                    0, 0
                 });
             }
         }
@@ -623,8 +662,11 @@ void FSphereScene::Initialize()
                     Roughness,
                     FBindlessManager::InvalidBindlessID,
                     FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
                     // padding
-                    0
+                    0, 0
                 });
             }
         }
@@ -646,8 +688,11 @@ void FSphereScene::Initialize()
                     Roughness,
                     FBindlessManager::InvalidBindlessID,
                     FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
+                    FBindlessManager::InvalidBindlessID,
                     // padding
-                    0
+                    0, 0
                 });
             }
         }
@@ -731,8 +776,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     m_GpuMaterials.push_back(
@@ -748,8 +796,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     m_GpuMaterials.push_back(
@@ -765,8 +816,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     // Light
@@ -783,8 +837,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     // Green Materials
@@ -801,8 +858,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     m_GpuMaterials.push_back(
@@ -818,8 +878,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     m_GpuMaterials.push_back(
@@ -835,8 +898,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     m_GpuMaterials.push_back(
@@ -852,8 +918,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     m_GpuMaterials.push_back(
@@ -869,8 +938,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     // Ball Materials
@@ -887,8 +959,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     m_GpuMaterials.push_back(
@@ -904,8 +979,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
     
     m_GpuMaterials.push_back(
@@ -921,8 +999,11 @@ void FCornellBoxScene::Initialize()
         0.0f,
         FBindlessManager::InvalidBindlessID,
         FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
+        FBindlessManager::InvalidBindlessID,
         // padding
-        0
+        0, 0
     });
 }
 

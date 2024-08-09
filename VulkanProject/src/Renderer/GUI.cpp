@@ -2076,10 +2076,12 @@ namespace GUI
 
     void OnSwapchainRecreated()
     {
-        ImGuiViewportData*        pViewportData    = ImGuiGetMainViewportData();
-        ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
+        ImGuiViewportData* pViewportData = ImGuiGetMainViewportData();
 
-        // At this point the device should already be idle
+        // Ensure we are finished on the device
+        ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
+        pRendererBackend->pDevice->WaitForIdle();
+
         ImGuiDestroyFramebuffers(pViewportData);
         ImGuiCreateFramebuffers(pRendererBackend->pDevice, pViewportData);
     }

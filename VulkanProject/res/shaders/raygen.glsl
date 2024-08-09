@@ -123,6 +123,7 @@ vec3 GetColorForRay(in vec3 Origin, in vec3 Direction, inout uint RandomSeed)
         const uint MaterialIndex = min(RayPayLoad.HitMaterialIndex, uScene.Settings.NumMaterials - 1);
         FMaterial Material = Materials[MaterialIndex];
 
+        // Perform NormalMapping
         vec3 Normal;
         if (Material.NormalTexIndex != INVALID_BINDLESS_ID)
         {
@@ -148,9 +149,30 @@ vec3 GetColorForRay(in vec3 Origin, in vec3 Direction, inout uint RandomSeed)
             RayColor *= exp(-Material.AbsorbtionColor.rgb * RayPayLoad.HitT);
         }
 
-        float SpecularChance   = Material.SpecularChance;
+        // Sample RoughnessTexture or just use the Specular Roughness in the material
+        float SpecularRoughness;
+        if (Material.RoughnessTexIndex != INVALID_BINDLESS_ID)
+        {
+            SpecularRoughness = texture(uTextures[Material.RoughnessTexIndex], RayPayLoad.HitTexCoord).r;
+        }
+        else
+        {
+            SpecularRoughness = Material.SpecularRoughness;
+        }
+
+        // Determine the chance of a specular ray
+        float SpecularChance;
+        if (Material.MetallicTexIndex != INVALID_BINDLESS_ID)
+        {
+            SpecularChance = texture(uTextures[Material.MetallicTexIndex], RayPayLoad.HitTexCoord).r;
+        }
+        else
+        {
+            SpecularChance = Material.SpecularChance;
+        }
+
+        // Take Fresnel into account
         float RefractionChance = Material.RefractionChance;
-        
         if (SpecularChance > 0.0)
         {
             float IncidenceOfRefraction1 = RayPayLoad.bFromInside  ? Material.IncidenceOfRefraction : 1.0;
@@ -161,6 +183,7 @@ vec3 GetColorForRay(in vec3 Origin, in vec3 Direction, inout uint RandomSeed)
             RefractionChance *= ChanceMultiplier;
         }
 
+        // Calculate RayProbability
         float DoSpecular     = 0.0;
         float DoRefraction   = 0.0;
         float RayProbability = 1.0;
@@ -198,7 +221,7 @@ vec3 GetColorForRay(in vec3 Origin, in vec3 Direction, inout uint RandomSeed)
 
         // Create specular ray 
         vec3 SpecularRay = reflect(RayDirection, Normal);
-        SpecularRay = normalize(mix(SpecularRay, DiffuseRay, Material.SpecularRoughness * Material.SpecularRoughness));
+        SpecularRay = normalize(mix(SpecularRay, DiffuseRay, SpecularRoughness * SpecularRoughness));
         
         // Create refraction ray
         vec3 RefractionRay = refract(RayDirection, Normal, RayPayLoad.bFromInside ? Material.IncidenceOfRefraction : 1.0 / Material.IncidenceOfRefraction);

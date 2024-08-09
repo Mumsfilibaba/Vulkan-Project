@@ -335,8 +335,11 @@ bool FMesh::LoadFromFile(const std::string& Filepath)
     for (const tinyobj::material_t& Material : TinyObjMaterials)
     {
         FMaterial NewMaterial;
-        NewMaterial.AlbedoTex = LoadMaterialTexture(Material.diffuse_texname);
-        NewMaterial.NormalTex = LoadMaterialTexture(Material.bump_texname);
+        NewMaterial.AlbedoTex    = LoadMaterialTexture(Material.diffuse_texname);
+        NewMaterial.NormalTex    = LoadMaterialTexture(Material.bump_texname);
+        NewMaterial.RoughnessTex = LoadMaterialTexture(Material.specular_highlight_texname);
+        NewMaterial.AlphaMaskTex = LoadMaterialTexture(Material.alpha_texname);
+        NewMaterial.MetallicTex  = LoadMaterialTexture(Material.ambient_texname);
         NewMaterials.emplace_back(std::move(NewMaterial));
     }
 

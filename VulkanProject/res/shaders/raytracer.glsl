@@ -533,16 +533,17 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
             const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
             FMaterial Material = Materials[MaterialIndex];
 
+            // Perform NormalMapping
             vec3 Normal;
             if (Material.NormalTexIndex != INVALID_BINDLESS_ID)
             {
-                vec3 BiTangent = cross(PayLoad.Normal, PayLoad.Tangent);
                 vec3 NormalMap = texture(uTextures[Material.NormalTexIndex], PayLoad.TexCoords).rgb;
                 NormalMap = normalize(NormalMap * 2.0 - 1.0); // Transform from [0,1] range to [-1,1]
-
-                mat3 TBN = mat3(PayLoad.Tangent, BiTangent, PayLoad.Normal);
-                Normal = normalize(TBN * NormalMap);
-
+            
+                const vec3 BiTangent = cross(PayLoad.Normal, PayLoad.Tangent);
+                const mat3 TBNMatrix = mat3(PayLoad.Tangent, BiTangent, PayLoad.Normal);
+                Normal = normalize(TBNMatrix * NormalMap);
+            
                 if (any(isnan(Normal)) || any(isinf(Normal)))
                 {
                     Normal = PayLoad.Normal;
@@ -558,12 +559,33 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
                 RayColor *= exp(-Material.AbsorbtionColor.rgb * PayLoad.T);
             }
 
-            float SpecularChance   = Material.SpecularChance;
+            // Sample RoughnessTexture or just use the Specular Roughness in the material
+            float SpecularRoughness;
+            if (Material.RoughnessTexIndex != INVALID_BINDLESS_ID)
+            {
+                SpecularRoughness = texture(uTextures[Material.RoughnessTexIndex], PayLoad.TexCoords).r;
+            }
+            else
+            {
+                SpecularRoughness = Material.SpecularRoughness;
+            }
+
+            // Determine the chance of a specular ray
+            float SpecularChance;
+            if (Material.MetallicTexIndex != INVALID_BINDLESS_ID)
+            {
+                SpecularChance = texture(uTextures[Material.MetallicTexIndex], PayLoad.TexCoords).r;
+            }
+            else
+            {
+                SpecularChance = Material.SpecularChance;
+            }
+
+            // Take Fresnel into account
             float RefractionChance = Material.RefractionChance;
-            
             if (SpecularChance > 0.0)
             {
-                float IncidenceOfRefraction1 = PayLoad.bFromInside ? Material.IncidenceOfRefraction : 1.0;
+                float IncidenceOfRefraction1 = PayLoad.bFromInside  ? Material.IncidenceOfRefraction : 1.0;
                 float IncidenceOfRefraction2 = !PayLoad.bFromInside ? Material.IncidenceOfRefraction : 1.0;
                 SpecularChance = FresnelReflectAmount(IncidenceOfRefraction1, IncidenceOfRefraction2, Ray.Direction, Normal, Material.SpecularChance, 1.0);
 
@@ -571,6 +593,7 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
                 RefractionChance *= ChanceMultiplier;
             }
 
+            // Calculate RayProbability
             float DoSpecular     = 0.0;
             float DoRefraction   = 0.0;
             float RayProbability = 1.0;
