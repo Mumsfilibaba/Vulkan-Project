@@ -233,6 +233,7 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     }
 
     assert(Format != VK_FORMAT_UNDEFINED);
+
     if (!Pixels)
     {
         LOG("Failed to load '%s'\n", Filepath);

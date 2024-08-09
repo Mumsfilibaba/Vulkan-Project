@@ -60,35 +60,35 @@ void FRayTracer::CreateResources()
     RayTracingBindings[3].binding            = 3;
     RayTracingBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     RayTracingBindings[3].descriptorCount    = 1;
-    RayTracingBindings[3].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    RayTracingBindings[3].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
     RayTracingBindings[3].pImmutableSamplers = nullptr;
 
     // RandomBuffer
     RayTracingBindings[4].binding            = 4;
     RayTracingBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     RayTracingBindings[4].descriptorCount    = 1;
-    RayTracingBindings[4].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    RayTracingBindings[4].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
     RayTracingBindings[4].pImmutableSamplers = nullptr;
 
     // SceneSettingsBuffer
     RayTracingBindings[5].binding            = 5;
     RayTracingBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     RayTracingBindings[5].descriptorCount    = 1;
-    RayTracingBindings[5].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    RayTracingBindings[5].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR;
     RayTracingBindings[5].pImmutableSamplers = nullptr;
 
     // MeshBuffer
     RayTracingBindings[6].binding            = 6;
     RayTracingBindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     RayTracingBindings[6].descriptorCount    = 1;
-    RayTracingBindings[6].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    RayTracingBindings[6].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
     RayTracingBindings[6].pImmutableSamplers = nullptr;
 
     // MaterialBuffer
     RayTracingBindings[7].binding            = 7;
     RayTracingBindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     RayTracingBindings[7].descriptorCount    = 1;
-    RayTracingBindings[7].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    RayTracingBindings[7].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
     RayTracingBindings[7].pImmutableSamplers = nullptr;
 
     FDescriptorSetLayoutParams RayTracingDescriptorSetLayoutParams;
@@ -113,26 +113,32 @@ void FRayTracer::CreateResources()
     assert(pRayGenShader != nullptr);
     pRayGenShader->SetDebugName(RESOURCE_PATH"/shaders/raygen.spv");
 
-    FShaderModule* pRayClosestHitShader = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/closesthit.spv");
-    assert(pRayClosestHitShader != nullptr);
-    pRayClosestHitShader->SetDebugName(RESOURCE_PATH"/shaders/closesthit.spv");
-
     FShaderModule* pRayMissShader = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/miss.spv");
     assert(pRayMissShader != nullptr);
     pRayMissShader->SetDebugName(RESOURCE_PATH"/shaders/miss.spv");
 
+    FShaderModule* pRayClosestHitShader = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/closesthit.spv");
+    assert(pRayClosestHitShader != nullptr);
+    pRayClosestHitShader->SetDebugName(RESOURCE_PATH"/shaders/closesthit.spv");
+
+    FShaderModule* pRayAnyHitShader = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/anyhit.spv");
+    assert(pRayAnyHitShader != nullptr);
+    pRayAnyHitShader->SetDebugName(RESOURCE_PATH"/shaders/anyhit.spv");
+
     FRayTracingPipelineStateParams PipelineParams;
     PipelineParams.pRayGenShader        = pRayGenShader;
-    PipelineParams.pRayClosestHitShader = pRayClosestHitShader;
     PipelineParams.pRayMissShader       = pRayMissShader;
+    PipelineParams.pRayClosestHitShader = pRayClosestHitShader;
+    PipelineParams.pRayAnyHitShader     = pRayAnyHitShader;
     PipelineParams.pPipelineLayout      = m_pRayTracingPipelineLayout;
 
     m_pRayTracingPipeline = FRayTracingPipeline::Create(GetDevice(), PipelineParams);
     assert(m_pRayTracingPipeline != nullptr);
 
     SAFE_DELETE(pRayGenShader);
-    SAFE_DELETE(pRayClosestHitShader);
     SAFE_DELETE(pRayMissShader);
+    SAFE_DELETE(pRayClosestHitShader);
+    SAFE_DELETE(pRayAnyHitShader);
 }
 
 void FRayTracer::ReleaseResources()
@@ -218,7 +224,7 @@ void FRayTracer::Render(FCommandBuffer* pCommandBuffer)
     MemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     MemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-    pCommandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &MemoryBarrier, 0, nullptr, 0, nullptr);
+    pCommandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, 0, 1, &MemoryBarrier, 0, nullptr, 0, nullptr);
 
     // Perform RayTracing
     pCommandBuffer->BindRayTracingPipelineState(m_pRayTracingPipeline);

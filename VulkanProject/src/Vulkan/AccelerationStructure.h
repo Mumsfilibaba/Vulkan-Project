@@ -17,6 +17,8 @@ struct FBLASGeometry
     FBuffer* pIndexBuffer       = nullptr;
     uint32_t IndexBufferOffset  = 0;
     uint32_t IndexBufferCount   = 0;
+
+    VkGeometryFlagsKHR Flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
 };
 
 struct FAccelerationStructureBLASParams

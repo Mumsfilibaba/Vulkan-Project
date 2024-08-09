@@ -118,7 +118,7 @@ vec3 GetColorForRay(in vec3 Origin, in vec3 Direction, inout uint RandomSeed)
         RayPayLoad.bFromInside      = false;
         
         // Trace-Ray
-        traceRayEXT(uAccelerationStructure, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
+        traceRayEXT(uAccelerationStructure, gl_RayFlagsNoneEXT , 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
 
         const uint MaterialIndex = min(RayPayLoad.HitMaterialIndex, uScene.Settings.NumMaterials - 1);
         FMaterial Material = Materials[MaterialIndex];
@@ -264,7 +264,7 @@ vec3 GetNormalForRay(in vec3 Origin, in vec3 Direction)
     RayPayLoad.bFromInside      = false;
     
     // Trace-Ray
-    traceRayEXT(uAccelerationStructure, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
+    traceRayEXT(uAccelerationStructure, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
 
     if (RayPayLoad.HitMaterialIndex < 0)
     {
@@ -312,7 +312,7 @@ vec3 GetBarycentricsForRay(in vec3 Origin, in vec3 Direction)
     RayPayLoad.bFromInside      = false;
     
     // Trace-Ray
-    traceRayEXT(uAccelerationStructure, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
+    traceRayEXT(uAccelerationStructure, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
 
     if (RayPayLoad.HitMaterialIndex < 0)
     {
@@ -339,7 +339,7 @@ vec3 GetTexCoordsForRay(in vec3 Origin, in vec3 Direction)
     RayPayLoad.bFromInside      = false;
     
     // Trace-Ray
-    traceRayEXT(uAccelerationStructure, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
+    traceRayEXT(uAccelerationStructure, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
 
     if (RayPayLoad.HitMaterialIndex < 0)
     {
@@ -366,7 +366,7 @@ vec3 GetAlbedoForRay(in vec3 Origin, in vec3 Direction)
     RayPayLoad.bFromInside      = false;
     
     // Trace-Ray
-    traceRayEXT(uAccelerationStructure, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
+    traceRayEXT(uAccelerationStructure, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
 
     if (RayPayLoad.HitMaterialIndex < 0)
     {

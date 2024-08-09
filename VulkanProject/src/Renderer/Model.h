@@ -156,6 +156,9 @@ struct FMaterial
 {
     std::shared_ptr<FTextureResource> AlbedoTex;
     std::shared_ptr<FTextureResource> NormalTex;
+    std::shared_ptr<FTextureResource> AlphaMaskTex;
+    std::shared_ptr<FTextureResource> RoughnessTex;
+    std::shared_ptr<FTextureResource> MetallicTex;
 };
 
 struct FModel
@@ -175,7 +178,7 @@ struct FModel
         uint32_t IndexOffset;
         uint32_t VertexCount;
         uint32_t VertexOffset;
-        uint32_t MaterialIndex;
+        int32_t  MaterialIndex;
     };
 
     FModel();

@@ -18,14 +18,19 @@ struct FMaterial
     float SpecularRoughness;
     float IncidenceOfRefraction;
     float RefractionChance;
-    // 80-88
+    // 80-84
     float RefractionRoughness;
-    // 84-88
+    // 84-92
     uint AlbedoTexIndex;
     uint NormalTexIndex;
+    uint AlphaMaskTexIndex;
+    // 92-100
+    uint MetallicTexIndex;
+    uint RoughnessTexIndex;
 
     // Padding
     uint Padding0;
+    uint Padding1;
 };
 
 struct FQuad

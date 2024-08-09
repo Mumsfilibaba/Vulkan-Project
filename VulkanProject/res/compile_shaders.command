@@ -11,3 +11,4 @@ cd "${DIR}"
 /usr/local/bin/glslc -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rgen     shaders/raygen.glsl        -o shaders/raygen.spv
 /usr/local/bin/glslc -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rmiss    shaders/miss.glsl          -o shaders/miss.spv
 /usr/local/bin/glslc -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rchit    shaders/closesthit.glsl    -o shaders/closesthit.spv
+/usr/local/bin/glslc -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rahit    shaders/anyhit.glsl        -o shaders/anyhit.spv

@@ -116,10 +116,14 @@ void FScene::Initialize()
         0.0f, 0.0f, 1.0f, 0.0f
     };
 
+    // BLAS for opaque objects
     FAccelerationStructureBLASParams BLASParams;
     for (const FModel::FSubMesh& SubMesh : Model->SubMeshes)
     {
+        const bool bHasAlphaMask = (SubMesh.MaterialIndex >= 0) ? (Model->Materials[SubMesh.MaterialIndex].AlphaMaskTex != nullptr) : false;
+
         FBLASGeometry& Geometry = BLASParams.Geometries.emplace_back();
+        Geometry.Flags              = bHasAlphaMask ? 0 : VK_GEOMETRY_OPAQUE_BIT_KHR;
         Geometry.TransformMatrix    = TransformMatrix;
         Geometry.pVertexBuffer      = pVertexBuffer;
         Geometry.MaxVertexIndex     = Model->VertexCount;
@@ -168,7 +172,20 @@ void FScene::Initialize()
     assert(m_pMaterialSampler != nullptr);
     m_pMaterialSampler->SetDebugName("Material Sampler");
 
-    // Create materials for the materials
+    // Create ShaderMaterials for each materials
+    const auto AddImageViewToBindlessManager = [](const std::shared_ptr<FTextureResource>& Texture, FSampler* pSampler)
+    {
+        if (Texture)
+        {
+            FDevice* pDevice = FApplication::Get().GetDevice();
+            return pDevice->GetBindlessManager().AddImageView(Texture->GetTextureView()->GetImageView(), pSampler->GetSampler());
+        }
+        else
+        {
+            return FBindlessManager::InvalidBindlessID;
+        }
+    };
+
     for (const FMaterial& Material : m_Materials)
     {
         FShaderMaterial& ShaderMaterial = m_GpuMaterials.emplace_back();
@@ -183,23 +200,11 @@ void FScene::Initialize()
         ShaderMaterial.RefractionRoughness   = 0.0f;
 
         // Add texture to the BindlessManager if there is a texture for this material
-        if (Material.AlbedoTex)
-        {
-            ShaderMaterial.AlbedoTexIndex = pDevice->GetBindlessManager().AddImageView(Material.AlbedoTex->GetTextureView()->GetImageView(), m_pMaterialSampler->GetSampler());
-        }
-        else
-        {
-            ShaderMaterial.AlbedoTexIndex = FBindlessManager::InvalidBindlessID;
-        }
-
-        if (Material.NormalTex)
-        {
-            ShaderMaterial.NormalTexIndex = pDevice->GetBindlessManager().AddImageView(Material.NormalTex->GetTextureView()->GetImageView(), m_pMaterialSampler->GetSampler());
-        }
-        else
-        {
-            ShaderMaterial.NormalTexIndex = FBindlessManager::InvalidBindlessID;
-        }
+        ShaderMaterial.AlbedoTexIndex    = AddImageViewToBindlessManager(Material.AlbedoTex, m_pMaterialSampler);
+        ShaderMaterial.NormalTexIndex    = AddImageViewToBindlessManager(Material.NormalTex, m_pMaterialSampler);
+        ShaderMaterial.AlphaMaskTexIndex = AddImageViewToBindlessManager(Material.AlphaMaskTex, m_pMaterialSampler);
+        ShaderMaterial.RoughnessTexIndex = AddImageViewToBindlessManager(Material.RoughnessTex, m_pMaterialSampler);
+        ShaderMaterial.MetallicTexIndex  = AddImageViewToBindlessManager(Material.MetallicTex, m_pMaterialSampler);
     }
 }
 

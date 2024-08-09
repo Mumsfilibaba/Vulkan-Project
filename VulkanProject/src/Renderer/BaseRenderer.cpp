@@ -176,7 +176,7 @@ void FBaseRenderer::CreateTonemappingResources()
     // Create Tonemap DescriptorSetLayout
     constexpr uint32_t NumTonemappingBindings = 2;
     VkDescriptorSetLayoutBinding TonemappingBindings[NumTonemappingBindings];
-    
+
     // Output Image
     TonemappingBindings[0].binding            = 0;
     TonemappingBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -190,7 +190,7 @@ void FBaseRenderer::CreateTonemappingResources()
     TonemappingBindings[1].descriptorCount    = 1;
     TonemappingBindings[1].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
     TonemappingBindings[1].pImmutableSamplers = nullptr;
-    
+
     FDescriptorSetLayoutParams TonemappingDescriptorSetLayoutParams;
     TonemappingDescriptorSetLayoutParams.pBindings   = TonemappingBindings;
     TonemappingDescriptorSetLayoutParams.NumBindings = NumTonemappingBindings;
@@ -203,7 +203,7 @@ void FBaseRenderer::CreateTonemappingResources()
     FPipelineLayoutParams ToneMappingPipelineLayoutParams;
     ToneMappingPipelineLayoutParams.ppLayouts  = &m_pTonemappingDescriptorSetLayout;
     ToneMappingPipelineLayoutParams.NumLayouts = 1;
-    
+
     m_pTonemappingPipelineLayout = FPipelineLayout::Create(GetDevice(), ToneMappingPipelineLayoutParams);
     assert(m_pTonemappingPipelineLayout != nullptr);
     m_pTonemappingPipelineLayout->SetDebugName("TonemappingPass PipelineLayout");
@@ -221,11 +221,11 @@ void FBaseRenderer::CreateTonemappingResources()
     Attachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
     Attachments[0].InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     Attachments[0].FinalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    
+
     FRenderPassParams RenderPassParams = {};
     RenderPassParams.ColorAttachmentCount = 1;
     RenderPassParams.pColorAttachments    = Attachments;
-    
+
     m_pTonemappingRenderPass = FRenderPass::Create(GetDevice(), RenderPassParams);
     assert(m_pTonemappingRenderPass != nullptr);
     m_pTonemappingRenderPass->SetDebugName("TonemappingPass RenderPass");
@@ -239,7 +239,7 @@ void FBaseRenderer::CreateTonemappingResources()
     TonemappingPipelineParams.pFragmentShader           = pFragment;
     TonemappingPipelineParams.pRenderPass               = m_pTonemappingRenderPass;
     TonemappingPipelineParams.pPipelineLayout           = m_pTonemappingPipelineLayout;
-    
+
     m_pTonemappingPipeline = FGraphicsPipeline::Create(GetDevice(), TonemappingPipelineParams);
     assert(m_pTonemappingPipeline != nullptr);
     m_pTonemappingPipeline->SetDebugName("TonemappingPass Pipeline");
@@ -495,18 +495,18 @@ void FBaseRenderer::OnRenderUI()
         const uint32_t CpuCurrentFPS = static_cast<uint32_t>(1000.0f / m_LastCPUTime);
         ImGui::Text("[CPU FPS] %u", CpuCurrentFPS);
         ImGui::Text("[CPU Time] %.4f", m_LastCPUTime);
-        
+
         const uint32_t GpuCurrentFPS = static_cast<uint32_t>(1000.0f / m_LastGPUTime);
         ImGui::Text("[GPU FPS] %u", GpuCurrentFPS);
         ImGui::Text("[GPU Time] %.4f", m_LastGPUTime);
-        
+
         ImGui::Text("Current Resolution: %dx%d", m_ViewportWidth, m_ViewportHeight);
 
         ImGui::NewLine();
 
         ImGui::Text("Image:");
         ImGui::Separator();
-        
+
         // Clear the image
         if (ImGui::Button("Clear Image"))
         {
@@ -515,7 +515,7 @@ void FBaseRenderer::OnRenderUI()
 
         ImGui::End();
     }
-    
+
     // Viewport
     ImGui::Begin("Viewport");
 
@@ -638,11 +638,11 @@ bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     m_pSceneTexture1 = FTexture::Create(m_pDevice, TextureParams);
     assert(m_pSceneTexture1 != nullptr);
     m_pSceneTexture1->SetDebugName("SceneTexture1");
-    
+
     {
         FTextureViewParams TextureViewParams = {};
         TextureViewParams.pTexture = m_pSceneTexture1;
-        
+
         m_pSceneTextureView1 = FTextureView::Create(m_pDevice, TextureViewParams);
         assert(m_pSceneTextureView1 != nullptr);
         m_pSceneTextureView1->SetDebugName("SceneTextureView1");
@@ -656,15 +656,15 @@ bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     OutputTextureParams.Height        = m_ViewportHeight;
     OutputTextureParams.Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     OutputTextureParams.InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    
+
     m_pOutputTexture = FTexture::Create(m_pDevice, OutputTextureParams);
     assert(m_pOutputTexture != nullptr);
     m_pOutputTexture->SetDebugName("OutputTexture");
-    
+
     {
         FTextureViewParams TextureViewParams = {};
         TextureViewParams.pTexture = m_pOutputTexture;
-        
+
         m_pOutputTextureView = FTextureView::Create(m_pDevice, TextureViewParams);
         assert(m_pOutputTextureView != nullptr);
         m_pOutputTextureView->SetDebugName("OutputTextureView");
@@ -672,7 +672,7 @@ bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
 
     // Create Framebuffer for the tonemap stage
     VkImageView ImageView = m_pOutputTextureView->GetImageView();
-    
+
     FFramebufferParams FramebufferParams = {};
     FramebufferParams.AttachmentCount = 1;
     FramebufferParams.Width           = m_ViewportWidth;
@@ -732,8 +732,8 @@ void FBaseRenderer::CreateGlobalBuffers()
 
     m_pCameraBuffer = FBuffer::Create(GetDevice(), CameraBufferParams, GetDeviceAllocator());
     assert(m_pCameraBuffer != nullptr);
-    m_pCameraBuffer->SetDebugName("Camera-Buffer");
-    
+    m_pCameraBuffer->SetDebugName("CameraBuffer");
+
     // Random
     FBufferParams RandomBufferParams;
     RandomBufferParams.Size             = sizeof(FRandomBuffer);
@@ -742,7 +742,7 @@ void FBaseRenderer::CreateGlobalBuffers()
 
     m_pRandomBuffer = FBuffer::Create(GetDevice(), RandomBufferParams, GetDeviceAllocator());
     assert(m_pRandomBuffer != nullptr);
-    m_pRandomBuffer->SetDebugName("Random-Buffer");
+    m_pRandomBuffer->SetDebugName("RandomBuffer");
 
     // TonemappingBuffer
     FBufferParams TonemappingBufferParams;
@@ -752,5 +752,5 @@ void FBaseRenderer::CreateGlobalBuffers()
 
     m_pTonemappingBuffer = FBuffer::Create(GetDevice(), TonemappingBufferParams, GetDeviceAllocator());
     assert(m_pTonemappingBuffer != nullptr);
-    m_pTonemappingBuffer->SetDebugName("Tonemapping-Buffer");
+    m_pTonemappingBuffer->SetDebugName("TonemappingBuffer");
 }

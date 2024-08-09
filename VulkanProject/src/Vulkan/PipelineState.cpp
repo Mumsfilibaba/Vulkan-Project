@@ -255,7 +255,7 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
     std::vector<VkPipelineShaderStageCreateInfo>      ShaderStages;
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;
 
-    // Ray generation group
+    // RayGenerationGroup
     {
         VkPipelineShaderStageCreateInfo ShaderStage = { };
         ShaderStage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -274,7 +274,7 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
         ShaderGroups.push_back(ShaderGroup);
     }
 
-    // Miss group
+    // MissGroup
     {
         VkPipelineShaderStageCreateInfo ShaderStage = { };
         ShaderStage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -293,8 +293,10 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
         ShaderGroups.push_back(ShaderGroup);
     }
 
-    // Closest hit group
+    // ClosestHit group
     {
+        const size_t ClosestHitIndex = ShaderStages.size();
+
         VkPipelineShaderStageCreateInfo ShaderStage = { };
         ShaderStage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         ShaderStage.stage  = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
@@ -302,12 +304,26 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
         ShaderStage.pName  = Params.pRayClosestHitShader->GetEntryPoint();
         ShaderStages.push_back(ShaderStage);
 
+        // Add AnyHit shader if there are one
+        size_t AnyHitIndex = 0;
+        if (Params.pRayAnyHitShader)
+        {
+            AnyHitIndex = ShaderStages.size();
+
+            VkPipelineShaderStageCreateInfo ShaderStage = { };
+            ShaderStage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            ShaderStage.stage  = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+            ShaderStage.module = Params.pRayAnyHitShader->GetModule();
+            ShaderStage.pName  = Params.pRayAnyHitShader->GetEntryPoint();
+            ShaderStages.push_back(ShaderStage);
+        }
+
         VkRayTracingShaderGroupCreateInfoKHR ShaderGroup = { };
         ShaderGroup.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
         ShaderGroup.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
         ShaderGroup.generalShader      = VK_SHADER_UNUSED_KHR;
-        ShaderGroup.closestHitShader   = static_cast<uint32_t>(ShaderStages.size()) - 1;
-        ShaderGroup.anyHitShader       = VK_SHADER_UNUSED_KHR;
+        ShaderGroup.closestHitShader   = static_cast<uint32_t>(ClosestHitIndex);
+        ShaderGroup.anyHitShader       = Params.pRayAnyHitShader ? static_cast<uint32_t>(AnyHitIndex) : VK_SHADER_UNUSED_KHR;
         ShaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
         ShaderGroups.push_back(ShaderGroup);
     }

@@ -70,6 +70,7 @@ struct FRayTracingPipelineStateParams
     FShaderModule*   pRayGenShader                = nullptr;
     FShaderModule*   pRayMissShader               = nullptr;
     FShaderModule*   pRayClosestHitShader         = nullptr;
+    FShaderModule*   pRayAnyHitShader             = nullptr;
     FPipelineLayout* pPipelineLayout              = nullptr;
     uint32_t         MaxPipelineRayRecursionDepth = 1;
 };

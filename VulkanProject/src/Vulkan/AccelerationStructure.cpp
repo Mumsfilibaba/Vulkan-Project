@@ -135,14 +135,15 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
     for (const FBLASGeometry& Geometry : Params.Geometries)
     {
         VkAccelerationStructureGeometryKHR AccelerationStructureGeometry = { };
-        AccelerationStructureGeometry.sType                                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        AccelerationStructureGeometry.flags                                           = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        AccelerationStructureGeometry.geometryType                                    = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        AccelerationStructureGeometry.geometry.triangles.sType                        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-        AccelerationStructureGeometry.geometry.triangles.vertexFormat                 = VK_FORMAT_R32G32B32_SFLOAT;
-        AccelerationStructureGeometry.geometry.triangles.vertexData                   = Geometry.pVertexBuffer->GetDeviceAddress();
-        AccelerationStructureGeometry.geometry.triangles.maxVertex                    = Geometry.MaxVertexIndex;
-        AccelerationStructureGeometry.geometry.triangles.vertexStride                 = Geometry.VertexStride;
+        AccelerationStructureGeometry.sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        AccelerationStructureGeometry.flags                           = Geometry.Flags;
+        AccelerationStructureGeometry.geometryType                    = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        AccelerationStructureGeometry.geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+        AccelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+        AccelerationStructureGeometry.geometry.triangles.vertexData   = Geometry.pVertexBuffer->GetDeviceAddress();
+        AccelerationStructureGeometry.geometry.triangles.maxVertex    = Geometry.MaxVertexIndex;
+        AccelerationStructureGeometry.geometry.triangles.vertexStride = Geometry.VertexStride;
+
         AccelerationStructureGeometry.geometry.triangles.transformData                = pTransformBuffer->GetDeviceAddress();
         AccelerationStructureGeometry.geometry.triangles.transformData.deviceAddress += AccelerationStructureGeometries.size() * sizeof(VkTransformMatrixKHR);
 
