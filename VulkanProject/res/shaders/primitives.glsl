@@ -63,7 +63,7 @@ struct FSphere
     uint Padding2;
 };
 
-struct FVertexPosOnly
+struct FVertexPosition
 {
     vec3 Position;
 };

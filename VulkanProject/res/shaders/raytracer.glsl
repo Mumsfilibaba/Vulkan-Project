@@ -118,7 +118,7 @@ layout(std430, binding = 8) readonly buffer MaterialBuffer
 
 layout(scalar, binding = 9) readonly buffer VertexPositionsBuffer
 {
-    FVertexPosOnly VertexPositions[];
+    FVertexPosition VertexPositions[];
 };
 
 layout(scalar, binding = 10) readonly buffer VertexBuffer

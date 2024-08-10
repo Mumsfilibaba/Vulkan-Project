@@ -70,14 +70,14 @@ struct FVertexHasher
     }
 };
 
-struct FVertexPosOnly
+struct FVertexPosition
 {
     static VkVertexInputBindingDescription* GetBindingDescription()
     {
         static VkVertexInputBindingDescription BindingDescriptions[1];
 
         BindingDescriptions[0].binding   = 0;
-        BindingDescriptions[0].stride    = sizeof(FVertexPosOnly);
+        BindingDescriptions[0].stride    = sizeof(FVertexPosition);
         BindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         return BindingDescriptions;
@@ -90,12 +90,12 @@ struct FVertexPosOnly
         AttributeDescriptions[0].binding  = 0;
         AttributeDescriptions[0].location = 0;
         AttributeDescriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
-        AttributeDescriptions[0].offset   = offsetof(FVertexPosOnly, Position);
+        AttributeDescriptions[0].offset   = offsetof(FVertexPosition, Position);
 
         return AttributeDescriptions;
     }
 
-    bool operator==(const FVertexPosOnly& Other) const
+    bool operator==(const FVertexPosition& Other) const
     {
         return Position == Other.Position;
     }
@@ -105,7 +105,7 @@ struct FVertexPosOnly
 
 struct FVertexPosOnlyHasher
 {
-    size_t operator()(const FVertexPosOnly& Vertex) const
+    size_t operator()(const FVertexPosition& Vertex) const
     {
         return std::hash<glm::vec3>()(Vertex.Position);
     }
