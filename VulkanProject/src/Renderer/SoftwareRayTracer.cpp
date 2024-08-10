@@ -29,8 +29,8 @@ FSoftwareRayTracer::FSoftwareRayTracer()
     , m_pQuadBuffer(nullptr)
     , m_pTriangleBuffer(nullptr)
     , m_pMeshBuffer(nullptr)
+    , m_pVertexPositionsBuffer(nullptr)
     , m_pVertexBuffer(nullptr)
-    , m_pVertexExBuffer(nullptr)
     , m_pBvhBuffer(nullptr)
     , m_pAABBVertexBuffer(nullptr)
     , m_pAABBIndexBuffer(nullptr)
@@ -81,8 +81,8 @@ void FSoftwareRayTracer::ReleaseResources()
     SAFE_DELETE(m_pQuadBuffer);
     SAFE_DELETE(m_pTriangleBuffer);
     SAFE_DELETE(m_pMeshBuffer);
+    SAFE_DELETE(m_pVertexPositionsBuffer);
     SAFE_DELETE(m_pVertexBuffer);
-    SAFE_DELETE(m_pVertexExBuffer);
     SAFE_DELETE(m_pBvhBuffer);
     SAFE_DELETE(m_pAABBVertexBuffer);
     SAFE_DELETE(m_pAABBIndexBuffer);
@@ -191,7 +191,7 @@ void FSoftwareRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
     ClearColor[0].color        = { 0.0f, 0.0f, 0.0f, 1.0f };
     ClearColor[1].depthStencil = { 1.0f, 0 };
 
-    if (!m_pScene->m_pMeshVertexBuffer || !m_pScene->m_pMeshIndexBuffer)
+    if (!m_pScene->m_pVertexPositionsBuffer || !m_pScene->m_pMeshIndexBuffer)
     {
         // Begin RenderPass (Only clear the image when the buffers are invalid)
         pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, ClearColor, 2);
@@ -237,7 +237,7 @@ void FSoftwareRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
         }
 
         // Set Vertex- and IndexBuffer
-        pCommandBuffer->BindVertexBuffer(m_pScene->m_pMeshVertexBuffer, 0, 0);
+        pCommandBuffer->BindVertexBuffer(m_pScene->m_pVertexPositionsBuffer, 0, 0);
         pCommandBuffer->BindIndexBuffer(m_pScene->m_pMeshIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         // Draw
@@ -251,7 +251,7 @@ void FSoftwareRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
 
         const glm::vec4 Color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
         pCommandBuffer->PushConstants(m_pDebugPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::vec4), glm::value_ptr(Color));
-        
+
         // Bind DescriptorSets
         const uint64_t Frame = GetFrameIndex() % 2;
         if (Frame == 0)
@@ -262,16 +262,16 @@ void FSoftwareRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
         {
             pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1, 0);
         }
-        
+
         // Set Vertex- and IndexBuffer
-        pCommandBuffer->BindVertexBuffer(m_pScene->m_pMeshVertexBuffer, 0, 0);
+        pCommandBuffer->BindVertexBuffer(m_pScene->m_pVertexPositionsBuffer, 0, 0);
         pCommandBuffer->BindIndexBuffer(m_pScene->m_pMeshIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         // Draw
         const size_t IndexCount = m_pScene->m_Indicies.size();
         pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
     }
-    
+
     // Draw the bounding boxes
     {
         pCommandBuffer->BindGraphicsPipelineState(m_pDebugAABBPipeline);
@@ -971,23 +971,26 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
 
     m_pSphereBuffer = FBuffer::Create(GetDevice(), SphereBufferParams, GetDeviceAllocator());
     assert(m_pSphereBuffer != nullptr);
-    m_pSphereBuffer->SetDebugName("Sphere-Buffer");
+    m_pSphereBuffer->SetDebugName("SphereBuffer");
 
     // VertexBuffer
+    FBufferParams VertexPositionsBufferParams;
+    VertexPositionsBufferParams.Size             = sizeof(FVertexPosOnly) * MAX_VERTICES;
+    VertexPositionsBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    VertexPositionsBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pVertexPositionsBuffer = FBuffer::Create(GetDevice(), VertexPositionsBufferParams, GetDeviceAllocator());
+    assert(m_pVertexPositionsBuffer != nullptr);
+    m_pVertexPositionsBuffer->SetDebugName("VertexPositionsBuffer");
+
     FBufferParams VertexBufferParams;
-    VertexBufferParams.Size             = sizeof(FVertexPosOnly) * MAX_VERTICES;
+    VertexBufferParams.Size             = sizeof(FVertex) * MAX_VERTICES;
     VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     VertexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_pVertexBuffer = FBuffer::Create(GetDevice(), VertexBufferParams, GetDeviceAllocator());
     assert(m_pVertexBuffer != nullptr);
-    m_pVertexBuffer->SetDebugName("Vertex-Buffer");
-
-    VertexBufferParams.Size = sizeof(FVertex) * MAX_VERTICES;
-
-    m_pVertexExBuffer = FBuffer::Create(GetDevice(), VertexBufferParams, GetDeviceAllocator());
-    assert(m_pVertexExBuffer != nullptr);
-    m_pVertexExBuffer->SetDebugName("VertexEx-Buffer");
+    m_pVertexBuffer->SetDebugName("VertexBuffer");
 
     // TriangleBuffer
     FBufferParams TriangleBufferParams;
@@ -1059,8 +1062,8 @@ void FSoftwareRayTracer::CreateDescriptorSets()
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pQuadBuffer->GetBuffer(), 6);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 7);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 9);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pVertexExBuffer->GetBuffer(), 10);
+    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pVertexPositionsBuffer->GetBuffer(), 9);
+    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 10);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 11);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 12);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 13);
@@ -1078,8 +1081,8 @@ void FSoftwareRayTracer::CreateDescriptorSets()
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pQuadBuffer->GetBuffer(), 6);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 7);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 9);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pVertexExBuffer->GetBuffer(), 10);
+    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pVertexPositionsBuffer->GetBuffer(), 9);
+    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 10);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 11);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 12);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 13);
@@ -1235,8 +1238,8 @@ void FSoftwareRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         BufferCopy.dstOffset = 0;
         BufferCopy.srcOffset = 0;
 
-        assert(m_pVertexBuffer->GetSize() >= m_pScene->m_pVertexPositionsBuffer->GetSize());
-        pCommandBuffer->CopyBuffer(m_pScene->m_pVertexPositionsBuffer->GetBuffer(), m_pVertexBuffer->GetBuffer(), 1, &BufferCopy);
+        assert(m_pVertexPositionsBuffer->GetSize() >= m_pScene->m_pVertexPositionsBuffer->GetSize());
+        pCommandBuffer->CopyBuffer(m_pScene->m_pVertexPositionsBuffer->GetBuffer(), m_pVertexPositionsBuffer->GetBuffer(), 1, &BufferCopy);
     }
 
     if (m_pScene->m_bUpdateBuffers && m_pScene->m_pVertexBuffer)
@@ -1246,8 +1249,8 @@ void FSoftwareRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         BufferCopy.dstOffset = 0;
         BufferCopy.srcOffset = 0;
 
-        assert(m_pVertexExBuffer->GetSize() >= m_pScene->m_pVertexBuffer->GetSize());
-        pCommandBuffer->CopyBuffer(m_pScene->m_pVertexBuffer->GetBuffer(), m_pVertexExBuffer->GetBuffer(), 1, &BufferCopy);
+        assert(m_pVertexBuffer->GetSize() >= m_pScene->m_pVertexBuffer->GetSize());
+        pCommandBuffer->CopyBuffer(m_pScene->m_pVertexBuffer->GetBuffer(), m_pVertexBuffer->GetBuffer(), 1, &BufferCopy);
     }
 
     if (m_pScene->m_bUpdateBuffers && m_pScene->m_pTriangleBuffer)

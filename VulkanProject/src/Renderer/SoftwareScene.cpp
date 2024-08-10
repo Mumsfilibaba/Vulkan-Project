@@ -23,7 +23,6 @@ FSoftwareScene::FSoftwareScene()
     , m_pTriangleBuffer(nullptr)
     , m_pBoundingBoxBuffer(nullptr)
     , m_pMaterialSampler(nullptr)
-    , m_pMeshVertexBuffer(nullptr)
     , m_pMeshIndexBuffer(nullptr)
     , m_pAABBInstanceBuffer(nullptr)
 {
@@ -46,8 +45,8 @@ FSoftwareScene::FSoftwareScene()
     m_VertexPositions.reserve(MAX_VERTICES);
     ZeroVector(m_VertexPositions);
 
-    m_VerticesEx.reserve(MAX_VERTICES);
-    ZeroVector(m_VerticesEx);
+    m_Vertices.reserve(MAX_VERTICES);
+    ZeroVector(m_Vertices);
 
     m_Meshes.reserve(MAX_TRIANGLEMESHES);
     ZeroVector(m_Meshes);
@@ -81,7 +80,6 @@ FSoftwareScene::~FSoftwareScene()
     SAFE_DELETE(m_pVertexBuffer);
     SAFE_DELETE(m_pMaterialSampler);
 
-    SAFE_DELETE(m_pMeshVertexBuffer);
     SAFE_DELETE(m_pMeshIndexBuffer);
     SAFE_DELETE(m_pAABBInstanceBuffer);
 }
@@ -112,15 +110,15 @@ void FModelScene::Initialize()
     }
 
     // Copy data to the scene
-    m_VerticesEx = Mesh.VerticesEx;
+    m_Vertices = Mesh.VerticesEx;
     m_Indicies   = Mesh.Indicies;
     m_Materials  = Mesh.Materials;
 
     // Create position only buffer
-    m_VertexPositions.resize(m_VerticesEx.size());
-    for (size_t i = 0; i < m_VerticesEx.size(); i++)
+    m_VertexPositions.resize(m_Vertices.size());
+    for (size_t i = 0; i < m_Vertices.size(); i++)
     {
-        m_VertexPositions[i].Position = m_VerticesEx[i].Position;
+        m_VertexPositions[i].Position = m_Vertices[i].Position;
     }
 
     // Build BVH
@@ -139,44 +137,54 @@ void FModelScene::Initialize()
     // Cache Device
     FDevice* pDevice = FApplication::Get().GetDevice();
 
-    // BVH Buffers
-    FBufferParams BufferParams;
-    BufferParams.Size             = sizeof(FShaderBoundingBox) * m_AccelerationStructure.m_BoundingBoxes.size();
-    BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
-    BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    // BVH-Buffer
+    FBufferParams BoundingBoxBufferParams;
+    BoundingBoxBufferParams.Size             = sizeof(FShaderBoundingBox) * m_AccelerationStructure.m_BoundingBoxes.size();
+    BoundingBoxBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    BoundingBoxBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     assert(m_AccelerationStructure.m_BoundingBoxes.size() < MAX_BVH_NODES);
-    m_pBoundingBoxBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_AccelerationStructure.m_BoundingBoxes.data());
+    m_pBoundingBoxBuffer = FBuffer::CreateWithData(pDevice, BoundingBoxBufferParams, nullptr, m_AccelerationStructure.m_BoundingBoxes.data());
     assert(m_pBoundingBoxBuffer != nullptr);
     m_pBoundingBoxBuffer->SetDebugName("CPU Bounding Box Buffer");
 
-    BufferParams.Size = sizeof(FShaderTriangle) * m_AccelerationStructure.m_Triangles.size();
-    m_pTriangleBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_AccelerationStructure.m_Triangles.data());
+    // CPU Triangle Buffer
+    FBufferParams TriangleBufferParams;
+    TriangleBufferParams.Size             = sizeof(FShaderTriangle) * m_AccelerationStructure.m_Triangles.size();
+    TriangleBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    TriangleBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pTriangleBuffer = FBuffer::CreateWithData(pDevice, TriangleBufferParams, nullptr, m_AccelerationStructure.m_Triangles.data());
     assert(m_pTriangleBuffer != nullptr);
     m_pTriangleBuffer->SetDebugName("CPU Triangle Buffer");
 
-    BufferParams.Size = sizeof(FVertexPosOnly) * m_VertexPositions.size();
-    m_pVertexPositionsBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_VertexPositions.data());
+    // CPU VertexPositionsBuffer Buffer
+    FBufferParams VertexPositionsBufferParams;
+    VertexPositionsBufferParams.Size             = sizeof(FVertexPosOnly) * m_VertexPositions.size();
+    VertexPositionsBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    VertexPositionsBufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pVertexPositionsBuffer = FBuffer::CreateWithData(pDevice, VertexPositionsBufferParams, nullptr, m_VertexPositions.data());
     assert(m_pVertexPositionsBuffer != nullptr);
-    m_pVertexPositionsBuffer->SetDebugName("CPU Vertex Buffer");
+    m_pVertexPositionsBuffer->SetDebugName("CPU VertexPositions Buffer");
 
-    BufferParams.Size = sizeof(FVertex) * m_VerticesEx.size();
-    m_pVertexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_VerticesEx.data());
+    // CPU VertexBuffer Buffer
+    FBufferParams VertexBufferParams;
+    VertexBufferParams.Size             = sizeof(FVertex) * m_Vertices.size();
+    VertexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    VertexBufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pVertexBuffer = FBuffer::CreateWithData(pDevice, VertexBufferParams, nullptr, m_Vertices.data());
     assert(m_pVertexBuffer != nullptr);
-    m_pVertexBuffer->SetDebugName("CPU VertexEx Buffer");
+    m_pVertexBuffer->SetDebugName("CPU Vertex Buffer");
 
-    BufferParams.Size             = sizeof(FVertexPosOnly) * m_VertexPositions.size();
-    BufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    // CPU IndexBuffer Buffer
+    FBufferParams IndexBufferParams;
+    IndexBufferParams.Size             = sizeof(uint32_t) * Mesh.Indicies.size();
+    IndexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+    IndexBufferParams.Usage            = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pMeshVertexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, m_VertexPositions.data());
-    assert(m_pMeshVertexBuffer != nullptr);
-    m_pMeshVertexBuffer->SetDebugName("CPU Debug Vertex Buffer");
-
-    BufferParams.Size  = sizeof(uint32_t) * Mesh.Indicies.size();
-    BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pMeshIndexBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, Mesh.Indicies.data());
+    m_pMeshIndexBuffer = FBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, Mesh.Indicies.data());
     assert(m_pMeshIndexBuffer != nullptr);
     m_pMeshIndexBuffer->SetDebugName("CPU Debug Index Buffer");
 
@@ -199,11 +207,12 @@ void FModelScene::Initialize()
         }
     }
 
-    BufferParams.Size             = sizeof(glm::mat4) * AABBMatrices.size();
-    BufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    BufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    FBufferParams AABBInstanceBufferParams;
+    AABBInstanceBufferParams.Size             = sizeof(glm::mat4) * AABBMatrices.size();
+    AABBInstanceBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    AABBInstanceBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pAABBInstanceBuffer = FBuffer::CreateWithData(pDevice, BufferParams, nullptr, AABBMatrices.data());
+    m_pAABBInstanceBuffer = FBuffer::CreateWithData(pDevice, AABBInstanceBufferParams, nullptr, AABBMatrices.data());
     assert(m_pAABBInstanceBuffer != nullptr);
     m_pAABBInstanceBuffer->SetDebugName("CPU Debug AABB Instance Buffer");
 

@@ -70,9 +70,10 @@ private:
     FBuffer* m_pQuadBuffer;
     FBuffer* m_pTriangleBuffer;
     FBuffer* m_pMeshBuffer;
+    FBuffer* m_pVertexPositionsBuffer;
     FBuffer* m_pVertexBuffer;
-    FBuffer* m_pVertexExBuffer;
     FBuffer* m_pBvhBuffer;
+
     FBuffer* m_pAABBVertexBuffer;
     FBuffer* m_pAABBIndexBuffer;
     FBuffer* m_pAABBInstanceBuffer;

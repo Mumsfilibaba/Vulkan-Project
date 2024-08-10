@@ -70,7 +70,7 @@ struct FSoftwareScene : public IScene
     
     // Triangle Mesh Data
     std::vector<FVertexPosOnly> m_VertexPositions;
-    std::vector<FVertex>        m_VerticesEx;
+    std::vector<FVertex>        m_Vertices;
     std::vector<uint32_t>       m_Indicies;
     std::vector<FShaderMesh>    m_Meshes;
     
@@ -79,7 +79,7 @@ struct FSoftwareScene : public IScene
     std::vector<FShaderQuad>    m_Quads;
 
     // BVH Container
-    FBvhAccelerationStructure m_AccelerationStructure;
+    FBvhAccelerationStructure   m_AccelerationStructure;
     
     // CPU Buffers
     FBuffer* m_pVertexPositionsBuffer;
@@ -92,7 +92,6 @@ struct FSoftwareScene : public IScene
     FSampler* m_pMaterialSampler;
     
     // Debugging
-    FBuffer* m_pMeshVertexBuffer;
     FBuffer* m_pMeshIndexBuffer;
     FBuffer* m_pAABBInstanceBuffer;
 };
