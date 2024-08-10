@@ -75,5 +75,5 @@ struct FScene : public IScene
     // Materials
     FSampler*                    m_pMaterialSampler;
     std::vector<FMaterial>       m_Materials;
-    std::vector<FShaderMaterial> m_GpuMaterials;
+    std::vector<FMaterialGLSL> m_GpuMaterials;
 };

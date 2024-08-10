@@ -65,35 +65,35 @@ struct FSoftwareScene : public IScene
     FSoftwareSceneSettings m_Settings;
 
     // Materials
-    std::vector<FMaterial>       m_Materials;
-    std::vector<FShaderMaterial> m_GpuMaterials;
-    
-    // Triangle Mesh Data
-    std::vector<FVertexPosOnly> m_VertexPositions;
-    std::vector<FVertex>        m_Vertices;
-    std::vector<uint32_t>       m_Indicies;
-    std::vector<FShaderMesh>    m_Meshes;
-    
+    std::vector<FMaterial>     m_Materials;
+    std::vector<FMaterialGLSL> m_GpuMaterials;
+
     // Other primitive data
-    std::vector<FShaderSphere>  m_Spheres;
-    std::vector<FShaderQuad>    m_Quads;
+    std::vector<FSphereGLSL>   m_Spheres;
+    std::vector<FQuadGLSL>     m_Quads;
 
     // BVH Container
-    FBvhAccelerationStructure   m_AccelerationStructure;
-    
+    FBvhAccelerationStructure  m_AccelerationStructure;
+
+    // Triangle Mesh Data
+    std::vector<FVertexPosOnly>    m_VertexPositions;
+    std::vector<FVertex>           m_Vertices;
+    std::vector<uint32_t>          m_Indicies;
+    std::vector<FMeshGLSL>         m_Meshes;
+    std::vector<FTriangleInfoGLSL> m_TriangleInfo;
+
     // CPU Buffers
-    FBuffer* m_pVertexPositionsBuffer;
-    FBuffer* m_pVertexBuffer;
-    FBuffer* m_pTriangleBuffer;
-    FBuffer* m_pBoundingBoxBuffer;
-    bool     m_bUpdateBuffers;
-    
+    FBuffer*  m_pVertexPositionsBuffer;
+    FBuffer*  m_pVertexBuffer;
+    FBuffer*  m_pIndexBuffer;
+    FBuffer*  m_pTriangleBuffer;
+    FBuffer*  m_pBoundingBoxBuffer;
+    bool      m_bUpdateBuffers;
+
     // Sampler for materials
     FSampler* m_pMaterialSampler;
-    
     // Debugging
-    FBuffer* m_pMeshIndexBuffer;
-    FBuffer* m_pAABBInstanceBuffer;
+    FBuffer*  m_pAABBInstanceBuffer;
 };
 
 enum class EModelSceneType

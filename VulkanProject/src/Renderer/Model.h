@@ -111,52 +111,6 @@ struct FVertexPosOnlyHasher
     }
 };
 
-struct FVertexAABB
-{
-    static VkVertexInputBindingDescription* GetBindingDescription()
-    {
-        static VkVertexInputBindingDescription BindingDescriptions[1];
-
-        BindingDescriptions[0].binding   = 0;
-        BindingDescriptions[0].stride    = sizeof(FVertexAABB);
-        BindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-        return BindingDescriptions;
-    }
-    
-    static VkVertexInputAttributeDescription* GetAttributeDescriptions()
-    {
-        static VkVertexInputAttributeDescription AttributeDescriptions[1];
-
-        AttributeDescriptions[0].binding  = 0;
-        AttributeDescriptions[0].location = 0;
-        AttributeDescriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
-        AttributeDescriptions[0].offset   = offsetof(FVertexAABB, Position);
-
-        return AttributeDescriptions;
-    }
-
-    bool operator==(const FVertexAABB& Other) const
-    {
-        return Position == Other.Position;
-    }
-
-    glm::vec3 Position;
-};
-
-struct FVertexAABBHasher
-{
-    size_t operator()(const FVertexAABB& Vertex) const
-    {
-        return std::hash<glm::vec3>()(Vertex.Position);
-    }
-};
-
-struct FTriangleInfo
-{
-    uint32_t MaterialIndex;
-};
-
 struct FMaterial
 {
     std::shared_ptr<FTextureResource> AlbedoTex;
@@ -200,14 +154,4 @@ struct FModel
     std::vector<uint32_t>  Indicies;
     std::vector<FVertex>   Vertices;
     std::vector<FMaterial> Materials;
-};
-
-struct FMesh
-{
-    bool LoadFromFile(const std::string& Filepath);
-
-    std::vector<FTriangleInfo>  TriangleInfo;
-    std::vector<uint32_t>       Indicies;
-    std::vector<FVertex>        VerticesEx;
-    std::vector<FMaterial>      Materials;
 };

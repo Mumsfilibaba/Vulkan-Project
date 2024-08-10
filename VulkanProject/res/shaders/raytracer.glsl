@@ -101,42 +101,47 @@ layout(binding = 5) uniform SceneBufferObject
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Scene objects
 
-layout(std430, binding = 6) buffer QuadBuffer
+layout(std430, binding = 6) readonly buffer QuadBuffer
 {
     FQuad Quads[];
 };
 
-layout(std430, binding = 7) buffer SphereBuffer
+layout(std430, binding = 7) readonly buffer SphereBuffer
 {
     FSphere Spheres[];
 };
 
-layout(std430, binding = 8) buffer MaterialBuffer
+layout(std430, binding = 8) readonly buffer MaterialBuffer
 {
     FMaterial Materials[];
 };
 
-layout(scalar, binding = 9) buffer VertexPositionsBuffer
+layout(scalar, binding = 9) readonly buffer VertexPositionsBuffer
 {
     FVertexPosOnly VertexPositions[];
 };
 
-layout(scalar, binding = 10) buffer VertexBuffer
+layout(scalar, binding = 10) readonly buffer VertexBuffer
 {
     FVertex Vertices[];
 };
 
-layout(std430, binding = 11) buffer TriangleBuffer
+layout(scalar, binding = 11) readonly buffer IndexBuffer
+{
+    uvec3 Indices[];
+};
+
+layout(scalar, binding = 12) readonly buffer TriangleInfoBuffer
 {
     FTriangle Triangles[];
 };
 
-layout(std430, binding = 12) buffer MeshBuffer
+layout(std430, binding = 13) readonly buffer MeshBuffer
 {
     FMesh Meshes[];
 };
 
-layout(std430, binding = 13) buffer BvhBuffer
+layout(std430, binding = 14) readonly buffer BvhBuffer
 {
     FBoundingBox BvhNodes[];
 };
@@ -327,10 +332,10 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, inout iv
             uint LastTriangleIndex = floatBitsToUint(Node.BoxMinAndIndex.w) + floatBitsToUint(Node.BoxMaxAndNumTriangles.w);
             for (uint TriangleIndex = floatBitsToUint(Node.BoxMinAndIndex.w); TriangleIndex < LastTriangleIndex; TriangleIndex++)
             {
-                FTriangle Triangle = Triangles[TriangleIndex];
-                vec3 Position0 = VertexPositions[Triangle.Index0].Position.xyz;
-                vec3 Position1 = VertexPositions[Triangle.Index1].Position.xyz;
-                vec3 Position2 = VertexPositions[Triangle.Index2].Position.xyz;
+                uvec3 Indicies = Indices[TriangleIndex];
+                vec3 Position0 = VertexPositions[Indicies.x].Position.xyz;
+                vec3 Position1 = VertexPositions[Indicies.y].Position.xyz;
+                vec3 Position2 = VertexPositions[Indicies.z].Position.xyz;
 
                 FHitInfo HitInfo = HitTriangle(Position0, Position1, Position2, Ray.Origin, Ray.Direction);
                 Stats[1]++;
@@ -373,20 +378,21 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, inout iv
 
     if (LastTriangleHitIndex >= 0)
     {
+        uvec3 Indicies = Indices[LastTriangleHitIndex];
+
+        vec2 TexCoords0 = Vertices[Indicies.x].TexCoord.xy;
+        vec2 TexCoords1 = Vertices[Indicies.y].TexCoord.xy;
+        vec2 TexCoords2 = Vertices[Indicies.z].TexCoord.xy;
+
+        vec3 Normal0 = Vertices[Indicies.x].Normal.xyz;
+        vec3 Normal1 = Vertices[Indicies.y].Normal.xyz;
+        vec3 Normal2 = Vertices[Indicies.z].Normal.xyz;
+
+        vec3 Tangent0 = Vertices[Indicies.x].Tangent.xyz;
+        vec3 Tangent1 = Vertices[Indicies.y].Tangent.xyz;
+        vec3 Tangent2 = Vertices[Indicies.z].Tangent.xyz;
+
         FTriangle Triangle = Triangles[LastTriangleHitIndex];
-
-        vec2 TexCoords0 = Vertices[Triangle.Index0].TexCoord.xy;
-        vec2 TexCoords1 = Vertices[Triangle.Index1].TexCoord.xy;
-        vec2 TexCoords2 = Vertices[Triangle.Index2].TexCoord.xy;
-
-        vec3 Normal0 = Vertices[Triangle.Index0].Normal.xyz;
-        vec3 Normal1 = Vertices[Triangle.Index1].Normal.xyz;
-        vec3 Normal2 = Vertices[Triangle.Index2].Normal.xyz;
-
-        vec3 Tangent0 = Vertices[Triangle.Index0].Tangent.xyz;
-        vec3 Tangent1 = Vertices[Triangle.Index1].Tangent.xyz;
-        vec3 Tangent2 = Vertices[Triangle.Index2].Tangent.xyz;
-
         PayLoad.BaryCentrics  = vec3(LastHitInfo.BaryCentrics, 1.0 - (LastHitInfo.BaryCentrics.x + LastHitInfo.BaryCentrics.y));
         PayLoad.Normal        = normalize((PayLoad.BaryCentrics.x * Normal1)  + (PayLoad.BaryCentrics.y * Normal2)  + (PayLoad.BaryCentrics.z * Normal0));
         PayLoad.Tangent       = normalize((PayLoad.BaryCentrics.x * Tangent1) + (PayLoad.BaryCentrics.y * Tangent2) + (PayLoad.BaryCentrics.z * Tangent0));

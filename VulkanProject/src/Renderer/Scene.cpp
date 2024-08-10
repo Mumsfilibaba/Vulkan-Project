@@ -188,7 +188,7 @@ void FScene::Initialize()
 
     for (const FMaterial& Material : m_Materials)
     {
-        FShaderMaterial& ShaderMaterial = m_GpuMaterials.emplace_back();
+        FMaterialGLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
         ShaderMaterial.AlbedoColor           = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
         ShaderMaterial.EmissiveColor         = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
         ShaderMaterial.SpecularColor         = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);

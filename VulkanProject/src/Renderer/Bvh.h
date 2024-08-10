@@ -102,12 +102,13 @@ struct FBvhBuilder
 struct FBvhAccelerationStructure
 {
     FBvhAccelerationStructure();
-    
-    void Build(const FMesh& Mesh, uint32_t MaxDepth);
 
-    std::vector<FShaderTriangle>    m_Triangles;
+    void Build(const FModel& Model, uint32_t MaxDepth);
+
+    std::vector<FTriangleInfoGLSL>  m_TriangleInfo;
+    std::vector<uint32_t>           m_Indicies;
     std::vector<FShaderBoundingBox> m_BoundingBoxes;
-    
+
     struct
     {
         uint32_t MaxTrianglesInLeafNode;

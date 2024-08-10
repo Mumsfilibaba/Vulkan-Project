@@ -35,12 +35,12 @@ FSoftwareRayTracer::FSoftwareRayTracer()
     , m_pAABBVertexBuffer(nullptr)
     , m_pAABBIndexBuffer(nullptr)
     , m_pAABBInstanceBuffer(nullptr)
+    , m_AABBIndexCount(0)
     , m_pRayTracingPipeline(nullptr)
     , m_pRayTracingPipelineLayout(nullptr)
     , m_pRayTracingDescriptorSetLayout(nullptr)
     , m_pRayTracingDescriptorSet0(nullptr)
     , m_pRayTracingDescriptorSet1(nullptr)
-    , m_AABBIndexCount(0)
     , m_pDebugPipeline(nullptr)
     , m_pDebugPipelineWireframe(nullptr)
     , m_pDebugAABBPipeline(nullptr)
@@ -83,6 +83,7 @@ void FSoftwareRayTracer::ReleaseResources()
     SAFE_DELETE(m_pMeshBuffer);
     SAFE_DELETE(m_pVertexPositionsBuffer);
     SAFE_DELETE(m_pVertexBuffer);
+    SAFE_DELETE(m_pIndexBuffer);
     SAFE_DELETE(m_pBvhBuffer);
     SAFE_DELETE(m_pAABBVertexBuffer);
     SAFE_DELETE(m_pAABBIndexBuffer);
@@ -146,7 +147,7 @@ void FSoftwareRayTracer::PerformRayTracing(FCommandBuffer* pCommandBuffer)
     SceneBuffer.NumMaterials          = m_pScene->m_GpuMaterials.size();
     SceneBuffer.NumMeshes             = m_pScene->m_Meshes.size();
     SceneBuffer.NumBvhNodes           = m_pScene->m_AccelerationStructure.m_BoundingBoxes.size();
-    SceneBuffer.NumTriangles          = m_pScene->m_AccelerationStructure.m_Triangles.size();
+    SceneBuffer.NumTriangles          = m_pScene->m_AccelerationStructure.m_TriangleInfo.size();
     SceneBuffer.BackgroundType        = m_pScene->m_Settings.BackgroundType;
     SceneBuffer.NumBounces            = m_pScene->m_Settings.NumBounces;
     SceneBuffer.ViewMode              = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
@@ -191,7 +192,7 @@ void FSoftwareRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
     ClearColor[0].color        = { 0.0f, 0.0f, 0.0f, 1.0f };
     ClearColor[1].depthStencil = { 1.0f, 0 };
 
-    if (!m_pScene->m_pVertexPositionsBuffer || !m_pScene->m_pMeshIndexBuffer)
+    if (!m_pScene->m_pVertexPositionsBuffer || !m_pScene->m_pIndexBuffer)
     {
         // Begin RenderPass (Only clear the image when the buffers are invalid)
         pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, ClearColor, 2);
@@ -238,7 +239,7 @@ void FSoftwareRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
 
         // Set Vertex- and IndexBuffer
         pCommandBuffer->BindVertexBuffer(m_pScene->m_pVertexPositionsBuffer, 0, 0);
-        pCommandBuffer->BindIndexBuffer(m_pScene->m_pMeshIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        pCommandBuffer->BindIndexBuffer(m_pScene->m_pIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         // Draw
         const size_t IndexCount = m_pScene->m_Indicies.size();
@@ -265,7 +266,7 @@ void FSoftwareRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
 
         // Set Vertex- and IndexBuffer
         pCommandBuffer->BindVertexBuffer(m_pScene->m_pVertexPositionsBuffer, 0, 0);
-        pCommandBuffer->BindIndexBuffer(m_pScene->m_pMeshIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        pCommandBuffer->BindIndexBuffer(m_pScene->m_pIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         // Draw
         const size_t IndexCount = m_pScene->m_Indicies.size();
@@ -301,7 +302,7 @@ void FSoftwareRayTracer::PerformDebugPass(FCommandBuffer* pCommandBuffer)
         const uint32_t NumInstances = static_cast<uint32_t>(m_pScene->m_AccelerationStructure.m_BoundingBoxes.size());
         pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, NumInstances, 0, 0, 0);
     }
-    
+
     // End RenderPass
     pCommandBuffer->EndRenderPass();
 }
@@ -514,7 +515,7 @@ void FSoftwareRayTracer::RenderUI()
         uint32_t ImguiID = 0;
         {
             uint32_t Index = 1;
-            for (FShaderSphere& Sphere : m_pScene->m_Spheres)
+            for (FSphereGLSL& Sphere : m_pScene->m_Spheres)
             {
                 ImGui::PushID(ImguiID++);
 
@@ -535,7 +536,7 @@ void FSoftwareRayTracer::RenderUI()
 
         {
             uint32_t Index = 1;
-            for (FShaderQuad& Quad : m_pScene->m_Quads)
+            for (FQuadGLSL& Quad : m_pScene->m_Quads)
             {
                 ImGui::PushID(ImguiID++);
 
@@ -560,7 +561,7 @@ void FSoftwareRayTracer::RenderUI()
 
         {
             uint32_t Index = 1;
-            for (FShaderMesh& Mesh : m_pScene->m_Meshes)
+            for (FMeshGLSL& Mesh : m_pScene->m_Meshes)
             {
                 ImGui::PushID(ImguiID++);
 
@@ -578,7 +579,7 @@ void FSoftwareRayTracer::RenderUI()
 
         {
             uint32_t Index = 1;
-            for (FShaderMaterial& Material : m_pScene->m_GpuMaterials)
+            for (FMaterialGLSL& Material : m_pScene->m_GpuMaterials)
             {
                 ImGui::PushID(ImguiID++);
                 ImGui::Text("Material %d", Index++);
@@ -636,106 +637,113 @@ void FSoftwareRayTracer::RenderUI()
 void FSoftwareRayTracer::CreateRayTracingResources()
 {
     // Create RayTracing DescriptorSetLayout
-    constexpr uint32_t NumRayTracingBindings = 14;
+    constexpr uint32_t NumRayTracingBindings = 15;
     VkDescriptorSetLayoutBinding RayTracingBindings[NumRayTracingBindings];
-    
-    // Output Image
+
+    // OutputImage
     RayTracingBindings[0].binding            = 0;
     RayTracingBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     RayTracingBindings[0].descriptorCount    = 1;
     RayTracingBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[0].pImmutableSamplers = nullptr;
 
-    // Accumulation image
+    // AccumulationImage
     RayTracingBindings[1].binding            = 1;
     RayTracingBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     RayTracingBindings[1].descriptorCount    = 1;
     RayTracingBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[1].pImmutableSamplers = nullptr;
-    
+
     // Skybox
     RayTracingBindings[2].binding            = 2;
     RayTracingBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     RayTracingBindings[2].descriptorCount    = 1;
     RayTracingBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[2].pImmutableSamplers = nullptr;
-    
-    // Camera Buffer
+
+    // CameraBuffer
     RayTracingBindings[3].binding            = 3;
     RayTracingBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     RayTracingBindings[3].descriptorCount    = 1;
     RayTracingBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[3].pImmutableSamplers = nullptr;
-    
-    // Random Buffer
+
+    // RandomBuffer
     RayTracingBindings[4].binding            = 4;
     RayTracingBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     RayTracingBindings[4].descriptorCount    = 1;
     RayTracingBindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[4].pImmutableSamplers = nullptr;
 
-    // Scene Buffer
+    // SceneBuffer
     RayTracingBindings[5].binding            = 5;
     RayTracingBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     RayTracingBindings[5].descriptorCount    = 1;
     RayTracingBindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[5].pImmutableSamplers = nullptr;
 
-    // Quads Buffer
+    // QuadsBuffer
     RayTracingBindings[6].binding            = 6;
     RayTracingBindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     RayTracingBindings[6].descriptorCount    = 1;
     RayTracingBindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[6].pImmutableSamplers = nullptr;
 
-    // Spheres Buffer
+    // SpheresBuffer
     RayTracingBindings[7].binding            = 7;
     RayTracingBindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     RayTracingBindings[7].descriptorCount    = 1;
     RayTracingBindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[7].pImmutableSamplers = nullptr;
 
-    // Materials Buffer
+    // MaterialBuffer
     RayTracingBindings[8].binding            = 8;
     RayTracingBindings[8].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     RayTracingBindings[8].descriptorCount    = 1;
     RayTracingBindings[8].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[8].pImmutableSamplers = nullptr;
-    
-    // Vertex Buffer
+
+    // VertexPositionsBuffer
     RayTracingBindings[9].binding            = 9;
     RayTracingBindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     RayTracingBindings[9].descriptorCount    = 1;
     RayTracingBindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[9].pImmutableSamplers = nullptr;
-    
-    // VertexEx Buffer
+
+    // VertexBuffer
     RayTracingBindings[10].binding            = 10;
     RayTracingBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     RayTracingBindings[10].descriptorCount    = 1;
     RayTracingBindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[10].pImmutableSamplers = nullptr;
-    
-    // Triangles Buffer
+
+    // IndexBuffer
     RayTracingBindings[11].binding            = 11;
     RayTracingBindings[11].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     RayTracingBindings[11].descriptorCount    = 1;
     RayTracingBindings[11].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[11].pImmutableSamplers = nullptr;
-    
-    // TriangleMeshes Buffer
+
+    // TriangleBuffer
     RayTracingBindings[12].binding            = 12;
     RayTracingBindings[12].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     RayTracingBindings[12].descriptorCount    = 1;
     RayTracingBindings[12].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[12].pImmutableSamplers = nullptr;
 
-    // BVH Buffer
+    // MeshBuffer
     RayTracingBindings[13].binding            = 13;
     RayTracingBindings[13].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     RayTracingBindings[13].descriptorCount    = 1;
     RayTracingBindings[13].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     RayTracingBindings[13].pImmutableSamplers = nullptr;
+
+    // BVH-Buffer
+    RayTracingBindings[14].binding            = 14;
+    RayTracingBindings[14].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    RayTracingBindings[14].descriptorCount    = 1;
+    RayTracingBindings[14].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+    RayTracingBindings[14].pImmutableSamplers = nullptr;
 
     FDescriptorSetLayoutParams RayTracingDescriptorSetLayoutParams;
     RayTracingDescriptorSetLayoutParams.pBindings   = RayTracingBindings;
@@ -750,7 +758,7 @@ void FSoftwareRayTracer::CreateRayTracingResources()
     RayTracingPipelineLayoutParams.ppLayouts       = &m_pRayTracingDescriptorSetLayout;
     RayTracingPipelineLayoutParams.NumLayouts      = 1;
     RayTracingPipelineLayoutParams.bEnableBindless = true;
-    
+
     m_pRayTracingPipelineLayout = FPipelineLayout::Create(GetDevice(), RayTracingPipelineLayoutParams);
     assert(m_pRayTracingPipelineLayout != nullptr);
     m_pRayTracingPipelineLayout->SetDebugName("RayTracingPass PipelineLayout");
@@ -759,16 +767,16 @@ void FSoftwareRayTracer::CreateRayTracingResources()
     FShaderModule* pComputeShader = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/raytracer.spv");
     assert(pComputeShader != nullptr);
     pComputeShader->SetDebugName(RESOURCE_PATH"/shaders/raytracer.spv");
-    
+
     FComputePipelineStateParams PipelineParams = {};
     PipelineParams.pShader         = pComputeShader;
     PipelineParams.pPipelineLayout = m_pRayTracingPipelineLayout;
-    
+
     m_pRayTracingPipeline = FComputePipeline::Create(GetDevice(), PipelineParams);
     assert(m_pRayTracingPipeline != nullptr);
     m_pRayTracingPipeline.load()->SetDebugName("RayTracingPass Pipeline");
-    
-    delete pComputeShader;
+
+    SAFE_DELETE(pComputeShader);
 }
 
 void FSoftwareRayTracer::CreateDebugViewResources()
@@ -783,14 +791,14 @@ void FSoftwareRayTracer::CreateDebugViewResources()
     DebugPassBindings[0].descriptorCount    = 1;
     DebugPassBindings[0].stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
     DebugPassBindings[0].pImmutableSamplers = nullptr;
-    
+
     // Storage Buffer
     DebugPassBindings[1].binding            = 1;
     DebugPassBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     DebugPassBindings[1].descriptorCount    = 1;
     DebugPassBindings[1].stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
     DebugPassBindings[1].pImmutableSamplers = nullptr;
-    
+
     FDescriptorSetLayoutParams DebugPassDescriptorSetLayoutParams;
     DebugPassDescriptorSetLayoutParams.pBindings   = DebugPassBindings;
     DebugPassDescriptorSetLayoutParams.NumBindings = NumDebugPassBindings;
@@ -804,13 +812,13 @@ void FSoftwareRayTracer::CreateDebugViewResources()
     DebugPassPipelineLayoutParams.ppLayouts        = &m_pDebugDescriptorSetLayout;
     DebugPassPipelineLayoutParams.NumLayouts       = 1;
     DebugPassPipelineLayoutParams.NumPushConstants = 4;
-    
+
     m_pDebugPipelineLayout = FPipelineLayout::Create(GetDevice(), DebugPassPipelineLayoutParams);
     assert(m_pDebugPipelineLayout != nullptr);
     m_pDebugPipelineLayout->SetDebugName("DebugPass PipelineLayout");
-    
+
     DebugPassPipelineLayoutParams.NumPushConstants = 20;
-    
+
     m_pDebugAABBPipelineLayout = FPipelineLayout::Create(GetDevice(), DebugPassPipelineLayoutParams);
     assert(m_pDebugAABBPipelineLayout != nullptr);
     m_pDebugAABBPipelineLayout->SetDebugName("DebugPass AABB PipelineLayout");
@@ -836,21 +844,21 @@ void FSoftwareRayTracer::CreateDebugViewResources()
     ColorAttachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
     ColorAttachments[0].InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     ColorAttachments[0].FinalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    
+
     FRenderPassAttachment DepthAttachment[1];
     DepthAttachment[0].Format        = VK_FORMAT_D24_UNORM_S8_UINT;
     DepthAttachment[0].InitialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     DepthAttachment[0].FinalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    
+
     FRenderPassParams RenderPassParams = {};
     RenderPassParams.pColorAttachments    = ColorAttachments;
     RenderPassParams.ColorAttachmentCount = 1;
     RenderPassParams.pDepthAttachment     = DepthAttachment;
-    
+
     m_pDebugRenderPass = FRenderPass::Create(GetDevice(), RenderPassParams);
     assert(m_pDebugRenderPass != nullptr);
     m_pDebugRenderPass->SetDebugName("DebugPass RenderPass");
-    
+
     FGraphicsPipelineStateParams DebugPassPipelineParams = {};
     DebugPassPipelineParams.pBindingDescriptions      = FVertexPosOnly::GetBindingDescription();
     DebugPassPipelineParams.BindingDescriptionCount   = 1;
@@ -861,20 +869,20 @@ void FSoftwareRayTracer::CreateDebugViewResources()
     DebugPassPipelineParams.pRenderPass               = m_pDebugRenderPass;
     DebugPassPipelineParams.pPipelineLayout           = m_pDebugPipelineLayout;
     DebugPassPipelineParams.bDepthEnable              = true;
-    
+
     m_pDebugPipeline = FGraphicsPipeline::Create(GetDevice(), DebugPassPipelineParams);
     assert(m_pDebugPipeline != nullptr);
     m_pDebugPipeline->SetDebugName("DebugPass Pipeline");
 
     DebugPassPipelineParams.PolygonMode = VK_POLYGON_MODE_LINE;
-    
+
     m_pDebugPipelineWireframe = FGraphicsPipeline::Create(GetDevice(), DebugPassPipelineParams);
     assert(m_pDebugPipelineWireframe != nullptr);
     m_pDebugPipelineWireframe->SetDebugName("DebugPass Pipeline WireFrame");
 
-    DebugPassPipelineParams.pBindingDescriptions      = FVertexAABB::GetBindingDescription();
+    DebugPassPipelineParams.pBindingDescriptions      = FVertexPosOnly::GetBindingDescription();
     DebugPassPipelineParams.BindingDescriptionCount   = 1;
-    DebugPassPipelineParams.pAttributeDescriptions    = FVertexAABB::GetAttributeDescriptions();
+    DebugPassPipelineParams.pAttributeDescriptions    = FVertexPosOnly::GetAttributeDescriptions();
     DebugPassPipelineParams.AttributeDescriptionCount = 1;
     DebugPassPipelineParams.pVertexShader             = pAABBVertex;
     DebugPassPipelineParams.pFragmentShader           = pAABBFragment;
@@ -882,15 +890,15 @@ void FSoftwareRayTracer::CreateDebugViewResources()
     DebugPassPipelineParams.pPipelineLayout           = m_pDebugAABBPipelineLayout;
     DebugPassPipelineParams.Topology                  = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
     DebugPassPipelineParams.bDepthEnable              = true;
-    
+
     m_pDebugAABBPipeline = FGraphicsPipeline::Create(GetDevice(), DebugPassPipelineParams);
     assert(m_pDebugAABBPipeline != nullptr);
     m_pDebugAABBPipeline->SetDebugName("DebugPass AABB Pipeline");
 
-    delete pVertex;
-    delete pAABBVertex;
-    delete pFragment;
-    delete pAABBFragment;
+    SAFE_DELETE(pVertex);
+    SAFE_DELETE(pAABBVertex);
+    SAFE_DELETE(pFragment);
+    SAFE_DELETE(pAABBFragment);
 
     std::array<glm::vec3, 8> AABBVertices =
     {
@@ -925,7 +933,7 @@ void FSoftwareRayTracer::CreateDebugViewResources()
     BufferParams.Size             = sizeof(glm::vec3) * AABBVertices.size();
     BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     BufferParams.Usage            = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    
+
     m_pAABBVertexBuffer = FBuffer::CreateWithData(GetDevice(), BufferParams, nullptr, AABBVertices.data());
     assert(m_pAABBVertexBuffer != nullptr);
     m_pAABBVertexBuffer->SetDebugName("AABBVertexBuffer");
@@ -933,7 +941,7 @@ void FSoftwareRayTracer::CreateDebugViewResources()
     BufferParams.Size  = sizeof(uint32_t) * AABBIndices.size();
     BufferParams.Usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     m_AABBIndexCount = AABBIndices.size();
-    
+
     m_pAABBIndexBuffer = FBuffer::CreateWithData(GetDevice(), BufferParams, nullptr, AABBIndices.data());
     assert(m_pAABBIndexBuffer != nullptr);
     m_pAABBIndexBuffer->SetDebugName("AABBIndexBuffer");
@@ -951,21 +959,21 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
 
     m_pSceneSettingsBuffer = FBuffer::Create(GetDevice(), SceneBufferParams, GetDeviceAllocator());
     assert(m_pSceneSettingsBuffer != nullptr);
-    m_pSceneSettingsBuffer->SetDebugName("Scene-Buffer");
+    m_pSceneSettingsBuffer->SetDebugName("SceneBuffer");
 
     // QuadBuffer
     FBufferParams QuadBufferParams;
-    QuadBufferParams.Size             = sizeof(FShaderQuad) * MAX_QUADS;
+    QuadBufferParams.Size             = sizeof(FQuadGLSL) * MAX_QUADS;
     QuadBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     QuadBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_pQuadBuffer = FBuffer::Create(GetDevice(), QuadBufferParams, GetDeviceAllocator());
     assert(m_pQuadBuffer != nullptr);
-    m_pQuadBuffer->SetDebugName("Quad-Buffer");
+    m_pQuadBuffer->SetDebugName("QuadBuffer");
 
     // SphereBuffer
     FBufferParams SphereBufferParams;
-    SphereBufferParams.Size             = sizeof(FShaderSphere) * MAX_SPHERES;
+    SphereBufferParams.Size             = sizeof(FSphereGLSL) * MAX_SPHERES;
     SphereBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     SphereBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -992,35 +1000,45 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
     assert(m_pVertexBuffer != nullptr);
     m_pVertexBuffer->SetDebugName("VertexBuffer");
 
+    // IndexBuffer
+    FBufferParams IndexBufferParams;
+    IndexBufferParams.Size             = (sizeof(uint32_t) * 3) * MAX_TRIANGLES;
+    IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    IndexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pIndexBuffer = FBuffer::Create(GetDevice(), IndexBufferParams, GetDeviceAllocator());
+    assert(m_pIndexBuffer  != nullptr);
+    m_pIndexBuffer->SetDebugName("IndexBuffer");
+
     // TriangleBuffer
     FBufferParams TriangleBufferParams;
-    TriangleBufferParams.Size             = sizeof(FShaderTriangle) * MAX_TRIANGLES;
+    TriangleBufferParams.Size             = sizeof(FTriangleInfoGLSL) * MAX_TRIANGLES;
     TriangleBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     TriangleBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_pTriangleBuffer = FBuffer::Create(GetDevice(), TriangleBufferParams, GetDeviceAllocator());
     assert(m_pTriangleBuffer != nullptr);
-    m_pTriangleBuffer->SetDebugName("Triangle-Buffer");
+    m_pTriangleBuffer->SetDebugName("TriangleBuffer");
 
     // TriangleMeshesBuffer
     FBufferParams MeshBufferParams;
-    MeshBufferParams.Size             = sizeof(FShaderMesh) * MAX_TRIANGLEMESHES;
+    MeshBufferParams.Size             = sizeof(FMeshGLSL) * MAX_TRIANGLEMESHES;
     MeshBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     MeshBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_pMeshBuffer = FBuffer::Create(GetDevice(), MeshBufferParams, GetDeviceAllocator());
     assert(m_pMeshBuffer != nullptr);
-    m_pMeshBuffer->SetDebugName("TriangleMeshes-Buffer");
+    m_pMeshBuffer->SetDebugName("MeshBuffer");
 
     // MaterialBuffer
     FBufferParams MaterialBufferParams;
-    MaterialBufferParams.Size             = sizeof(FShaderMaterial) * MAX_MATERIALS;
+    MaterialBufferParams.Size             = sizeof(FMaterialGLSL) * MAX_MATERIALS;
     MaterialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     MaterialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     m_pMaterialBuffer = FBuffer::Create(GetDevice(), MaterialBufferParams, GetDeviceAllocator());
     assert(m_pMaterialBuffer != nullptr);
-    m_pMaterialBuffer->SetDebugName("Material-Buffer");
+    m_pMaterialBuffer->SetDebugName("MaterialBuffer");
 
     // BoundingBoxBuffer
     FBufferParams BoundingBoxBufferParams;
@@ -1030,7 +1048,7 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
 
     m_pBvhBuffer = FBuffer::Create(GetDevice(), BoundingBoxBufferParams, GetDeviceAllocator());
     assert(m_pBvhBuffer != nullptr);
-    m_pBvhBuffer->SetDebugName("BVH-Buffer");
+    m_pBvhBuffer->SetDebugName("BVHBuffer");
 
     // Debug AABB instance buffer
     FBufferParams AABBInstanceBufferParams;
@@ -1064,9 +1082,10 @@ void FSoftwareRayTracer::CreateDescriptorSets()
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pVertexPositionsBuffer->GetBuffer(), 9);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 10);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 11);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 12);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 13);
+    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pIndexBuffer->GetBuffer(), 11);
+    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 12);
+    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 13);
+    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 14);
     
     m_pRayTracingDescriptorSet1 = FDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pRayTracingDescriptorSetLayout);
     assert(m_pRayTracingDescriptorSet1 != nullptr);
@@ -1083,9 +1102,10 @@ void FSoftwareRayTracer::CreateDescriptorSets()
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pVertexPositionsBuffer->GetBuffer(), 9);
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 10);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 11);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 12);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 13);
+    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pIndexBuffer->GetBuffer(), 11);
+    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 12);
+    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 13);
+    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 14);
 
     // Debug Pass
     m_pDebugDescriptorSet0 = FDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
@@ -1253,6 +1273,17 @@ void FSoftwareRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
         pCommandBuffer->CopyBuffer(m_pScene->m_pVertexBuffer->GetBuffer(), m_pVertexBuffer->GetBuffer(), 1, &BufferCopy);
     }
 
+    if (m_pScene->m_bUpdateBuffers && m_pScene->m_pIndexBuffer)
+    {
+        VkBufferCopy BufferCopy;
+        BufferCopy.size      = m_pScene->m_pIndexBuffer->GetSize();
+        BufferCopy.dstOffset = 0;
+        BufferCopy.srcOffset = 0;
+
+        assert(m_pIndexBuffer->GetSize() >= m_pScene->m_pIndexBuffer->GetSize());
+        pCommandBuffer->CopyBuffer(m_pScene->m_pIndexBuffer->GetBuffer(), m_pIndexBuffer->GetBuffer(), 1, &BufferCopy);
+    }
+
     if (m_pScene->m_bUpdateBuffers && m_pScene->m_pTriangleBuffer)
     {
         VkBufferCopy BufferCopy;
@@ -1293,29 +1324,29 @@ void FSoftwareRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
     if (!m_pScene->m_Quads.empty())
     {
         pCommandBuffer->FillBuffer(m_pQuadBuffer, 0, m_pQuadBuffer->GetSize(), 0);
-        assert((sizeof(FShaderQuad) * m_pScene->m_Quads.size()) <= m_pQuadBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pQuadBuffer, 0, sizeof(FShaderQuad) * m_pScene->m_Quads.size(), m_pScene->m_Quads.data());
+        assert((sizeof(FQuadGLSL) * m_pScene->m_Quads.size()) <= m_pQuadBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pQuadBuffer, 0, sizeof(FQuadGLSL) * m_pScene->m_Quads.size(), m_pScene->m_Quads.data());
     }
 
     if (!m_pScene->m_Spheres.empty())
     {
         pCommandBuffer->FillBuffer(m_pSphereBuffer, 0, m_pSphereBuffer->GetSize(), 0);
-        assert((sizeof(FShaderSphere) * m_pScene->m_Spheres.size()) <= m_pSphereBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(FShaderSphere) * m_pScene->m_Spheres.size(), m_pScene->m_Spheres.data());
+        assert((sizeof(FSphereGLSL) * m_pScene->m_Spheres.size()) <= m_pSphereBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(FSphereGLSL) * m_pScene->m_Spheres.size(), m_pScene->m_Spheres.data());
     }
 
     if (!m_pScene->m_Meshes.empty())
     {
         pCommandBuffer->FillBuffer(m_pMeshBuffer, 0, m_pMeshBuffer->GetSize(), 0);
-        assert((sizeof(FShaderMesh) * m_pScene->m_Meshes.size()) <= m_pMeshBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(FShaderMesh) * m_pScene->m_Meshes.size(), m_pScene->m_Meshes.data());
+        assert((sizeof(FMeshGLSL) * m_pScene->m_Meshes.size()) <= m_pMeshBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(FMeshGLSL) * m_pScene->m_Meshes.size(), m_pScene->m_Meshes.data());
     }
 
     if (!m_pScene->m_GpuMaterials.empty())
     {
         pCommandBuffer->FillBuffer(m_pMaterialBuffer, 0, m_pMaterialBuffer->GetSize(), 0);
-        assert((sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
+        assert((sizeof(FMaterialGLSL) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FMaterialGLSL) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
     }
 
     // Barrier before reading the buffer from the shader

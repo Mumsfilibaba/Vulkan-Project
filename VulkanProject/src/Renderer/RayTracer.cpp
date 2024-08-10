@@ -415,7 +415,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     // MaterialBuffer
     FBufferParams MaterialBufferParams;
-    MaterialBufferParams.Size             = m_pScene->m_GpuMaterials.size() * sizeof(FShaderMaterial);
+    MaterialBufferParams.Size             = m_pScene->m_GpuMaterials.size() * sizeof(FMaterialGLSL);
     MaterialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     MaterialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -437,8 +437,8 @@ void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
     if (!m_pScene->m_GpuMaterials.empty())
     {
         pCommandBuffer->FillBuffer(m_pMaterialBuffer, 0, m_pMaterialBuffer->GetSize(), 0);
-        assert((sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FShaderMaterial) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
+        assert((sizeof(FMaterialGLSL) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FMaterialGLSL) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
     }
 
     // Barrier before reading the buffer from the shader

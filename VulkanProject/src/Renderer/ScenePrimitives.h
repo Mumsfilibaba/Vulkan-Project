@@ -9,7 +9,7 @@ enum class EObjectType : uint32_t
     Mesh     = 3
 };
 
-struct FShaderSphere
+struct FSphereGLSL
 {
     // 0-16
     glm::vec3 Position;
@@ -23,7 +23,7 @@ struct FShaderSphere
     uint32_t Padding2;
 };
 
-struct FShaderQuad
+struct FQuadGLSL
 {
     // 0-16
     glm::vec4 Position;
@@ -40,22 +40,13 @@ struct FShaderQuad
     uint32_t Padding2;
 };
 
-struct FShaderTriangle
-{
-    // 0-16
-    uint32_t Index0;
-    uint32_t Index1;
-    uint32_t Index2;
-    uint32_t MaterialIndex;
-};
-
-struct FShaderMesh
+struct FMeshGLSL
 {
     // 0-8
     uint32_t BoundingBoxIndex;
 };
 
-struct FShaderMaterial
+struct FMaterialGLSL
 {
     // 0-16
     glm::vec4 AlbedoColor;
@@ -83,4 +74,10 @@ struct FShaderMaterial
     // Padding
     uint32_t Padding0;
     uint32_t Padding1;
+};
+
+struct FTriangleInfoGLSL
+{
+    // 0-4
+    int32_t MaterialIndex;
 };

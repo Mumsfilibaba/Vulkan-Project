@@ -72,11 +72,13 @@ private:
     FBuffer* m_pMeshBuffer;
     FBuffer* m_pVertexPositionsBuffer;
     FBuffer* m_pVertexBuffer;
+    FBuffer* m_pIndexBuffer;
     FBuffer* m_pBvhBuffer;
 
     FBuffer* m_pAABBVertexBuffer;
     FBuffer* m_pAABBIndexBuffer;
     FBuffer* m_pAABBInstanceBuffer;
+    size_t   m_AABBIndexCount;
 
     // RayTracing Pass
     std::atomic<FComputePipeline*> m_pRayTracingPipeline;
@@ -86,7 +88,6 @@ private:
     FDescriptorSet*                m_pRayTracingDescriptorSet1;
 
     // DebugPass
-    size_t                m_AABBIndexCount;
     FGraphicsPipeline*    m_pDebugPipeline;
     FGraphicsPipeline*    m_pDebugPipelineWireframe;
     FGraphicsPipeline*    m_pDebugAABBPipeline;

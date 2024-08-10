@@ -20,10 +20,10 @@ FSoftwareScene::FSoftwareScene()
     , m_Settings()
     , m_pVertexPositionsBuffer(nullptr)
     , m_pVertexBuffer(nullptr)
+    , m_pIndexBuffer(nullptr)
     , m_pTriangleBuffer(nullptr)
     , m_pBoundingBoxBuffer(nullptr)
     , m_pMaterialSampler(nullptr)
-    , m_pMeshIndexBuffer(nullptr)
     , m_pAABBInstanceBuffer(nullptr)
 {
     m_Settings.ViewMode              = ESoftwareViewMode::Render;
@@ -73,14 +73,13 @@ FSoftwareScene::~FSoftwareScene()
             }
         }
     }
-    
+
     SAFE_DELETE(m_pBoundingBoxBuffer);
     SAFE_DELETE(m_pTriangleBuffer);
     SAFE_DELETE(m_pVertexPositionsBuffer);
     SAFE_DELETE(m_pVertexBuffer);
+    SAFE_DELETE(m_pIndexBuffer);
     SAFE_DELETE(m_pMaterialSampler);
-
-    SAFE_DELETE(m_pMeshIndexBuffer);
     SAFE_DELETE(m_pAABBInstanceBuffer);
 }
 
@@ -95,24 +94,26 @@ void FModelScene::Initialize()
     // Setup Camera
     Reset();
 
+    // Cache Device
+    FDevice* pDevice = FApplication::Get().GetDevice();
+
     // Load Model
-    FMesh Mesh;
+    FModel Model;
     if (Type == EModelSceneType::Default)
     {
-        Mesh.LoadFromFile(RESOURCE_PATH"/models/queen.obj");
+        Model.LoadFromFile(RESOURCE_PATH"/models/queen.obj", pDevice);
         m_Settings.CameraSpeed = 1.5f;
     }
     else if (Type == EModelSceneType::Sponza)
     {
-        Mesh.LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj");
+        Model.LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj", pDevice);
         m_Settings.CameraSpeed           = 150.0f;
         m_Settings.GradientLightStrength = 4.0f;
     }
 
     // Copy data to the scene
-    m_Vertices = Mesh.VerticesEx;
-    m_Indicies   = Mesh.Indicies;
-    m_Materials  = Mesh.Materials;
+    m_Vertices  = Model.Vertices;
+    m_Materials = Model.Materials;
 
     // Create position only buffer
     m_VertexPositions.resize(m_Vertices.size());
@@ -122,7 +123,11 @@ void FModelScene::Initialize()
     }
 
     // Build BVH
-    m_AccelerationStructure.Build(Mesh, 32);
+    m_AccelerationStructure.Build(Model, 32);
+
+    // Copy data from the AccelerationStructure to the scene
+    m_Indicies     = m_AccelerationStructure.m_Indicies;
+    m_TriangleInfo = m_AccelerationStructure.m_TriangleInfo;
 
     LOG("Depth: %u\n", m_AccelerationStructure.Stats.Depth);
     LOG("MaxTrianglesInLeafNode: %u\n", m_AccelerationStructure.Stats.MaxTrianglesInLeafNode);
@@ -133,9 +138,6 @@ void FModelScene::Initialize()
     {
         0, // BoundingBoxIndex
     });
-
-    // Cache Device
-    FDevice* pDevice = FApplication::Get().GetDevice();
 
     // BVH-Buffer
     FBufferParams BoundingBoxBufferParams;
@@ -150,11 +152,11 @@ void FModelScene::Initialize()
 
     // CPU Triangle Buffer
     FBufferParams TriangleBufferParams;
-    TriangleBufferParams.Size             = sizeof(FShaderTriangle) * m_AccelerationStructure.m_Triangles.size();
+    TriangleBufferParams.Size             = sizeof(FTriangleInfoGLSL) * m_TriangleInfo.size();
     TriangleBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     TriangleBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pTriangleBuffer = FBuffer::CreateWithData(pDevice, TriangleBufferParams, nullptr, m_AccelerationStructure.m_Triangles.data());
+    m_pTriangleBuffer = FBuffer::CreateWithData(pDevice, TriangleBufferParams, nullptr, m_TriangleInfo.data());
     assert(m_pTriangleBuffer != nullptr);
     m_pTriangleBuffer->SetDebugName("CPU Triangle Buffer");
 
@@ -180,13 +182,13 @@ void FModelScene::Initialize()
 
     // CPU IndexBuffer Buffer
     FBufferParams IndexBufferParams;
-    IndexBufferParams.Size             = sizeof(uint32_t) * Mesh.Indicies.size();
+    IndexBufferParams.Size             = sizeof(uint32_t) * m_Indicies.size();
     IndexBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     IndexBufferParams.Usage            = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pMeshIndexBuffer = FBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, Mesh.Indicies.data());
-    assert(m_pMeshIndexBuffer != nullptr);
-    m_pMeshIndexBuffer->SetDebugName("CPU Debug Index Buffer");
+    m_pIndexBuffer = FBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, m_Indicies.data());
+    assert(m_pIndexBuffer != nullptr);
+    m_pIndexBuffer->SetDebugName("CPU Index Buffer");
 
     // Create a matrix for each AABB
     std::vector<glm::mat4> AABBMatrices;
@@ -248,7 +250,7 @@ void FModelScene::Initialize()
 
     for (const FMaterial& Material : m_Materials)
     {
-        FShaderMaterial& ShaderMaterial = m_GpuMaterials.emplace_back();
+        FMaterialGLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
         ShaderMaterial.AlbedoColor           = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
         ShaderMaterial.EmissiveColor         = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
         ShaderMaterial.SpecularColor         = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
