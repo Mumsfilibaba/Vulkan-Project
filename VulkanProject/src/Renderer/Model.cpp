@@ -2,6 +2,9 @@
 #include "TextureResource.h"
 #include "Application.h"
 #include "Vulkan/BindlessManager.h"
+#include "Vulkan/AccelerationStructure.h"
+#include "Vulkan/Buffer.h"
+#include "Vulkan/Device.h"
 #include <tiny_obj_loader.h>
 
 static std::string ExtractPath(const std::string& Path)
@@ -29,6 +32,7 @@ static void ReplaceBackslashes(std::string& Path)
 FModel::FModel()
     : pVertexBuffer(nullptr)
     , pIndexBuffer(nullptr)
+    , pAccelerationStructure(nullptr)
     , VertexCount(0)
     , IndexCount(0)
     , SubMeshes()
@@ -40,6 +44,7 @@ FModel::~FModel()
 {
     SAFE_DELETE(pVertexBuffer);
     SAFE_DELETE(pIndexBuffer);
+    SAFE_DELETE(pAccelerationStructure);
 }
 
 bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
@@ -263,6 +268,38 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
     pIndexBuffer = FBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, NewIndices.data());
     assert(pIndexBuffer != nullptr);
     IndexCount = NewIndices.size();
+
+    // Create a AccelerationStructure if RayTracing is supported
+    if (pDevice->IsRayTracingSupported())
+    {
+        VkTransformMatrixKHR TransformMatrix =
+        {
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f
+        };
+
+        FAccelerationStructureBLASParams BLASParams;
+        for (const FModel::FSubMesh& SubMesh : NewSubmeshes)
+        {
+            const bool bHasAlphaMask = (SubMesh.MaterialIndex >= 0) ? (NewMaterials[SubMesh.MaterialIndex].AlphaMaskTex != nullptr) : false;
+
+            FBLASGeometry& Geometry = BLASParams.Geometries.emplace_back();
+            Geometry.Flags              = bHasAlphaMask ? 0 : VK_GEOMETRY_OPAQUE_BIT_KHR;
+            Geometry.TransformMatrix    = TransformMatrix;
+            Geometry.pVertexBuffer      = pVertexBuffer;
+            Geometry.MaxVertexIndex     = VertexCount;
+            Geometry.VertexBufferCount  = SubMesh.VertexCount;
+            Geometry.VertexBufferOffset = SubMesh.VertexOffset;
+            Geometry.VertexStride       = sizeof(FVertex);
+            Geometry.pIndexBuffer       = pIndexBuffer;
+            Geometry.IndexBufferOffset  = SubMesh.IndexOffset;
+            Geometry.IndexBufferCount   = SubMesh.IndexCount;
+        }
+
+        pAccelerationStructure = FAccelerationStructure::CreateBLAS(pDevice, BLASParams);
+        assert(pAccelerationStructure != nullptr);
+    }
 
     Indicies  = std::move(NewIndices);
     Vertices  = std::move(NewVertices);

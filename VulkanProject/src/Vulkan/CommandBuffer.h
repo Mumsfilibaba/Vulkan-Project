@@ -63,7 +63,7 @@ public:
         RenderPassInfo.renderArea.extent = pFramebuffer->GetExtent();
         RenderPassInfo.pClearValues      = pClearValues;
         RenderPassInfo.clearValueCount   = ClearValuesCount;
-        
+
         vkCmdBeginRenderPass(m_CommandBuffer, &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         m_NumCommands++;
     }
@@ -85,7 +85,7 @@ public:
         vkCmdSetScissor(m_CommandBuffer, 0, 1, &Scissor);
         m_NumCommands++;
     }
-    
+
     void WriteTimestamp(FQuery* pQuery, VkPipelineStageFlagBits PipelineStage, uint32_t QueryIndex)
     {
         assert(pQuery != nullptr);
@@ -107,7 +107,7 @@ public:
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineState->GetPipeline());
         m_NumCommands++;
     }
-    
+
     void BindComputePipelineState(FComputePipeline* pPipelineState)
     {
         assert(pPipelineState != nullptr);
@@ -121,7 +121,7 @@ public:
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pPipelineState->GetPipeline());
         m_NumCommands++;
     }
-    
+
     void BindGraphicsDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet, uint32_t DescriptorSetIndex)
     {
         assert(pDescriptorSet != nullptr);
@@ -130,7 +130,7 @@ public:
         vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineLayout->GetPipelineLayout(), DescriptorSetIndex, 1, &DescriptorSet, 0, nullptr);
         m_NumCommands++;
     }
-    
+
     void BindComputeDescriptorSet(FPipelineLayout* pPipelineLayout, FDescriptorSet* pDescriptorSet, uint32_t DescriptorSetIndex)
     {
         assert(pDescriptorSet != nullptr);
@@ -165,14 +165,14 @@ public:
         vkCmdBindIndexBuffer(m_CommandBuffer, pBuffer->GetBuffer(), Offset, IndexType);
         m_NumCommands++;
     }
-    
+
     void PushConstants(FPipelineLayout* pPipelineLayout, VkShaderStageFlags StageFlags, uint32_t Offset, uint32_t Size, const void* pData)
     {
         assert(pPipelineLayout != nullptr);
         vkCmdPushConstants(m_CommandBuffer, pPipelineLayout->GetPipelineLayout(), StageFlags, Offset, Size, pData);
         m_NumCommands++;
     }
-    
+
     void UpdateBuffer(FBuffer* pBuffer, VkDeviceSize DstOffset, VkDeviceSize DataSize, const void* pData)
     {
         assert(pBuffer != nullptr);
@@ -187,7 +187,7 @@ public:
         vkCmdFillBuffer(m_CommandBuffer, pBuffer->GetBuffer(), DstOffset, Size, Data);
         m_NumCommands++;
     }
-    
+
     void CopyBuffer(VkBuffer SrcBuffer, VkBuffer DstBuffer, uint32_t RegionCount, const VkBufferCopy* pRegions)
     {
         vkCmdCopyBuffer(m_CommandBuffer, SrcBuffer, DstBuffer, RegionCount, pRegions);
@@ -211,7 +211,7 @@ public:
         vkCmdDrawIndexed(m_CommandBuffer, IndexCount, InstanceCount, FirstIndex, VertexOffset, FirstInstance);
         m_NumCommands++;
     }
-    
+
     void Dispatch(uint32_t ThreadGroupsX, uint32_t ThreadGroupsY, uint32_t ThreadGroupsZ)
     {
         vkCmdDispatch(m_CommandBuffer, ThreadGroupsX, ThreadGroupsY, ThreadGroupsZ);
@@ -239,13 +239,13 @@ public:
             LOG("vkEndCommandBuffer failed. Error: %d\n", Result);
         }
     }
-    
+
     bool IsFinishedOnGPU() const
     {
         VkResult Result = vkGetFenceStatus(GetDevice()->GetDevice(), m_Fence);
         return Result == VK_NOT_READY;
     }
-    
+
     void WaitForAndResetFences()
     {
         VkResult Result = vkWaitForFences(GetDevice()->GetDevice(), 1, &m_Fence, VK_TRUE, UINT64_MAX);
@@ -281,12 +281,12 @@ public:
     {
         return m_Fence;
     }
-    
+
     VkCommandBuffer GetCommandBuffer() const
     {
         return m_CommandBuffer;
     }
-    
+
     uint32_t GetNumCommands() const
     {
         return m_NumCommands;

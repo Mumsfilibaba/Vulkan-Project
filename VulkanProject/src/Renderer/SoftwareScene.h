@@ -76,7 +76,7 @@ struct FSoftwareScene : public IScene
     FBvhAccelerationStructure  m_AccelerationStructure;
 
     // Triangle Mesh Data
-    std::vector<FVertexPosOnly>    m_VertexPositions;
+    std::vector<FVertexPosition>   m_VertexPositions;
     std::vector<FVertex>           m_Vertices;
     std::vector<uint32_t>          m_Indicies;
     std::vector<FMeshGLSL>         m_Meshes;

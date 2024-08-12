@@ -26,9 +26,15 @@ struct FAccelerationStructureBLASParams
     std::vector<FBLASGeometry> Geometries;
 };
 
+struct FTLASInstance
+{
+    VkTransformMatrixKHR    TransformMatrix;
+    FAccelerationStructure* pBLAS;
+};
+
 struct FAccelerationStructureTLASParams
 {
-    FAccelerationStructure* pAccelerationStructure = nullptr;
+    std::vector<FTLASInstance> Instances;
 };
 
 class FAccelerationStructure : public FDeviceChild

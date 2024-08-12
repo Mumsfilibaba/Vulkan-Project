@@ -860,9 +860,9 @@ void FSoftwareRayTracer::CreateDebugViewResources()
     m_pDebugRenderPass->SetDebugName("DebugPass RenderPass");
 
     FGraphicsPipelineStateParams DebugPassPipelineParams = {};
-    DebugPassPipelineParams.pBindingDescriptions      = FVertexPosOnly::GetBindingDescription();
+    DebugPassPipelineParams.pBindingDescriptions      = FVertexPosition::GetBindingDescription();
     DebugPassPipelineParams.BindingDescriptionCount   = 1;
-    DebugPassPipelineParams.pAttributeDescriptions    = FVertexPosOnly::GetAttributeDescriptions();
+    DebugPassPipelineParams.pAttributeDescriptions    = FVertexPosition::GetAttributeDescriptions();
     DebugPassPipelineParams.AttributeDescriptionCount = 1;
     DebugPassPipelineParams.pVertexShader             = pVertex;
     DebugPassPipelineParams.pFragmentShader           = pFragment;
@@ -880,9 +880,9 @@ void FSoftwareRayTracer::CreateDebugViewResources()
     assert(m_pDebugPipelineWireframe != nullptr);
     m_pDebugPipelineWireframe->SetDebugName("DebugPass Pipeline WireFrame");
 
-    DebugPassPipelineParams.pBindingDescriptions      = FVertexPosOnly::GetBindingDescription();
+    DebugPassPipelineParams.pBindingDescriptions      = FVertexPosition::GetBindingDescription();
     DebugPassPipelineParams.BindingDescriptionCount   = 1;
-    DebugPassPipelineParams.pAttributeDescriptions    = FVertexPosOnly::GetAttributeDescriptions();
+    DebugPassPipelineParams.pAttributeDescriptions    = FVertexPosition::GetAttributeDescriptions();
     DebugPassPipelineParams.AttributeDescriptionCount = 1;
     DebugPassPipelineParams.pVertexShader             = pAABBVertex;
     DebugPassPipelineParams.pFragmentShader           = pAABBFragment;
@@ -983,7 +983,7 @@ void FSoftwareRayTracer::CreateGlobalBuffers()
 
     // VertexBuffer
     FBufferParams VertexPositionsBufferParams;
-    VertexPositionsBufferParams.Size             = sizeof(FVertexPosOnly) * MAX_VERTICES;
+    VertexPositionsBufferParams.Size             = sizeof(FVertexPosition) * MAX_VERTICES;
     VertexPositionsBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     VertexPositionsBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 

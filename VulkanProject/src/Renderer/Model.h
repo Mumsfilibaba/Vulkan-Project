@@ -1,11 +1,11 @@
 #pragma once
 #include "ScenePrimitives.h"
 #include "MathHelper.h"
-#include "Vulkan/Buffer.h"
-#include "Vulkan/Device.h"
-#include "Vulkan/DeviceMemoryAllocator.h"
 
+class FBuffer;
+class FAccelerationStructure;
 class FTextureResource;
+class FDevice;
 
 struct FVertex
 {
@@ -145,13 +145,14 @@ struct FModel
 
     bool LoadFromFile(const std::string& filepath, FDevice* pDevice);
 
-    FBuffer*               pVertexBuffer;
-    FBuffer*               pIndexBuffer;
-    uint32_t               VertexCount;
-    uint32_t               IndexCount;
+    FBuffer*                pVertexBuffer;
+    FBuffer*                pIndexBuffer;
+    uint32_t                VertexCount;
+    uint32_t                IndexCount;
+    FAccelerationStructure* pAccelerationStructure;
 
-    std::vector<FSubMesh>  SubMeshes;
-    std::vector<uint32_t>  Indicies;
-    std::vector<FVertex>   Vertices;
-    std::vector<FMaterial> Materials;
+    std::vector<FSubMesh>   SubMeshes;
+    std::vector<uint32_t>   Indicies;
+    std::vector<FVertex>    Vertices;
+    std::vector<FMaterial>  Materials;
 };

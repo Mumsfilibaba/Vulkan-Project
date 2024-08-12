@@ -1,5 +1,7 @@
 #include "RayTracer.h"
 #include "GUI.h"
+#include "Application.h"
+#include "Vulkan/Device.h"
 #include "Vulkan/PipelineState.h"
 #include "Vulkan/ShaderModule.h"
 #include "Vulkan/DescriptorSetLayout.h"
@@ -28,8 +30,7 @@ FRayTracer::~FRayTracer()
 
 void FRayTracer::CreateResources()
 {
-    m_pScene = new FScene(GetDevice());
-    m_pScene->Initialize();
+    m_pScene = FSceneFactory::CreateScene(ESceneType::Spheres);
 
     // Create RayTracing DescriptorSetLayout
     constexpr uint32_t NumRayTracingBindings = 8;
@@ -311,6 +312,80 @@ void FRayTracer::RenderUI()
         ImGui::Text("Scene:");
         ImGui::Separator();
 
+        // Scene selector
+        {
+            static const char* Scenes[] =
+            {
+                "Spheres Default",
+                "CornellBox",
+                "Triangles",
+                "Sponza",
+                "Polished Glass Spheres",
+                "Rough Colored Glass Spheres",
+                "Rough Transparent Glass Spheres",
+            };
+
+            static int CurrentScene = 0;
+            static int PrevScene = 0;
+            ImGui::Combo("Current Scene", &CurrentScene, Scenes, IM_ARRAYSIZE(Scenes));
+
+            if (PrevScene != CurrentScene)
+            {
+                FDevice* pDevice = FApplication::Get().GetDevice();
+                pDevice->WaitForIdle();
+
+                // Release Descriptors
+                ReleaseDescriptorSets();
+
+                const EViewMode ViewMode = m_pScene->m_Settings.ViewMode;
+                if (CurrentScene == 0) // Change to Sphere-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = FSceneFactory::CreateScene(ESceneType::Spheres);
+                }
+                else if (CurrentScene == 1) // Change to CornellBox-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = FSceneFactory::CreateScene(ESceneType::CornellBox);
+                }
+                else if (CurrentScene == 2) // Change to Triangles-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = FSceneFactory::CreateScene(ESceneType::Triangles);
+                }
+                else if (CurrentScene == 3) // Change to Sponza-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = FSceneFactory::CreateScene(ESceneType::Sponza);
+                }
+                else if (CurrentScene == 4) // Change to "Polished Glass Sphere"-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = FSceneFactory::CreateScene(ESceneType::PolishedGlassSpheres);
+                }
+                else if (CurrentScene == 5) // Change to "Rough Colored Glass Spheres"-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = FSceneFactory::CreateScene(ESceneType::RoughColoredGlassSpheres);
+                }
+                else if (CurrentScene == 6) // Change to "Rough Transparent Glass Spheres"-scene
+                {
+                    SAFE_DELETE(m_pScene);
+                    m_pScene = FSceneFactory::CreateScene(ESceneType::RoughTransparentGlassSpheres);
+                }
+
+                assert(m_pScene != nullptr);
+                m_pScene->Initialize();
+                ResetImage();
+
+                m_pScene->m_Settings.ViewMode = ViewMode;
+                PrevScene = CurrentScene;
+
+                // Create Descriptors
+                CreateDescriptorSets();
+            }
+        }
+
         // Background
         static const char* Background[] =
         {
@@ -405,7 +480,7 @@ void FRayTracer::CreateGlobalBuffers()
 
     // MeshBuffer
     FBufferParams MeshBufferParams = {};
-    MeshBufferParams.Size             = m_pScene->m_MeshInfoBuffer.size() * sizeof(FMeshInfo);
+    MeshBufferParams.Size             = 1024 * sizeof(FMeshInfo);
     MeshBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     MeshBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
@@ -414,14 +489,17 @@ void FRayTracer::CreateGlobalBuffers()
     m_pMeshBuffer->SetDebugName("MeshInfoBuffer");
 
     // MaterialBuffer
-    FBufferParams MaterialBufferParams;
-    MaterialBufferParams.Size             = m_pScene->m_GpuMaterials.size() * sizeof(FMaterialGLSL);
-    MaterialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    MaterialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    if (!m_pScene->m_GpuMaterials.empty())
+    {
+        FBufferParams MaterialBufferParams;
+        MaterialBufferParams.Size             = 1024 * sizeof(FMaterialGLSL);
+        MaterialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+        MaterialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pMaterialBuffer = FBuffer::CreateWithData(GetDevice(), MaterialBufferParams, nullptr, m_pScene->m_GpuMaterials.data());
-    assert(m_pMaterialBuffer != nullptr);
-    m_pMaterialBuffer->SetDebugName("MaterialBuffer");
+        m_pMaterialBuffer = FBuffer::CreateWithData(GetDevice(), MaterialBufferParams, nullptr, m_pScene->m_GpuMaterials.data());
+        assert(m_pMaterialBuffer != nullptr);
+        m_pMaterialBuffer->SetDebugName("MaterialBuffer");
+    }
 }
 
 void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)

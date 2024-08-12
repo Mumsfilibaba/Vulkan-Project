@@ -553,6 +553,8 @@ void FBaseRenderer::Release()
     m_CommandBuffers.clear();
     m_TimestampQueries.clear();
 
+    SAFE_DELETE(m_pOutputTextureDescriptorSet);
+
     // Release DescriptorSets
     ReleaseDescriptorSets();
 
@@ -603,6 +605,7 @@ bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
         SAFE_DELETE(m_pOutputTexture);
         SAFE_DELETE(m_pOutputTextureView);
         SAFE_DELETE(m_pTonemappingFramebuffer);
+        SAFE_DELETE(m_pOutputTextureDescriptorSet);
 
         ReleaseDescriptorSets();
     }
@@ -719,7 +722,6 @@ void FBaseRenderer::ReleaseDescriptorSets()
 {
     SAFE_DELETE(m_pTonemappingDescriptorSet0);
     SAFE_DELETE(m_pTonemappingDescriptorSet1);
-    SAFE_DELETE(m_pOutputTextureDescriptorSet);
 }
 
 void FBaseRenderer::CreateGlobalBuffers()

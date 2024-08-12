@@ -29,6 +29,17 @@ enum class EBackgroundType : uint32_t
     Skybox   = 2,
 };
 
+enum class ESceneType
+{
+    Spheres = 0,
+    CornellBox,
+    Triangles,
+    Sponza,
+    PolishedGlassSpheres,
+    RoughColoredGlassSpheres,
+    RoughTransparentGlassSpheres,
+};
+
 struct FSceneSettings
 {
     EViewMode       ViewMode;
@@ -40,8 +51,17 @@ struct FSceneSettings
     float           CameraSpeed;
 };
 
+
 struct FScene : public IScene
 {
+    struct FSceneModel
+    {
+        std::shared_ptr<FModel> Model;
+        glm::vec3               Position;
+        glm::vec3               Scale;
+        glm::vec3               Rotation;
+    };
+
     FScene(FDevice* pDevice);
     virtual ~FScene();
 
@@ -58,22 +78,29 @@ struct FScene : public IScene
     virtual FCamera& GetCamera() override { return m_Camera; }
     virtual const FCamera& GetCamera() const override { return m_Camera; }
 
+    void AddModel(const std::shared_ptr<FModel>& Model, const glm::vec3& Position = glm::vec3(0.0f), const glm::vec3& Scale = glm::vec3(0.0f), const glm::vec3& Rotation = glm::vec3(0.0f))
+    {
+        m_ModelInstances.push_back({ Model, Position, Scale, Rotation });
+    }
+
     // Cache the device
     FDevice* m_pDevice;
 
     // Camera
-    FCamera        m_Camera;
-    FSceneSettings m_Settings;
-
-    // Vulkan Resources
-    FAccelerationStructure*              m_pTopLevelAS;
-    std::vector<FBuffer*>                m_VertexBuffers;
-    std::vector<FBuffer*>                m_IndexBuffers;
-    std::vector<FAccelerationStructure*> m_BottomLevelASs;
-    std::vector<FMeshInfo>               m_MeshInfoBuffer;
+    FCamera                    m_Camera;
+    FSceneSettings             m_Settings;
+    std::vector<FSceneModel>   m_ModelInstances;
 
     // Materials
-    FSampler*                    m_pMaterialSampler;
-    std::vector<FMaterial>       m_Materials;
+    FSampler*                  m_pMaterialSampler;
     std::vector<FMaterialGLSL> m_GpuMaterials;
+
+    // Vulkan Resources
+    FAccelerationStructure*    m_pTopLevelAS;
+    std::vector<FMeshInfo>     m_MeshInfoBuffer;
+};
+
+struct FSceneFactory
+{
+    static FScene* CreateScene(ESceneType SceneType);
 };

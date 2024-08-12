@@ -3,18 +3,15 @@
 #include "Application.h"
 #include "TextureResource.h"
 #include "Vulkan/Sampler.h"
+#include "Vulkan/Buffer.h"
 #include "Vulkan/BindlessManager.h"
 
-#define SPONZA 1
-
 FScene::FScene(FDevice* pDevice)
-    : m_pDevice(pDevice)
+    : IScene()
+    , m_pDevice(pDevice)
     , m_Camera()
     , m_Settings()
-    , m_VertexBuffers()
-    , m_IndexBuffers()
     , m_pTopLevelAS(nullptr)
-    , m_BottomLevelASs()
     , m_pMaterialSampler(nullptr)
 {
     assert(pDevice != nullptr);
@@ -35,15 +32,20 @@ FScene::~FScene()
         pDevice->WaitForIdle();
 
         // Cleanup any textures from the BindlessManager
-        for (const FMaterial& Material : m_Materials)
+        for (const FSceneModel& ModelInstance : m_ModelInstances)
         {
-            if (Material.AlbedoTex)
+            for (const FMaterial& Material : ModelInstance.Model->Materials)
             {
-                pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
-            }
-            if (Material.NormalTex)
-            {
-                pDevice->GetBindlessManager().RemoveImageView(Material.NormalTex->GetTextureView()->GetImageView());
+                if (Material.AlbedoTex)
+                    pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
+                if (Material.NormalTex)
+                    pDevice->GetBindlessManager().RemoveImageView(Material.NormalTex->GetTextureView()->GetImageView());
+                if (Material.AlphaMaskTex)
+                    pDevice->GetBindlessManager().RemoveImageView(Material.AlphaMaskTex->GetTextureView()->GetImageView());
+                if (Material.RoughnessTex)
+                    pDevice->GetBindlessManager().RemoveImageView(Material.RoughnessTex->GetTextureView()->GetImageView());
+                if (Material.MetallicTex)
+                    pDevice->GetBindlessManager().RemoveImageView(Material.MetallicTex->GetTextureView()->GetImageView());
             }
         }
     }
@@ -53,19 +55,6 @@ FScene::~FScene()
         return;
     }
 
-    for (FBuffer* pBuffer : m_VertexBuffers)
-    {
-        SAFE_DELETE(pBuffer);
-    }
-    for (FBuffer* pBuffer : m_IndexBuffers)
-    {
-        SAFE_DELETE(pBuffer);
-    }
-    for (FAccelerationStructure* pAccelerationStructure : m_BottomLevelASs)
-    {
-        SAFE_DELETE(pAccelerationStructure);
-    }
-
     SAFE_DELETE(m_pTopLevelAS);
     SAFE_DELETE(m_pMaterialSampler);
 }
@@ -73,88 +62,6 @@ FScene::~FScene()
 void FScene::Initialize()
 {
     FDevice* pDevice = FApplication::Get().GetDevice();
-    FModel* Model = new FModel();
-
-#if SPONZA
-    Model->LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj", pDevice);
-    m_Settings.CameraSpeed = 150.0f;
-#else
-    Model->LoadFromFile(RESOURCE_PATH"/models/queen.obj", pDevice);
-    m_Settings.CameraSpeed = 1.5f;
-#endif
-
-    // Copy Materials
-    m_Materials = Model->Materials;
-
-    // Copy the buffers from the model
-    FBufferParams VertexBufferParams = {};
-    VertexBufferParams.Size             = Model->VertexCount * sizeof(FVertex);
-    VertexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
-    VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-
-    FBuffer* pVertexBuffer = FBuffer::CreateAndCopy(pDevice, VertexBufferParams, nullptr, Model->pVertexBuffer);
-    assert(pVertexBuffer != nullptr);
-    pVertexBuffer->SetDebugName("Scene VertexBuffer");
-
-    FBufferParams IndexBufferParams = {};
-    IndexBufferParams.Size             = Model->IndexCount * sizeof(uint32_t);
-    IndexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
-    IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-
-    FBuffer* pIndexBuffer = FBuffer::CreateAndCopy(pDevice, IndexBufferParams, nullptr, Model->pIndexBuffer);
-    assert(pIndexBuffer != nullptr);
-    pIndexBuffer->SetDebugName("Scene IndexBuffer");
-
-    m_VertexBuffers.push_back(pVertexBuffer);
-    m_IndexBuffers.push_back(pIndexBuffer);
-
-    // Create geometries for the AccelerationStructure
-    VkTransformMatrixKHR TransformMatrix =
-    {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f
-    };
-
-    // BLAS for opaque objects
-    FAccelerationStructureBLASParams BLASParams;
-    for (const FModel::FSubMesh& SubMesh : Model->SubMeshes)
-    {
-        const bool bHasAlphaMask = (SubMesh.MaterialIndex >= 0) ? (Model->Materials[SubMesh.MaterialIndex].AlphaMaskTex != nullptr) : false;
-
-        FBLASGeometry& Geometry = BLASParams.Geometries.emplace_back();
-        Geometry.Flags              = bHasAlphaMask ? 0 : VK_GEOMETRY_OPAQUE_BIT_KHR;
-        Geometry.TransformMatrix    = TransformMatrix;
-        Geometry.pVertexBuffer      = pVertexBuffer;
-        Geometry.MaxVertexIndex     = Model->VertexCount;
-        Geometry.VertexBufferCount  = SubMesh.VertexCount;
-        Geometry.VertexBufferOffset = SubMesh.VertexOffset;
-        Geometry.VertexStride       = sizeof(FVertex);
-        Geometry.pIndexBuffer       = pIndexBuffer;
-        Geometry.IndexBufferOffset  = SubMesh.IndexOffset;
-        Geometry.IndexBufferCount   = SubMesh.IndexCount;
-
-        FMeshInfo& MeshInfo = m_MeshInfoBuffer.emplace_back();
-        MeshInfo.MaterialIndex       = SubMesh.MaterialIndex;
-        MeshInfo.VertexBufferAddress = pVertexBuffer->GetDeviceAddress().deviceAddress;
-        MeshInfo.IndexBufferAddress  = pIndexBuffer->GetDeviceAddress().deviceAddress;
-        MeshInfo.IndexBufferAddress += Geometry.IndexBufferOffset * sizeof(uint32_t);
-    }
-
-    // Cleanup the old VertexBuffers
-    SAFE_DELETE(Model);
-
-    // Create Bottom-Level AccelerationStructure
-    FAccelerationStructure* pBottomLevelAS = FAccelerationStructure::CreateBLAS(pDevice, BLASParams);
-    assert(pBottomLevelAS != nullptr);
-    m_BottomLevelASs.push_back(pBottomLevelAS);
-
-    // Create Top-Level AccelerationStructure
-    FAccelerationStructureTLASParams TLASParams;
-    TLASParams.pAccelerationStructure = m_BottomLevelASs[0];
-
-    m_pTopLevelAS = FAccelerationStructure::CreateTLAS(pDevice, TLASParams);
-    assert(m_pTopLevelAS != nullptr);
 
     // Create Sampler for materials
     FSamplerParams SamplerParams = {};
@@ -170,9 +77,34 @@ void FScene::Initialize()
 
     m_pMaterialSampler = FSampler::Create(pDevice, SamplerParams);
     assert(m_pMaterialSampler != nullptr);
-    m_pMaterialSampler->SetDebugName("Material Sampler");
+    m_pMaterialSampler->SetDebugName("MaterialSampler");
 
-    // Create ShaderMaterials for each materials
+    // Create a default material
+    const size_t DefaultMaterialIndex = m_GpuMaterials.size();
+    FMaterialGLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
+    ShaderMaterial.AlbedoColor           = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
+    ShaderMaterial.EmissiveColor         = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+    ShaderMaterial.SpecularColor         = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
+    ShaderMaterial.AbsorbtionColor       = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+    ShaderMaterial.SpecularChance        = 0.1f;
+    ShaderMaterial.SpecularRoughness     = 1.0f;
+    ShaderMaterial.IncidenceOfRefraction = 1.0f;
+    ShaderMaterial.RefractionChance      = 0.0f;
+    ShaderMaterial.RefractionRoughness   = 0.0f;
+    ShaderMaterial.AlbedoTexIndex        = FBindlessManager::InvalidBindlessID;
+    ShaderMaterial.NormalTexIndex        = FBindlessManager::InvalidBindlessID;
+    ShaderMaterial.AlphaMaskTexIndex     = FBindlessManager::InvalidBindlessID;
+    ShaderMaterial.RoughnessTexIndex     = FBindlessManager::InvalidBindlessID;
+    ShaderMaterial.MetallicTexIndex      = FBindlessManager::InvalidBindlessID;
+
+    // Create geometries for the AccelerationStructure
+    VkTransformMatrixKHR TransformMatrix =
+    {
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f
+    };
+
     const auto AddImageViewToBindlessManager = [](const std::shared_ptr<FTextureResource>& Texture, FSampler* pSampler)
     {
         if (Texture)
@@ -186,29 +118,108 @@ void FScene::Initialize()
         }
     };
 
-    for (const FMaterial& Material : m_Materials)
+    FAccelerationStructureTLASParams TLASParams;
+    for (const FSceneModel& ModelInstance : m_ModelInstances)
     {
-        FMaterialGLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
-        ShaderMaterial.AlbedoColor           = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
-        ShaderMaterial.EmissiveColor         = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        ShaderMaterial.SpecularColor         = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
-        ShaderMaterial.AbsorbtionColor       = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        ShaderMaterial.SpecularChance        = 0.0f;
-        ShaderMaterial.SpecularRoughness     = 1.0f;
-        ShaderMaterial.IncidenceOfRefraction = 1.0f;
-        ShaderMaterial.RefractionChance      = 0.0f;
-        ShaderMaterial.RefractionRoughness   = 0.0f;
+        FTLASInstance& TLASInstance = TLASParams.Instances.emplace_back();
+        TLASInstance.pBLAS           = ModelInstance.Model->pAccelerationStructure;
+        TLASInstance.TransformMatrix = TransformMatrix;
 
-        // Add texture to the BindlessManager if there is a texture for this material
-        ShaderMaterial.AlbedoTexIndex    = AddImageViewToBindlessManager(Material.AlbedoTex, m_pMaterialSampler);
-        ShaderMaterial.NormalTexIndex    = AddImageViewToBindlessManager(Material.NormalTex, m_pMaterialSampler);
-        ShaderMaterial.AlphaMaskTexIndex = AddImageViewToBindlessManager(Material.AlphaMaskTex, m_pMaterialSampler);
-        ShaderMaterial.RoughnessTexIndex = AddImageViewToBindlessManager(Material.RoughnessTex, m_pMaterialSampler);
-        ShaderMaterial.MetallicTexIndex  = AddImageViewToBindlessManager(Material.MetallicTex, m_pMaterialSampler);
+        // Gather all materials from the model
+        const size_t MaterialOffset = m_GpuMaterials.size();
+        if (!ModelInstance.Model->Materials.empty())
+        {
+            for (const FMaterial& Material : ModelInstance.Model->Materials)
+            {
+                FMaterialGLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
+                ShaderMaterial.AlbedoColor           = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
+                ShaderMaterial.EmissiveColor         = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+                ShaderMaterial.SpecularColor         = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
+                ShaderMaterial.AbsorbtionColor       = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+                ShaderMaterial.SpecularChance        = 0.1f;
+                ShaderMaterial.SpecularRoughness     = 1.0f;
+                ShaderMaterial.IncidenceOfRefraction = 1.0f;
+                ShaderMaterial.RefractionChance      = 0.0f;
+                ShaderMaterial.RefractionRoughness   = 0.0f;
+
+                // Add texture to the BindlessManager if there is a texture for this material
+                ShaderMaterial.AlbedoTexIndex    = AddImageViewToBindlessManager(Material.AlbedoTex, m_pMaterialSampler);
+                ShaderMaterial.NormalTexIndex    = AddImageViewToBindlessManager(Material.NormalTex, m_pMaterialSampler);
+                ShaderMaterial.AlphaMaskTexIndex = AddImageViewToBindlessManager(Material.AlphaMaskTex, m_pMaterialSampler);
+                ShaderMaterial.RoughnessTexIndex = AddImageViewToBindlessManager(Material.RoughnessTex, m_pMaterialSampler);
+                ShaderMaterial.MetallicTexIndex  = AddImageViewToBindlessManager(Material.MetallicTex, m_pMaterialSampler);
+            }
+        }
+
+        // Construct GPU mesh information
+        for (const FModel::FSubMesh& SubMesh : ModelInstance.Model->SubMeshes)
+        {
+            FMeshInfo& MeshInfo = m_MeshInfoBuffer.emplace_back();
+            MeshInfo.VertexBufferAddress = ModelInstance.Model->pVertexBuffer->GetDeviceAddress().deviceAddress;
+            MeshInfo.IndexBufferAddress  = ModelInstance.Model->pIndexBuffer->GetDeviceAddress().deviceAddress;
+            MeshInfo.IndexBufferAddress += SubMesh.IndexOffset * sizeof(uint32_t);
+
+            // We need to offset the model's material-index into the global array of materials
+            MeshInfo.MaterialIndex = (SubMesh.MaterialIndex >= 0) ? (MaterialOffset + SubMesh.MaterialIndex) : DefaultMaterialIndex;
+        }
     }
+
+    m_pTopLevelAS = FAccelerationStructure::CreateTLAS(pDevice, TLASParams);
+    assert(m_pTopLevelAS != nullptr);
 }
 
 void FScene::Reset()
 {
     m_Camera.Reset();
+}
+
+FScene* FSceneFactory::CreateScene(ESceneType SceneType)
+{
+    FDevice* pDevice = FApplication::Get().GetDevice();
+
+    FScene* pScene = new FScene(pDevice);
+    switch (SceneType)
+    {
+    case ESceneType::Spheres:
+    case ESceneType::CornellBox:
+    {
+        std::shared_ptr<FModel> pSphereModel = std::make_shared<FModel>();
+        pSphereModel->LoadFromFile(RESOURCE_PATH"/models/sphere.obj", pDevice);
+        pScene->AddModel(pSphereModel);
+        break;
+    }
+
+    case ESceneType::Triangles:
+    {
+        std::shared_ptr<FModel> pChessModel = std::make_shared<FModel>();
+        pChessModel->LoadFromFile(RESOURCE_PATH"/models/queen.obj", pDevice);
+        pScene->AddModel(pChessModel);
+        break;
+    }
+
+    case ESceneType::Sponza:
+    {
+        std::shared_ptr<FModel> pSponzaModel = std::make_shared<FModel>();
+        pSponzaModel->LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj", pDevice);
+        pScene->AddModel(pSponzaModel);
+        pScene->m_Settings.CameraSpeed = 150.0f;
+        break;
+    }
+
+    case ESceneType::PolishedGlassSpheres:
+    case ESceneType::RoughColoredGlassSpheres:
+    case ESceneType::RoughTransparentGlassSpheres:
+    {
+        std::shared_ptr<FModel> pSphereModel = std::make_shared<FModel>();
+        pSphereModel->LoadFromFile(RESOURCE_PATH"/models/sphere.obj", pDevice);
+        pScene->AddModel(pSphereModel);
+        break;
+    }
+
+    default:
+        break;
+    }
+
+    pScene->Initialize();
+    return pScene;
 }

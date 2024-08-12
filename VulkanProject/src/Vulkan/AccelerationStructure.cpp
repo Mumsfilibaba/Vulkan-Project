@@ -324,36 +324,35 @@ FAccelerationStructure* FAccelerationStructure::CreateBLAS(FDevice* pDevice, con
 
 FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, const FAccelerationStructureTLASParams& Params)
 {
-    if (!Params.pAccelerationStructure)
+    if (Params.Instances.empty())
     {
-        LOG("No valid AccelerationStructures");
+        LOG("No valid Instances");
         return nullptr;
     }
 
     FAccelerationStructure* pAccelerationStructure = new FAccelerationStructure(pDevice);
 
-    VkTransformMatrixKHR TransformMatrix = 
+    // Create a buffer for the transform-matrices
+    std::vector<VkAccelerationStructureInstanceKHR> Instances;
+    for (const FTLASInstance& InstanceParams : Params.Instances)
     {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f
-    };
-
-    VkAccelerationStructureInstanceKHR Instance = { };
-    Instance.transform                              = TransformMatrix;
-    Instance.instanceCustomIndex                    = 0;
-    Instance.mask                                   = 0xff;
-    Instance.instanceShaderBindingTableRecordOffset = 0;
-    Instance.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    Instance.accelerationStructureReference         = Params.pAccelerationStructure->GetDeviceAddress();
+        VkAccelerationStructureInstanceKHR Instance = { };
+        Instance.transform                              = InstanceParams.TransformMatrix;
+        Instance.instanceCustomIndex                    = 0;
+        Instance.mask                                   = 0xff;
+        Instance.instanceShaderBindingTableRecordOffset = 0;
+        Instance.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        Instance.accelerationStructureReference         = InstanceParams.pBLAS->GetDeviceAddress();
+        Instances.emplace_back(Instance);
+    }
 
     // Buffer for instance data
     FBufferParams InstanceBufferParams = { };
-    InstanceBufferParams.Size             = sizeof(VkAccelerationStructureInstanceKHR);
+    InstanceBufferParams.Size             = Instances.size() * sizeof(VkAccelerationStructureInstanceKHR);
     InstanceBufferParams.Usage            = VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     InstanceBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
 
-    FBuffer* pInstanceBuffer = FBuffer::CreateWithData(pDevice, InstanceBufferParams, nullptr, &Instance);
+    FBuffer* pInstanceBuffer = FBuffer::CreateWithData(pDevice, InstanceBufferParams, nullptr, Instances.data());
     if (!pInstanceBuffer)
     {
         LOG("Failed to create InstanceBuffer\n");
@@ -376,7 +375,7 @@ FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, con
     AccelerationStructureBuildGeometryInfo.geometryCount = 1;
     AccelerationStructureBuildGeometryInfo.pGeometries   = &AccelerationStructureGeometry;
 
-    uint32_t PrimitiveCount = 1;
+    const uint32_t PrimitiveCount = Instances.size();
     VkAccelerationStructureBuildSizesInfoKHR AccelerationStructureBuildSizesInfo = { };
     AccelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
     FExtensions::vkGetAccelerationStructureBuildSizesKHR(pDevice->GetDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &AccelerationStructureBuildGeometryInfo, &PrimitiveCount, &AccelerationStructureBuildSizesInfo);
