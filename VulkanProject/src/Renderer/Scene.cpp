@@ -97,14 +97,6 @@ void FScene::Initialize()
     ShaderMaterial.RoughnessTexIndex     = FBindlessManager::InvalidBindlessID;
     ShaderMaterial.MetallicTexIndex      = FBindlessManager::InvalidBindlessID;
 
-    // Create geometries for the AccelerationStructure
-    VkTransformMatrixKHR TransformMatrix =
-    {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f
-    };
-
     const auto AddImageViewToBindlessManager = [](const std::shared_ptr<FTextureResource>& Texture, FSampler* pSampler)
     {
         if (Texture)
@@ -121,9 +113,22 @@ void FScene::Initialize()
     FAccelerationStructureTLASParams TLASParams;
     for (const FSceneModel& ModelInstance : m_ModelInstances)
     {
+        // Translate
+        glm::mat4 TransformMatrix = glm::identity<glm::mat4>();
+        TransformMatrix = glm::translate(TransformMatrix, ModelInstance.Position);
+        // Rotate
+        glm::mat4 RotationMatrix = glm::yawPitchRoll(ModelInstance.Rotation.y, ModelInstance.Rotation.x, ModelInstance.Rotation.z);
+        TransformMatrix = TransformMatrix * RotationMatrix;
+        // Scale 
+        TransformMatrix = glm::scale(TransformMatrix, ModelInstance.Scale);
+        TransformMatrix = glm::transpose(TransformMatrix);
+
+        VkTransformMatrixKHR TransformMatrixVk;
+        memcpy(&TransformMatrixVk, glm::value_ptr(TransformMatrix), sizeof(VkTransformMatrixKHR));
+
         FTLASInstance& TLASInstance = TLASParams.Instances.emplace_back();
-        TLASInstance.pBLAS           = ModelInstance.Model->pAccelerationStructure;
-        TLASInstance.TransformMatrix = TransformMatrix;
+        TLASInstance.pBLAS = ModelInstance.Model->pAccelerationStructure;
+        TLASInstance.TransformMatrix = TransformMatrixVk;
 
         // Gather all materials from the model
         const size_t MaterialOffset = m_GpuMaterials.size();
@@ -185,7 +190,11 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
     {
         std::shared_ptr<FModel> pSphereModel = std::make_shared<FModel>();
         pSphereModel->LoadFromFile(RESOURCE_PATH"/models/sphere.obj", pDevice);
-        pScene->AddModel(pSphereModel);
+
+        pScene->AddModel(pSphereModel, glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.5f));
+        pScene->AddModel(pSphereModel, glm::vec3( 0.0f, 0.0f, 0.0f), glm::vec3(0.5f));
+        pScene->AddModel(pSphereModel, glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.5f));
+        pScene->AddModel(pSphereModel, glm::vec3( 0.0f, -100.5f, 0.0f), glm::vec3(100.0f));
         break;
     }
 
@@ -193,6 +202,7 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
     {
         std::shared_ptr<FModel> pChessModel = std::make_shared<FModel>();
         pChessModel->LoadFromFile(RESOURCE_PATH"/models/queen.obj", pDevice);
+
         pScene->AddModel(pChessModel);
         break;
     }
@@ -201,6 +211,7 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
     {
         std::shared_ptr<FModel> pSponzaModel = std::make_shared<FModel>();
         pSponzaModel->LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj", pDevice);
+
         pScene->AddModel(pSponzaModel);
         pScene->m_Settings.CameraSpeed = 150.0f;
         break;
@@ -212,7 +223,23 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
     {
         std::shared_ptr<FModel> pSphereModel = std::make_shared<FModel>();
         pSphereModel->LoadFromFile(RESOURCE_PATH"/models/sphere.obj", pDevice);
-        pScene->AddModel(pSphereModel);
+
+        constexpr int32_t NumSpheres        = 7;
+        constexpr float SphereRadius        = 2.8f;
+        constexpr float SphereDiameter      = SphereRadius * 2.0f;
+        constexpr float SphereOffset        = 0.2f;
+        constexpr float SphereHalfFootPrint = SphereRadius + SphereOffset;
+        constexpr float SphereFootPrint     = SphereHalfFootPrint * 2.0f;
+        constexpr float Width               = SphereFootPrint * NumSpheres;
+        constexpr float HalfWidth           = Width / 2.0f;
+
+        for (int32_t i = 0; i < NumSpheres; i++)
+        {
+            const float SphereStartPos = -(SphereHalfFootPrint - HalfWidth);
+            pScene->AddModel(pSphereModel, glm::vec3(SphereStartPos - (static_cast<float>(i) * SphereFootPrint), SphereRadius + SphereOffset, 0.0f), glm::vec3(SphereRadius));
+        }
+
+        pScene->m_Settings.CameraSpeed = 10.0f;
         break;
     }
 

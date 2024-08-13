@@ -4,6 +4,9 @@
 #include "IScene.h"
 #include "Vulkan/AccelerationStructure.h"
 
+#define MAX_MATERIALS 1024
+#define MAX_NUM_MESHES 1024
+
 class FSampler;
 
 struct FMeshInfo
@@ -78,7 +81,7 @@ struct FScene : public IScene
     virtual FCamera& GetCamera() override { return m_Camera; }
     virtual const FCamera& GetCamera() const override { return m_Camera; }
 
-    void AddModel(const std::shared_ptr<FModel>& Model, const glm::vec3& Position = glm::vec3(0.0f), const glm::vec3& Scale = glm::vec3(0.0f), const glm::vec3& Rotation = glm::vec3(0.0f))
+    void AddModel(const std::shared_ptr<FModel>& Model, const glm::vec3& Position = glm::vec3(0.0f), const glm::vec3& Scale = glm::vec3(1.0f), const glm::vec3& Rotation = glm::vec3(0.0f))
     {
         m_ModelInstances.push_back({ Model, Position, Scale, Rotation });
     }

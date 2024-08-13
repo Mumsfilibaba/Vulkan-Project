@@ -359,6 +359,10 @@ FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, con
         SAFE_DELETE(pAccelerationStructure);
         return nullptr;
     }
+    else
+    {
+        pInstanceBuffer->SetDebugName("TLAS InstanceBuffer");
+    }
 
     VkAccelerationStructureGeometryKHR AccelerationStructureGeometry = { };
     AccelerationStructureGeometry.sType                              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -475,7 +479,7 @@ FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, con
     AccelerationBuildGeometryInfo.scratchData.deviceAddress = ScratchBuffer.DeviceAddress;
 
     VkAccelerationStructureBuildRangeInfoKHR AccelerationStructureBuildRangeInfo = { };
-    AccelerationStructureBuildRangeInfo.primitiveCount  = 1;
+    AccelerationStructureBuildRangeInfo.primitiveCount  = Instances.size();
     AccelerationStructureBuildRangeInfo.primitiveOffset = 0;
     AccelerationStructureBuildRangeInfo.firstVertex     = 0;
     AccelerationStructureBuildRangeInfo.transformOffset = 0;

@@ -63,13 +63,13 @@ void main()
     const vec3 Tangent  = (Vertices[0].Tangent  * BarycentricCoords.x) + (Vertices[1].Tangent  * BarycentricCoords.y) + (Vertices[2].Tangent  * BarycentricCoords.z);
     const vec2 TexCoord = (Vertices[0].TexCoord * BarycentricCoords.x) + (Vertices[1].TexCoord * BarycentricCoords.y) + (Vertices[2].TexCoord * BarycentricCoords.z);
 
-    RayPayLoad.HitNormal = normalize(vec3(Normal * gl_WorldToObjectEXT));
+    RayPayLoad.HitNormal = normalize(vec3(gl_WorldToObjectEXT * vec4(Normal, 0.0)));
     if (any(isnan(RayPayLoad.HitNormal)) || any(isinf(RayPayLoad.HitNormal)))
     {
         RayPayLoad.HitNormal = Normal;
     }
 
-    RayPayLoad.HitTangent = normalize(vec3(Tangent * gl_WorldToObjectEXT));
+    RayPayLoad.HitTangent = normalize(vec3(gl_WorldToObjectEXT * vec4(Tangent, 0.0)));
     if (any(isnan(RayPayLoad.HitTangent)) || any(isinf(RayPayLoad.HitTangent)))
     {
         RayPayLoad.HitTangent = Tangent;

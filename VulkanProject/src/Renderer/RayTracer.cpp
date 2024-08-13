@@ -480,11 +480,11 @@ void FRayTracer::CreateGlobalBuffers()
 
     // MeshBuffer
     FBufferParams MeshBufferParams = {};
-    MeshBufferParams.Size             = 1024 * sizeof(FMeshInfo);
+    MeshBufferParams.Size             = MAX_NUM_MESHES * sizeof(FMeshInfo);
     MeshBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     MeshBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
-    m_pMeshBuffer = FBuffer::CreateWithData(GetDevice(), MeshBufferParams, nullptr, m_pScene->m_MeshInfoBuffer.data());
+    m_pMeshBuffer = FBuffer::Create(GetDevice(), MeshBufferParams, nullptr);
     assert(m_pMeshBuffer != nullptr);
     m_pMeshBuffer->SetDebugName("MeshInfoBuffer");
 
@@ -492,11 +492,11 @@ void FRayTracer::CreateGlobalBuffers()
     if (!m_pScene->m_GpuMaterials.empty())
     {
         FBufferParams MaterialBufferParams;
-        MaterialBufferParams.Size             = 1024 * sizeof(FMaterialGLSL);
+        MaterialBufferParams.Size             = MAX_MATERIALS * sizeof(FMaterialGLSL);
         MaterialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
         MaterialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-        m_pMaterialBuffer = FBuffer::CreateWithData(GetDevice(), MaterialBufferParams, nullptr, m_pScene->m_GpuMaterials.data());
+        m_pMaterialBuffer = FBuffer::Create(GetDevice(), MaterialBufferParams, nullptr);
         assert(m_pMaterialBuffer != nullptr);
         m_pMaterialBuffer->SetDebugName("MaterialBuffer");
     }
