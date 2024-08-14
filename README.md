@@ -2,8 +2,9 @@
 
 ## Overview
 
-This project is a simple Vulkan-based path tracer written in C++ and GLSL. It features both software and hardware-accelerated ray tracing. The project started out with a focus on Bounding Volume Hierarchy (BVH) and how to build and use them to speed up ray tracing. 
-The build process uses surface area heuristics (SAH) to determine the most efficient BVH for the scene.
+This project is a Vulkan-based path tracer developed in C++ and GLSL, featuring both software and hardware-accelerated ray tracing. Initially, 
+it focused on constructing and optimizing Bounding Volume Hierarchies (BVH) using Surface Area Heuristics (SAH) to enhance ray tracing performance. 
+It has since evolved into a platform for experimenting with various ray tracing and path tracing techniques.
 
 ## Current Features
 - **Simple Path Tracing**: Simple non-physically based path tracing.
