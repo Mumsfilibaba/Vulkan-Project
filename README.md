@@ -12,6 +12,7 @@ The build process uses surface area heuristics (SAH) to determine the most effic
 - **Hardware Accelerated Ray Tracing**: Supports a hardware-accelerated path (using `VK_KHR_acceleration_structure` and `VK_KHR_ray_tracing_pipeline` Vulkan extensions).
 - **BVH Construction**: Constructs a BVH using surface area heuristics (SAH).
 - **Cross-Platform**: Can be run on both Windows and macOS.
+- **Debug Views**: Contains various debug views such as normals, texcoords, albedo, barycentric coords etc. The software version also contains bvh-intersection debug-views and the ability to view the BVH
 
 ## Planned Features
 - **Physically Based Light Model**: The current path tracer is very simple and is not necessarily physically based, even though things such as Fresnel are taken into account. However, a more physically accurate BRDF would improve the look.
@@ -69,3 +70,18 @@ Before you begin, ensure you have the following installed:
 
     - Open the generated solution or workspace in Visual Studio (for Windows) or Xcode (for macOS).
     - Build and run the project from your chosen IDE.
+
+## Screenshots
+![Sponza](Screenshots/screen0.png)
+
+![Spheres1](Screenshots/screen1.png)
+
+![Spheres2](Screenshots/screen2.png)
+
+![Spheres3](Screenshots/screen3.png)
+
+![Cornell](Screenshots/screen4.png)
+
+![SoftwareIntersection](Screenshots/screen5.png)
+
+![BVHDebug](Screenshots/screen6.png)
