@@ -39,7 +39,7 @@ layout (binding = 1, rgba32f) uniform image2D uPreviousFrame;
 
 // Bindless Textures
 layout (set = 1, binding = 0) uniform sampler2D   uTextures[];
-// layout (set = 1, binding = 0) uniform samplerCube uCubeTextures[];
+layout (set = 1, binding = 0) uniform samplerCube uCubeTextures[];
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
 // Global uniforms
@@ -506,9 +506,9 @@ vec3 GetEnvironmentLight(vec3 RayDirection)
     else if (uScene.BackgroundType == BACKGROUND_TYPE_SKYBOX)
     {
         // Sample the Skybox
-        //vec3 UnitDirection = normalize(RayDirection);
-        //vec4 SkyboxColor = texture(uCubeTextures[0], UnitDirection);
-        return vec3(1.0, 0.0, 0.0); //SkyboxColor.rgb * SKYBOX_MULTIPLIER;
+        vec3 UnitDirection = normalize(RayDirection);
+        vec4 SkyboxColor = texture(uCubeTextures[0], UnitDirection);
+        return SkyboxColor.rgb * SKYBOX_MULTIPLIER;
     }
     else
     {
@@ -828,9 +828,9 @@ vec3 GetColorForRay_BvhDebug(in FRay Ray)
     ivec2 Stats = ivec2(0, 0);
     TraceRay(Ray, PayLoad, Stats);
 
-    vec3 BoxTestColor      = vec3(float(Stats[0])) / 50.0;
-    vec3 TriangleTestColor = vec3(float(Stats[1])) / 50.0;
-    return BoxTestColor;
+    vec3 BoxTestColor      = vec3(float(Stats[0])) / 100.0;
+    vec3 TriangleTestColor = vec3(float(Stats[1])) / 100.0;
+    return TriangleTestColor;
 }
 
 void main()
