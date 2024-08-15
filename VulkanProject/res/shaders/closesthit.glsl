@@ -37,8 +37,10 @@ hitAttributeEXT vec2 Attribs;
 
 void main()
 {
-    const uint GeometryIndex = gl_GeometryIndexEXT;
-    FMeshInfo MeshInfo = MeshInfos[GeometryIndex];
+    const uint MeshInfoOffset = gl_InstanceCustomIndexEXT;
+    const uint GeometryIndex  = gl_GeometryIndexEXT;
+    const uint MeshInfoIndex  = MeshInfoOffset + GeometryIndex; 
+    FMeshInfo MeshInfo = MeshInfos[MeshInfoIndex];
 
     // Retrieve Buffers
     FIndexBuffer  IndexBuffer  = FIndexBuffer(MeshInfo.IndexBufferAddress);

@@ -30,6 +30,7 @@ struct FTLASInstance
 {
     VkTransformMatrixKHR    TransformMatrix;
     FAccelerationStructure* pBLAS;
+    uint32_t                InstanceCustomIndex;
 };
 
 struct FAccelerationStructureTLASParams

@@ -317,7 +317,8 @@ vec3 GetNormalForRay(in vec3 Origin, in vec3 Direction)
         Normal = RayPayLoad.HitNormal;
     }
 
-    return (Normal + vec3(1.0)) * 0.5;
+    // return (Normal + vec3(1.0)) * 0.5;
+    return Normal;
 }
 
 vec3 GetBarycentricsForRay(in vec3 Origin, in vec3 Direction)

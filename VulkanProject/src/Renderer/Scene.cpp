@@ -126,9 +126,11 @@ void FScene::Initialize()
         VkTransformMatrixKHR TransformMatrixVk;
         memcpy(&TransformMatrixVk, glm::value_ptr(TransformMatrix), sizeof(VkTransformMatrixKHR));
 
+        const size_t MeshInfoOffset = m_MeshInfoBuffer.size();
         FTLASInstance& TLASInstance = TLASParams.Instances.emplace_back();
-        TLASInstance.pBLAS = ModelInstance.Model->pAccelerationStructure;
-        TLASInstance.TransformMatrix = TransformMatrixVk;
+        TLASInstance.TransformMatrix     = TransformMatrixVk;
+        TLASInstance.pBLAS               = ModelInstance.Model->pAccelerationStructure;
+        TLASInstance.InstanceCustomIndex = MeshInfoOffset;
 
         // Gather all materials from the model
         const size_t MaterialOffset = m_GpuMaterials.size();
@@ -186,15 +188,42 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
     switch (SceneType)
     {
     case ESceneType::Spheres:
-    case ESceneType::CornellBox:
     {
         std::shared_ptr<FModel> pSphereModel = std::make_shared<FModel>();
         pSphereModel->LoadFromFile(RESOURCE_PATH"/models/sphere.obj", pDevice);
 
         pScene->AddModel(pSphereModel, glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.5f));
-        pScene->AddModel(pSphereModel, glm::vec3( 0.0f, 0.0f, 0.0f), glm::vec3(0.5f));
-        pScene->AddModel(pSphereModel, glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.5f));
-        pScene->AddModel(pSphereModel, glm::vec3( 0.0f, -100.5f, 0.0f), glm::vec3(100.0f));
+        pScene->AddModel(pSphereModel, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.5f));
+        pScene->AddModel(pSphereModel, glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.5f));
+        pScene->AddModel(pSphereModel, glm::vec3(0.0f, -100.5f, 0.0f), glm::vec3(100.0f));
+        break;
+    }
+
+    case ESceneType::CornellBox:
+    {
+        std::shared_ptr<FModel> pSphereModel = std::make_shared<FModel>();
+        pSphereModel->LoadFromFile(RESOURCE_PATH"/models/sphere.obj", pDevice);
+
+        pScene->AddModel(pSphereModel, glm::vec3( 2.0f, 2.5f, 1.5f), glm::vec3(0.25f));
+        pScene->AddModel(pSphereModel, glm::vec3( 1.0f, 2.5f, 1.5f), glm::vec3(0.25f));
+        pScene->AddModel(pSphereModel, glm::vec3( 0.0f, 2.5f, 1.5f), glm::vec3(0.25f));
+        pScene->AddModel(pSphereModel, glm::vec3(-1.0f, 2.5f, 1.5f), glm::vec3(0.25f));
+        pScene->AddModel(pSphereModel, glm::vec3(-2.0f, 2.5f, 1.5f), glm::vec3(0.25f));
+
+        pScene->AddModel(pSphereModel, glm::vec3( 2.2f, 0.75f, -0.5f), glm::vec3(0.7f));
+        pScene->AddModel(pSphereModel, glm::vec3( 0.0f, 0.75f, -0.5f), glm::vec3(0.7f));
+        pScene->AddModel(pSphereModel, glm::vec3(-2.2f, 0.75f, -0.5f), glm::vec3(0.7f));
+
+        std::shared_ptr<FModel> pPlaneModel = std::make_shared<FModel>();
+        pPlaneModel->LoadFromFile(RESOURCE_PATH"/models/plane.obj", pDevice);
+
+        constexpr float PI      = glm::pi<float>();
+        constexpr float HALF_PI = PI / 2.0f;
+        pScene->AddModel(pPlaneModel, glm::vec3( 0.0f, 0.0f, 0.0f), glm::vec3(6.0f, 1.0f, 4.0f), glm::vec3(0.0f,    0.0f,     0.0f));
+        pScene->AddModel(pPlaneModel, glm::vec3( 0.0f, 2.0f, 2.0f), glm::vec3(6.0f, 1.0f, 4.0f), glm::vec3(HALF_PI, 0.0f,     0.0f));
+        pScene->AddModel(pPlaneModel, glm::vec3( 0.0f, 4.0f, 0.0f), glm::vec3(6.0f, 1.0f, 4.0f), glm::vec3(PI,      0.0f,     0.0f));
+        pScene->AddModel(pPlaneModel, glm::vec3( 3.0f, 2.0f, 0.0f), glm::vec3(4.0f, 1.0f, 4.0f), glm::vec3(0.0f,    0.0f, -HALF_PI));
+        pScene->AddModel(pPlaneModel, glm::vec3(-3.0f, 2.0f, 0.0f), glm::vec3(4.0f, 1.0f, 4.0f), glm::vec3(0.0f,    0.0f,  HALF_PI));
         break;
     }
 
@@ -204,6 +233,17 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
         pChessModel->LoadFromFile(RESOURCE_PATH"/models/queen.obj", pDevice);
 
         pScene->AddModel(pChessModel);
+
+        std::shared_ptr<FModel> pPlaneModel = std::make_shared<FModel>();
+        pPlaneModel->LoadFromFile(RESOURCE_PATH"/models/plane.obj", pDevice);
+
+        constexpr float PI      = glm::pi<float>();
+        constexpr float HALF_PI = PI / 2.0f;
+        pScene->AddModel(pPlaneModel, glm::vec3( 0.0f, 0.0f, 0.0f), glm::vec3(2.0f, 1.0f, 2.0f), glm::vec3(0.0f,    0.0f,     0.0f));
+        pScene->AddModel(pPlaneModel, glm::vec3( 0.0f, 1.0f, 1.0f), glm::vec3(2.0f, 1.0f, 2.0f), glm::vec3(HALF_PI, 0.0f,     0.0f));
+        pScene->AddModel(pPlaneModel, glm::vec3( 0.0f, 2.0f, 0.0f), glm::vec3(2.0f, 1.0f, 2.0f), glm::vec3(PI,      0.0f,     0.0f));
+        pScene->AddModel(pPlaneModel, glm::vec3( 1.0f, 1.0f, 0.0f), glm::vec3(2.0f, 1.0f, 2.0f), glm::vec3(0.0f,    0.0f, -HALF_PI));
+        pScene->AddModel(pPlaneModel, glm::vec3(-1.0f, 1.0f, 0.0f), glm::vec3(2.0f, 1.0f, 2.0f), glm::vec3(0.0f,    0.0f,  HALF_PI));
         break;
     }
 
@@ -221,6 +261,7 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
     case ESceneType::RoughColoredGlassSpheres:
     case ESceneType::RoughTransparentGlassSpheres:
     {
+        // Spheres
         std::shared_ptr<FModel> pSphereModel = std::make_shared<FModel>();
         pSphereModel->LoadFromFile(RESOURCE_PATH"/models/sphere.obj", pDevice);
 
@@ -232,11 +273,46 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
         constexpr float SphereFootPrint     = SphereHalfFootPrint * 2.0f;
         constexpr float Width               = SphereFootPrint * NumSpheres;
         constexpr float HalfWidth           = Width / 2.0f;
+        constexpr float PI                  = glm::pi<float>();
+        constexpr float HALF_PI             = PI / 2.0f;
 
         for (int32_t i = 0; i < NumSpheres; i++)
         {
             const float SphereStartPos = -(SphereHalfFootPrint - HalfWidth);
             pScene->AddModel(pSphereModel, glm::vec3(SphereStartPos - (static_cast<float>(i) * SphereFootPrint), SphereRadius + SphereOffset, 0.0f), glm::vec3(SphereRadius));
+        }
+
+        // Quads
+        std::shared_ptr<FModel> pPlaneModel = std::make_shared<FModel>();
+        pPlaneModel->LoadFromFile(RESOURCE_PATH"/models/plane.obj", pDevice);
+
+        // Roof Quad
+        constexpr float RoofPos   = 23.0f;
+        constexpr float RoofWidth = 15.0f;
+        pScene->AddModel(pPlaneModel, glm::vec3(0.0f, RoofPos, 0.0f), glm::vec3(RoofWidth, 1.0f, RoofWidth), glm::vec3(PI, 0.0f, 0.0f));
+
+        // Light Quad
+        constexpr float LightPos   = RoofPos - 0.1f;
+        constexpr float LightWidth = 10.0f;
+        pScene->AddModel(pPlaneModel, glm::vec3(0.0f, LightPos, 0.0f), glm::vec3(LightWidth, 1.0f, LightWidth), glm::vec3(PI, 0.0f, 0.0f));
+
+        // Floor Quad
+        constexpr float FloorWidth     = Width + (SphereFootPrint * 2.0f);
+        constexpr float FloorDepth     = SphereFootPrint + SphereRadius;
+        constexpr float HalfFloorWidth = FloorWidth / 2.0f;
+        pScene->AddModel(pPlaneModel, glm::vec3(0.0f, -2.0f, 0.0f), glm::vec3(FloorWidth, 1.0f, FloorDepth), glm::vec3(0.0f, 0.0f, 0.0f));
+
+        // Wall Quads
+        constexpr uint32_t NumQuads = 100;
+
+        constexpr float TotalWidth     = FloorWidth;
+        constexpr float QuadWidth      = TotalWidth / NumQuads;
+        constexpr float WallHeight     = 9.0f;
+        constexpr float HalfWallHeight = WallHeight / 2.0f;
+
+        for (uint32_t i = 0; i < NumQuads; i++)
+        {
+            pScene->AddModel(pPlaneModel, glm::vec3(-HalfFloorWidth + (QuadWidth * static_cast<float>(i)), HalfWallHeight, -FloorDepth), glm::vec3(QuadWidth, 1.0f, WallHeight), glm::vec3(-HALF_PI, 0.0f, 0.0f));
         }
 
         pScene->m_Settings.CameraSpeed = 10.0f;

@@ -337,12 +337,12 @@ FAccelerationStructure* FAccelerationStructure::CreateTLAS(FDevice* pDevice, con
     for (const FTLASInstance& InstanceParams : Params.Instances)
     {
         VkAccelerationStructureInstanceKHR Instance = { };
-        Instance.transform                              = InstanceParams.TransformMatrix;
-        Instance.instanceCustomIndex                    = 0;
-        Instance.mask                                   = 0xff;
-        Instance.instanceShaderBindingTableRecordOffset = 0;
         Instance.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        Instance.instanceCustomIndex                    = InstanceParams.InstanceCustomIndex;
+        Instance.instanceShaderBindingTableRecordOffset = 0;
+        Instance.mask                                   = 0xff;
         Instance.accelerationStructureReference         = InstanceParams.pBLAS->GetDeviceAddress();
+        Instance.transform                              = InstanceParams.TransformMatrix;
         Instances.emplace_back(Instance);
     }
 
