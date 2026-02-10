@@ -2,24 +2,24 @@
 #include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
-class FDevice;
-class FDescriptorSetLayout;
+class CDevice;
+class CDescriptorSetLayout;
 
-struct FPipelineLayoutParams
+struct SPipelineLayoutParams
 {
-    FDescriptorSetLayout** ppLayouts = nullptr;
+    CDescriptorSetLayout** ppLayouts = nullptr;
     uint32_t NumLayouts       = 0;
     uint32_t NumPushConstants = 0;
     bool     bEnableBindless  = false;
 };
 
-class FPipelineLayout : public FDeviceChild
+class CPipelineLayout : public CDeviceChild
 {
 public:
-    static FPipelineLayout* Create(FDevice* pDevice, const FPipelineLayoutParams& Params);
+    static CPipelineLayout* Create(CDevice* pDevice, const SPipelineLayoutParams& Params);
 
-    FPipelineLayout(FDevice* pDevice);
-    ~FPipelineLayout();
+    CPipelineLayout(CDevice* pDevice);
+    ~CPipelineLayout();
 
     void SetDebugName(const char* DebugName);
     

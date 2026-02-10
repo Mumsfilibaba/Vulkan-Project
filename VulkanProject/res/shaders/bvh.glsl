@@ -10,7 +10,7 @@
 #define BVH_ROOT_NODE_INDEX 0
 #define BVH_MAX_DEPTH 32
 
-struct FBoundingBox
+struct SBoundingBox
 {
     // 0-16
     vec4 BoxMinAndIndex;

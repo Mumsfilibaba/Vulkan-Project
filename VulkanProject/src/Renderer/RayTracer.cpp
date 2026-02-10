@@ -10,8 +10,8 @@
 #include "Vulkan/Texture.h"
 #include "Vulkan/TextureView.h"
 
-FRayTracer::FRayTracer()
-    : FBaseRenderer()
+CRayTracer::CRayTracer()
+    : CBaseRenderer()
     , m_pScene(nullptr)
     , m_pSceneSettingsBuffer(nullptr)
     , m_pMaterialBuffer(nullptr)
@@ -24,13 +24,13 @@ FRayTracer::FRayTracer()
 {
 }
 
-FRayTracer::~FRayTracer()
+CRayTracer::~CRayTracer()
 {
 }
 
-void FRayTracer::CreateResources()
+void CRayTracer::CreateResources()
 {
-    m_pScene = FSceneFactory::CreateScene(ESceneType::Spheres);
+    m_pScene = SceneFactory::CreateScene(ESceneType::Spheres);
 
     // Create RayTracing DescriptorSetLayout
     constexpr uint32_t NumRayTracingBindings = 8;
@@ -92,48 +92,48 @@ void FRayTracer::CreateResources()
     RayTracingBindings[7].stageFlags         = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
     RayTracingBindings[7].pImmutableSamplers = nullptr;
 
-    FDescriptorSetLayoutParams RayTracingDescriptorSetLayoutParams;
+    SDescriptorSetLayoutParams RayTracingDescriptorSetLayoutParams;
     RayTracingDescriptorSetLayoutParams.pBindings   = RayTracingBindings;
     RayTracingDescriptorSetLayoutParams.NumBindings = NumRayTracingBindings;
 
-    m_pRayTracingDescriptorSetLayout = FDescriptorSetLayout::Create(GetDevice(), RayTracingDescriptorSetLayoutParams);
+    m_pRayTracingDescriptorSetLayout = CDescriptorSetLayout::Create(GetDevice(), RayTracingDescriptorSetLayoutParams);
     assert(m_pRayTracingDescriptorSetLayout != nullptr);
     m_pRayTracingDescriptorSetLayout->SetDebugName("RayTracingPass DescriptorSetLayout");
 
     // Create RayTracing PipelineLayout
-    FPipelineLayoutParams RayTracingPipelineLayoutParams;
+    SPipelineLayoutParams RayTracingPipelineLayoutParams;
     RayTracingPipelineLayoutParams.ppLayouts       = &m_pRayTracingDescriptorSetLayout;
     RayTracingPipelineLayoutParams.NumLayouts      = 1;
     RayTracingPipelineLayoutParams.bEnableBindless = true;
     
-    m_pRayTracingPipelineLayout = FPipelineLayout::Create(GetDevice(), RayTracingPipelineLayoutParams);
+    m_pRayTracingPipelineLayout = CPipelineLayout::Create(GetDevice(), RayTracingPipelineLayoutParams);
     assert(m_pRayTracingPipelineLayout != nullptr);
     m_pRayTracingPipelineLayout->SetDebugName("RayTracingPass PipelineLayout");
 
-    FShaderModule* pRayGenShader = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/raygen.spv");
+    CShaderModule* pRayGenShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/raygen.spv");
     assert(pRayGenShader != nullptr);
     pRayGenShader->SetDebugName(RESOURCE_PATH"/shaders/raygen.spv");
 
-    FShaderModule* pRayMissShader = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/miss.spv");
+    CShaderModule* pRayMissShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/miss.spv");
     assert(pRayMissShader != nullptr);
     pRayMissShader->SetDebugName(RESOURCE_PATH"/shaders/miss.spv");
 
-    FShaderModule* pRayClosestHitShader = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/closesthit.spv");
+    CShaderModule* pRayClosestHitShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/closesthit.spv");
     assert(pRayClosestHitShader != nullptr);
     pRayClosestHitShader->SetDebugName(RESOURCE_PATH"/shaders/closesthit.spv");
 
-    FShaderModule* pRayAnyHitShader = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/anyhit.spv");
+    CShaderModule* pRayAnyHitShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/anyhit.spv");
     assert(pRayAnyHitShader != nullptr);
     pRayAnyHitShader->SetDebugName(RESOURCE_PATH"/shaders/anyhit.spv");
 
-    FRayTracingPipelineStateParams PipelineParams;
+    SRayTracingPipelineStateParams PipelineParams;
     PipelineParams.pRayGenShader        = pRayGenShader;
     PipelineParams.pRayMissShader       = pRayMissShader;
     PipelineParams.pRayClosestHitShader = pRayClosestHitShader;
     PipelineParams.pRayAnyHitShader     = pRayAnyHitShader;
     PipelineParams.pPipelineLayout      = m_pRayTracingPipelineLayout;
 
-    m_pRayTracingPipeline = FRayTracingPipeline::Create(GetDevice(), PipelineParams);
+    m_pRayTracingPipeline = CRayTracingPipeline::Create(GetDevice(), PipelineParams);
     assert(m_pRayTracingPipeline != nullptr);
 
     SAFE_DELETE(pRayGenShader);
@@ -142,7 +142,7 @@ void FRayTracer::CreateResources()
     SAFE_DELETE(pRayAnyHitShader);
 }
 
-void FRayTracer::ReleaseResources()
+void CRayTracer::ReleaseResources()
 {
     SAFE_DELETE(m_pScene);
 
@@ -157,10 +157,10 @@ void FRayTracer::ReleaseResources()
     SAFE_DELETE(m_pRayTracingDescriptorSet1);
 }
 
-void FRayTracer::CreateDescriptorSets()
+void CRayTracer::CreateDescriptorSets()
 {
     // Create common DescriptorSets
-    FBaseRenderer::CreateDescriptorSets();
+    CBaseRenderer::CreateDescriptorSets();
 
     if (!m_pScene)
     {
@@ -168,7 +168,7 @@ void FRayTracer::CreateDescriptorSets()
     }
 
     // RayTracing Pass
-    m_pRayTracingDescriptorSet0 = FDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pRayTracingDescriptorSetLayout);
+    m_pRayTracingDescriptorSet0 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pRayTracingDescriptorSetLayout);
     assert(m_pRayTracingDescriptorSet0 != nullptr);
     m_pRayTracingDescriptorSet0->SetDebugName("RayTracingPass DescriptorSet0");
 
@@ -181,7 +181,7 @@ void FRayTracer::CreateDescriptorSets()
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 6);
     m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 7);
 
-    m_pRayTracingDescriptorSet1 = FDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pRayTracingDescriptorSetLayout);
+    m_pRayTracingDescriptorSet1 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pRayTracingDescriptorSetLayout);
     assert(m_pRayTracingDescriptorSet1 != nullptr);
     m_pRayTracingDescriptorSet1->SetDebugName("RayTracingPass DescriptorSet1");
 
@@ -195,28 +195,28 @@ void FRayTracer::CreateDescriptorSets()
     m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 7);
 }
 
-void FRayTracer::ReleaseDescriptorSets()
+void CRayTracer::ReleaseDescriptorSets()
 {
-    FBaseRenderer::ReleaseDescriptorSets();
+    CBaseRenderer::ReleaseDescriptorSets();
 
     SAFE_DELETE(m_pRayTracingDescriptorSet0);
     SAFE_DELETE(m_pRayTracingDescriptorSet1);
 }
 
-void FRayTracer::Render(FCommandBuffer* pCommandBuffer)
+void CRayTracer::Render(CCommandBuffer* pCommandBuffer)
 {
     // Update necessary buffers
     UpdateGlobalBuffers(pCommandBuffer);
 
     // Update Scene
-    FSceneBuffer SceneBuffer = {};
+    SSceneBuffer SceneBuffer = {};
     SceneBuffer.NumMaterials          = m_pScene->m_GpuMaterials.size();
     SceneBuffer.BackgroundType        = static_cast<uint32_t>(m_pScene->m_Settings.BackgroundType);
     SceneBuffer.NumBounces            = m_pScene->m_Settings.NumBounces;
     SceneBuffer.ViewMode              = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
     SceneBuffer.GradientLightStrength = m_pScene->m_Settings.GradientLightStrength;
     
-    pCommandBuffer->UpdateBuffer(m_pSceneSettingsBuffer, 0, sizeof(FSceneBuffer), &SceneBuffer);
+    pCommandBuffer->UpdateBuffer(m_pSceneSettingsBuffer, 0, sizeof(SSceneBuffer), &SceneBuffer);
 
     // Barrier before reading the buffer from the shader
     VkMemoryBarrier MemoryBarrier;
@@ -244,19 +244,19 @@ void FRayTracer::Render(FCommandBuffer* pCommandBuffer)
 
     pCommandBuffer->TraceRays(m_pRayTracingPipeline, m_pSceneTexture0->GetWidth(), m_pSceneTexture0->GetHeight(), 1);
 
-    // Scene textures are assumed to be in GENERAL when FBaseRenderer::Render is called
+    // Scene textures are assumed to be in GENERAL when CBaseRenderer::Render is called
     pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
     pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 
     // Tonemapping
     PerformTonemapping(pCommandBuffer);
 
-    // Scene textures are assumed to be in GENERAL when FBaseRenderer::Render is called so let's put it back into the correct format
+    // Scene textures are assumed to be in GENERAL when CBaseRenderer::Render is called so let's put it back into the correct format
     pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
     pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
-void FRayTracer::RenderUI()
+void CRayTracer::RenderUI()
 {
     if (ImGui::Begin("Scene Inspector"))
     {
@@ -331,7 +331,7 @@ void FRayTracer::RenderUI()
 
             if (PrevScene != CurrentScene)
             {
-                FDevice* pDevice = FApplication::Get().GetDevice();
+                CDevice* pDevice = CApplication::Get().GetDevice();
                 pDevice->WaitForIdle();
 
                 // Release Descriptors
@@ -341,37 +341,37 @@ void FRayTracer::RenderUI()
                 if (CurrentScene == 0) // Change to Sphere-scene
                 {
                     SAFE_DELETE(m_pScene);
-                    m_pScene = FSceneFactory::CreateScene(ESceneType::Spheres);
+                    m_pScene = SceneFactory::CreateScene(ESceneType::Spheres);
                 }
                 else if (CurrentScene == 1) // Change to CornellBox-scene
                 {
                     SAFE_DELETE(m_pScene);
-                    m_pScene = FSceneFactory::CreateScene(ESceneType::CornellBox);
+                    m_pScene = SceneFactory::CreateScene(ESceneType::CornellBox);
                 }
                 else if (CurrentScene == 2) // Change to Triangles-scene
                 {
                     SAFE_DELETE(m_pScene);
-                    m_pScene = FSceneFactory::CreateScene(ESceneType::Triangles);
+                    m_pScene = SceneFactory::CreateScene(ESceneType::Triangles);
                 }
                 else if (CurrentScene == 3) // Change to Sponza-scene
                 {
                     SAFE_DELETE(m_pScene);
-                    m_pScene = FSceneFactory::CreateScene(ESceneType::Sponza);
+                    m_pScene = SceneFactory::CreateScene(ESceneType::Sponza);
                 }
                 else if (CurrentScene == 4) // Change to "Polished Glass Sphere"-scene
                 {
                     SAFE_DELETE(m_pScene);
-                    m_pScene = FSceneFactory::CreateScene(ESceneType::PolishedGlassSpheres);
+                    m_pScene = SceneFactory::CreateScene(ESceneType::PolishedGlassSpheres);
                 }
                 else if (CurrentScene == 5) // Change to "Rough Colored Glass Spheres"-scene
                 {
                     SAFE_DELETE(m_pScene);
-                    m_pScene = FSceneFactory::CreateScene(ESceneType::RoughColoredGlassSpheres);
+                    m_pScene = SceneFactory::CreateScene(ESceneType::RoughColoredGlassSpheres);
                 }
                 else if (CurrentScene == 6) // Change to "Rough Transparent Glass Spheres"-scene
                 {
                     SAFE_DELETE(m_pScene);
-                    m_pScene = FSceneFactory::CreateScene(ESceneType::RoughTransparentGlassSpheres);
+                    m_pScene = SceneFactory::CreateScene(ESceneType::RoughTransparentGlassSpheres);
                 }
 
                 assert(m_pScene != nullptr);
@@ -460,63 +460,63 @@ void FRayTracer::RenderUI()
     }
 }
 
-void FRayTracer::ReloadShaders()
+void CRayTracer::ReloadShaders()
 {
 }
 
-void FRayTracer::CreateGlobalBuffers()
+void CRayTracer::CreateGlobalBuffers()
 {
-    FBaseRenderer::CreateGlobalBuffers();
+    CBaseRenderer::CreateGlobalBuffers();
 
     // SceneBuffer
-    FBufferParams SceneBufferParams;
-    SceneBufferParams.Size             = sizeof(FSceneBuffer);
+    SBufferParams SceneBufferParams;
+    SceneBufferParams.Size             = sizeof(SSceneBuffer);
     SceneBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     SceneBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pSceneSettingsBuffer = FBuffer::Create(GetDevice(), SceneBufferParams, nullptr);
+    m_pSceneSettingsBuffer = CBuffer::Create(GetDevice(), SceneBufferParams, nullptr);
     assert(m_pSceneSettingsBuffer != nullptr);
     m_pSceneSettingsBuffer->SetDebugName("SceneBuffer");
 
     // MeshBuffer
-    FBufferParams MeshBufferParams = {};
-    MeshBufferParams.Size             = MAX_NUM_MESHES * sizeof(FMeshInfo);
+    SBufferParams MeshBufferParams = {};
+    MeshBufferParams.Size             = MAX_NUM_MESHES * sizeof(SMeshInfo);
     MeshBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     MeshBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
-    m_pMeshBuffer = FBuffer::Create(GetDevice(), MeshBufferParams, nullptr);
+    m_pMeshBuffer = CBuffer::Create(GetDevice(), MeshBufferParams, nullptr);
     assert(m_pMeshBuffer != nullptr);
     m_pMeshBuffer->SetDebugName("MeshInfoBuffer");
 
     // MaterialBuffer
     if (!m_pScene->m_GpuMaterials.empty())
     {
-        FBufferParams MaterialBufferParams;
-        MaterialBufferParams.Size             = MAX_MATERIALS * sizeof(FMaterialGLSL);
+        SBufferParams MaterialBufferParams;
+        MaterialBufferParams.Size             = MAX_MATERIALS * sizeof(SMaterialGLSL);
         MaterialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
         MaterialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-        m_pMaterialBuffer = FBuffer::Create(GetDevice(), MaterialBufferParams, nullptr);
+        m_pMaterialBuffer = CBuffer::Create(GetDevice(), MaterialBufferParams, nullptr);
         assert(m_pMaterialBuffer != nullptr);
         m_pMaterialBuffer->SetDebugName("MaterialBuffer");
     }
 }
 
-void FRayTracer::UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer)
+void CRayTracer::UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer)
 {
     // Update GPU buffers
     if (!m_pScene->m_MeshInfoBuffer.empty())
     {
         pCommandBuffer->FillBuffer(m_pMeshBuffer, 0, m_pMeshBuffer->GetSize(), 0);
-        assert((sizeof(FMeshInfo) * m_pScene->m_MeshInfoBuffer.size()) <= m_pMeshBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(FMeshInfo) * m_pScene->m_MeshInfoBuffer.size(), m_pScene->m_MeshInfoBuffer.data());
+        assert((sizeof(SMeshInfo) * m_pScene->m_MeshInfoBuffer.size()) <= m_pMeshBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(SMeshInfo) * m_pScene->m_MeshInfoBuffer.size(), m_pScene->m_MeshInfoBuffer.data());
     }
 
     if (!m_pScene->m_GpuMaterials.empty())
     {
         pCommandBuffer->FillBuffer(m_pMaterialBuffer, 0, m_pMaterialBuffer->GetSize(), 0);
-        assert((sizeof(FMaterialGLSL) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(FMaterialGLSL) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
+        assert((sizeof(SMaterialGLSL) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(SMaterialGLSL) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
     }
 
     // Barrier before reading the buffer from the shader

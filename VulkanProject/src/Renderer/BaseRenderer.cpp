@@ -11,7 +11,7 @@
 #include "Vulkan/DescriptorSetLayout.h"
 #include "Vulkan/ShaderModule.h"
 
-FBaseRenderer::FBaseRenderer()
+CBaseRenderer::CBaseRenderer()
     : IRenderer()
     , m_pDevice(nullptr)
     , m_pSwapchain(nullptr)
@@ -27,7 +27,7 @@ FBaseRenderer::FBaseRenderer()
     , m_pOutputTextureView(nullptr)
     , m_pOutputTextureDescriptorSet(nullptr)
     , m_pSkybox(nullptr)
-    , m_SkyboxBindlessIndex(FBindlessManager::InvalidBindlessID)
+    , m_SkyboxBindlessIndex(CBindlessManager::InvalidBindlessID)
     , m_pSkyboxSampler(nullptr)
     , m_pTonemapSampler(nullptr)
     , m_pTonemappingPipeline(nullptr)
@@ -50,33 +50,33 @@ FBaseRenderer::FBaseRenderer()
 {
 }
 
-FBaseRenderer::~FBaseRenderer()
+CBaseRenderer::~CBaseRenderer()
 {
 }
 
-void FBaseRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
+void CBaseRenderer::Init(CDevice* pDevice, CSwapchain* pSwapchain)
 {
     // Set device
     m_pDevice    = pDevice;
     m_pSwapchain = pSwapchain;
 
     // Init the TextureLoader
-    FTextureResource::InitLoader(m_pDevice);
+    CTextureResource::InitLoader(m_pDevice);
 
     // Create DescriptorPool
-    FDescriptorPoolParams DescriptorPoolParams;
+    SDescriptorPoolParams DescriptorPoolParams;
     DescriptorPoolParams.NumUniformBuffers        = 128;
     DescriptorPoolParams.NumStorageImages         = 128;
     DescriptorPoolParams.NumStorageBuffers        = 128;
     DescriptorPoolParams.NumCombinedImageSamplers = 128;
     DescriptorPoolParams.MaxSets                  = 16;
 
-    m_pDescriptorPool = FDescriptorPool::Create(m_pDevice, DescriptorPoolParams);
+    m_pDescriptorPool = CDescriptorPool::Create(m_pDevice, DescriptorPoolParams);
     assert(m_pDescriptorPool != nullptr);
     m_pDescriptorPool->SetDebugName("DescriptorPool");
 
     // CommandBuffers
-    FCommandBufferParams CommandBufferParams = {};
+    SCommandBufferParams CommandBufferParams = {};
     CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     CommandBufferParams.QueueType = ECommandQueueType::Graphics;
 
@@ -84,7 +84,7 @@ void FBaseRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     m_CommandBuffers.resize(ImageCount);
     for (size_t i = 0; i < m_CommandBuffers.size(); i++)
     {
-        FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(m_pDevice, CommandBufferParams);
+        CCommandBuffer* pCommandBuffer = CCommandBuffer::Create(m_pDevice, CommandBufferParams);
         assert(pCommandBuffer != nullptr);
 
         const std::string DebugName = "Frame CommandBuffer[" + std::to_string(i) + "]";
@@ -94,14 +94,14 @@ void FBaseRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     }
 
     // Timestamp queries
-    FQueryParams QueryParams;
+    SQueryParams QueryParams;
     QueryParams.QueryType  = VK_QUERY_TYPE_TIMESTAMP;
     QueryParams.QueryCount = 2;
     
     m_TimestampQueries.resize(ImageCount);
     for (size_t i = 0; i < m_TimestampQueries.size(); i++)
     {
-        FQuery* pQuery = FQuery::Create(m_pDevice, QueryParams);
+        CQuery* pQuery = CQuery::Create(m_pDevice, QueryParams);
         pQuery->Reset();
 
         const std::string DebugName = "TimeStamp Queries[" + std::to_string(i) + "]";
@@ -111,15 +111,15 @@ void FBaseRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     }
     
     // Allocator for GPU memory
-    m_pDeviceAllocator = new FDeviceMemoryAllocator(m_pDevice);
+    m_pDeviceAllocator = new CDeviceMemoryAllocator(m_pDevice);
 
     // Create Skybox
-    m_pSkybox = FTextureResource::LoadCubeMapFromPanoramaFile(m_pDevice, RESOURCE_PATH"/textures/arches.hdr");
+    m_pSkybox = CTextureResource::LoadCubeMapFromPanoramaFile(m_pDevice, RESOURCE_PATH"/textures/arches.hdr");
     assert(m_pSkybox != nullptr);
 
     // Skybox Sampler
     {
-        FSamplerParams SamplerParams = {};
+        SSamplerParams SamplerParams = {};
         SamplerParams.MagFilter     = VK_FILTER_LINEAR;
         SamplerParams.MinFilter     = VK_FILTER_LINEAR;
         SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -130,14 +130,14 @@ void FBaseRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
         SamplerParams.MaxLod        = 1000;
         SamplerParams.MaxAnisotropy = 1.0f;
 
-        m_pSkyboxSampler = FSampler::Create(pDevice, SamplerParams);
+        m_pSkyboxSampler = CSampler::Create(pDevice, SamplerParams);
         assert(m_pSkyboxSampler != nullptr);
         m_pSkyboxSampler->SetDebugName("Skybox Sampler");
     }
 
     // Tonemap Sampler
     {
-        FSamplerParams SamplerParams = {};
+        SSamplerParams SamplerParams = {};
         SamplerParams.MagFilter     = VK_FILTER_NEAREST;
         SamplerParams.MinFilter     = VK_FILTER_NEAREST;
         SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -148,7 +148,7 @@ void FBaseRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
         SamplerParams.MaxLod        = 1000;
         SamplerParams.MaxAnisotropy = 1.0f;
 
-        m_pTonemapSampler = FSampler::Create(pDevice, SamplerParams);
+        m_pTonemapSampler = CSampler::Create(pDevice, SamplerParams);
         assert(m_pTonemapSampler != nullptr);
         m_pTonemapSampler->SetDebugName("Tonemap Sampler");
     }
@@ -171,7 +171,7 @@ void FBaseRenderer::Init(FDevice* pDevice, FSwapchain* pSwapchain)
     CreateOrResizeSceneTexture(1280, 720);
 }
 
-void FBaseRenderer::CreateTonemappingResources()
+void CBaseRenderer::CreateTonemappingResources()
 {
     // Create Tonemap DescriptorSetLayout
     constexpr uint32_t NumTonemappingBindings = 2;
@@ -191,46 +191,46 @@ void FBaseRenderer::CreateTonemappingResources()
     TonemappingBindings[1].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
     TonemappingBindings[1].pImmutableSamplers = nullptr;
 
-    FDescriptorSetLayoutParams TonemappingDescriptorSetLayoutParams;
+    SDescriptorSetLayoutParams TonemappingDescriptorSetLayoutParams;
     TonemappingDescriptorSetLayoutParams.pBindings   = TonemappingBindings;
     TonemappingDescriptorSetLayoutParams.NumBindings = NumTonemappingBindings;
 
-    m_pTonemappingDescriptorSetLayout = FDescriptorSetLayout::Create(GetDevice(), TonemappingDescriptorSetLayoutParams);
+    m_pTonemappingDescriptorSetLayout = CDescriptorSetLayout::Create(GetDevice(), TonemappingDescriptorSetLayoutParams);
     assert(m_pTonemappingDescriptorSetLayout != nullptr);
     m_pTonemappingDescriptorSetLayout->SetDebugName("TonemappingPass DescriptorSetLayout");
 
     // Create Tonemapping PipelineLayout
-    FPipelineLayoutParams ToneMappingPipelineLayoutParams;
+    SPipelineLayoutParams ToneMappingPipelineLayoutParams;
     ToneMappingPipelineLayoutParams.ppLayouts  = &m_pTonemappingDescriptorSetLayout;
     ToneMappingPipelineLayoutParams.NumLayouts = 1;
 
-    m_pTonemappingPipelineLayout = FPipelineLayout::Create(GetDevice(), ToneMappingPipelineLayoutParams);
+    m_pTonemappingPipelineLayout = CPipelineLayout::Create(GetDevice(), ToneMappingPipelineLayoutParams);
     assert(m_pTonemappingPipelineLayout != nullptr);
     m_pTonemappingPipelineLayout->SetDebugName("TonemappingPass PipelineLayout");
 
     // PipelineState, RenderPass and Shaders
-    FShaderModule* pVertex = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/fullscreenVS.spv");
+    CShaderModule* pVertex = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/fullscreenVS.spv");
     assert(pVertex != nullptr);
     pVertex->SetDebugName(RESOURCE_PATH"/shaders/fullscreenVS.spv");
 
-    FShaderModule* pFragment = FShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/tonemap.spv");
+    CShaderModule* pFragment = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/tonemap.spv");
     assert(pFragment != nullptr);
     pFragment->SetDebugName(RESOURCE_PATH"/shaders/tonemap.spv");
 
-    FRenderPassAttachment Attachments[1];
+    SRenderPassAttachment Attachments[1];
     Attachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
     Attachments[0].InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     Attachments[0].FinalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    FRenderPassParams RenderPassParams = {};
+    SRenderPassParams RenderPassParams = {};
     RenderPassParams.ColorAttachmentCount = 1;
     RenderPassParams.pColorAttachments    = Attachments;
 
-    m_pTonemappingRenderPass = FRenderPass::Create(GetDevice(), RenderPassParams);
+    m_pTonemappingRenderPass = CRenderPass::Create(GetDevice(), RenderPassParams);
     assert(m_pTonemappingRenderPass != nullptr);
     m_pTonemappingRenderPass->SetDebugName("TonemappingPass RenderPass");
 
-    FGraphicsPipelineStateParams TonemappingPipelineParams = {};
+    SGraphicsPipelineStateParams TonemappingPipelineParams = {};
     TonemappingPipelineParams.pBindingDescriptions      = nullptr;
     TonemappingPipelineParams.BindingDescriptionCount   = 0;
     TonemappingPipelineParams.pAttributeDescriptions    = nullptr;
@@ -240,7 +240,7 @@ void FBaseRenderer::CreateTonemappingResources()
     TonemappingPipelineParams.pRenderPass               = m_pTonemappingRenderPass;
     TonemappingPipelineParams.pPipelineLayout           = m_pTonemappingPipelineLayout;
 
-    m_pTonemappingPipeline = FGraphicsPipeline::Create(GetDevice(), TonemappingPipelineParams);
+    m_pTonemappingPipeline = CGraphicsPipeline::Create(GetDevice(), TonemappingPipelineParams);
     assert(m_pTonemappingPipeline != nullptr);
     m_pTonemappingPipeline->SetDebugName("TonemappingPass Pipeline");
 
@@ -248,12 +248,12 @@ void FBaseRenderer::CreateTonemappingResources()
     delete pFragment;
 }
 
-void FBaseRenderer::PerformTonemapping(FCommandBuffer* pCommandBuffer)
+void CBaseRenderer::PerformTonemapping(CCommandBuffer* pCommandBuffer)
 {
     // Update Tonemap Settings
-    FTonemappingBuffer TonemappingBuffer = {};
+    STonemappingBuffer TonemappingBuffer = {};
     TonemappingBuffer.Exposure = GetScene()->GetExposure();
-    pCommandBuffer->UpdateBuffer(m_pTonemappingBuffer, 0, sizeof(FTonemappingBuffer), &TonemappingBuffer);
+    pCommandBuffer->UpdateBuffer(m_pTonemappingBuffer, 0, sizeof(STonemappingBuffer), &TonemappingBuffer);
 
     // Begin RenderPass
     VkClearValue ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -287,7 +287,7 @@ void FBaseRenderer::PerformTonemapping(FCommandBuffer* pCommandBuffer)
     pCommandBuffer->EndRenderPass();
 }
 
-void FBaseRenderer::Tick(float DeltaTime)
+void CBaseRenderer::Tick(float DeltaTime)
 {
     m_LastCPUTime = DeltaTime * 1000.0f; // deltaTime is in seconds
 
@@ -299,20 +299,20 @@ void FBaseRenderer::Tick(float DeltaTime)
     if (m_bViewportHasFocus)
     {
         glm::vec3 Translation(0.0f);
-        if (FInput::IsKeyDown(GLFW_KEY_W))
+        if (Input::IsKeyDown(GLFW_KEY_W))
         {
             Translation.z = CameraSpeed * DeltaTime;
         }
-        else if (FInput::IsKeyDown(GLFW_KEY_S))
+        else if (Input::IsKeyDown(GLFW_KEY_S))
         {
             Translation.z = -CameraSpeed * DeltaTime;
         }
 
-        if (FInput::IsKeyDown(GLFW_KEY_A))
+        if (Input::IsKeyDown(GLFW_KEY_A))
         {
             Translation.x = CameraSpeed * DeltaTime;
         }
-        else if (FInput::IsKeyDown(GLFW_KEY_D))
+        else if (Input::IsKeyDown(GLFW_KEY_D))
         {
             Translation.x = -CameraSpeed * DeltaTime;
         }
@@ -323,20 +323,20 @@ void FBaseRenderer::Tick(float DeltaTime)
         constexpr float CameraRotationSpeed = glm::pi<float>() / 2;
 
         glm::vec3 Rotation(0.0f);
-        if (FInput::IsKeyDown(GLFW_KEY_LEFT))
+        if (Input::IsKeyDown(GLFW_KEY_LEFT))
         {
             Rotation.y = -CameraRotationSpeed * DeltaTime;
         }
-        else if (FInput::IsKeyDown(GLFW_KEY_RIGHT))
+        else if (Input::IsKeyDown(GLFW_KEY_RIGHT))
         {
             Rotation.y = CameraRotationSpeed * DeltaTime;
         }
 
-        if (FInput::IsKeyDown(GLFW_KEY_UP))
+        if (Input::IsKeyDown(GLFW_KEY_UP))
         {
             Rotation.x = -CameraRotationSpeed * DeltaTime;
         }
-        else if (FInput::IsKeyDown(GLFW_KEY_DOWN))
+        else if (Input::IsKeyDown(GLFW_KEY_DOWN))
         {
             Rotation.x = CameraRotationSpeed * DeltaTime;
         }
@@ -350,7 +350,7 @@ void FBaseRenderer::Tick(float DeltaTime)
         }
 
         // Reload shaders
-        if (FInput::IsKeyDown(GLFW_KEY_R))
+        if (Input::IsKeyDown(GLFW_KEY_R))
         {
             ReloadShaders();
         }
@@ -361,8 +361,8 @@ void FBaseRenderer::Tick(float DeltaTime)
 
     // Draw
     uint32_t FrameIndex = m_pSwapchain->GetCurrentBackBufferIndex();
-    FQuery* pCurrentTimestampQuery = m_TimestampQueries[FrameIndex];
-    FCommandBuffer* pCurrentCommandBuffer = m_CommandBuffers[FrameIndex];
+    CQuery* pCurrentTimestampQuery = m_TimestampQueries[FrameIndex];
+    CCommandBuffer* pCurrentCommandBuffer = m_CommandBuffers[FrameIndex];
 
     // Reset CommandBuffer
     pCurrentCommandBuffer->Reset();
@@ -412,7 +412,7 @@ void FBaseRenderer::Tick(float DeltaTime)
     }
 
     // Update CameraBuffer
-    FCameraBuffer CameraBuffer = {};
+    SCameraBuffer CameraBuffer = {};
     CameraBuffer.Projection         = GetScene()->GetCamera().GetProjectionMatrix();
     CameraBuffer.View               = GetScene()->GetCamera().GetViewMatrix();
     CameraBuffer.InverseView        = GetScene()->GetCamera().GetInverseViewMatrix();
@@ -421,15 +421,15 @@ void FBaseRenderer::Tick(float DeltaTime)
     CameraBuffer.Forward            = glm::vec4(GetScene()->GetCamera().GetForward(), 0.0f);
     CameraBuffer.FieldOfViewDegrees = Math::ToDegrees(GetScene()->GetCamera().GetFieldOfView());
     
-    pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(FCameraBuffer), &CameraBuffer);
+    pCurrentCommandBuffer->UpdateBuffer(m_pCameraBuffer, 0, sizeof(SCameraBuffer), &CameraBuffer);
 
     // Update RandomBuffer
     constexpr uint32_t MaxSamples = 16;
-    FRandomBuffer RandomBuffer = {};
+    SRandomBuffer RandomBuffer = {};
     RandomBuffer.FrameIndex  = m_FrameIndex;
     RandomBuffer.HaltonIndex = m_FrameIndex % MaxSamples;
 
-    pCurrentCommandBuffer->UpdateBuffer(m_pRandomBuffer, 0, sizeof(FRandomBuffer), &RandomBuffer);
+    pCurrentCommandBuffer->UpdateBuffer(m_pRandomBuffer, 0, sizeof(SRandomBuffer), &RandomBuffer);
 
     // Perform the actual rendering
     Render(pCurrentCommandBuffer);
@@ -441,7 +441,7 @@ void FBaseRenderer::Tick(float DeltaTime)
     m_pDevice->ExecuteGraphics(pCurrentCommandBuffer, nullptr, nullptr);
 }
 
-void FBaseRenderer::OnRenderUI()
+void CBaseRenderer::OnRenderUI()
 {
     // Setup DockSpace
     static ImGuiDockNodeFlags DockspaceFlags = ImGuiDockNodeFlags_None;
@@ -534,18 +534,18 @@ void FBaseRenderer::OnRenderUI()
     RenderUI();
 }
 
-void FBaseRenderer::Release()
+void CBaseRenderer::Release()
 {
     GetDevice()->WaitForIdle();
 
-    FTextureResource::ReleaseLoader();
+    CTextureResource::ReleaseLoader();
 
-    for (FQuery* Query : m_TimestampQueries)
+    for (CQuery* Query : m_TimestampQueries)
     {
         SAFE_DELETE(Query);
     }
 
-    for (FCommandBuffer* CommandBuffer : m_CommandBuffers)
+    for (CCommandBuffer* CommandBuffer : m_CommandBuffers)
     {
         SAFE_DELETE(CommandBuffer);
     }
@@ -586,7 +586,7 @@ void FBaseRenderer::Release()
     SAFE_DELETE(m_pDeviceAllocator);
 }
 
-bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
+bool CBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
 {
     // If the SceneTexture does not exist yet, we just create the resource directly
     if (m_pSceneTexture0)
@@ -615,7 +615,7 @@ bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     m_ViewportHeight = Height;
 
     // Create texture for the viewport
-    FTextureParams TextureParams = {};
+    STextureParams TextureParams = {};
     TextureParams.Format        = VK_FORMAT_R32G32B32A32_SFLOAT;
     TextureParams.ImageType     = VK_IMAGE_TYPE_2D;
     TextureParams.Width         = m_ViewportWidth;
@@ -624,35 +624,35 @@ bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     TextureParams.InitialLayout = VK_IMAGE_LAYOUT_GENERAL;
 
     // Scene texture frame 0
-    m_pSceneTexture0 = FTexture::Create(m_pDevice, TextureParams);
+    m_pSceneTexture0 = CTexture::Create(m_pDevice, TextureParams);
     assert(m_pSceneTexture0 != nullptr);
     m_pSceneTexture0->SetDebugName("SceneTexture0");
 
     {
-        FTextureViewParams TextureViewParams = {};
+        STextureViewParams TextureViewParams = {};
         TextureViewParams.pTexture = m_pSceneTexture0;
 
-        m_pSceneTextureView0 = FTextureView::Create(m_pDevice, TextureViewParams);
+        m_pSceneTextureView0 = CTextureView::Create(m_pDevice, TextureViewParams);
         assert(m_pSceneTextureView0 != nullptr);
         m_pSceneTextureView0->SetDebugName("SceneTextureView0");
     }
 
     // Scene texture frame 1
-    m_pSceneTexture1 = FTexture::Create(m_pDevice, TextureParams);
+    m_pSceneTexture1 = CTexture::Create(m_pDevice, TextureParams);
     assert(m_pSceneTexture1 != nullptr);
     m_pSceneTexture1->SetDebugName("SceneTexture1");
 
     {
-        FTextureViewParams TextureViewParams = {};
+        STextureViewParams TextureViewParams = {};
         TextureViewParams.pTexture = m_pSceneTexture1;
 
-        m_pSceneTextureView1 = FTextureView::Create(m_pDevice, TextureViewParams);
+        m_pSceneTextureView1 = CTextureView::Create(m_pDevice, TextureViewParams);
         assert(m_pSceneTextureView1 != nullptr);
         m_pSceneTextureView1->SetDebugName("SceneTextureView1");
     }
 
     // Create texture for the viewport
-    FTextureParams OutputTextureParams = {};
+    STextureParams OutputTextureParams = {};
     OutputTextureParams.Format        = VK_FORMAT_R8G8B8A8_UNORM;
     OutputTextureParams.ImageType     = VK_IMAGE_TYPE_2D;
     OutputTextureParams.Width         = m_ViewportWidth;
@@ -660,15 +660,15 @@ bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     OutputTextureParams.Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     OutputTextureParams.InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    m_pOutputTexture = FTexture::Create(m_pDevice, OutputTextureParams);
+    m_pOutputTexture = CTexture::Create(m_pDevice, OutputTextureParams);
     assert(m_pOutputTexture != nullptr);
     m_pOutputTexture->SetDebugName("OutputTexture");
 
     {
-        FTextureViewParams TextureViewParams = {};
+        STextureViewParams TextureViewParams = {};
         TextureViewParams.pTexture = m_pOutputTexture;
 
-        m_pOutputTextureView = FTextureView::Create(m_pDevice, TextureViewParams);
+        m_pOutputTextureView = CTextureView::Create(m_pDevice, TextureViewParams);
         assert(m_pOutputTextureView != nullptr);
         m_pOutputTextureView->SetDebugName("OutputTextureView");
     }
@@ -676,14 +676,14 @@ bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     // Create Framebuffer for the tonemap stage
     VkImageView ImageView = m_pOutputTextureView->GetImageView();
 
-    FFramebufferParams FramebufferParams = {};
+    SFramebufferParams FramebufferParams = {};
     FramebufferParams.AttachmentCount = 1;
     FramebufferParams.Width           = m_ViewportWidth;
     FramebufferParams.Height          = m_ViewportHeight;
     FramebufferParams.pRenderPass     = m_pTonemappingRenderPass;
     FramebufferParams.pAttachMents    = &ImageView;
 
-    m_pTonemappingFramebuffer = FFramebuffer::Create(m_pDevice, FramebufferParams);
+    m_pTonemappingFramebuffer = CFramebuffer::Create(m_pDevice, FramebufferParams);
     m_pTonemappingFramebuffer->SetDebugName("TonemappingPass FrameBuffer");
 
     // UI DescriptorSet
@@ -700,17 +700,17 @@ bool FBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
     return true;
 }
 
-void FBaseRenderer::CreateDescriptorSets()
+void CBaseRenderer::CreateDescriptorSets()
 {
     // Tonemap Pass
-    m_pTonemappingDescriptorSet0 = FDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pTonemappingDescriptorSetLayout);
+    m_pTonemappingDescriptorSet0 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pTonemappingDescriptorSetLayout);
     assert(m_pTonemappingDescriptorSet0 != nullptr);
     m_pTonemappingDescriptorSet0->SetDebugName("TonemappingPass DescriptorSet0");
 
     m_pTonemappingDescriptorSet0->BindCombinedImageSampler(m_pSceneTextureView0->GetImageView(), m_pTonemapSampler->GetSampler(), 0);
     m_pTonemappingDescriptorSet0->BindUniformBuffer(m_pTonemappingBuffer->GetBuffer(), 1);
     
-    m_pTonemappingDescriptorSet1 = FDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pTonemappingDescriptorSetLayout);
+    m_pTonemappingDescriptorSet1 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pTonemappingDescriptorSetLayout);
     assert(m_pTonemappingDescriptorSet1 != nullptr);
     m_pTonemappingDescriptorSet1->SetDebugName("TonemappingPass DescriptorSet1");
 
@@ -718,41 +718,41 @@ void FBaseRenderer::CreateDescriptorSets()
     m_pTonemappingDescriptorSet1->BindUniformBuffer(m_pTonemappingBuffer->GetBuffer(), 1);
 }
 
-void FBaseRenderer::ReleaseDescriptorSets()
+void CBaseRenderer::ReleaseDescriptorSets()
 {
     SAFE_DELETE(m_pTonemappingDescriptorSet0);
     SAFE_DELETE(m_pTonemappingDescriptorSet1);
 }
 
-void FBaseRenderer::CreateGlobalBuffers()
+void CBaseRenderer::CreateGlobalBuffers()
 {
     // Camera
-    FBufferParams CameraBufferParams;
-    CameraBufferParams.Size             = sizeof(FCameraBuffer);
+    SBufferParams CameraBufferParams;
+    CameraBufferParams.Size             = sizeof(SCameraBuffer);
     CameraBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     CameraBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pCameraBuffer = FBuffer::Create(GetDevice(), CameraBufferParams, GetDeviceAllocator());
+    m_pCameraBuffer = CBuffer::Create(GetDevice(), CameraBufferParams, GetDeviceAllocator());
     assert(m_pCameraBuffer != nullptr);
     m_pCameraBuffer->SetDebugName("CameraBuffer");
 
     // Random
-    FBufferParams RandomBufferParams;
-    RandomBufferParams.Size             = sizeof(FRandomBuffer);
+    SBufferParams RandomBufferParams;
+    RandomBufferParams.Size             = sizeof(SRandomBuffer);
     RandomBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     RandomBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pRandomBuffer = FBuffer::Create(GetDevice(), RandomBufferParams, GetDeviceAllocator());
+    m_pRandomBuffer = CBuffer::Create(GetDevice(), RandomBufferParams, GetDeviceAllocator());
     assert(m_pRandomBuffer != nullptr);
     m_pRandomBuffer->SetDebugName("RandomBuffer");
 
     // TonemappingBuffer
-    FBufferParams TonemappingBufferParams;
-    TonemappingBufferParams.Size             = sizeof(FTonemappingBuffer);
+    SBufferParams TonemappingBufferParams;
+    TonemappingBufferParams.Size             = sizeof(STonemappingBuffer);
     TonemappingBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     TonemappingBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    m_pTonemappingBuffer = FBuffer::Create(GetDevice(), TonemappingBufferParams, GetDeviceAllocator());
+    m_pTonemappingBuffer = CBuffer::Create(GetDevice(), TonemappingBufferParams, GetDeviceAllocator());
     assert(m_pTonemappingBuffer != nullptr);
     m_pTonemappingBuffer->SetDebugName("TonemappingBuffer");
 }

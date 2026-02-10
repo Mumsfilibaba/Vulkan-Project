@@ -103,27 +103,27 @@ layout(binding = 5) uniform SceneBufferObject
 
 layout(std430, binding = 6) readonly buffer QuadBuffer
 {
-    FQuad Quads[];
+    SQuad Quads[];
 };
 
 layout(std430, binding = 7) readonly buffer SphereBuffer
 {
-    FSphere Spheres[];
+    SSphere Spheres[];
 };
 
 layout(std430, binding = 8) readonly buffer MaterialBuffer
 {
-    FMaterial Materials[];
+    SMaterial Materials[];
 };
 
 layout(scalar, binding = 9) readonly buffer VertexPositionsBuffer
 {
-    FVertexPosition VertexPositions[];
+    SVertexPosition VertexPositions[];
 };
 
 layout(scalar, binding = 10) readonly buffer VertexBuffer
 {
-    FVertex Vertices[];
+    SVertex Vertices[];
 };
 
 layout(scalar, binding = 11) readonly buffer IndexBuffer
@@ -133,17 +133,17 @@ layout(scalar, binding = 11) readonly buffer IndexBuffer
 
 layout(scalar, binding = 12) readonly buffer TriangleInfoBuffer
 {
-    FTriangle Triangles[];
+    STriangle Triangles[];
 };
 
 layout(std430, binding = 13) readonly buffer MeshBuffer
 {
-    FMesh Meshes[];
+    SMesh Meshes[];
 };
 
 layout(std430, binding = 14) readonly buffer BvhBuffer
 {
-    FBoundingBox BvhNodes[];
+    SBoundingBox BvhNodes[];
 };
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -154,7 +154,7 @@ bool IsAlmostZero(vec3 Value)
     return Value.x <= SIGMA && Value.y <= SIGMA && Value.z <= SIGMA; 
 }
 
-void HitQuad(in FQuad Quad, in FRay Ray, inout FRayPayLoad PayLoad)
+void HitQuad(in SQuad Quad, in SRay Ray, inout SRayPayLoad PayLoad)
 {
     vec3 Q = Quad.Position.xyz;
     vec3 U = Quad.Edge0.xyz;
@@ -212,7 +212,7 @@ void HitQuad(in FQuad Quad, in FRay Ray, inout FRayPayLoad PayLoad)
     }
 }
 
-void HitSphere(in FSphere Sphere, in FRay Ray, inout FRayPayLoad PayLoad)
+void HitSphere(in SSphere Sphere, in SRay Ray, inout SRayPayLoad PayLoad)
 {
     // Extract sphere position and radius
     vec3 SpherePos = Sphere.PositionAndRadius.xyz;
@@ -267,9 +267,9 @@ void HitSphere(in FSphere Sphere, in FRay Ray, inout FRayPayLoad PayLoad)
     }
 }
 
-FHitInfo HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in vec3 RayOrigin, in vec3 RayDirection) 
+SHitInfo HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in vec3 RayOrigin, in vec3 RayDirection) 
 {
-    FHitInfo HitInfo;
+    SHitInfo HitInfo;
     HitInfo.Dist = LARGE_NUMBER;
 
     // Compute the triangle edges
@@ -306,7 +306,7 @@ FHitInfo HitTriangle(in vec3 Vertex0, in vec3 Vertex1, in vec3 Vertex2, in vec3 
     return HitInfo;
 }
 
-void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, inout ivec2 Stats)
+void HitMesh(uint RootBoxIndex, in SRay Ray, inout SRayPayLoad PayLoad, inout ivec2 Stats)
 {
     // Create a stack for checking all the nodes
     const uint MaxDepth = BVH_MAX_DEPTH;
@@ -317,7 +317,7 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, inout iv
     Stack[StackIndex] = RootBoxIndex;
 
     // Start traversing the bounding boxes
-    FHitInfo LastHitInfo;
+    SHitInfo LastHitInfo;
     int LastTriangleHitIndex = -1;
     while (StackIndex >= 0)
     {
@@ -326,7 +326,7 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, inout iv
         StackIndex--;
 
         // Check if we hit this node
-        FBoundingBox Node = BvhNodes[NodeIndex];
+        SBoundingBox Node = BvhNodes[NodeIndex];
         if (floatBitsToUint(Node.BoxMaxAndNumTriangles.w) > 0)
         {
             uint LastTriangleIndex = floatBitsToUint(Node.BoxMinAndIndex.w) + floatBitsToUint(Node.BoxMaxAndNumTriangles.w);
@@ -337,7 +337,7 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, inout iv
                 vec3 Position1 = VertexPositions[Indicies.y].Position.xyz;
                 vec3 Position2 = VertexPositions[Indicies.z].Position.xyz;
 
-                FHitInfo HitInfo = HitTriangle(Position0, Position1, Position2, Ray.Origin, Ray.Direction);
+                SHitInfo HitInfo = HitTriangle(Position0, Position1, Position2, Ray.Origin, Ray.Direction);
                 Stats[1]++;
 
                 if (HitInfo.Dist > PayLoad.MinT && HitInfo.Dist < PayLoad.MaxT && HitInfo.Dist < PayLoad.T)
@@ -392,7 +392,7 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, inout iv
         vec3 Tangent1 = Vertices[Indicies.y].Tangent.xyz;
         vec3 Tangent2 = Vertices[Indicies.z].Tangent.xyz;
 
-        FTriangle Triangle = Triangles[LastTriangleHitIndex];
+        STriangle Triangle = Triangles[LastTriangleHitIndex];
         PayLoad.BaryCentrics  = vec3(LastHitInfo.BaryCentrics, 1.0 - (LastHitInfo.BaryCentrics.x + LastHitInfo.BaryCentrics.y));
         PayLoad.Normal        = normalize((PayLoad.BaryCentrics.x * Normal1)  + (PayLoad.BaryCentrics.y * Normal2)  + (PayLoad.BaryCentrics.z * Normal0));
         PayLoad.Tangent       = normalize((PayLoad.BaryCentrics.x * Tangent1) + (PayLoad.BaryCentrics.y * Tangent2) + (PayLoad.BaryCentrics.z * Tangent0));
@@ -413,23 +413,23 @@ void HitMesh(uint RootBoxIndex, in FRay Ray, inout FRayPayLoad PayLoad, inout iv
     }
 }
 
-bool TraceRay(in FRay Ray, inout FRayPayLoad PayLoad, inout ivec2 Stats)
+bool TraceRay(in SRay Ray, inout SRayPayLoad PayLoad, inout ivec2 Stats)
 {
     for (uint i = 0; i < uScene.NumSpheres; i++)
     {
-        FSphere Sphere = Spheres[i];
+        SSphere Sphere = Spheres[i];
         HitSphere(Sphere, Ray, PayLoad);
     }
 
     for (uint i = 0; i < uScene.NumQuads; i++)
     {
-        FQuad Quad = Quads[i];
+        SQuad Quad = Quads[i];
         HitQuad(Quad, Ray, PayLoad);
     }
 
     for (uint i = 0; i < uScene.NumMeshes; i++)
     {
-        FMesh Mesh = Meshes[i];
+        SMesh Mesh = Meshes[i];
         HitMesh(Mesh.BoundingBoxIndex, Ray, PayLoad, Stats);
     }
 
@@ -516,7 +516,7 @@ vec3 GetEnvironmentLight(vec3 RayDirection)
     }
 }
 
-vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
+vec3 GetColorForRay(in SRay Ray, inout uint RandomSeed)
 {
     // Start tracing rays
     vec3 RayColor    = vec3(1.0);
@@ -529,7 +529,7 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
     const uint MaxBounces = min(uScene.NumBounces, MAX_NUM_BOUNCES) + 1;
     for (uint i = 0; i < MaxBounces; i++)
     {
-        FRayPayLoad PayLoad;
+        SRayPayLoad PayLoad;
         PayLoad.MinT        = 0.0001;
         PayLoad.MaxT        = 100000.0;
         PayLoad.T           = PayLoad.MaxT;
@@ -539,7 +539,7 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
         if (TraceRay(Ray, PayLoad, Stats))
         {
             const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
-            FMaterial Material = Materials[MaterialIndex];
+            SMaterial Material = Materials[MaterialIndex];
 
             // Perform NormalMapping
             vec3 Normal;
@@ -696,9 +696,9 @@ vec3 GetColorForRay(in FRay Ray, inout uint RandomSeed)
     return SampleColor;
 }
 
-vec3 GetNormalForRay(in FRay Ray)
+vec3 GetNormalForRay(in SRay Ray)
 {
-    FRayPayLoad PayLoad;
+    SRayPayLoad PayLoad;
     PayLoad.MinT        = 0.0001;
     PayLoad.MaxT        = 100000.0;
     PayLoad.T           = PayLoad.MaxT;
@@ -712,7 +712,7 @@ vec3 GetNormalForRay(in FRay Ray)
         const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
 
         vec3 Normal;
-        FMaterial Material = Materials[MaterialIndex];
+        SMaterial Material = Materials[MaterialIndex];
         if (Material.NormalTexIndex != INVALID_BINDLESS_ID)
         {
             vec3 BiTangent = cross(PayLoad.Normal, PayLoad.Tangent);
@@ -740,9 +740,9 @@ vec3 GetNormalForRay(in FRay Ray)
     }
 }
 
-vec3 GetBarycentricsForRay(in FRay Ray)
+vec3 GetBarycentricsForRay(in SRay Ray)
 {
-    FRayPayLoad PayLoad;
+    SRayPayLoad PayLoad;
     PayLoad.MinT         = 0.0001;
     PayLoad.MaxT         = 100000.0;
     PayLoad.T            = PayLoad.MaxT;
@@ -762,9 +762,9 @@ vec3 GetBarycentricsForRay(in FRay Ray)
     }
 }
 
-vec3 GetTexCoordsForRay(in FRay Ray)
+vec3 GetTexCoordsForRay(in SRay Ray)
 {
-    FRayPayLoad PayLoad;
+    SRayPayLoad PayLoad;
     PayLoad.MinT        = 0.0001;
     PayLoad.MaxT        = 100000.0;
     PayLoad.T           = PayLoad.MaxT;
@@ -784,9 +784,9 @@ vec3 GetTexCoordsForRay(in FRay Ray)
     }
 }
 
-vec3 GetAlbedoForRay(in FRay Ray)
+vec3 GetAlbedoForRay(in SRay Ray)
 {
-    FRayPayLoad PayLoad;
+    SRayPayLoad PayLoad;
     PayLoad.MinT        = 0.0001;
     PayLoad.MaxT        = 100000.0;
     PayLoad.T           = PayLoad.MaxT;
@@ -799,7 +799,7 @@ vec3 GetAlbedoForRay(in FRay Ray)
     {
         const uint MaterialIndex = min(PayLoad.MaterialIndex, uScene.NumMaterials - 1);
 
-        FMaterial Material = Materials[MaterialIndex];
+        SMaterial Material = Materials[MaterialIndex];
         if (Material.AlbedoTexIndex != INVALID_BINDLESS_ID)
         {
             return texture(uTextures[Material.AlbedoTexIndex], PayLoad.TexCoords).rgb;
@@ -815,9 +815,9 @@ vec3 GetAlbedoForRay(in FRay Ray)
     }
 }
 
-vec3 GetColorForRay_BvhDebug(in FRay Ray)
+vec3 GetColorForRay_BvhDebug(in SRay Ray)
 {
-    FRayPayLoad PayLoad;
+    SRayPayLoad PayLoad;
     PayLoad.MinT        = 0.0001;
     PayLoad.MaxT        = 100000.0;
     PayLoad.T           = PayLoad.MaxT;
@@ -846,7 +846,7 @@ void main()
     const vec3 FilmTarget = CalculateFilmTarget(Pixel, Size, Jitter);
 
     // Setup the first Ray
-    FRay Ray;
+    SRay Ray;
     Ray.Origin       = CameraPosition;
     Ray.Direction    = normalize(FilmTarget - CameraPosition);
     Ray.InvDirection = 1.0 / Ray.Direction;

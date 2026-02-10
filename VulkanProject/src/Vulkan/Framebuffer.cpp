@@ -3,9 +3,9 @@
 #include "Device.h"
 #include "Extensions.h"
 
-FFramebuffer* FFramebuffer::Create(FDevice* pDevice, const FFramebufferParams& Params)
+CFramebuffer* CFramebuffer::Create(CDevice* pDevice, const SFramebufferParams& Params)
 {
-    FFramebuffer* pFramebuffer = new FFramebuffer(pDevice);
+    CFramebuffer* pFramebuffer = new CFramebuffer(pDevice);
     
     assert(Params.pRenderPass != nullptr);
 
@@ -37,13 +37,13 @@ FFramebuffer* FFramebuffer::Create(FDevice* pDevice, const FFramebufferParams& P
     return pFramebuffer;
 }
 
-FFramebuffer::FFramebuffer(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CFramebuffer::CFramebuffer(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_Framebuffer(VK_NULL_HANDLE)
 {
 }
 
-FFramebuffer::~FFramebuffer()
+CFramebuffer::~CFramebuffer()
 {
     if (m_Framebuffer != VK_NULL_HANDLE)
     {
@@ -52,9 +52,9 @@ FFramebuffer::~FFramebuffer()
     }
 }
 
-void FFramebuffer::SetDebugName(const char* DebugName)
+void CFramebuffer::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -64,7 +64,7 @@ void FFramebuffer::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Framebuffer);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);

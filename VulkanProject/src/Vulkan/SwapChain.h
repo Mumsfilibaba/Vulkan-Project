@@ -3,27 +3,27 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-class FDevice;
+class CDevice;
 
-class FSwapchain : public FDeviceChild
+class CSwapchain : public CDeviceChild
 {
-    struct FFrameData
+    struct SFrameData
     {
         VkImage     BackBuffer      = VK_NULL_HANDLE;
         VkImageView BackBufferView  = VK_NULL_HANDLE;
     };
     
-    struct FSemaphores
+    struct SSemaphores
     {
         VkSemaphore ImageSemaphore  = VK_NULL_HANDLE;
         VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
     };
     
 public:
-    static FSwapchain* Create(FDevice* pDevice, GLFWwindow* pWindow);
+    static CSwapchain* Create(CDevice* pDevice, GLFWwindow* pWindow);
     
-    FSwapchain(FDevice* pDevice, GLFWwindow* pWindow);
-    ~FSwapchain();
+    CSwapchain(CDevice* pDevice, GLFWwindow* pWindow);
+    ~CSwapchain();
 
     void Resize(uint32_t Width, uint32_t Height);
     VkResult Present();
@@ -85,8 +85,8 @@ private:
     VkPresentModeKHR         m_PresentMode;
     uint32_t                 m_ImageCount;
     uint32_t                 m_SemaphoreCount;
-    std::vector<FFrameData>  m_FrameData;
-    std::vector<FSemaphores> m_SemaphoreData;
+    std::vector<SFrameData>  m_FrameData;
+    std::vector<SSemaphores> m_SemaphoreData;
     mutable uint32_t         m_SemaphoreIndex;
     mutable uint32_t         m_CurrentBufferIndex;
 };

@@ -7,9 +7,9 @@
 #include "BindlessManager.h"
 #include "Extensions.h"
 
-FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferParams& Params)
+CCommandBuffer* CCommandBuffer::Create(CDevice* pDevice, const SCommandBufferParams& Params)
 {
-    FCommandBuffer* pCommandBuffer = new FCommandBuffer(pDevice);
+    CCommandBuffer* pCommandBuffer = new CCommandBuffer(pDevice);
     
     VkCommandPoolCreateInfo CommandPoolInfo;
     ZERO_STRUCT(&CommandPoolInfo);
@@ -67,8 +67,8 @@ FCommandBuffer* FCommandBuffer::Create(FDevice* pDevice, const FCommandBufferPar
     return pCommandBuffer;
 }
 
-FCommandBuffer::FCommandBuffer(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CCommandBuffer::CCommandBuffer(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_CommandPool(VK_NULL_HANDLE)
     , m_CommandBuffer(VK_NULL_HANDLE)
     , m_Fence(VK_NULL_HANDLE)
@@ -76,7 +76,7 @@ FCommandBuffer::FCommandBuffer(FDevice* pDevice)
 {
 }
 
-FCommandBuffer::~FCommandBuffer()
+CCommandBuffer::~CCommandBuffer()
 {
     if (m_Fence != VK_NULL_HANDLE)
     {
@@ -91,9 +91,9 @@ FCommandBuffer::~FCommandBuffer()
     }
 }
 
-void FCommandBuffer::SetDebugName(const char* DebugName)
+void CCommandBuffer::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -103,7 +103,7 @@ void FCommandBuffer::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_CommandBuffer);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
@@ -112,7 +112,7 @@ void FCommandBuffer::SetDebugName(const char* DebugName)
         DebugNameInfo.objectType   = VK_OBJECT_TYPE_COMMAND_POOL;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_CommandPool);
 
-        Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
@@ -121,7 +121,7 @@ void FCommandBuffer::SetDebugName(const char* DebugName)
         DebugNameInfo.objectType   = VK_OBJECT_TYPE_FENCE;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Fence);
 
-        Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
@@ -129,18 +129,18 @@ void FCommandBuffer::SetDebugName(const char* DebugName)
     }
 }
 
-void FCommandBuffer::BindBindlessDescriptors(FPipelineLayout* pPipelineLayout, VkPipelineBindPoint BindPoint)
+void CCommandBuffer::BindBindlessDescriptors(CPipelineLayout* pPipelineLayout, VkPipelineBindPoint BindPoint)
 {
     assert(pPipelineLayout != nullptr);
     assert(pPipelineLayout->GetBindlessDescriptorSetIndex() != uint32_t(-1));
     
-    FBindlessManager& BindlessManager = GetDevice()->GetBindlessManager();
+    CBindlessManager& BindlessManager = GetDevice()->GetBindlessManager();
     VkDescriptorSet BindlessDescriptorSet = BindlessManager.GetDescriptorSet();
     vkCmdBindDescriptorSets(m_CommandBuffer, BindPoint, pPipelineLayout->GetPipelineLayout(), pPipelineLayout->GetBindlessDescriptorSetIndex(), 1, &BindlessDescriptorSet, 0, nullptr);
     m_NumCommands++;
 }
 
-void FCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkImageAspectFlags AspectMask)
+void CCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkImageAspectFlags AspectMask)
 {
     VkImageMemoryBarrier Barrier;
     ZERO_STRUCT(&Barrier);

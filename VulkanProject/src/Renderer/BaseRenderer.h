@@ -3,21 +3,21 @@
 #include "IRenderer.h"
 #include "Vulkan/DeviceMemoryAllocator.h"
 
-class FQuery;
-class FTexture;
-class FDescriptorSet;
-class FTextureView;
-class FTextureResource;
-class FSampler;
-class FBuffer;
-class FGraphicsPipeline;
-class FComputePipeline;
-class FRenderPass;
-class FPipelineLayout;
-class FDescriptorSetLayout;
-class FFramebuffer;
+class CQuery;
+class CTexture;
+class CDescriptorSet;
+class CTextureView;
+class CTextureResource;
+class CSampler;
+class CBuffer;
+class CGraphicsPipeline;
+class CComputePipeline;
+class CRenderPass;
+class CPipelineLayout;
+class CDescriptorSetLayout;
+class CFramebuffer;
 
-struct FTonemappingBuffer
+struct STonemappingBuffer
 {
     // 0-4
     float Exposure = 0.5f;
@@ -28,7 +28,7 @@ struct FTonemappingBuffer
     uint32_t Padding2 = 0;
 };
 
-struct FRandomBuffer
+struct SRandomBuffer
 {
     // 0-8
     uint32_t FrameIndex  = 0;
@@ -39,23 +39,23 @@ struct FRandomBuffer
     uint32_t Padding1 = 0;
 };
 
-class FBaseRenderer : public IRenderer
+class CBaseRenderer : public IRenderer
 {
 public:
-    FBaseRenderer();
-    ~FBaseRenderer();
+    CBaseRenderer();
+    ~CBaseRenderer();
 
     // IRenderer Interface
-    virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) override final;
+    virtual void Init(CDevice* pDevice, CSwapchain* pSwapchain) override final;
     virtual void Release() override final;
 
     virtual void Tick(float DeltaTime) override final;
 
     virtual void OnRenderUI() override final;
 
-    virtual FDevice* GetDevice() const override final { return m_pDevice; }
-    virtual FDeviceMemoryAllocator* GetDeviceAllocator() const override final { return m_pDeviceAllocator; }
-    virtual FDescriptorPool* GetDescriptorPool() const override final { return m_pDescriptorPool; }
+    virtual CDevice* GetDevice() const override final { return m_pDevice; }
+    virtual CDeviceMemoryAllocator* GetDeviceAllocator() const override final { return m_pDeviceAllocator; }
+    virtual CDescriptorPool* GetDescriptorPool() const override final { return m_pDescriptorPool; }
 
     // BaseRenderer Interface
     virtual bool CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height);
@@ -69,12 +69,12 @@ public:
     virtual void CreateDescriptorSets();
     virtual void ReleaseDescriptorSets();
 
-    virtual void Render(FCommandBuffer* pCommandBuffer) = 0;
+    virtual void Render(CCommandBuffer* pCommandBuffer) = 0;
 
     virtual void CreateGlobalBuffers();
 
     void CreateTonemappingResources();
-    void PerformTonemapping(FCommandBuffer* pCommandBuffer);
+    void PerformTonemapping(CCommandBuffer* pCommandBuffer);
 
     void ResetImage()
     {
@@ -99,35 +99,35 @@ public:
 protected:
 
     // Scene textures
-    FTexture*         m_pSceneTexture0;
-    FTextureView*     m_pSceneTextureView0;
-    FTexture*         m_pSceneTexture1;
-    FTextureView*     m_pSceneTextureView1;
-    FTexture*         m_pOutputTexture;
-    FTextureView*     m_pOutputTextureView;
+    CTexture*         m_pSceneTexture0;
+    CTextureView*     m_pSceneTextureView0;
+    CTexture*         m_pSceneTexture1;
+    CTextureView*     m_pSceneTextureView1;
+    CTexture*         m_pOutputTexture;
+    CTextureView*     m_pOutputTextureView;
 
     // Samplers
-    FSampler*         m_pSkyboxSampler;
+    CSampler*         m_pSkyboxSampler;
 
     // Buffers
-    FBuffer*          m_pCameraBuffer;
-    FBuffer*          m_pRandomBuffer;
+    CBuffer*          m_pCameraBuffer;
+    CBuffer*          m_pRandomBuffer;
 
     // Skybox
-    FTextureResource* m_pSkybox;
+    CTextureResource* m_pSkybox;
     uint32_t          m_SkyboxBindlessIndex;
 
 private:
 
     // Base Objects
-    FDevice*                m_pDevice;
-    FSwapchain*             m_pSwapchain;
-    FDeviceMemoryAllocator* m_pDeviceAllocator;
-    FDescriptorPool*        m_pDescriptorPool;
+    CDevice*                m_pDevice;
+    CSwapchain*             m_pSwapchain;
+    CDeviceMemoryAllocator* m_pDeviceAllocator;
+    CDescriptorPool*        m_pDescriptorPool;
 
     // Frame-Data
-    std::vector<FCommandBuffer*> m_CommandBuffers;
-    std::vector<FQuery*>         m_TimestampQueries;
+    std::vector<CCommandBuffer*> m_CommandBuffers;
+    std::vector<CQuery*>         m_TimestampQueries;
 
     // Samples
     std::atomic_bool m_bResetImage;
@@ -143,18 +143,18 @@ private:
     bool     m_bViewportHasFocus;
 
     // Scene textures
-    FDescriptorSet* m_pOutputTextureDescriptorSet;
+    CDescriptorSet* m_pOutputTextureDescriptorSet;
 
     // Samplers
-    FSampler* m_pTonemapSampler;
+    CSampler* m_pTonemapSampler;
 
     // ToneMapping
-    FBuffer*              m_pTonemappingBuffer;
-    FGraphicsPipeline*    m_pTonemappingPipeline;
-    FRenderPass*          m_pTonemappingRenderPass;
-    FPipelineLayout*      m_pTonemappingPipelineLayout;
-    FDescriptorSetLayout* m_pTonemappingDescriptorSetLayout;
-    FDescriptorSet*       m_pTonemappingDescriptorSet0;
-    FDescriptorSet*       m_pTonemappingDescriptorSet1;
-    FFramebuffer*         m_pTonemappingFramebuffer;
+    CBuffer*              m_pTonemappingBuffer;
+    CGraphicsPipeline*    m_pTonemappingPipeline;
+    CRenderPass*          m_pTonemappingRenderPass;
+    CPipelineLayout*      m_pTonemappingPipelineLayout;
+    CDescriptorSetLayout* m_pTonemappingDescriptorSetLayout;
+    CDescriptorSet*       m_pTonemappingDescriptorSet0;
+    CDescriptorSet*       m_pTonemappingDescriptorSet1;
+    CFramebuffer*         m_pTonemappingFramebuffer;
 };

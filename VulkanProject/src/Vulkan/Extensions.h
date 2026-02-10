@@ -1,7 +1,7 @@
 #pragma once
 #include <vulkan/vulkan.h>
 
-struct FExtensions
+struct Extensions
 {
     // SetDebugName
     static PFN_vkSetDebugUtilsObjectNameEXT    vkSetDebugUtilsObjectNameEXT;

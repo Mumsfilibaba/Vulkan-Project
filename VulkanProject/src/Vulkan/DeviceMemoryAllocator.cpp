@@ -9,7 +9,7 @@
 
 constexpr float mb = 1024.0f * 1024.0f;
 
-FDeviceMemoryPage::FDeviceMemoryPage(VkDevice Device, VkPhysicalDevice PhyicalDevice, uint32_t Id, VkDeviceSize SizeInBytes, uint32_t MemoryType, VkMemoryPropertyFlags Properties)
+CDeviceMemoryPage::CDeviceMemoryPage(VkDevice Device, VkPhysicalDevice PhyicalDevice, uint32_t Id, VkDeviceSize SizeInBytes, uint32_t MemoryType, VkMemoryPropertyFlags Properties)
     : m_Device(Device)
     , m_PhysicalDevice(PhyicalDevice)
     , m_Properties(Properties)
@@ -24,7 +24,7 @@ FDeviceMemoryPage::FDeviceMemoryPage(VkDevice Device, VkPhysicalDevice PhyicalDe
     Init();
 }
 
-FDeviceMemoryPage::~FDeviceMemoryPage()
+CDeviceMemoryPage::~CDeviceMemoryPage()
 {
     if (m_DeviceMemory != VK_NULL_HANDLE)
     {
@@ -34,7 +34,7 @@ FDeviceMemoryPage::~FDeviceMemoryPage()
         // Print MemoryLeaks
     #if defined(ALLOCATOR_DEBUG)
         {
-            FDeviceMemoryBlock* pDebug = m_pHead;
+            SDeviceMemoryBlock* pDebug = m_pHead;
             LOG("Allocated blocks left in MemoryPage '" << m_ID << "'\n");
             while (pDebug)
             {
@@ -45,10 +45,10 @@ FDeviceMemoryPage::~FDeviceMemoryPage()
     #endif
 
         // Delete all blocks
-        FDeviceMemoryBlock* pCurrent = m_pHead;
+        SDeviceMemoryBlock* pCurrent = m_pHead;
         while (pCurrent != nullptr)
         {
-            FDeviceMemoryBlock* pOld = pCurrent;
+            SDeviceMemoryBlock* pOld = pCurrent;
             pCurrent = pCurrent->pNext;
 
             //Delete block
@@ -63,7 +63,7 @@ FDeviceMemoryPage::~FDeviceMemoryPage()
     }
 }
 
-void FDeviceMemoryPage::Init()
+void CDeviceMemoryPage::Init()
 {
     //Allocate device memory
     VkMemoryAllocateInfo AllocateInfo = {};
@@ -81,7 +81,7 @@ void FDeviceMemoryPage::Init()
     {
         LOG("Allocated '%llu' bytes for MemoryPage\n", m_SizeInBytes);
 
-        if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+        if (Extensions::vkSetDebugUtilsObjectNameEXT)
         {
             const std::string DebugName = "DeviceMemoryPage[" + std::to_string(m_ID) + "]";
             VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
@@ -92,7 +92,7 @@ void FDeviceMemoryPage::Init()
             DebugNameInfo.pObjectName  = DebugName.c_str();
             DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_DeviceMemory);
 
-            VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(m_Device, &DebugNameInfo);
+            VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(m_Device, &DebugNameInfo);
             if (Result != VK_SUCCESS)
             {
                 LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
@@ -101,7 +101,7 @@ void FDeviceMemoryPage::Init()
     }
 
     // Setup first block
-    m_pHead = new FDeviceMemoryBlock();
+    m_pHead = new SDeviceMemoryBlock();
     m_pHead->pPage              = this;
     m_pHead->pNext              = nullptr;
     m_pHead->pPrevious          = nullptr;
@@ -118,14 +118,14 @@ void FDeviceMemoryPage::Init()
     }
 }
 
-bool FDeviceMemoryPage::Allocate(FDeviceAllocation& Allocation, VkDeviceSize SizeInBytes, VkDeviceSize Alignment, VkDeviceSize Granularity)
+bool CDeviceMemoryPage::Allocate(SDeviceAllocation& Allocation, VkDeviceSize SizeInBytes, VkDeviceSize Alignment, VkDeviceSize Granularity)
 {
     VkDeviceSize PaddedDeviceOffset = 0;
     VkDeviceSize PaddedSizeInBytes  = 0;
-    FDeviceMemoryBlock* pBestFit = nullptr;
+    SDeviceMemoryBlock* pBestFit = nullptr;
 
     // Find enough free space, and find the block that best fits
-    for (FDeviceMemoryBlock* pCurrent = m_pHead; pCurrent != nullptr; pCurrent = pCurrent->pNext)
+    for (SDeviceMemoryBlock* pCurrent = m_pHead; pCurrent != nullptr; pCurrent = pCurrent->pNext)
     {
         // Check if the block is allocated or not
         if (!pCurrent->IsFree)
@@ -145,7 +145,7 @@ bool FDeviceMemoryPage::Allocate(FDeviceAllocation& Allocation, VkDeviceSize Siz
         // Take granularity into account
         if (pCurrent->pPrevious != nullptr && Granularity > 1)
         {
-            FDeviceMemoryBlock* pPrevious = pCurrent->pPrevious;
+            SDeviceMemoryBlock* pPrevious = pCurrent->pPrevious;
             if (IsOnSamePage(pPrevious->DeviceMemoryOffset, pPrevious->SizeInBytes, PaddedDeviceOffset, Granularity))
             {
                 PaddedDeviceOffset = Math::AlignUp(PaddedDeviceOffset, Granularity);
@@ -164,7 +164,7 @@ bool FDeviceMemoryPage::Allocate(FDeviceAllocation& Allocation, VkDeviceSize Siz
         // Avoid granularity conflict
         if (Granularity > 1 && pCurrent->pNext != nullptr)
         {
-            FDeviceMemoryBlock* pNext = pCurrent->pNext;
+            SDeviceMemoryBlock* pNext = pCurrent->pNext;
             if (IsOnSamePage(PaddedDeviceOffset, SizeInBytes, pNext->DeviceMemoryOffset, Granularity))
             {
                 continue;
@@ -188,7 +188,7 @@ bool FDeviceMemoryPage::Allocate(FDeviceAllocation& Allocation, VkDeviceSize Siz
     if (pBestFit->SizeInBytes > PaddedSizeInBytes)
     {
         // Create a new block after allocation
-        FDeviceMemoryBlock* pBlock = new FDeviceMemoryBlock();
+        SDeviceMemoryBlock* pBlock = new SDeviceMemoryBlock();
         pBlock->pPage              = this;
         pBlock->ID                 = m_BlockCount++;
         pBlock->SizeInBytes        = pBestFit->SizeInBytes - PaddedSizeInBytes;
@@ -229,7 +229,7 @@ bool FDeviceMemoryPage::Allocate(FDeviceAllocation& Allocation, VkDeviceSize Siz
 #if defined (ALLOCATOR_DEBUG)
     {
         LOG("Memory Page '" << m_ID << "'\n");
-        for (FDeviceMemoryBlock* pCurrent = m_pHead; pCurrent != nullptr; pCurrent = pCurrent->pNext)
+        for (SDeviceMemoryBlock* pCurrent = m_pHead; pCurrent != nullptr; pCurrent = pCurrent->pNext)
         {
             LOG("----Block " << pCurrent->ID << "----\n");
             LOG("Starts at: Dec=" << pCurrent->DeviceMemoryOffset << ", Hex=" << std::hex << pCurrent->DeviceMemoryOffset << std::dec << std::endl;
@@ -237,7 +237,7 @@ bool FDeviceMemoryPage::Allocate(FDeviceAllocation& Allocation, VkDeviceSize Siz
             
             if (pCurrent->pPrevious)
             {
-                FDeviceMemoryBlock* pPrevious = pCurrent->pPrevious;
+                SDeviceMemoryBlock* pPrevious = pCurrent->pPrevious;
                 if ((pPrevious->DeviceMemoryOffset + pPrevious->PaddedSizeInBytes) > pCurrent->DeviceMemoryOffset)
                 {
                     LOG("Overlapping memory in page '" << m_ID << "' between blocks '" << pPrevious->ID << "' and '" << pCurrent->ID << std::endl;
@@ -257,7 +257,7 @@ bool FDeviceMemoryPage::Allocate(FDeviceAllocation& Allocation, VkDeviceSize Siz
     return true;
 }
 
-bool FDeviceMemoryPage::IsOnSamePage(VkDeviceSize OffsetA, VkDeviceSize SizeA, VkDeviceSize OffsetB, VkDeviceSize PageSize)
+bool CDeviceMemoryPage::IsOnSamePage(VkDeviceSize OffsetA, VkDeviceSize SizeA, VkDeviceSize OffsetB, VkDeviceSize PageSize)
 {
     assert(OffsetA + SizeA <= OffsetB && SizeA > 0 && PageSize > 0);
 
@@ -268,7 +268,7 @@ bool FDeviceMemoryPage::IsOnSamePage(VkDeviceSize OffsetA, VkDeviceSize SizeA, V
     return aEndPage == bStartPage;
 }
 
-void FDeviceMemoryPage::Map()
+void CDeviceMemoryPage::Map()
 {
     // If not mapped -> map
     if (!m_IsMapped)
@@ -281,7 +281,7 @@ void FDeviceMemoryPage::Map()
     }
 }
 
-void FDeviceMemoryPage::Unmap()
+void CDeviceMemoryPage::Unmap()
 {
     // If mapped -> unmap
     if (m_IsMapped)
@@ -292,11 +292,11 @@ void FDeviceMemoryPage::Unmap()
     }
 }
 
-void FDeviceMemoryPage::Deallocate(FDeviceAllocation& Allocation)
+void CDeviceMemoryPage::Deallocate(SDeviceAllocation& Allocation)
 {
 
     // Try to find the correct block
-    FDeviceMemoryBlock* pCurrent = Allocation.pBlock;
+    SDeviceMemoryBlock* pCurrent = Allocation.pBlock;
     if (!pCurrent)
     {
         LOG("Block owning allocation was not found\n");
@@ -311,7 +311,7 @@ void FDeviceMemoryPage::Deallocate(FDeviceAllocation& Allocation)
     // Merge previous with current
     if (pCurrent->pPrevious)
     {
-        FDeviceMemoryBlock* pPrevious = pCurrent->pPrevious;
+        SDeviceMemoryBlock* pPrevious = pCurrent->pPrevious;
         if (pPrevious->IsFree)
         {
             // Set size
@@ -334,7 +334,7 @@ void FDeviceMemoryPage::Deallocate(FDeviceAllocation& Allocation)
     // Try and merge current with next
     if (pCurrent->pNext)
     {
-        FDeviceMemoryBlock* pNext = pCurrent->pNext;
+        SDeviceMemoryBlock* pNext = pCurrent->pNext;
         if (pNext->IsFree)
         {
             // Set size
@@ -357,8 +357,8 @@ void FDeviceMemoryPage::Deallocate(FDeviceAllocation& Allocation)
 
 constexpr size_t NumFrames = 3;
 
-FDeviceMemoryAllocator::FDeviceMemoryAllocator(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CDeviceMemoryAllocator::CDeviceMemoryAllocator(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_MaxAllocations(0)
     , m_TotalReserved(0)
     , m_TotalAllocated(0)
@@ -377,7 +377,7 @@ FDeviceMemoryAllocator::FDeviceMemoryAllocator(FDevice* pDevice)
     m_BufferImageGranularity = Properties.limits.bufferImageGranularity;
 }
 
-FDeviceMemoryAllocator::~FDeviceMemoryAllocator()
+CDeviceMemoryAllocator::~CDeviceMemoryAllocator()
 {
     // Cleanup all garbage memory before deleting
     for (uint32_t i = 0; i < NumFrames; i++)
@@ -388,7 +388,7 @@ FDeviceMemoryAllocator::~FDeviceMemoryAllocator()
     // Delete allocator
     LOG("Deleting DeviceAllocator. Number of Pages: %u\n", m_Pages.size());
 
-    for (FDeviceMemoryPage* page : m_Pages)
+    for (CDeviceMemoryPage* page : m_Pages)
     {
         delete page;
     }
@@ -396,7 +396,7 @@ FDeviceMemoryAllocator::~FDeviceMemoryAllocator()
     LOG("Destroyed DeviceAllocator\n");
 }
 
-bool FDeviceMemoryAllocator::Allocate(FDeviceAllocation& Allocation, const VkMemoryRequirements& MemoryRequirements, VkMemoryPropertyFlags Properties)
+bool CDeviceMemoryAllocator::Allocate(SDeviceAllocation& Allocation, const VkMemoryRequirements& MemoryRequirements, VkMemoryPropertyFlags Properties)
 {
     m_TotalAllocated += MemoryRequirements.size;
     uint32_t MemoryType = FindMemoryType(GetDevice()->GetPhysicalDevice(), MemoryRequirements.memoryTypeBits, Properties);
@@ -427,14 +427,14 @@ bool FDeviceMemoryAllocator::Allocate(FDeviceAllocation& Allocation, const VkMem
     m_TotalReserved += BytesToReserve;
 
     // Allocate new page
-    FDeviceMemoryPage* pPage = new FDeviceMemoryPage(GetDevice()->GetDevice(), GetDevice()->GetPhysicalDevice(), uint32_t(m_Pages.size()), BytesToReserve, MemoryType, Properties);
+    CDeviceMemoryPage* pPage = new CDeviceMemoryPage(GetDevice()->GetDevice(), GetDevice()->GetPhysicalDevice(), uint32_t(m_Pages.size()), BytesToReserve, MemoryType, Properties);
     m_Pages.emplace_back(pPage);
 
     LOG("Allocated Memory-Page. Allocationcount: '%llu/%llu'. Memory-Type=%u, Total Allocated: %.4f MB. Total Reserved: %.4f MB\n", m_Pages.size(), m_MaxAllocations, MemoryType, float(m_TotalAllocated) / mb, float(m_TotalReserved) / mb);
     return pPage->Allocate(Allocation, MemoryRequirements.size, MemoryRequirements.alignment, m_BufferImageGranularity);
 }
 
-void FDeviceMemoryAllocator::Deallocate(FDeviceAllocation& Allocation)
+void CDeviceMemoryAllocator::Deallocate(SDeviceAllocation& Allocation)
 {
     //Set it to be removed
     if (Allocation.pBlock && Allocation.DeviceMemory != VK_NULL_HANDLE)
@@ -450,7 +450,7 @@ void FDeviceMemoryAllocator::Deallocate(FDeviceAllocation& Allocation)
     Allocation.pHostMemory        = nullptr;
 }
 
-void FDeviceMemoryAllocator::EmptyGarbageMemory()
+void CDeviceMemoryAllocator::EmptyGarbageMemory()
 {
     //Move on a frame
     m_FrameIndex = (m_FrameIndex + 1) % NumFrames;
@@ -464,7 +464,7 @@ void FDeviceMemoryAllocator::EmptyGarbageMemory()
         {
             if (Memory.pBlock && Memory.DeviceMemory != VK_NULL_HANDLE)
             {
-                FDeviceMemoryPage* pPage = Memory.pBlock->pPage;
+                CDeviceMemoryPage* pPage = Memory.pBlock->pPage;
                 pPage->Deallocate(Memory);
 
                 m_TotalAllocated -= Memory.SizeInBytes;

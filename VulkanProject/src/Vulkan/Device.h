@@ -1,9 +1,9 @@
 #pragma once
 #include "Core.h"
 
-class FSwapchain;
-class FCommandBuffer;
-class FBindlessManager;
+class CSwapchain;
+class CCommandBuffer;
+class CBindlessManager;
 
 enum class ECommandQueueType
 {
@@ -12,7 +12,7 @@ enum class ECommandQueueType
     Transfer = 3,
 };
 
-struct FDeviceParams
+struct SDeviceParams
 {
     GLFWwindow* pWindow           = nullptr;
     bool        bEnableRayTracing = false;
@@ -20,7 +20,7 @@ struct FDeviceParams
     bool        bVerbose          = false;
 };
 
-struct FQueueFamilyIndices
+struct SQueueFamilyIndices
 {
     uint32_t Graphics     = UINT32_MAX;
     uint32_t Presentation = UINT32_MAX;
@@ -33,15 +33,15 @@ struct FQueueFamilyIndices
     }
 };
 
-class FDevice
+class CDevice
 {
 public:
-    static FDevice* Create(const FDeviceParams& params);
+    static CDevice* Create(const SDeviceParams& params);
 
-    FDevice();
-    ~FDevice();
+    CDevice();
+    ~CDevice();
 
-    void ExecuteGraphics(FCommandBuffer* pCommandBuffer, FSwapchain* pSwapchain, VkPipelineStageFlags* pWaitStages);
+    void ExecuteGraphics(CCommandBuffer* pCommandBuffer, CSwapchain* pSwapchain, VkPipelineStageFlags* pWaitStages);
     void WaitForIdle();
     void Destroy();
 
@@ -63,7 +63,7 @@ public:
         return m_bRayTracingSupported;
     }
 
-    FBindlessManager& GetBindlessManager() const
+    CBindlessManager& GetBindlessManager() const
     {
         assert(IsBindlessSupported());
         return *m_pBindlessManager;
@@ -85,15 +85,15 @@ public:
     }
 
 private:
-    bool Init(const FDeviceParams& props);
-    bool CreateInstance(const FDeviceParams& props);
+    bool Init(const SDeviceParams& props);
+    bool CreateInstance(const SDeviceParams& props);
     bool CreateDebugMessenger();
-    bool CreateDeviceAndQueues(const FDeviceParams& props);
-    bool QueryPhysicalDevice(const FDeviceParams& props);
+    bool CreateDeviceAndQueues(const SDeviceParams& props);
+    bool QueryPhysicalDevice(const SDeviceParams& props);
     bool QueryDeviceExtensionFunctions();
     void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     std::vector<const char*> GetRequiredDeviceExtensions();
-    FQueueFamilyIndices GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
+    SQueueFamilyIndices GetQueueFamilyIndices(VkPhysicalDevice physicalDevice);
     void QueryPhysicalDeviceFeatures();
 
     VkInstance               m_Instance;
@@ -102,7 +102,7 @@ private:
     VkDevice                 m_Device;
 
     // Bindless
-    FBindlessManager* m_pBindlessManager;
+    CBindlessManager* m_pBindlessManager;
 
     // Queues
     VkQueue m_GraphicsQueue;
@@ -126,7 +126,7 @@ private:
     // Device Properties
     VkPhysicalDeviceMemoryProperties                 m_DeviceMemoryProperties;
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR  m_DeviceRayTracingProperties;
-    FQueueFamilyIndices                              m_QueueFamilyIndices;
+    SQueueFamilyIndices                              m_QueueFamilyIndices;
 
     bool m_bValidationEnabled   : 1;
     bool m_bRayTracingSupported : 1;

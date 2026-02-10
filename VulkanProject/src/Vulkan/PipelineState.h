@@ -2,11 +2,11 @@
 #include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
-class FRenderPass;
-class FShaderModule;
-class FPipelineLayout;
+class CRenderPass;
+class CShaderModule;
+class CPipelineLayout;
 
-struct FGraphicsPipelineStateParams
+struct SGraphicsPipelineStateParams
 {
     VkVertexInputAttributeDescription* pAttributeDescriptions    = nullptr;
     uint32_t                           AttributeDescriptionCount = 0;
@@ -18,17 +18,17 @@ struct FGraphicsPipelineStateParams
     VkPolygonMode                      PolygonMode               = VK_POLYGON_MODE_FILL;
     bool                               bBlendEnable              = false;
     bool                               bDepthEnable              = false;
-    FRenderPass*                       pRenderPass               = nullptr;
-    FPipelineLayout*                   pPipelineLayout           = nullptr;
-    FShaderModule*                     pVertexShader             = nullptr;
-    FShaderModule*                     pFragmentShader           = nullptr;
+    CRenderPass*                       pRenderPass               = nullptr;
+    CPipelineLayout*                   pPipelineLayout           = nullptr;
+    CShaderModule*                     pVertexShader             = nullptr;
+    CShaderModule*                     pFragmentShader           = nullptr;
 };
 
-class FBasePipeline : public FDeviceChild
+class CBasePipeline : public CDeviceChild
 {
 public:
-    FBasePipeline(FDevice* pDevice);
-    ~FBasePipeline();
+    CBasePipeline(CDevice* pDevice);
+    ~CBasePipeline();
     
     void SetDebugName(const char* DebugName);
     
@@ -41,47 +41,47 @@ protected:
     VkPipeline m_Pipeline;
 };
 
-class FGraphicsPipeline : public FBasePipeline
+class CGraphicsPipeline : public CBasePipeline
 {
 public:
-    static FGraphicsPipeline* Create(FDevice* pDevice, const FGraphicsPipelineStateParams& Params);
+    static CGraphicsPipeline* Create(CDevice* pDevice, const SGraphicsPipelineStateParams& Params);
     
-    FGraphicsPipeline(FDevice* pDevice);
-    ~FGraphicsPipeline() = default;
+    CGraphicsPipeline(CDevice* pDevice);
+    ~CGraphicsPipeline() = default;
 };
 
-struct FComputePipelineStateParams
+struct SComputePipelineStateParams
 {
-    FShaderModule*   pShader         = nullptr;
-    FPipelineLayout* pPipelineLayout = nullptr;
+    CShaderModule*   pShader         = nullptr;
+    CPipelineLayout* pPipelineLayout = nullptr;
 };
 
-class FComputePipeline : public FBasePipeline
+class CComputePipeline : public CBasePipeline
 {
 public:
-    static FComputePipeline* Create(class FDevice* pDevice, const FComputePipelineStateParams& Params);
+    static CComputePipeline* Create(class CDevice* pDevice, const SComputePipelineStateParams& Params);
     
-    FComputePipeline(FDevice* pDevice);
-    ~FComputePipeline() = default;
+    CComputePipeline(CDevice* pDevice);
+    ~CComputePipeline() = default;
 };
 
-struct FRayTracingPipelineStateParams
+struct SRayTracingPipelineStateParams
 {
-    FShaderModule*   pRayGenShader                = nullptr;
-    FShaderModule*   pRayMissShader               = nullptr;
-    FShaderModule*   pRayClosestHitShader         = nullptr;
-    FShaderModule*   pRayAnyHitShader             = nullptr;
-    FPipelineLayout* pPipelineLayout              = nullptr;
+    CShaderModule*   pRayGenShader                = nullptr;
+    CShaderModule*   pRayMissShader               = nullptr;
+    CShaderModule*   pRayClosestHitShader         = nullptr;
+    CShaderModule*   pRayAnyHitShader             = nullptr;
+    CPipelineLayout* pPipelineLayout              = nullptr;
     uint32_t         MaxPipelineRayRecursionDepth = 1;
 };
 
-class FRayTracingPipeline : public FBasePipeline
+class CRayTracingPipeline : public CBasePipeline
 {
 public:
-    static FRayTracingPipeline* Create(class FDevice* pDevice, const FRayTracingPipelineStateParams& Params);
+    static CRayTracingPipeline* Create(class CDevice* pDevice, const SRayTracingPipelineStateParams& Params);
 
-    FRayTracingPipeline(FDevice* pDevice);
-    ~FRayTracingPipeline();
+    CRayTracingPipeline(CDevice* pDevice);
+    ~CRayTracingPipeline();
 
     const VkStridedDeviceAddressRegionKHR* GetRayGenSBT()      const { return &m_RayGenSBT; }
     const VkStridedDeviceAddressRegionKHR* GetRayMissSBT()     const { return &m_RayMissSBT; }

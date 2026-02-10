@@ -1,51 +1,51 @@
 #pragma once
 #include "DeviceChild.h"
 
-class FBuffer;
-class FAccelerationStructure;
+class CBuffer;
+class CAccelerationStructure;
 
-struct FBLASGeometry
+struct SBLASGeometry
 {
     VkTransformMatrixKHR TransformMatrix;
 
-    FBuffer* pVertexBuffer      = nullptr;
+    CBuffer* pVertexBuffer      = nullptr;
     uint32_t VertexBufferOffset = 0;
     uint32_t VertexBufferCount  = 0;
     uint32_t VertexStride       = 0;
     uint32_t MaxVertexIndex     = 0;
 
-    FBuffer* pIndexBuffer       = nullptr;
+    CBuffer* pIndexBuffer       = nullptr;
     uint32_t IndexBufferOffset  = 0;
     uint32_t IndexBufferCount   = 0;
 
     VkGeometryFlagsKHR Flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
 };
 
-struct FAccelerationStructureBLASParams
+struct SAccelerationStructureBLASParams
 {
-    std::vector<FBLASGeometry> Geometries;
+    std::vector<SBLASGeometry> Geometries;
 };
 
-struct FTLASInstance
+struct STLASInstance
 {
     VkTransformMatrixKHR    TransformMatrix;
-    FAccelerationStructure* pBLAS;
+    CAccelerationStructure* pBLAS;
     uint32_t                InstanceCustomIndex;
 };
 
-struct FAccelerationStructureTLASParams
+struct SAccelerationStructureTLASParams
 {
-    std::vector<FTLASInstance> Instances;
+    std::vector<STLASInstance> Instances;
 };
 
-class FAccelerationStructure : public FDeviceChild
+class CAccelerationStructure : public CDeviceChild
 {
 public:
-    static FAccelerationStructure* CreateBLAS(FDevice* pDevice, const FAccelerationStructureBLASParams& Params);
-    static FAccelerationStructure* CreateTLAS(FDevice* pDevice, const FAccelerationStructureTLASParams& Params);
+    static CAccelerationStructure* CreateBLAS(CDevice* pDevice, const SAccelerationStructureBLASParams& Params);
+    static CAccelerationStructure* CreateTLAS(CDevice* pDevice, const SAccelerationStructureTLASParams& Params);
 
-    FAccelerationStructure(FDevice* pDevice);
-    ~FAccelerationStructure();
+    CAccelerationStructure(CDevice* pDevice);
+    ~CAccelerationStructure();
 
     void SetDebugName(const char* DebugName);
 

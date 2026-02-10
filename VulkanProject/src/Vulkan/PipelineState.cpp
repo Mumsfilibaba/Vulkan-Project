@@ -7,13 +7,13 @@
 #include "Helpers.h"
 #include "MathHelper.h"
 
-FBasePipeline::FBasePipeline(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CBasePipeline::CBasePipeline(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_Pipeline(VK_NULL_HANDLE)
 {
 }
 
-FBasePipeline::~FBasePipeline()
+CBasePipeline::~CBasePipeline()
 {
     if (m_Pipeline != VK_NULL_HANDLE)
     {
@@ -22,9 +22,9 @@ FBasePipeline::~FBasePipeline()
     }
 }
 
-void FBasePipeline::SetDebugName(const char* DebugName)
+void CBasePipeline::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -34,7 +34,7 @@ void FBasePipeline::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Pipeline);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
@@ -42,9 +42,9 @@ void FBasePipeline::SetDebugName(const char* DebugName)
     }
 }
 
-FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPipelineStateParams& Params)
+CGraphicsPipeline* CGraphicsPipeline::Create(CDevice* pDevice, const SGraphicsPipelineStateParams& Params)
 {
-    FGraphicsPipeline* pPipeline = new FGraphicsPipeline(pDevice);
+    CGraphicsPipeline* pPipeline = new CGraphicsPipeline(pDevice);
     assert(Params.pVertexShader != nullptr);
     assert(Params.pRenderPass != nullptr);
     assert(Params.pPipelineLayout != nullptr);
@@ -202,14 +202,14 @@ FGraphicsPipeline* FGraphicsPipeline::Create(FDevice* pDevice, const FGraphicsPi
     return pPipeline;
 }
 
-FGraphicsPipeline::FGraphicsPipeline(FDevice* pDevice)
-    : FBasePipeline(pDevice)
+CGraphicsPipeline::CGraphicsPipeline(CDevice* pDevice)
+    : CBasePipeline(pDevice)
 {
 }
 
-FComputePipeline* FComputePipeline::Create(FDevice* pDevice, const FComputePipelineStateParams& Params)
+CComputePipeline* CComputePipeline::Create(CDevice* pDevice, const SComputePipelineStateParams& Params)
 {
-    FComputePipeline* pPipeline = new FComputePipeline(pDevice);
+    CComputePipeline* pPipeline = new CComputePipeline(pDevice);
     assert(Params.pShader != nullptr);
     assert(Params.pPipelineLayout != nullptr);
 
@@ -243,14 +243,14 @@ FComputePipeline* FComputePipeline::Create(FDevice* pDevice, const FComputePipel
     return pPipeline;
 }
 
-FComputePipeline::FComputePipeline(FDevice* pDevice)
-    : FBasePipeline(pDevice)
+CComputePipeline::CComputePipeline(CDevice* pDevice)
+    : CBasePipeline(pDevice)
 {
 }
 
-FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const FRayTracingPipelineStateParams& Params)
+CRayTracingPipeline* CRayTracingPipeline::Create(class CDevice* pDevice, const SRayTracingPipelineStateParams& Params)
 {
-    FRayTracingPipeline* pPipeline = new FRayTracingPipeline(pDevice);
+    CRayTracingPipeline* pPipeline = new CRayTracingPipeline(pDevice);
 
     std::vector<VkPipelineShaderStageCreateInfo>      ShaderStages;
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;
@@ -339,7 +339,7 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
     PipelineCreateInfo.maxPipelineRayRecursionDepth = Params.MaxPipelineRayRecursionDepth;
     PipelineCreateInfo.layout                       = Params.pPipelineLayout->GetPipelineLayout();
 
-    VkResult Result = FExtensions::vkCreateRayTracingPipelinesKHR(pDevice->GetDevice(), VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &pPipeline->m_Pipeline);
+    VkResult Result = Extensions::vkCreateRayTracingPipelinesKHR(pDevice->GetDevice(), VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &pPipeline->m_Pipeline);
     if (Result != VK_SUCCESS)
     {
         LOG("vkCreateRayTracingPipelinesKHR failed\n");
@@ -358,7 +358,7 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
     const uint32_t ShaderBindingTableSize       = GroupCount * HandleSizeAligned;
 
     std::vector<uint8_t> ShaderHandleStorage(ShaderBindingTableSize);
-    Result = FExtensions::vkGetRayTracingShaderGroupHandlesKHR(pDevice->GetDevice(), pPipeline->m_Pipeline, 0, GroupCount, ShaderBindingTableSize, ShaderHandleStorage.data());
+    Result = Extensions::vkGetRayTracingShaderGroupHandlesKHR(pDevice->GetDevice(), pPipeline->m_Pipeline, 0, GroupCount, ShaderBindingTableSize, ShaderHandleStorage.data());
 
     VkBufferCreateInfo BufferCreateInfo = { };
     BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -463,8 +463,8 @@ FRayTracingPipeline* FRayTracingPipeline::Create(class FDevice* pDevice, const F
     return pPipeline;
 }
 
-FRayTracingPipeline::FRayTracingPipeline(FDevice* pDevice)
-    : FBasePipeline(pDevice)
+CRayTracingPipeline::CRayTracingPipeline(CDevice* pDevice)
+    : CBasePipeline(pDevice)
     , m_SBTBuffer(VK_NULL_HANDLE)
     , m_SBTDeviceAddress(0)
     , m_SBTDeviceMemory(VK_NULL_HANDLE)
@@ -476,7 +476,7 @@ FRayTracingPipeline::FRayTracingPipeline(FDevice* pDevice)
 {
 }
 
-FRayTracingPipeline::~FRayTracingPipeline()
+CRayTracingPipeline::~CRayTracingPipeline()
 {
     if (m_SBTBuffer != VK_NULL_HANDLE)
     {

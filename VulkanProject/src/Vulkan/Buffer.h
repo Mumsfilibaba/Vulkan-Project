@@ -7,24 +7,24 @@
 
 #define VK_BUFFER_USAGE_RAY_TRACING_INPUT (VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR)
 
-class FDevice;
+class CDevice;
 
-struct FBufferParams
+struct SBufferParams
 {
     VkDeviceSize          Size             = 0;
     VkMemoryPropertyFlags MemoryProperties = 0;
     VkBufferUsageFlags    Usage            = 0;
 };
 
-class FBuffer : public FDeviceChild
+class CBuffer : public CDeviceChild
 {
 public:
-    static FBuffer* Create(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator);
-    static FBuffer* CreateWithData(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator, const void* pSource);
-    static FBuffer* CreateAndCopy(FDevice* pDevice, const FBufferParams& Params, FDeviceMemoryAllocator* pAllocator, FBuffer* pSrcBuffer);
+    static CBuffer* Create(CDevice* pDevice, const SBufferParams& Params, CDeviceMemoryAllocator* pAllocator);
+    static CBuffer* CreateWithData(CDevice* pDevice, const SBufferParams& Params, CDeviceMemoryAllocator* pAllocator, const void* pSource);
+    static CBuffer* CreateAndCopy(CDevice* pDevice, const SBufferParams& Params, CDeviceMemoryAllocator* pAllocator, CBuffer* pSrcBuffer);
 
-    FBuffer(FDevice* pDevice, FDeviceMemoryAllocator* pAllocator = nullptr);
-    ~FBuffer();
+    CBuffer(CDevice* pDevice, CDeviceMemoryAllocator* pAllocator = nullptr);
+    ~CBuffer();
     
     void* Map();
     void FlushMappedMemoryRange();
@@ -47,11 +47,11 @@ public:
     }
 
 private:
-    FDeviceMemoryAllocator*       m_pAllocator;
+    CDeviceMemoryAllocator*       m_pAllocator;
     VkBuffer                      m_Buffer;
     VkDeviceMemory                m_DeviceMemory;
     VkDeviceOrHostAddressConstKHR m_DeviceAddress;
     VkDeviceSize                  m_Size;
     VkDeviceSize                  m_AllocatedSize;
-    FDeviceAllocation             m_Allocation;
+    SDeviceAllocation             m_Allocation;
 };

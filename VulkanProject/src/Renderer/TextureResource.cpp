@@ -13,12 +13,12 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../thirdparty/std_image.h"
 
-FSampler*             FTextureResource::s_pCubeMapGenSampler             = nullptr;
-FDescriptorSetLayout* FTextureResource::s_pCubeMapGenDescriptorSetLayout = nullptr;
-FPipelineLayout*      FTextureResource::s_pCubeMapGenPipelineLayout      = nullptr;
-FComputePipeline*     FTextureResource::s_pCubeMapGenPipelineState       = nullptr;
+CSampler*             CTextureResource::s_pCubeMapGenSampler             = nullptr;
+CDescriptorSetLayout* CTextureResource::s_pCubeMapGenDescriptorSetLayout = nullptr;
+CPipelineLayout*      CTextureResource::s_pCubeMapGenPipelineLayout      = nullptr;
+CComputePipeline*     CTextureResource::s_pCubeMapGenPipelineState       = nullptr;
 
-bool FTextureResource::InitLoader(FDevice* pDevice)
+bool CTextureResource::InitLoader(CDevice* pDevice)
 {
     // Create DescriptorSetLayout
     constexpr uint32_t NumBindings = 2;
@@ -35,11 +35,11 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
     Bindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
     Bindings[1].pImmutableSamplers = nullptr;
 
-    FDescriptorSetLayoutParams DescriptorSetLayoutParams;
+    SDescriptorSetLayoutParams DescriptorSetLayoutParams;
     DescriptorSetLayoutParams.pBindings   = Bindings;
     DescriptorSetLayoutParams.NumBindings = NumBindings;
 
-    s_pCubeMapGenDescriptorSetLayout = FDescriptorSetLayout::Create(pDevice, DescriptorSetLayoutParams);
+    s_pCubeMapGenDescriptorSetLayout = CDescriptorSetLayout::Create(pDevice, DescriptorSetLayoutParams);
     if (!s_pCubeMapGenDescriptorSetLayout)
     {
         LOG("Failed to create CubeMapGen DescriptorSetLayout\n");
@@ -49,12 +49,12 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
     s_pCubeMapGenDescriptorSetLayout->SetDebugName("CubeMapGen DescriptorSetLayout");
     
     // Create PipelineLayout
-    FPipelineLayoutParams PipelineLayoutParams;
+    SPipelineLayoutParams PipelineLayoutParams;
     PipelineLayoutParams.ppLayouts        = &s_pCubeMapGenDescriptorSetLayout;
     PipelineLayoutParams.NumLayouts       = 1;
     PipelineLayoutParams.NumPushConstants = 1;
     
-    s_pCubeMapGenPipelineLayout = FPipelineLayout::Create(pDevice, PipelineLayoutParams);
+    s_pCubeMapGenPipelineLayout = CPipelineLayout::Create(pDevice, PipelineLayoutParams);
     if (!s_pCubeMapGenPipelineLayout)
     {
         LOG("Failed to create CubeMapGen PipelineLayout\n");
@@ -64,14 +64,14 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
     s_pCubeMapGenPipelineLayout->SetDebugName("CubeMapGen PipelineLayout");
 
     // Create shader and pipeline
-    FShaderModule* pComputeShader = FShaderModule::CreateFromFile(pDevice, "main", RESOURCE_PATH"/shaders/cubemapgen.spv");
+    CShaderModule* pComputeShader = CShaderModule::CreateFromFile(pDevice, "main", RESOURCE_PATH"/shaders/cubemapgen.spv");
     pComputeShader->SetDebugName(RESOURCE_PATH"/shaders/cubemapgen.spv");
 
-    FComputePipelineStateParams PipelineParams = {};
+    SComputePipelineStateParams PipelineParams = {};
     PipelineParams.pShader         = pComputeShader;
     PipelineParams.pPipelineLayout = s_pCubeMapGenPipelineLayout;
     
-    s_pCubeMapGenPipelineState = FComputePipeline::Create(pDevice, PipelineParams);
+    s_pCubeMapGenPipelineState = CComputePipeline::Create(pDevice, PipelineParams);
     s_pCubeMapGenPipelineState->SetDebugName("CubeMapGen Pipeline");
 
     SAFE_DELETE(pComputeShader);
@@ -83,7 +83,7 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
     }
     
     // Sampler
-    FSamplerParams SamplerParams = {};
+    SSamplerParams SamplerParams = {};
     SamplerParams.MagFilter     = VK_FILTER_LINEAR;
     SamplerParams.MinFilter     = VK_FILTER_LINEAR;
     SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -94,7 +94,7 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
     SamplerParams.MaxLod        = 1000;
     SamplerParams.MaxAnisotropy = 1.0f;
     
-    s_pCubeMapGenSampler = FSampler::Create(pDevice, SamplerParams);
+    s_pCubeMapGenSampler = CSampler::Create(pDevice, SamplerParams);
     if (!s_pCubeMapGenSampler)
     {
         LOG("Failed to create CubeMapGen Sampler\n");
@@ -105,7 +105,7 @@ bool FTextureResource::InitLoader(FDevice* pDevice)
     return true;
 }
 
-void FTextureResource::ReleaseLoader()
+void CTextureResource::ReleaseLoader()
 {
     SAFE_DELETE(s_pCubeMapGenSampler);
     SAFE_DELETE(s_pCubeMapGenDescriptorSetLayout);
@@ -178,7 +178,7 @@ static VkFormat GetFloatFormat(int32_t Channels)
 }
 
 
-FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* Filepath)
+CTextureResource* CTextureResource::LoadFromFile(CDevice* pDevice, const char* Filepath)
 {
     FILE* File = fopen(Filepath, "rb");
     if (!File)
@@ -241,7 +241,7 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     }
 
     // Texture
-    FTextureParams TextureParams = {};
+    STextureParams TextureParams = {};
     TextureParams.Format        = Format;
     TextureParams.ImageType     = VK_IMAGE_TYPE_2D;
     TextureParams.Width         = Width;
@@ -249,7 +249,7 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     TextureParams.Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     TextureParams.InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    std::unique_ptr<FTexture> pTexture = std::unique_ptr<FTexture>(FTexture::CreateWithData(pDevice, TextureParams, Pixels.get()));
+    std::unique_ptr<CTexture> pTexture = std::unique_ptr<CTexture>(CTexture::CreateWithData(pDevice, TextureParams, Pixels.get()));
     if (!pTexture)
     {
         LOG("Failed to create Texture '%s'\n", Filepath);
@@ -262,10 +262,10 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     }
 
     // TextureView
-    FTextureViewParams TextureViewParams = {};
+    STextureViewParams TextureViewParams = {};
     TextureViewParams.pTexture = pTexture.get();
 
-    std::unique_ptr<FTextureView> pTextureView = std::unique_ptr<FTextureView>(FTextureView::Create(pDevice, TextureViewParams));
+    std::unique_ptr<CTextureView> pTextureView = std::unique_ptr<CTextureView>(CTextureView::Create(pDevice, TextureViewParams));
     if (!pTextureView)
     {
         LOG("Failed to create TextureView '%s'\n", Filepath);
@@ -277,7 +277,7 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
         pTextureView->SetDebugName(DebugName.c_str());
     }
 
-    std::unique_ptr<FTextureResource> pTextureResource = std::make_unique<FTextureResource>(pDevice);
+    std::unique_ptr<CTextureResource> pTextureResource = std::make_unique<CTextureResource>(pDevice);
     pTextureResource->m_pTexture     = pTexture.release();
     pTextureResource->m_pTextureView = pTextureView.release();
     pTextureResource->m_Width        = Width;
@@ -287,9 +287,9 @@ FTextureResource* FTextureResource::LoadFromFile(FDevice* pDevice, const char* F
     return pTextureResource.release();
 }
 
-FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice, const char* Filepath)
+CTextureResource* CTextureResource::LoadCubeMapFromPanoramaFile(CDevice* pDevice, const char* Filepath)
 {
-    std::unique_ptr<FTextureResource> pPanorama = std::unique_ptr<FTextureResource>(LoadFromFile(pDevice, Filepath));
+    std::unique_ptr<CTextureResource> pPanorama = std::unique_ptr<CTextureResource>(LoadFromFile(pDevice, Filepath));
     if (!pPanorama)
     {
         return nullptr;
@@ -297,7 +297,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     
     // Texture
     constexpr uint32_t CubeMapSize = 1024;
-    FTextureParams TextureParams = {};
+    STextureParams TextureParams = {};
     TextureParams.Format         = VK_FORMAT_R16G16B16A16_SFLOAT;
     TextureParams.ImageType      = VK_IMAGE_TYPE_2D;
     TextureParams.Flags          = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
@@ -306,7 +306,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     TextureParams.NumArraySlices = 6;
     TextureParams.Usage          = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     
-    std::unique_ptr<FTexture> pTexture = std::unique_ptr<FTexture>(FTexture::Create(pDevice, TextureParams));
+    std::unique_ptr<CTexture> pTexture = std::unique_ptr<CTexture>(CTexture::Create(pDevice, TextureParams));
     if (!pTexture)
     {
         LOG("Failed to create TextureCube '%s'\n", Filepath);
@@ -319,12 +319,12 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     }
 
     // TextureView
-    FTextureViewParams TextureViewParams = {};
+    STextureViewParams TextureViewParams = {};
     TextureViewParams.pTexture       = pTexture.get();
     TextureViewParams.ViewType       = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
     TextureViewParams.NumArraySlices = 6;
     
-    std::unique_ptr<FTextureView> pTextureViewUAV = std::unique_ptr<FTextureView>(FTextureView::Create(pDevice, TextureViewParams));
+    std::unique_ptr<CTextureView> pTextureViewUAV = std::unique_ptr<CTextureView>(CTextureView::Create(pDevice, TextureViewParams));
     if (!pTextureViewUAV)
     {
         LOG("Failed to create TextureView UAV for TextureCube '%s'\n", Filepath);
@@ -340,7 +340,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     TextureViewParams.ViewType       = VK_IMAGE_VIEW_TYPE_CUBE;
     TextureViewParams.NumArraySlices = 6;
     
-    std::unique_ptr<FTextureView> pTextureView = std::unique_ptr<FTextureView>(FTextureView::Create(pDevice, TextureViewParams));
+    std::unique_ptr<CTextureView> pTextureView = std::unique_ptr<CTextureView>(CTextureView::Create(pDevice, TextureViewParams));
     if (!pTextureView)
     {
         LOG("Failed to create TextureView for TextureCube '%s'\n", Filepath);
@@ -353,12 +353,12 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     }
     
     // DescriptorPool
-    FDescriptorPoolParams DescriptorPoolParams;
+    SDescriptorPoolParams DescriptorPoolParams;
     DescriptorPoolParams.NumStorageImages         = 1;
     DescriptorPoolParams.NumCombinedImageSamplers = 1;
     DescriptorPoolParams.MaxSets                  = 1;
     
-    std::unique_ptr<FDescriptorPool> pDescriptorPool = std::unique_ptr<FDescriptorPool>(FDescriptorPool::Create(pDevice, DescriptorPoolParams));
+    std::unique_ptr<CDescriptorPool> pDescriptorPool = std::unique_ptr<CDescriptorPool>(CDescriptorPool::Create(pDevice, DescriptorPoolParams));
     if (!pDescriptorPool)
     {
         LOG("Failed to create DescriptorPool '%s'\n", Filepath);
@@ -370,7 +370,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     }
     
     // DescriptorSet
-    std::unique_ptr<FDescriptorSet> pDescriptorSet = std::unique_ptr<FDescriptorSet>(FDescriptorSet::Create(pDevice, pDescriptorPool.get(), s_pCubeMapGenDescriptorSetLayout));
+    std::unique_ptr<CDescriptorSet> pDescriptorSet = std::unique_ptr<CDescriptorSet>(CDescriptorSet::Create(pDevice, pDescriptorPool.get(), s_pCubeMapGenDescriptorSetLayout));
     if (!pDescriptorSet)
     {
         LOG("Failed to create DescriptorSet '%s'\n", Filepath);
@@ -384,11 +384,11 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     }
     
     // CommandBuffer
-    FCommandBufferParams CommandBufferParams = {};
+    SCommandBufferParams CommandBufferParams = {};
     CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     CommandBufferParams.QueueType = ECommandQueueType::Graphics;
     
-    std::unique_ptr<FCommandBuffer> pCommandBuffer = std::unique_ptr<FCommandBuffer>(FCommandBuffer::Create(pDevice, CommandBufferParams));
+    std::unique_ptr<CCommandBuffer> pCommandBuffer = std::unique_ptr<CCommandBuffer>(CCommandBuffer::Create(pDevice, CommandBufferParams));
     if (!pCommandBuffer)
     {
         LOG("Failed to create CommandBuffer '%s'\n", Filepath);
@@ -396,7 +396,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     }
     else
     {
-        pCommandBuffer->SetDebugName("FTextureResource::LoadCubeMapFromPanoramaFile CommandBuffer");
+        pCommandBuffer->SetDebugName("CTextureResource::LoadCubeMapFromPanoramaFile CommandBuffer");
     }
     
     pCommandBuffer->Reset();
@@ -404,13 +404,13 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     
     pCommandBuffer->TransitionImage(pTexture->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
     
-    struct FPushConstants
+    struct SPushConstants
     {
         uint32_t CubeSize;
     } PushConstants;
     PushConstants.CubeSize = CubeMapSize;
     
-    pCommandBuffer->PushConstants(s_pCubeMapGenPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(FPushConstants), &PushConstants);
+    pCommandBuffer->PushConstants(s_pCubeMapGenPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(SPushConstants), &PushConstants);
     
     pCommandBuffer->BindComputePipelineState(s_pCubeMapGenPipelineState);
     pCommandBuffer->BindComputeDescriptorSet(s_pCubeMapGenPipelineLayout, pDescriptorSet.get(), 0);
@@ -424,7 +424,7 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     pDevice->ExecuteGraphics(pCommandBuffer.get(), nullptr, nullptr);
     pDevice->WaitForIdle();
 
-    std::unique_ptr<FTextureResource> pTextureResource = std::make_unique<FTextureResource>(pDevice);
+    std::unique_ptr<CTextureResource> pTextureResource = std::make_unique<CTextureResource>(pDevice);
     pTextureResource->m_pTexture     = pTexture.release();
     pTextureResource->m_pTextureView = pTextureView.release();
     pTextureResource->m_Width        = pTextureResource->m_pTexture->GetWidth();
@@ -434,14 +434,14 @@ FTextureResource* FTextureResource::LoadCubeMapFromPanoramaFile(FDevice* pDevice
     return pTextureResource.release();
 }
 
-FTextureResource::FTextureResource(FDevice* pDevice)
+CTextureResource::CTextureResource(CDevice* pDevice)
     : m_pDevice(pDevice)
     , m_pTexture(nullptr)
     , m_pTextureView(nullptr)
 {
 }
 
-FTextureResource::~FTextureResource()
+CTextureResource::~CTextureResource()
 {
     SAFE_DELETE(m_pTexture);
     SAFE_DELETE(m_pTextureView);

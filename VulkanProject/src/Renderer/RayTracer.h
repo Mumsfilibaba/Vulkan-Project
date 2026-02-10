@@ -2,9 +2,9 @@
 #include "BaseRenderer.h"
 #include "Scene.h"
 
-class FRayTracingPipeline;
+class CRayTracingPipeline;
 
-struct FSceneBuffer
+struct SSceneBuffer
 {
     // 0-16
     uint32_t NumMaterials   = 0;
@@ -20,11 +20,11 @@ struct FSceneBuffer
     uint32_t Padding2;
 };
 
-class FRayTracer : public FBaseRenderer
+class CRayTracer : public CBaseRenderer
 {
 public:
-    FRayTracer();
-    ~FRayTracer();
+    CRayTracer();
+    ~CRayTracer();
 
     // IRenderer Interface
     virtual IScene* GetScene() const override final
@@ -42,25 +42,25 @@ public:
     virtual void RenderUI() override;
     virtual void ReloadShaders() override;
 
-    virtual void Render(FCommandBuffer* pCommandBuffer) override;
+    virtual void Render(CCommandBuffer* pCommandBuffer) override;
 
     virtual void CreateGlobalBuffers() override;
 
 private:
-    void UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer);
+    void UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer);
 
     // Current Scene
-    FScene* m_pScene;
+    SScene* m_pScene;
     
     // Buffers
-    FBuffer* m_pSceneSettingsBuffer;
-    FBuffer* m_pMaterialBuffer;
-    FBuffer* m_pMeshBuffer;
+    CBuffer* m_pSceneSettingsBuffer;
+    CBuffer* m_pMaterialBuffer;
+    CBuffer* m_pMeshBuffer;
 
     // RayTracing Pass
-    FRayTracingPipeline*  m_pRayTracingPipeline;
-    FPipelineLayout*      m_pRayTracingPipelineLayout;
-    FDescriptorSetLayout* m_pRayTracingDescriptorSetLayout;
-    FDescriptorSet*       m_pRayTracingDescriptorSet0;
-    FDescriptorSet*       m_pRayTracingDescriptorSet1;
+    CRayTracingPipeline*  m_pRayTracingPipeline;
+    CPipelineLayout*      m_pRayTracingPipelineLayout;
+    CDescriptorSetLayout* m_pRayTracingDescriptorSetLayout;
+    CDescriptorSet*       m_pRayTracingDescriptorSet0;
+    CDescriptorSet*       m_pRayTracingDescriptorSet1;
 };

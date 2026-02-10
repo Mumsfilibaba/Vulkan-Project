@@ -1,32 +1,32 @@
 #include "Extensions.h"
 
 // SetDebugName
-PFN_vkSetDebugUtilsObjectNameEXT    FExtensions::vkSetDebugUtilsObjectNameEXT    = nullptr;
-PFN_vkCreateDebugUtilsMessengerEXT  FExtensions::vkCreateDebugUtilsMessengerEXT  = nullptr;
-PFN_vkDestroyDebugUtilsMessengerEXT FExtensions::vkDestroyDebugUtilsMessengerEXT = nullptr;
+PFN_vkSetDebugUtilsObjectNameEXT    Extensions::vkSetDebugUtilsObjectNameEXT    = nullptr;
+PFN_vkCreateDebugUtilsMessengerEXT  Extensions::vkCreateDebugUtilsMessengerEXT  = nullptr;
+PFN_vkDestroyDebugUtilsMessengerEXT Extensions::vkDestroyDebugUtilsMessengerEXT = nullptr;
 
 // RayTracing
-PFN_vkCreateAccelerationStructureKHR                 FExtensions::vkCreateAccelerationStructureKHR                 = nullptr;
-PFN_vkDestroyAccelerationStructureKHR                FExtensions::vkDestroyAccelerationStructureKHR                = nullptr;
-PFN_vkCmdBuildAccelerationStructuresKHR              FExtensions::vkCmdBuildAccelerationStructuresKHR              = nullptr;
-PFN_vkCmdBuildAccelerationStructuresIndirectKHR      FExtensions::vkCmdBuildAccelerationStructuresIndirectKHR      = nullptr;
-PFN_vkBuildAccelerationStructuresKHR                 FExtensions::vkBuildAccelerationStructuresKHR                 = nullptr;
-PFN_vkCopyAccelerationStructureKHR                   FExtensions::vkCopyAccelerationStructureKHR                   = nullptr;
-PFN_vkCopyAccelerationStructureToMemoryKHR           FExtensions::vkCopyAccelerationStructureToMemoryKHR           = nullptr;
-PFN_vkCopyMemoryToAccelerationStructureKHR           FExtensions::vkCopyMemoryToAccelerationStructureKHR           = nullptr;
-PFN_vkWriteAccelerationStructuresPropertiesKHR       FExtensions::vkWriteAccelerationStructuresPropertiesKHR       = nullptr;
-PFN_vkCmdCopyAccelerationStructureKHR                FExtensions::vkCmdCopyAccelerationStructureKHR                = nullptr;
-PFN_vkCmdCopyAccelerationStructureToMemoryKHR        FExtensions::vkCmdCopyAccelerationStructureToMemoryKHR        = nullptr;
-PFN_vkCmdCopyMemoryToAccelerationStructureKHR        FExtensions::vkCmdCopyMemoryToAccelerationStructureKHR        = nullptr;
-PFN_vkGetAccelerationStructureDeviceAddressKHR       FExtensions::vkGetAccelerationStructureDeviceAddressKHR       = nullptr;
-PFN_vkCmdWriteAccelerationStructuresPropertiesKHR    FExtensions::vkCmdWriteAccelerationStructuresPropertiesKHR    = nullptr;
-PFN_vkGetDeviceAccelerationStructureCompatibilityKHR FExtensions::vkGetDeviceAccelerationStructureCompatibilityKHR = nullptr;
-PFN_vkGetAccelerationStructureBuildSizesKHR          FExtensions::vkGetAccelerationStructureBuildSizesKHR          = nullptr;
-PFN_vkGetRayTracingShaderGroupHandlesKHR             FExtensions::vkGetRayTracingShaderGroupHandlesKHR             = nullptr;
+PFN_vkCreateAccelerationStructureKHR                 Extensions::vkCreateAccelerationStructureKHR                 = nullptr;
+PFN_vkDestroyAccelerationStructureKHR                Extensions::vkDestroyAccelerationStructureKHR                = nullptr;
+PFN_vkCmdBuildAccelerationStructuresKHR              Extensions::vkCmdBuildAccelerationStructuresKHR              = nullptr;
+PFN_vkCmdBuildAccelerationStructuresIndirectKHR      Extensions::vkCmdBuildAccelerationStructuresIndirectKHR      = nullptr;
+PFN_vkBuildAccelerationStructuresKHR                 Extensions::vkBuildAccelerationStructuresKHR                 = nullptr;
+PFN_vkCopyAccelerationStructureKHR                   Extensions::vkCopyAccelerationStructureKHR                   = nullptr;
+PFN_vkCopyAccelerationStructureToMemoryKHR           Extensions::vkCopyAccelerationStructureToMemoryKHR           = nullptr;
+PFN_vkCopyMemoryToAccelerationStructureKHR           Extensions::vkCopyMemoryToAccelerationStructureKHR           = nullptr;
+PFN_vkWriteAccelerationStructuresPropertiesKHR       Extensions::vkWriteAccelerationStructuresPropertiesKHR       = nullptr;
+PFN_vkCmdCopyAccelerationStructureKHR                Extensions::vkCmdCopyAccelerationStructureKHR                = nullptr;
+PFN_vkCmdCopyAccelerationStructureToMemoryKHR        Extensions::vkCmdCopyAccelerationStructureToMemoryKHR        = nullptr;
+PFN_vkCmdCopyMemoryToAccelerationStructureKHR        Extensions::vkCmdCopyMemoryToAccelerationStructureKHR        = nullptr;
+PFN_vkGetAccelerationStructureDeviceAddressKHR       Extensions::vkGetAccelerationStructureDeviceAddressKHR       = nullptr;
+PFN_vkCmdWriteAccelerationStructuresPropertiesKHR    Extensions::vkCmdWriteAccelerationStructuresPropertiesKHR    = nullptr;
+PFN_vkGetDeviceAccelerationStructureCompatibilityKHR Extensions::vkGetDeviceAccelerationStructureCompatibilityKHR = nullptr;
+PFN_vkGetAccelerationStructureBuildSizesKHR          Extensions::vkGetAccelerationStructureBuildSizesKHR          = nullptr;
+PFN_vkGetRayTracingShaderGroupHandlesKHR             Extensions::vkGetRayTracingShaderGroupHandlesKHR             = nullptr;
 
-PFN_vkCmdTraceRaysKHR                                 FExtensions::vkCmdTraceRaysKHR                                 = nullptr;
-PFN_vkCreateRayTracingPipelinesKHR                    FExtensions::vkCreateRayTracingPipelinesKHR                    = nullptr;
-PFN_vkGetRayTracingCaptureReplayShaderGroupHandlesKHR FExtensions::vkGetRayTracingCaptureReplayShaderGroupHandlesKHR = nullptr;
-PFN_vkCmdTraceRaysIndirectKHR                         FExtensions::vkCmdTraceRaysIndirectKHR                         = nullptr;
-PFN_vkGetRayTracingShaderGroupStackSizeKHR            FExtensions::vkGetRayTracingShaderGroupStackSizeKHR            = nullptr;
-PFN_vkCmdSetRayTracingPipelineStackSizeKHR            FExtensions::vkCmdSetRayTracingPipelineStackSizeKHR            = nullptr;
+PFN_vkCmdTraceRaysKHR                                 Extensions::vkCmdTraceRaysKHR                                 = nullptr;
+PFN_vkCreateRayTracingPipelinesKHR                    Extensions::vkCreateRayTracingPipelinesKHR                    = nullptr;
+PFN_vkGetRayTracingCaptureReplayShaderGroupHandlesKHR Extensions::vkGetRayTracingCaptureReplayShaderGroupHandlesKHR = nullptr;
+PFN_vkCmdTraceRaysIndirectKHR                         Extensions::vkCmdTraceRaysIndirectKHR                         = nullptr;
+PFN_vkGetRayTracingShaderGroupStackSizeKHR            Extensions::vkGetRayTracingShaderGroupStackSizeKHR            = nullptr;
+PFN_vkCmdSetRayTracingPipelineStackSizeKHR            Extensions::vkCmdSetRayTracingPipelineStackSizeKHR            = nullptr;

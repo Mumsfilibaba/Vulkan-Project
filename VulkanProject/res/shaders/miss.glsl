@@ -8,11 +8,11 @@
 #define BACKGROUND_TYPE_GRADIENT 1
 #define BACKGROUND_TYPE_SKYBOX 2
 
-layout(location = 0) rayPayloadInEXT FRayPayLoad RayPayLoad;
+layout(location = 0) rayPayloadInEXT SRayPayLoad RayPayLoad;
 
 layout(binding = 5) uniform SceneBufferObject
 {
-    FSceneSettings Settings;
+    SSceneSettings Settings;
 } uScene;
 
 layout (set = 1, binding = 0) uniform samplerCube uCubeTextures[];

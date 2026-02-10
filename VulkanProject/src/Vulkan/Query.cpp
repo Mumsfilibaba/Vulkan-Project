@@ -2,9 +2,9 @@
 #include "Device.h"
 #include "Extensions.h"
 
-FQuery* FQuery::Create(class FDevice* pDevice, const FQueryParams& Params)
+CQuery* CQuery::Create(class CDevice* pDevice, const SQueryParams& Params)
 {
-    FQuery* pQuery = new FQuery(pDevice);
+    CQuery* pQuery = new CQuery(pDevice);
     
     VkQueryPoolCreateInfo QueryCreateInfo;
     ZERO_STRUCT(&QueryCreateInfo);
@@ -27,13 +27,13 @@ FQuery* FQuery::Create(class FDevice* pDevice, const FQueryParams& Params)
     return pQuery;
 }
     
-FQuery::FQuery(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CQuery::CQuery(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_QueryPool(VK_NULL_HANDLE)
 {
 }
 
-FQuery::~FQuery()
+CQuery::~CQuery()
 {
     if (m_QueryPool != VK_NULL_HANDLE)
     {
@@ -42,7 +42,7 @@ FQuery::~FQuery()
     }
 }
 
-void FQuery::Reset(uint32_t FirstQuery, uint32_t QueryCount)
+void CQuery::Reset(uint32_t FirstQuery, uint32_t QueryCount)
 {
     if (!QueryCount)
     {
@@ -52,7 +52,7 @@ void FQuery::Reset(uint32_t FirstQuery, uint32_t QueryCount)
     vkResetQueryPool(GetDevice()->GetDevice(), m_QueryPool, FirstQuery, QueryCount);
 }
 
-bool FQuery::GetData(uint32_t FirstQuery, uint32_t QueryCount, uint64_t DataSize, void* pData, VkDeviceSize Stride, VkQueryResultFlags Flags)
+bool CQuery::GetData(uint32_t FirstQuery, uint32_t QueryCount, uint64_t DataSize, void* pData, VkDeviceSize Stride, VkQueryResultFlags Flags)
 {
     VkResult Result = vkGetQueryPoolResults(GetDevice()->GetDevice(), m_QueryPool, FirstQuery, QueryCount, DataSize, pData, Stride, Flags);
     if (Result != VK_SUCCESS)
@@ -65,9 +65,9 @@ bool FQuery::GetData(uint32_t FirstQuery, uint32_t QueryCount, uint64_t DataSize
     }
 }
 
-void FQuery::SetDebugName(const char* DebugName)
+void CQuery::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -77,7 +77,7 @@ void FQuery::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_QueryPool);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);

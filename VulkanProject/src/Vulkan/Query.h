@@ -2,19 +2,19 @@
 #include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
-struct FQueryParams
+struct SQueryParams
 {
     VkQueryType QueryType;
     uint32_t    QueryCount;
 };
 
-class FQuery : public FDeviceChild
+class CQuery : public CDeviceChild
 {
 public:
-    static FQuery* Create(FDevice* pDevice, const FQueryParams& Params);
+    static CQuery* Create(CDevice* pDevice, const SQueryParams& Params);
     
-    FQuery(FDevice* pDevice);
-    ~FQuery();
+    CQuery(CDevice* pDevice);
+    ~CQuery();
 
     void SetDebugName(const char* DebugName);
     

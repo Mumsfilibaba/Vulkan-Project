@@ -7,15 +7,15 @@
 
 extern bool GIsRunning = false;
 
-FApplication* FApplication::GAppInstance = nullptr;
+CApplication* CApplication::GAppInstance = nullptr;
 
-FApplication* FApplication::Create()
+CApplication* CApplication::Create()
 {
-    GAppInstance = new FApplication();
+    GAppInstance = new CApplication();
     return GAppInstance;
 }
 
-FApplication::FApplication()
+CApplication::CApplication()
     : m_pWindow(nullptr)
     , m_pDevice(nullptr)
     , m_Width(1440)
@@ -23,11 +23,11 @@ FApplication::FApplication()
 {
 }
 
-FApplication::~FApplication()
+CApplication::~CApplication()
 {
 }
 
-bool FApplication::Init()
+bool CApplication::Init()
 {
     // Setup error handling
     glfwSetErrorCallback([](int32_t, const char* pErrorMessage)
@@ -54,13 +54,13 @@ bool FApplication::Init()
     }
     
     // Init Vulkan
-    FDeviceParams DeviceParams;
+    SDeviceParams DeviceParams;
     DeviceParams.pWindow           = m_pWindow;
     DeviceParams.bEnableRayTracing = true;
     DeviceParams.bEnableValidation = true;
     DeviceParams.bVerbose          = false;
 
-    m_pDevice = FDevice::Create(DeviceParams);
+    m_pDevice = CDevice::Create(DeviceParams);
     if (!m_pDevice)
     {
         LOG("Failed to init Vulkan\n");
@@ -68,7 +68,7 @@ bool FApplication::Init()
     }
     
     // Create SwapChain
-    m_pSwapchain = FSwapchain::Create(m_pDevice, m_pWindow);
+    m_pSwapchain = CSwapchain::Create(m_pDevice, m_pWindow);
 
     // Initialize ImGui
     GUI::InitializeImgui(m_pWindow, m_pDevice, m_pSwapchain);
@@ -76,12 +76,12 @@ bool FApplication::Init()
 #if ENABLE_HW_RT
     if (m_pDevice->IsRayTracingSupported())
     {
-        m_pRenderer = new FRayTracer();
+        m_pRenderer = new CRayTracer();
     }
     else
 #endif
     {
-        m_pRenderer = new FSoftwareRayTracer();
+        m_pRenderer = new CSoftwareRayTracer();
     }
 
     m_pRenderer->Init(m_pDevice, m_pSwapchain);
@@ -94,7 +94,7 @@ bool FApplication::Init()
     return true;
 }
 
-bool FApplication::CreateWindow()
+bool CApplication::CreateWindow()
 {
     // Setup window
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_TRUE);
@@ -129,7 +129,7 @@ bool FApplication::CreateWindow()
     }
 }
 
-void FApplication::OnWindowMinimized(GLFWwindow* pWindow, int32_t Minimized)
+void CApplication::OnWindowMinimized(GLFWwindow* pWindow, int32_t Minimized)
 {
     if (Minimized)
     {
@@ -141,7 +141,7 @@ void FApplication::OnWindowMinimized(GLFWwindow* pWindow, int32_t Minimized)
     }
 }
 
-void FApplication::OnWindowResize(GLFWwindow* pWindow, uint32_t Width, uint32_t Height)
+void CApplication::OnWindowResize(GLFWwindow* pWindow, uint32_t Width, uint32_t Height)
 {
     // This happens when we minimize a window
     if (Width > 0 && Height > 0)
@@ -157,7 +157,7 @@ void FApplication::OnWindowResize(GLFWwindow* pWindow, uint32_t Width, uint32_t 
     }
 }
 
-void FApplication::OnWindowClose(GLFWwindow* pWindow)
+void CApplication::OnWindowClose(GLFWwindow* pWindow)
 {
     if (pWindow == m_pWindow)
     {
@@ -165,7 +165,7 @@ void FApplication::OnWindowClose(GLFWwindow* pWindow)
     }
 }
 
-void FApplication::Tick()
+void CApplication::Tick()
 {
     auto CurrentTime = std::chrono::system_clock::now();
     
@@ -200,7 +200,7 @@ void FApplication::Tick()
     m_LastTime = CurrentTime;
 }
 
-void FApplication::Release()
+void CApplication::Release()
 {
     m_pDevice->WaitForIdle();
     m_pRenderer->Release();

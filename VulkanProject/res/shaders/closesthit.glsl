@@ -9,29 +9,29 @@
 #include "hw_ray_trace_common.glsl"
 #include "primitives.glsl"
 
-struct FMeshInfo
+struct SMeshInfo
 {
     uint64_t VertexBufferAddress;
     uint64_t IndexBufferAddress;
     uint64_t MaterialIndex;
 };
 
-layout(buffer_reference, scalar) readonly buffer FVertexBuffer
+layout(buffer_reference, scalar) readonly buffer SVertexBuffer
 {
-    FVertex Vertices[];
+    SVertex Vertices[];
 };
 
-layout(buffer_reference, scalar) readonly buffer FIndexBuffer
+layout(buffer_reference, scalar) readonly buffer SIndexBuffer
 {
     ivec3 Indices[];
 };
 
-layout(binding = 6) readonly buffer FMeshInfoBuffer 
+layout(binding = 6) readonly buffer SMeshInfoBuffer 
 { 
-    FMeshInfo MeshInfos[]; 
+    SMeshInfo MeshInfos[]; 
 };
 
-layout(location = 0) rayPayloadInEXT FRayPayLoad RayPayLoad;
+layout(location = 0) rayPayloadInEXT SRayPayLoad RayPayLoad;
 
 hitAttributeEXT vec2 Attribs;
 
@@ -40,17 +40,17 @@ void main()
     const uint MeshInfoOffset = gl_InstanceCustomIndexEXT;
     const uint GeometryIndex  = gl_GeometryIndexEXT;
     const uint MeshInfoIndex  = MeshInfoOffset + GeometryIndex; 
-    FMeshInfo MeshInfo = MeshInfos[MeshInfoIndex];
+    SMeshInfo MeshInfo = MeshInfos[MeshInfoIndex];
 
     // Retrieve Buffers
-    FIndexBuffer  IndexBuffer  = FIndexBuffer(MeshInfo.IndexBufferAddress);
-    FVertexBuffer VertexBuffer = FVertexBuffer(MeshInfo.VertexBufferAddress);
+    SIndexBuffer  IndexBuffer  = SIndexBuffer(MeshInfo.IndexBufferAddress);
+    SVertexBuffer VertexBuffer = SVertexBuffer(MeshInfo.VertexBufferAddress);
 
     // The primtive index
     const ivec3 Indices = IndexBuffer.Indices[gl_PrimitiveID];
 
     // Gather vertices
-    FVertex Vertices[3];
+    SVertex Vertices[3];
     Vertices[0] = VertexBuffer.Vertices[Indices.x];
     Vertices[1] = VertexBuffer.Vertices[Indices.y];
     Vertices[2] = VertexBuffer.Vertices[Indices.z];

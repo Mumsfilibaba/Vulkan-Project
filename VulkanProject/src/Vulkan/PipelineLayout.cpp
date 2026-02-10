@@ -4,9 +4,9 @@
 #include "BindlessManager.h"
 #include "Extensions.h"
 
-FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayoutParams& Params)
+CPipelineLayout* CPipelineLayout::Create(CDevice* pDevice, const SPipelineLayoutParams& Params)
 {
-    FPipelineLayout* pPipelineLayout = new FPipelineLayout(pDevice);
+    CPipelineLayout* pPipelineLayout = new CPipelineLayout(pDevice);
 
     std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
     DescriptorSetLayouts.reserve(Params.NumLayouts);
@@ -58,14 +58,14 @@ FPipelineLayout* FPipelineLayout::Create(FDevice* pDevice, const FPipelineLayout
     }
 }
 
-FPipelineLayout::FPipelineLayout(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CPipelineLayout::CPipelineLayout(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_PipelineLayout(VK_NULL_HANDLE)
     , m_BindlessDescriptorSetIndex(uint32_t(-1))
 {
 }
 
-FPipelineLayout::~FPipelineLayout()
+CPipelineLayout::~CPipelineLayout()
 {
     if (m_PipelineLayout != VK_NULL_HANDLE)
     {
@@ -74,9 +74,9 @@ FPipelineLayout::~FPipelineLayout()
     }
 }
 
-void FPipelineLayout::SetDebugName(const char* DebugName)
+void CPipelineLayout::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -86,7 +86,7 @@ void FPipelineLayout::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_PipelineLayout);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);

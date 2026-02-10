@@ -3,9 +3,9 @@
 #include "ScenePrimitives.h"
 #include "Model.h"
 
-struct FBvhBuilder;
+struct SBvhBuilder;
 
-struct FShaderBoundingBox
+struct SShaderBoundingBox
 {
     // 0-16
     glm::vec3 BoxMin;
@@ -16,15 +16,15 @@ struct FShaderBoundingBox
     uint32_t  NumTriangles = 0;
 };
 
-struct FAABB
+struct SAABB
 {
-    FAABB()
+    SAABB()
         : Min(std::numeric_limits<float>::max())
         , Max(std::numeric_limits<float>::lowest())
     {
     }
     
-    void Grow(const FAABB& AABB)
+    void Grow(const SAABB& AABB)
     {
         if (AABB.Min.x != std::numeric_limits<float>::max() && AABB.Min.y != std::numeric_limits<float>::max() && AABB.Min.z != std::numeric_limits<float>::max())
         {
@@ -53,9 +53,9 @@ struct FAABB
     glm::vec3 Max;
 };
 
-struct FBvhBoundingBox
+struct SBvhBoundingBox
 {
-    FBvhBoundingBox()
+    SBvhBoundingBox()
         : BoxMin(std::numeric_limits<float>::max())
         , BoxMax(std::numeric_limits<float>::lowest())
         , Triangles()
@@ -73,7 +73,7 @@ struct FBvhBoundingBox
     uint32_t              ChildIndex;
 };
 
-struct FBvhTriangle
+struct SBvhTriangle
 {
     glm::vec3 Center;
     glm::vec3 BoundsMin;
@@ -84,30 +84,30 @@ struct FBvhTriangle
     uint32_t  MaterialIndex;
 };
 
-struct FBvhBuilder
+struct SBvhBuilder
 {
-    FBvhBuilder(uint32_t InMaxDepth);
+    SBvhBuilder(uint32_t InMaxDepth);
     
     void BuildHierarchy();
     void Finalize();
     void RecalculateBounds(size_t VolumeIndex);
     float EvaluateCost(size_t VolumeIndex, size_t AxisIndex, float SplitPos);
     
-    std::vector<FBvhTriangle>    Triangles;
-    std::vector<FBvhBoundingBox> BoundingBoxes;
+    std::vector<SBvhTriangle>    Triangles;
+    std::vector<SBvhBoundingBox> BoundingBoxes;
     const uint32_t               MaxDepth;
     uint32_t                     Depth;
 };
 
-struct FBvhAccelerationStructure
+struct SBvhAccelerationStructure
 {
-    FBvhAccelerationStructure();
+    SBvhAccelerationStructure();
 
-    void Build(const FModel& Model, uint32_t MaxDepth);
+    void Build(const SModel& Model, uint32_t MaxDepth);
 
-    std::vector<FTriangleInfoGLSL>  m_TriangleInfo;
+    std::vector<STriangleInfoGLSL>  m_TriangleInfo;
     std::vector<uint32_t>           m_Indicies;
-    std::vector<FShaderBoundingBox> m_BoundingBoxes;
+    std::vector<SShaderBoundingBox> m_BoundingBoxes;
 
     struct
     {

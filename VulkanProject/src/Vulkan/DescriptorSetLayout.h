@@ -2,19 +2,19 @@
 #include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
-struct FDescriptorSetLayoutParams
+struct SDescriptorSetLayoutParams
 {
     VkDescriptorSetLayoutBinding* pBindings = nullptr;
     uint32_t NumBindings = 0;
 };
 
-class FDescriptorSetLayout : public FDeviceChild
+class CDescriptorSetLayout : public CDeviceChild
 {
 public:
-    static FDescriptorSetLayout* Create(FDevice* pDevice, const FDescriptorSetLayoutParams& Params);
+    static CDescriptorSetLayout* Create(CDevice* pDevice, const SDescriptorSetLayoutParams& Params);
 
-    FDescriptorSetLayout(FDevice* pDevice);
-    ~FDescriptorSetLayout();
+    CDescriptorSetLayout(CDevice* pDevice);
+    ~CDescriptorSetLayout();
 
     void SetDebugName(const char* DebugName);
     

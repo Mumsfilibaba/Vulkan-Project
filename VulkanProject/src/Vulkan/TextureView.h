@@ -2,24 +2,24 @@
 #include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
-class FDevice;
-class FTexture;
+class CDevice;
+class CTexture;
 
-struct FTextureViewParams
+struct STextureViewParams
 {
-    FTexture*       pTexture       = nullptr;
+    CTexture*       pTexture       = nullptr;
     VkImageViewType ViewType       = VK_IMAGE_VIEW_TYPE_2D;
     uint32_t        BaseArraySlice = 0;
     uint32_t        NumArraySlices = 1;
 };
 
-class FTextureView : public FDeviceChild
+class CTextureView : public CDeviceChild
 {
 public:
-    static FTextureView* Create(FDevice* pDevice, const FTextureViewParams& Params);
+    static CTextureView* Create(CDevice* pDevice, const STextureViewParams& Params);
 
-    FTextureView(FDevice* pDevice);
-    ~FTextureView();
+    CTextureView(CDevice* pDevice);
+    ~CTextureView();
 
     void SetDebugName(const char* DebugName);
 

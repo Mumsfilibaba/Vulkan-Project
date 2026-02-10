@@ -3,7 +3,7 @@
 
 #define INVALID_BINDLESS_ID uint(-1)
 
-struct FMaterial
+struct SMaterial
 {
     // 0-16
     vec4 AlbedoColor;
@@ -33,7 +33,7 @@ struct FMaterial
     uint Padding1;
 };
 
-struct FQuad
+struct SQuad
 {
     // 0-16
     vec4 Position;
@@ -50,7 +50,7 @@ struct FQuad
     uint Padding2;
 };
 
-struct FSphere
+struct SSphere
 {
     // 0-16
     vec4 PositionAndRadius;
@@ -63,12 +63,12 @@ struct FSphere
     uint Padding2;
 };
 
-struct FVertexPosition
+struct SVertexPosition
 {
     vec3 Position;
 };
 
-struct FVertex
+struct SVertex
 {
     vec3 Position;
     vec3 Normal;
@@ -76,19 +76,19 @@ struct FVertex
     vec2 TexCoord;
 };
 
-struct FTriangle
+struct STriangle
 {
     // 0-4
     int MaterialIndex;
 };
 
-struct FMesh
+struct SMesh
 {
     // 0-8
     uint BoundingBoxIndex;
 };
 
-struct FHitInfo
+struct SHitInfo
 {
     vec2  BaryCentrics;
     float Dist;

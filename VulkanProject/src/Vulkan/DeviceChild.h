@@ -1,27 +1,27 @@
 #pragma once
 #include "Core.h"
 
-class FDevice;
+class CDevice;
 
-class FDeviceChild
+class CDeviceChild
 {
 public:
-    FDeviceChild(FDevice* pDevice)
+    CDeviceChild(CDevice* pDevice)
         : m_pDevice(pDevice)
     {
         assert(pDevice != nullptr);
     }
 
-    ~FDeviceChild()
+    ~CDeviceChild()
     {
         m_pDevice = nullptr;
     }
     
-    FDevice* GetDevice() const
+    CDevice* GetDevice() const
     {
         return m_pDevice;
     }
 
 private:
-    FDevice* m_pDevice;
+    CDevice* m_pDevice;
 };

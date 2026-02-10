@@ -29,7 +29,7 @@ static void ReplaceBackslashes(std::string& Path)
     }
 }
 
-FModel::FModel()
+SModel::SModel()
     : pVertexBuffer(nullptr)
     , pIndexBuffer(nullptr)
     , pAccelerationStructure(nullptr)
@@ -40,14 +40,14 @@ FModel::FModel()
 {
 }
 
-FModel::~FModel()
+SModel::~SModel()
 {
     SAFE_DELETE(pVertexBuffer);
     SAFE_DELETE(pIndexBuffer);
     SAFE_DELETE(pAccelerationStructure);
 }
 
-bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
+bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
 {
     tinyobj::attrib_t                TinyObjAttrib;
     std::vector<tinyobj::shape_t>    TinyObjShapes;
@@ -80,10 +80,10 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
     }
 
     // Parse Materials
-    std::unordered_map<std::string, std::shared_ptr<FTextureResource>> MaterialTextures;
+    std::unordered_map<std::string, std::shared_ptr<CTextureResource>> MaterialTextures;
     const auto LoadMaterialTexture = [&](const std::string& TextureName)
     {
-        std::shared_ptr<FTextureResource> Texture;
+        std::shared_ptr<CTextureResource> Texture;
         if (!TextureName.empty())
         {
             auto It = MaterialTextures.find(TextureName);
@@ -92,7 +92,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
                 std::string Path = MaterialPath + TextureName;
                 ReplaceBackslashes(Path);
 
-                Texture = std::shared_ptr<FTextureResource>(FTextureResource::LoadFromFile(pDevice, Path.c_str()));
+                Texture = std::shared_ptr<CTextureResource>(CTextureResource::LoadFromFile(pDevice, Path.c_str()));
                 if (Texture)
                 {
                     MaterialTextures.insert(std::make_pair(TextureName, Texture));
@@ -107,10 +107,10 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
         return Texture;
     };
 
-    std::vector<FMaterial> NewMaterials;
+    std::vector<SMaterial> NewMaterials;
     for (const tinyobj::material_t& Material : TinyObjMaterials)
     {
-        FMaterial NewMaterial;
+        SMaterial NewMaterial;
         NewMaterial.AlbedoTex    = LoadMaterialTexture(Material.diffuse_texname);
         NewMaterial.NormalTex    = LoadMaterialTexture(Material.bump_texname);
         NewMaterial.RoughnessTex = LoadMaterialTexture(Material.specular_highlight_texname);
@@ -120,11 +120,11 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
     }
 
     // Parse Vertices
-    std::vector<FSubMesh> NewSubmeshes;
-    std::vector<FVertex>  NewVertices;
+    std::vector<SSubMesh> NewSubmeshes;
+    std::vector<SVertex>  NewVertices;
     std::vector<uint32_t> NewIndices;
 
-    std::unordered_map<FVertex, uint32_t, FVertexHasher> UniqueVertices;
+    std::unordered_map<SVertex, uint32_t, SVertexHasher> UniqueVertices;
     for (const tinyobj::shape_t& Shape : TinyObjShapes)
     {
         // Start at index zero for each mesh and loop until all indices are processed
@@ -136,7 +136,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
             const int32_t TriangleIndex        = CurrentIndex / 3;
             const int32_t CurrentMaterialIndex = Shape.mesh.material_ids[TriangleIndex];
 
-            FSubMesh& SubMesh = NewSubmeshes.emplace_back();
+            SSubMesh& SubMesh = NewSubmeshes.emplace_back();
             SubMesh.VertexOffset  = NewVertices.size();
             SubMesh.IndexOffset   = NewIndices.size();
             SubMesh.MaterialIndex = CurrentMaterialIndex;
@@ -157,7 +157,7 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
                 const size_t BasePositionIndex = 3 * Index.vertex_index;
                 assert(BasePositionIndex >= 0);
 
-                FVertex Vertex;
+                SVertex Vertex;
                 Vertex.Position =
                 {
                     TinyObjAttrib.vertices[BasePositionIndex + 0],
@@ -251,21 +251,21 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
 
     assert(NewIndices.size() < UINT32_MAX);
 
-    FBufferParams VertexBufferParams = { };
-    VertexBufferParams.Size  = NewVertices.size() * sizeof(FVertex);
+    SBufferParams VertexBufferParams = { };
+    VertexBufferParams.Size  = NewVertices.size() * sizeof(SVertex);
     VertexBufferParams.Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
-    pVertexBuffer = FBuffer::CreateWithData(pDevice, VertexBufferParams, nullptr, NewVertices.data());
+    pVertexBuffer = CBuffer::CreateWithData(pDevice, VertexBufferParams, nullptr, NewVertices.data());
     assert(pVertexBuffer != nullptr);
     VertexCount = NewVertices.size();
 
-    FBufferParams IndexBufferParams = { };
+    SBufferParams IndexBufferParams = { };
     IndexBufferParams.Size  = NewIndices.size() * sizeof(uint32_t);
     IndexBufferParams.Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
-    pIndexBuffer = FBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, NewIndices.data());
+    pIndexBuffer = CBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, NewIndices.data());
     assert(pIndexBuffer != nullptr);
     IndexCount = NewIndices.size();
 
@@ -279,25 +279,25 @@ bool FModel::LoadFromFile(const std::string& Filepath, FDevice* pDevice)
             0.0f, 0.0f, 1.0f, 0.0f
         };
 
-        FAccelerationStructureBLASParams BLASParams;
-        for (const FModel::FSubMesh& SubMesh : NewSubmeshes)
+        SAccelerationStructureBLASParams BLASParams;
+        for (const SModel::SSubMesh& SubMesh : NewSubmeshes)
         {
             const bool bHasAlphaMask = (SubMesh.MaterialIndex >= 0) ? (NewMaterials[SubMesh.MaterialIndex].AlphaMaskTex != nullptr) : false;
 
-            FBLASGeometry& Geometry = BLASParams.Geometries.emplace_back();
+            SBLASGeometry& Geometry = BLASParams.Geometries.emplace_back();
             Geometry.Flags              = bHasAlphaMask ? 0 : VK_GEOMETRY_OPAQUE_BIT_KHR;
             Geometry.TransformMatrix    = TransformMatrix;
             Geometry.pVertexBuffer      = pVertexBuffer;
             Geometry.MaxVertexIndex     = VertexCount;
             Geometry.VertexBufferCount  = SubMesh.VertexCount;
             Geometry.VertexBufferOffset = SubMesh.VertexOffset;
-            Geometry.VertexStride       = sizeof(FVertex);
+            Geometry.VertexStride       = sizeof(SVertex);
             Geometry.pIndexBuffer       = pIndexBuffer;
             Geometry.IndexBufferOffset  = SubMesh.IndexOffset;
             Geometry.IndexBufferCount   = SubMesh.IndexCount;
         }
 
-        pAccelerationStructure = FAccelerationStructure::CreateBLAS(pDevice, BLASParams);
+        pAccelerationStructure = CAccelerationStructure::CreateBLAS(pDevice, BLASParams);
         assert(pAccelerationStructure != nullptr);
     }
 

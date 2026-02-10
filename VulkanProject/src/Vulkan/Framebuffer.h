@@ -2,24 +2,24 @@
 #include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
-class FRenderPass;
+class CRenderPass;
 
-struct FFramebufferParams
+struct SFramebufferParams
 {
-    FRenderPass* pRenderPass     = nullptr;
+    CRenderPass* pRenderPass     = nullptr;
     VkImageView* pAttachMents    = nullptr;
     uint32_t     AttachmentCount = 0;
     uint32_t     Width           = 0;
     uint32_t     Height          = 0;
 };
 
-class FFramebuffer : public FDeviceChild
+class CFramebuffer : public CDeviceChild
 {
 public:
-    static FFramebuffer* Create(FDevice* pDevice, const FFramebufferParams& Params);
+    static CFramebuffer* Create(CDevice* pDevice, const SFramebufferParams& Params);
     
-    FFramebuffer(FDevice* pDevice);
-    ~FFramebuffer();
+    CFramebuffer(CDevice* pDevice);
+    ~CFramebuffer();
 
     void SetDebugName(const char* DebugName);
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "Core.h"
 
-struct FCameraBuffer
+struct SCameraBuffer
 {
     // 0-64
     glm::mat4 Projection;
@@ -23,10 +23,10 @@ struct FCameraBuffer
     uint32_t Padding2;
 };
 
-class FCamera
+class CCamera
 {
 public:
-    FCamera()
+    CCamera()
     {
         Reset();
     }

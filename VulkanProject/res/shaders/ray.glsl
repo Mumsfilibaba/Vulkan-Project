@@ -1,14 +1,14 @@
 #ifndef RAY_GLSL
 #define RAY_GLSL
 
-struct FRay
+struct SRay
 {
     vec3 Origin;
     vec3 Direction;
     vec3 InvDirection;
 };
 
-struct FRayPayLoad
+struct SRayPayLoad
 {
     vec3  Normal;
     vec3  Tangent;

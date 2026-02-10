@@ -15,18 +15,18 @@ inline void StartApplicationLoop()
     GIsRunning = true;
 }
 
-class FApplication
+class CApplication
 {
 public:
-    static FApplication* Create();
+    static CApplication* Create();
 
-    static FApplication& Get()
+    static CApplication& Get()
     {
         return *GAppInstance;
     }
 
-    FApplication();
-    ~FApplication();
+    CApplication();
+    ~CApplication();
 
     bool Init();
     void Tick();
@@ -42,7 +42,7 @@ public:
         return m_pWindow;
     }
 
-    FDevice* GetDevice() const
+    CDevice* GetDevice() const
     {
         return m_pDevice;
     }
@@ -50,13 +50,13 @@ public:
 private:
     GLFWwindow* m_pWindow;
     IRenderer*  m_pRenderer;
-    FDevice*    m_pDevice;
-    FSwapchain* m_pSwapchain;
+    CDevice*    m_pDevice;
+    CSwapchain* m_pSwapchain;
     uint32_t    m_Width;
     uint32_t    m_Height;
     bool        m_bIsMinimized;
 
     std::chrono::time_point<std::chrono::system_clock> m_LastTime;
 
-    static FApplication* GAppInstance;
+    static CApplication* GAppInstance;
 };

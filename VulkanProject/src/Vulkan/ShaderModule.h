@@ -2,16 +2,16 @@
 #include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
-class FDevice;
+class CDevice;
 
-class FShaderModule : public FDeviceChild
+class CShaderModule : public CDeviceChild
 {
 public:
-    static FShaderModule* Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t ByteCodeLength, const char* pEntryPoint);
-    static FShaderModule* CreateFromFile(FDevice* pDevice, const char* pEntryPoint, const char* pFilePath);
+    static CShaderModule* Create(CDevice* pDevice, const uint32_t* pByteCode, uint32_t ByteCodeLength, const char* pEntryPoint);
+    static CShaderModule* CreateFromFile(CDevice* pDevice, const char* pEntryPoint, const char* pFilePath);
     
-    FShaderModule(FDevice* pDevice);
-    ~FShaderModule();
+    CShaderModule(CDevice* pDevice);
+    ~CShaderModule();
 
     void SetDebugName(const char* DebugName);
     

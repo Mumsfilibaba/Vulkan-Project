@@ -18,8 +18,8 @@
 #define BACKGROUND_TYPE_GRADIENT 1
 #define BACKGROUND_TYPE_SKYBOX 2
 
-class FBuffer;
-class FSampler;
+class CBuffer;
+class CSampler;
 
 enum class ESoftwareViewMode : uint32_t
 {
@@ -32,7 +32,7 @@ enum class ESoftwareViewMode : uint32_t
     Debug           = 6,
 };
 
-struct FSoftwareSceneSettings
+struct SSoftwareSceneSettings
 {
     ESoftwareViewMode ViewMode;
     uint32_t          BackgroundType;
@@ -43,10 +43,10 @@ struct FSoftwareSceneSettings
     float             CameraSpeed;
 };
 
-struct FSoftwareScene : public IScene
+struct SSoftwareScene : public IScene
 {
-    FSoftwareScene();
-    virtual ~FSoftwareScene();
+    SSoftwareScene();
+    virtual ~SSoftwareScene();
 
     // IScene Interface
     virtual void Initialize() override { }
@@ -58,42 +58,42 @@ struct FSoftwareScene : public IScene
     virtual float GetFieldOfView() const override { return m_Settings.FieldOfView; }
     virtual float GetExposure() const override { return m_Settings.Exposure; }
 
-    virtual FCamera& GetCamera() override { return m_Camera; }
-    virtual const FCamera& GetCamera() const override { return m_Camera; }
+    virtual CCamera& GetCamera() override { return m_Camera; }
+    virtual const CCamera& GetCamera() const override { return m_Camera; }
 
-    FCamera                m_Camera;
-    FSoftwareSceneSettings m_Settings;
+    CCamera                m_Camera;
+    SSoftwareSceneSettings m_Settings;
 
     // Materials
-    std::vector<FMaterial>     m_Materials;
-    std::vector<FMaterialGLSL> m_GpuMaterials;
+    std::vector<SMaterial>     m_Materials;
+    std::vector<SMaterialGLSL> m_GpuMaterials;
 
     // Other primitive data
-    std::vector<FSphereGLSL>   m_Spheres;
-    std::vector<FQuadGLSL>     m_Quads;
+    std::vector<SSphereGLSL>   m_Spheres;
+    std::vector<SQuadGLSL>     m_Quads;
 
     // BVH Container
-    FBvhAccelerationStructure  m_AccelerationStructure;
+    SBvhAccelerationStructure  m_AccelerationStructure;
 
     // Triangle Mesh Data
-    std::vector<FVertexPosition>   m_VertexPositions;
-    std::vector<FVertex>           m_Vertices;
+    std::vector<SVertexPosition>   m_VertexPositions;
+    std::vector<SVertex>           m_Vertices;
     std::vector<uint32_t>          m_Indicies;
-    std::vector<FMeshGLSL>         m_Meshes;
-    std::vector<FTriangleInfoGLSL> m_TriangleInfo;
+    std::vector<SMeshGLSL>         m_Meshes;
+    std::vector<STriangleInfoGLSL> m_TriangleInfo;
 
     // CPU Buffers
-    FBuffer*  m_pVertexPositionsBuffer;
-    FBuffer*  m_pVertexBuffer;
-    FBuffer*  m_pIndexBuffer;
-    FBuffer*  m_pTriangleBuffer;
-    FBuffer*  m_pBoundingBoxBuffer;
+    CBuffer*  m_pVertexPositionsBuffer;
+    CBuffer*  m_pVertexBuffer;
+    CBuffer*  m_pIndexBuffer;
+    CBuffer*  m_pTriangleBuffer;
+    CBuffer*  m_pBoundingBoxBuffer;
     bool      m_bUpdateBuffers;
 
     // Sampler for materials
-    FSampler* m_pMaterialSampler;
+    CSampler* m_pMaterialSampler;
     // Debugging
-    FBuffer*  m_pAABBInstanceBuffer;
+    CBuffer*  m_pAABBInstanceBuffer;
 };
 
 enum class EModelSceneType
@@ -102,9 +102,9 @@ enum class EModelSceneType
     Sponza  = 2,
 };
 
-struct FModelScene : public FSoftwareScene
+struct SModelScene : public SSoftwareScene
 {
-    FModelScene(EModelSceneType InType)
+    SModelScene(EModelSceneType InType)
         : Type(InType)
     {
     }
@@ -123,9 +123,9 @@ enum class ESphereSceneType
     RoughGlass        = 4,
 };
 
-struct FSphereScene : public FSoftwareScene
+struct SSphereScene : public SSoftwareScene
 {
-    FSphereScene(ESphereSceneType InType)
+    SSphereScene(ESphereSceneType InType)
         : Type(InType)
     {
     }
@@ -136,7 +136,7 @@ struct FSphereScene : public FSoftwareScene
     const ESphereSceneType Type;
 };
 
-struct FCornellBoxScene : public FSoftwareScene
+struct SCornellBoxScene : public SSoftwareScene
 {
     virtual void Initialize() override;
     virtual void Reset() override;

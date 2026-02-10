@@ -7,13 +7,13 @@
 #include "Extensions.h"
 
 // Allocates from pDescriptorPool and uses the layout from pPipeline
-FDescriptorSet* FDescriptorSet::Create(FDevice* pDevice, FDescriptorPool* pDescriptorPool, FDescriptorSetLayout* pDescriptorSetLayout)
+CDescriptorSet* CDescriptorSet::Create(CDevice* pDevice, CDescriptorPool* pDescriptorPool, CDescriptorSetLayout* pDescriptorSetLayout)
 {
     assert(pDevice != nullptr);
     assert(pDescriptorPool != nullptr);
     assert(pDescriptorSetLayout != nullptr);
     
-    FDescriptorSet* pDescriptorSet = new FDescriptorSet(pDevice, pDescriptorPool);
+    CDescriptorSet* pDescriptorSet = new CDescriptorSet(pDevice, pDescriptorPool);
     
     VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo;
     ZERO_STRUCT(&DescriptorSetAllocateInfo);
@@ -34,15 +34,15 @@ FDescriptorSet* FDescriptorSet::Create(FDevice* pDevice, FDescriptorPool* pDescr
     return pDescriptorSet;
 }
 
-FDescriptorSet::FDescriptorSet(FDevice* pDevice, FDescriptorPool* pDescriptorPool)
-    : FDeviceChild(pDevice)
+CDescriptorSet::CDescriptorSet(CDevice* pDevice, CDescriptorPool* pDescriptorPool)
+    : CDeviceChild(pDevice)
     , m_pDescriptorPool(pDescriptorPool)
     , m_DescriptorSet(VK_NULL_HANDLE)
 {
     assert(m_pDescriptorPool != nullptr);
 }
 
-FDescriptorSet::~FDescriptorSet()
+CDescriptorSet::~CDescriptorSet()
 {
     if (m_DescriptorSet)
     {
@@ -51,7 +51,7 @@ FDescriptorSet::~FDescriptorSet()
     }
 }
 
-void FDescriptorSet::BindStorageImage(VkImageView ImageView, uint32_t Binding)
+void CDescriptorSet::BindStorageImage(VkImageView ImageView, uint32_t Binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
     assert(ImageView != VK_NULL_HANDLE);
@@ -77,7 +77,7 @@ void FDescriptorSet::BindStorageImage(VkImageView ImageView, uint32_t Binding)
     vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &DescriptorWrite, 0, nullptr);
 }
 
-void FDescriptorSet::BindCombinedImageSampler(VkImageView ImageView, VkSampler Sampler, uint32_t Binding)
+void CDescriptorSet::BindCombinedImageSampler(VkImageView ImageView, VkSampler Sampler, uint32_t Binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
     assert(Sampler != VK_NULL_HANDLE);
@@ -104,7 +104,7 @@ void FDescriptorSet::BindCombinedImageSampler(VkImageView ImageView, VkSampler S
     vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &DescriptorWrite, 0, nullptr);
 }
 
-void FDescriptorSet::BindUniformBuffer(VkBuffer Buffer, uint32_t Binding)
+void CDescriptorSet::BindUniformBuffer(VkBuffer Buffer, uint32_t Binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
     assert(Buffer != VK_NULL_HANDLE);
@@ -130,7 +130,7 @@ void FDescriptorSet::BindUniformBuffer(VkBuffer Buffer, uint32_t Binding)
     vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &DescriptorWrite, 0, nullptr);
 }
 
-void FDescriptorSet::BindStorageBuffer(VkBuffer Buffer, uint32_t Binding)
+void CDescriptorSet::BindStorageBuffer(VkBuffer Buffer, uint32_t Binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
     assert(Buffer != VK_NULL_HANDLE);
@@ -156,7 +156,7 @@ void FDescriptorSet::BindStorageBuffer(VkBuffer Buffer, uint32_t Binding)
     vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &DescriptorWrite, 0, nullptr);
 }
 
-void FDescriptorSet::BindAccelerationStructure(VkAccelerationStructureKHR AccelerationStructure, uint32_t Binding)
+void CDescriptorSet::BindAccelerationStructure(VkAccelerationStructureKHR AccelerationStructure, uint32_t Binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
     assert(AccelerationStructure != VK_NULL_HANDLE);
@@ -183,9 +183,9 @@ void FDescriptorSet::BindAccelerationStructure(VkAccelerationStructureKHR Accele
     vkUpdateDescriptorSets(GetDevice()->GetDevice(), 1, &DescriptorWrite, 0, nullptr);
 }
 
-void FDescriptorSet::SetDebugName(const char* DebugName)
+void CDescriptorSet::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -195,7 +195,7 @@ void FDescriptorSet::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_DescriptorSet);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);

@@ -2,7 +2,7 @@
 #include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
-struct FRenderPassAttachment
+struct SRenderPassAttachment
 {
     VkFormat            Format = VK_FORMAT_UNDEFINED;
     VkAttachmentLoadOp  LoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -11,20 +11,20 @@ struct FRenderPassAttachment
     VkImageLayout       FinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 };
 
-struct FRenderPassParams
+struct SRenderPassParams
 {
-    FRenderPassAttachment* pColorAttachments = nullptr;
+    SRenderPassAttachment* pColorAttachments = nullptr;
     uint32_t ColorAttachmentCount = 0;
-    FRenderPassAttachment* pDepthAttachment = nullptr;
+    SRenderPassAttachment* pDepthAttachment = nullptr;
 };
 
-class FRenderPass : public FDeviceChild
+class CRenderPass : public CDeviceChild
 {
 public:
-    static FRenderPass* Create(class FDevice* pDevice, const FRenderPassParams& Params);
+    static CRenderPass* Create(class CDevice* pDevice, const SRenderPassParams& Params);
     
-    FRenderPass(FDevice* pDevice);
-    ~FRenderPass();
+    CRenderPass(CDevice* pDevice);
+    ~CRenderPass();
 
     void SetDebugName(const char* DebugName);
 

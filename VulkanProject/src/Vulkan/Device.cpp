@@ -33,13 +33,13 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugUtilsMessageSev
     return VK_FALSE;
 }
 
-FDevice* FDevice::Create(const FDeviceParams& Params)
+CDevice* CDevice::Create(const SDeviceParams& Params)
 {
-    FDevice* pDevice = new FDevice();
+    CDevice* pDevice = new CDevice();
     return pDevice->Init(Params) ? pDevice : nullptr;
 }
 
-FDevice::FDevice()
+CDevice::CDevice()
     : m_Instance(VK_NULL_HANDLE)
     , m_DebugMessenger(VK_NULL_HANDLE)
     , m_PhysicalDevice(VK_NULL_HANDLE)
@@ -59,7 +59,7 @@ FDevice::FDevice()
 {
 }
 
-FDevice::~FDevice()
+CDevice::~CDevice()
 {
     SAFE_DELETE(m_pBindlessManager);
     
@@ -71,9 +71,9 @@ FDevice::~FDevice()
 
     if (m_bValidationEnabled)
     {
-        if (FExtensions::vkDestroyDebugUtilsMessengerEXT)
+        if (Extensions::vkDestroyDebugUtilsMessengerEXT)
         {
-            FExtensions::vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, nullptr);
+            Extensions::vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, nullptr);
             m_DebugMessenger = nullptr;
         }
     }
@@ -85,7 +85,7 @@ FDevice::~FDevice()
     }
 }
 
-uint32_t FDevice::GetQueueFamilyIndex(ECommandQueueType Type)
+uint32_t CDevice::GetQueueFamilyIndex(ECommandQueueType Type)
 {
     switch (Type)
     {
@@ -96,7 +96,7 @@ uint32_t FDevice::GetQueueFamilyIndex(ECommandQueueType Type)
     }
 }
 
-void FDevice::ExecuteGraphics(FCommandBuffer* pCommandBuffer, FSwapchain* pSwapchain, VkPipelineStageFlags* pWaitStages)
+void CDevice::ExecuteGraphics(CCommandBuffer* pCommandBuffer, CSwapchain* pSwapchain, VkPipelineStageFlags* pWaitStages)
 {
     VkSubmitInfo SubmitInfo;
     ZERO_STRUCT(&SubmitInfo);
@@ -151,7 +151,7 @@ void FDevice::ExecuteGraphics(FCommandBuffer* pCommandBuffer, FSwapchain* pSwapc
     }
 }
 
-void FDevice::WaitForIdle()
+void CDevice::WaitForIdle()
 {
     VkResult Result = vkDeviceWaitIdle(m_Device);
     if (Result != VK_SUCCESS)
@@ -160,12 +160,12 @@ void FDevice::WaitForIdle()
     }
 }
 
-void FDevice::Destroy()
+void CDevice::Destroy()
 {
     delete this;
 }
 
-bool FDevice::Init(const FDeviceParams& Params)
+bool CDevice::Init(const SDeviceParams& Params)
 {
     m_bValidationEnabled = Params.bEnableValidation;
     if (CreateInstance(Params))
@@ -210,7 +210,7 @@ bool FDevice::Init(const FDeviceParams& Params)
     // Create BindlessManager
     if (m_bBindlessSupported)
     {
-        m_pBindlessManager = FBindlessManager::Create(this);
+        m_pBindlessManager = CBindlessManager::Create(this);
         if (!m_pBindlessManager)
         {
             return false;
@@ -220,7 +220,7 @@ bool FDevice::Init(const FDeviceParams& Params)
     return true;
 }
 
-bool FDevice::CreateInstance(const FDeviceParams& Params)
+bool CDevice::CreateInstance(const SDeviceParams& Params)
 {
     VkApplicationInfo ApplicationInfo;
     ZERO_STRUCT(&ApplicationInfo);
@@ -365,20 +365,20 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
     }
 
     // Get instance functions
-    FExtensions::vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT"));
-    if (!FExtensions::vkSetDebugUtilsObjectNameEXT)
+    Extensions::vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT"));
+    if (!Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         LOG("Failed to retrieve 'vkSetDebugUtilsObjectNameEXT'\n");
     }
 
-    FExtensions::vkCreateDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT"));
-    if (!FExtensions::vkCreateDebugUtilsMessengerEXT)
+    Extensions::vkCreateDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT"));
+    if (!Extensions::vkCreateDebugUtilsMessengerEXT)
     {
         LOG("Failed to retrieve 'vkCreateDebugUtilsMessengerEXT'\n");
     }
 
-    FExtensions::vkDestroyDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(m_Instance, "vkDestroyDebugUtilsMessengerEXT"));
-    if (!FExtensions::vkDestroyDebugUtilsMessengerEXT)
+    Extensions::vkDestroyDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(m_Instance, "vkDestroyDebugUtilsMessengerEXT"));
+    if (!Extensions::vkDestroyDebugUtilsMessengerEXT)
     {
         LOG("Failed to retrieve 'vkDestroyDebugUtilsMessengerEXT'\n");
     }
@@ -386,14 +386,14 @@ bool FDevice::CreateInstance(const FDeviceParams& Params)
     return true;
 }
 
-bool FDevice::CreateDebugMessenger()
+bool CDevice::CreateDebugMessenger()
 {
-    if (FExtensions::vkCreateDebugUtilsMessengerEXT)
+    if (Extensions::vkCreateDebugUtilsMessengerEXT)
     {
         VkDebugUtilsMessengerCreateInfoEXT CreateInfo = {};
         PopulateDebugMessengerCreateInfo(CreateInfo);
 
-        VkResult Result = FExtensions::vkCreateDebugUtilsMessengerEXT(m_Instance, &CreateInfo, nullptr, &m_DebugMessenger);
+        VkResult Result = Extensions::vkCreateDebugUtilsMessengerEXT(m_Instance, &CreateInfo, nullptr, &m_DebugMessenger);
         if (Result != VK_SUCCESS)
         {
             LOG("vkCreateDebugUtilsMessengerEXT failed. Error: %d\n", Result);
@@ -407,7 +407,7 @@ bool FDevice::CreateDebugMessenger()
     return false;
 }
 
-bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
+bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
 {
     m_QueueFamilyIndices = GetQueueFamilyIndices(m_PhysicalDevice);
 
@@ -628,7 +628,7 @@ bool FDevice::CreateDeviceAndQueues(const FDeviceParams& Params)
     }
 }
 
-void FDevice::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& CreateInfo)
+void CDevice::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& CreateInfo)
 {
     ZERO_STRUCT(&CreateInfo);
     
@@ -638,7 +638,7 @@ void FDevice::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEX
     CreateInfo.pfnUserCallback = VulkanDebugCallback;
 }
 
-bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
+bool CDevice::QueryPhysicalDevice(const SDeviceParams& Params)
 {
     // Enumerate devices
     uint32_t GpuCount = 0;
@@ -680,7 +680,7 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
         }
 
         // Find indices for queue-families
-        FQueueFamilyIndices Indices = GetQueueFamilyIndices(PhysicalDevice);
+        SQueueFamilyIndices Indices = GetQueueFamilyIndices(PhysicalDevice);
         if (!Indices.IsValid())
         {
             LOG("Failed to find a suitable queue-families\n");
@@ -739,11 +739,11 @@ bool FDevice::QueryPhysicalDevice(const FDeviceParams& Params)
     return true;
 }
 
-bool FDevice::QueryDeviceExtensionFunctions()
+bool CDevice::QueryDeviceExtensionFunctions()
 {
 #define GET_DEVICE_EXTENTION_FUNC(FunctionName) \
-    FExtensions::FunctionName = reinterpret_cast<PFN_##FunctionName>(vkGetDeviceProcAddr(m_Device, #FunctionName)); \
-    if (!FExtensions::FunctionName) \
+    Extensions::FunctionName = reinterpret_cast<PFN_##FunctionName>(vkGetDeviceProcAddr(m_Device, #FunctionName)); \
+    if (!Extensions::FunctionName) \
     { \
         LOG("Failed to retrieve '" #FunctionName "'\n"); \
         return false; \
@@ -781,7 +781,7 @@ bool FDevice::QueryDeviceExtensionFunctions()
     return true;
 }
 
-void FDevice::QueryPhysicalDeviceFeatures()
+void CDevice::QueryPhysicalDeviceFeatures()
 {
     ZERO_STRUCT(&m_DeviceAccelerationStructureFeatures);
     m_DeviceAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
@@ -847,7 +847,7 @@ static uint32_t GetQueueFamilyIndex(VkQueueFlagBits QueueFlags, const std::vecto
     return UINT32_MAX;
 }
 
-FQueueFamilyIndices FDevice::GetQueueFamilyIndices(VkPhysicalDevice PhysicalDevice)
+SQueueFamilyIndices CDevice::GetQueueFamilyIndices(VkPhysicalDevice PhysicalDevice)
 {
     uint32_t QueueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, nullptr);
@@ -855,7 +855,7 @@ FQueueFamilyIndices FDevice::GetQueueFamilyIndices(VkPhysicalDevice PhysicalDevi
     std::vector<VkQueueFamilyProperties> QueueFamilies(QueueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, QueueFamilies.data());
 
-    FQueueFamilyIndices Indices = {};
+    SQueueFamilyIndices Indices = {};
     Indices.Compute  = ::GetQueueFamilyIndex(VK_QUEUE_COMPUTE_BIT, QueueFamilies);
     Indices.Transfer = ::GetQueueFamilyIndex(VK_QUEUE_TRANSFER_BIT, QueueFamilies);
     Indices.Graphics = ::GetQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, QueueFamilies);
@@ -865,7 +865,7 @@ FQueueFamilyIndices FDevice::GetQueueFamilyIndices(VkPhysicalDevice PhysicalDevi
     return Indices;
 }
 
-std::vector<const char*> FDevice::GetRequiredDeviceExtensions()
+std::vector<const char*> CDevice::GetRequiredDeviceExtensions()
 {
     std::vector<const char*> DeviceExtensions;
     DeviceExtensions.reserve(16);

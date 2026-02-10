@@ -5,24 +5,24 @@
 #include "Vulkan/PipelineLayout.h"
 #include "Vulkan/Sampler.h"
 
-class FTextureResource
+class CTextureResource
 {
 public:
-    static bool InitLoader(FDevice* pDevice);
+    static bool InitLoader(CDevice* pDevice);
     static void ReleaseLoader();
 
-    static FTextureResource* LoadFromFile(FDevice* pDevice, const char* Filepath);
-    static FTextureResource* LoadCubeMapFromPanoramaFile(FDevice* pDevice, const char* Filepath);
+    static CTextureResource* LoadFromFile(CDevice* pDevice, const char* Filepath);
+    static CTextureResource* LoadCubeMapFromPanoramaFile(CDevice* pDevice, const char* Filepath);
     
-    FTextureResource(FDevice* pDevice);
-    ~FTextureResource();
+    CTextureResource(CDevice* pDevice);
+    ~CTextureResource();
 
-    FTexture* GetTexture() const
+    CTexture* GetTexture() const
     {
         return m_pTexture;
     }
 
-    FTextureView* GetTextureView() const
+    CTextureView* GetTextureView() const
     {
         return m_pTextureView;
     }
@@ -38,14 +38,14 @@ public:
     }
 
 private:
-    FDevice*      m_pDevice;
-    FTexture*     m_pTexture;
-    FTextureView* m_pTextureView;
+    CDevice*      m_pDevice;
+    CTexture*     m_pTexture;
+    CTextureView* m_pTextureView;
     uint32_t      m_Width;
     uint32_t      m_Height;
 
-    static FSampler*             s_pCubeMapGenSampler;
-    static FDescriptorSetLayout* s_pCubeMapGenDescriptorSetLayout;
-    static FPipelineLayout*      s_pCubeMapGenPipelineLayout;
-    static FComputePipeline*     s_pCubeMapGenPipelineState;
+    static CSampler*             s_pCubeMapGenSampler;
+    static CDescriptorSetLayout* s_pCubeMapGenDescriptorSetLayout;
+    static CPipelineLayout*      s_pCubeMapGenPipelineLayout;
+    static CComputePipeline*     s_pCubeMapGenPipelineState;
 };

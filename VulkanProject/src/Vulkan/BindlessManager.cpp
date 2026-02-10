@@ -4,9 +4,9 @@
 #include "DescriptorSet.h"
 #include "TextureView.h"
 
-FBindlessManager* FBindlessManager::Create(FDevice* pDevice)
+CBindlessManager* CBindlessManager::Create(CDevice* pDevice)
 {
-    FBindlessManager* pBindlessManager = new FBindlessManager(pDevice);
+    CBindlessManager* pBindlessManager = new CBindlessManager(pDevice);
 
     const VkPhysicalDeviceLimits& DeviceLimits = pDevice->GetDeviceLimits();
     if (DeviceLimits.maxPerStageDescriptorSampledImages < 16)
@@ -116,8 +116,8 @@ FBindlessManager* FBindlessManager::Create(FDevice* pDevice)
     return pBindlessManager;
 }
 
-FBindlessManager::FBindlessManager(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CBindlessManager::CBindlessManager(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_DescriptorPool(VK_NULL_HANDLE)
     , m_DescriptorSet(VK_NULL_HANDLE)
     , m_DescriptorSetLayout(VK_NULL_HANDLE)
@@ -126,7 +126,7 @@ FBindlessManager::FBindlessManager(FDevice* pDevice)
 {
 }
 
-FBindlessManager::~FBindlessManager()
+CBindlessManager::~CBindlessManager()
 {
     if (m_DescriptorPool != VK_NULL_HANDLE)
     {
@@ -141,7 +141,7 @@ FBindlessManager::~FBindlessManager()
     }
 }
 
-uint32_t FBindlessManager::AddImageView(VkImageView ImageView, VkSampler Sampler)
+uint32_t CBindlessManager::AddImageView(VkImageView ImageView, VkSampler Sampler)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
     assert(Sampler != VK_NULL_HANDLE);
@@ -196,7 +196,7 @@ uint32_t FBindlessManager::AddImageView(VkImageView ImageView, VkSampler Sampler
     return BindlessHandle;
 }
 
-void FBindlessManager::RemoveImageView(VkImageView ImageView)
+void CBindlessManager::RemoveImageView(VkImageView ImageView)
 {
     auto It = m_TextureBindings.find(ImageView);
     if (It == m_TextureBindings.end())

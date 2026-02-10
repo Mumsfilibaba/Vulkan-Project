@@ -3,11 +3,11 @@
 #include "Vulkan/Device.h"
 #include "Vulkan/DescriptorPool.h"
 
-class FDeviceMemoryAllocator;
+class CDeviceMemoryAllocator;
 
 struct IRenderer
 {
-    virtual void Init(FDevice* pDevice, FSwapchain* pSwapchain) = 0;
+    virtual void Init(CDevice* pDevice, CSwapchain* pSwapchain) = 0;
     virtual void Release() = 0;
     virtual void Tick(float DeltaTime) = 0;
 
@@ -15,7 +15,7 @@ struct IRenderer
 
     virtual IScene* GetScene() const = 0;
 
-    virtual FDevice* GetDevice() const = 0;
-    virtual FDeviceMemoryAllocator* GetDeviceAllocator() const = 0;
-    virtual FDescriptorPool* GetDescriptorPool() const = 0;
+    virtual CDevice* GetDevice() const = 0;
+    virtual CDeviceMemoryAllocator* GetDeviceAllocator() const = 0;
+    virtual CDescriptorPool* GetDescriptorPool() const = 0;
 };

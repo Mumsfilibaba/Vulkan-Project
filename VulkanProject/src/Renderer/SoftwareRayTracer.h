@@ -4,7 +4,7 @@
 #include "SoftwareScene.h"
 #include "Bvh.h"
 
-struct FSoftwareSceneBuffer
+struct SSoftwareSceneBuffer
 {
     // 0-16
     uint32_t NumQuads     = 0;
@@ -25,11 +25,11 @@ struct FSoftwareSceneBuffer
     uint32_t Padding1;
 };
 
-class FSoftwareRayTracer : public FBaseRenderer
+class CSoftwareRayTracer : public CBaseRenderer
 {
 public:
-    FSoftwareRayTracer();
-    ~FSoftwareRayTracer();
+    CSoftwareRayTracer();
+    ~CSoftwareRayTracer();
 
     // IRenderer Interface
     virtual IScene* GetScene() const override final
@@ -49,55 +49,55 @@ public:
     virtual void RenderUI() override;
     virtual void ReloadShaders() override;
 
-    virtual void Render(FCommandBuffer* pCommandBuffer) override;
+    virtual void Render(CCommandBuffer* pCommandBuffer) override;
 
     virtual void CreateGlobalBuffers() override;
 
 private:
     void CreateRayTracingResources();
     void CreateDebugViewResources();
-    void UpdateGlobalBuffers(FCommandBuffer* pCommandBuffer);
-    void PerformRayTracing(FCommandBuffer* pCommandBuffer);
-    void PerformDebugPass(FCommandBuffer* pCommandBuffer);
+    void UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer);
+    void PerformRayTracing(CCommandBuffer* pCommandBuffer);
+    void PerformDebugPass(CCommandBuffer* pCommandBuffer);
 
     // Scene
-    FSoftwareScene* m_pScene;
+    SSoftwareScene* m_pScene;
 
     // Buffers
-    FBuffer* m_pSceneSettingsBuffer;
-    FBuffer* m_pMaterialBuffer;
-    FBuffer* m_pSphereBuffer;
-    FBuffer* m_pQuadBuffer;
-    FBuffer* m_pTriangleBuffer;
-    FBuffer* m_pMeshBuffer;
-    FBuffer* m_pVertexPositionsBuffer;
-    FBuffer* m_pVertexBuffer;
-    FBuffer* m_pIndexBuffer;
-    FBuffer* m_pBvhBuffer;
+    CBuffer* m_pSceneSettingsBuffer;
+    CBuffer* m_pMaterialBuffer;
+    CBuffer* m_pSphereBuffer;
+    CBuffer* m_pQuadBuffer;
+    CBuffer* m_pTriangleBuffer;
+    CBuffer* m_pMeshBuffer;
+    CBuffer* m_pVertexPositionsBuffer;
+    CBuffer* m_pVertexBuffer;
+    CBuffer* m_pIndexBuffer;
+    CBuffer* m_pBvhBuffer;
 
-    FBuffer* m_pAABBVertexBuffer;
-    FBuffer* m_pAABBIndexBuffer;
-    FBuffer* m_pAABBInstanceBuffer;
+    CBuffer* m_pAABBVertexBuffer;
+    CBuffer* m_pAABBIndexBuffer;
+    CBuffer* m_pAABBInstanceBuffer;
     size_t   m_AABBIndexCount;
 
     // RayTracing Pass
-    std::atomic<FComputePipeline*> m_pRayTracingPipeline;
-    FPipelineLayout*               m_pRayTracingPipelineLayout;
-    FDescriptorSetLayout*          m_pRayTracingDescriptorSetLayout;
-    FDescriptorSet*                m_pRayTracingDescriptorSet0;
-    FDescriptorSet*                m_pRayTracingDescriptorSet1;
+    std::atomic<CComputePipeline*> m_pRayTracingPipeline;
+    CPipelineLayout*               m_pRayTracingPipelineLayout;
+    CDescriptorSetLayout*          m_pRayTracingDescriptorSetLayout;
+    CDescriptorSet*                m_pRayTracingDescriptorSet0;
+    CDescriptorSet*                m_pRayTracingDescriptorSet1;
 
     // DebugPass
-    FGraphicsPipeline*    m_pDebugPipeline;
-    FGraphicsPipeline*    m_pDebugPipelineWireframe;
-    FGraphicsPipeline*    m_pDebugAABBPipeline;
-    FRenderPass*          m_pDebugRenderPass;
-    FPipelineLayout*      m_pDebugPipelineLayout;
-    FPipelineLayout*      m_pDebugAABBPipelineLayout;
-    FDescriptorSetLayout* m_pDebugDescriptorSetLayout;
-    FDescriptorSet*       m_pDebugDescriptorSet0;
-    FDescriptorSet*       m_pDebugDescriptorSet1;
-    FFramebuffer*         m_pDebugFramebuffer;
-    FTexture*             m_pDepthBufferTexture;
-    FTextureView*         m_pDepthBufferTextureView;
+    CGraphicsPipeline*    m_pDebugPipeline;
+    CGraphicsPipeline*    m_pDebugPipelineWireframe;
+    CGraphicsPipeline*    m_pDebugAABBPipeline;
+    CRenderPass*          m_pDebugRenderPass;
+    CPipelineLayout*      m_pDebugPipelineLayout;
+    CPipelineLayout*      m_pDebugAABBPipelineLayout;
+    CDescriptorSetLayout* m_pDebugDescriptorSetLayout;
+    CDescriptorSet*       m_pDebugDescriptorSet0;
+    CDescriptorSet*       m_pDebugDescriptorSet1;
+    CFramebuffer*         m_pDebugFramebuffer;
+    CTexture*             m_pDepthBufferTexture;
+    CTextureView*         m_pDepthBufferTextureView;
 };

@@ -2,9 +2,9 @@
 #include "Device.h"
 #include "Extensions.h"
 
-FShaderModule* FShaderModule::Create(FDevice* pDevice, const uint32_t* pByteCode, uint32_t ByteCodeLength, const char* pEntryPoint)
+CShaderModule* CShaderModule::Create(CDevice* pDevice, const uint32_t* pByteCode, uint32_t ByteCodeLength, const char* pEntryPoint)
 {
-    FShaderModule* pShader = new FShaderModule(pDevice);
+    CShaderModule* pShader = new CShaderModule(pDevice);
     assert(pEntryPoint != nullptr);
     assert(pByteCode != nullptr);
     assert(ByteCodeLength != 0);
@@ -33,7 +33,7 @@ FShaderModule* FShaderModule::Create(FDevice* pDevice, const uint32_t* pByteCode
     }
 }
 
-FShaderModule* FShaderModule::CreateFromFile(FDevice* pDevice, const char* pEntryPoint, const char* pFilePath)
+CShaderModule* CShaderModule::CreateFromFile(CDevice* pDevice, const char* pEntryPoint, const char* pFilePath)
 {
     if (!pFilePath)
     {
@@ -52,7 +52,7 @@ FShaderModule* FShaderModule::CreateFromFile(FDevice* pDevice, const char* pEntr
         FileStream.read(buffer.data(), fileSize);
         FileStream.close();
                 
-        FShaderModule* pShader = FShaderModule::Create(pDevice, reinterpret_cast<const uint32_t*>(buffer.data()), buffer.size(), pEntryPoint);
+        CShaderModule* pShader = CShaderModule::Create(pDevice, reinterpret_cast<const uint32_t*>(buffer.data()), buffer.size(), pEntryPoint);
         if (!pShader)
         {
             return nullptr;
@@ -68,14 +68,14 @@ FShaderModule* FShaderModule::CreateFromFile(FDevice* pDevice, const char* pEntr
     }
 }
 
-FShaderModule::FShaderModule(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CShaderModule::CShaderModule(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_Module(VK_NULL_HANDLE)
     , m_pEntryPoint(nullptr)
 {
 }
 
-FShaderModule::~FShaderModule()
+CShaderModule::~CShaderModule()
 {
     if (m_Module)
     {
@@ -90,9 +90,9 @@ FShaderModule::~FShaderModule()
     }
 }
 
-void FShaderModule::SetDebugName(const char* DebugName)
+void CShaderModule::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -102,7 +102,7 @@ void FShaderModule::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Module);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);

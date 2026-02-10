@@ -1,7 +1,7 @@
 #pragma once
 #include "DeviceChild.h"
 
-struct FDescriptorPoolParams
+struct SDescriptorPoolParams
 {
     uint32_t NumUniformBuffers        = 0;
     uint32_t NumStorageImages         = 0;
@@ -10,13 +10,13 @@ struct FDescriptorPoolParams
     uint32_t MaxSets                  = 0;
 };
 
-class FDescriptorPool : public FDeviceChild
+class CDescriptorPool : public CDeviceChild
 {
 public:
-    static FDescriptorPool* Create(FDevice* pDevice, const FDescriptorPoolParams& Params);
+    static CDescriptorPool* Create(CDevice* pDevice, const SDescriptorPoolParams& Params);
 
-    FDescriptorPool(FDevice* pDevice);
-    ~FDescriptorPool();
+    CDescriptorPool(CDevice* pDevice);
+    ~CDescriptorPool();
 
     void SetDebugName(const char* DebugName);
 
@@ -27,5 +27,5 @@ public:
 
 private:
     VkDescriptorPool      m_DescriptorPool;
-    FDescriptorPoolParams m_Params;
+    SDescriptorPoolParams m_Params;
 };

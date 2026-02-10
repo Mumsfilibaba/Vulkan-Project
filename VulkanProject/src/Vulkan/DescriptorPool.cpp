@@ -2,11 +2,11 @@
 #include "Device.h"
 #include "Extensions.h"
 
-FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPoolParams& Params)
+CDescriptorPool* CDescriptorPool::Create(CDevice* pDevice, const SDescriptorPoolParams& Params)
 {
     constexpr uint32_t NumPoolSizes = 4;
     
-    FDescriptorPool* pDescriptorPool = new FDescriptorPool(pDevice);
+    CDescriptorPool* pDescriptorPool = new CDescriptorPool(pDevice);
     
     uint32_t NumPools = 0;
     VkDescriptorPoolSize PoolSizes[NumPoolSizes];
@@ -59,13 +59,13 @@ FDescriptorPool* FDescriptorPool::Create(FDevice* pDevice, const FDescriptorPool
     }
 }
 
-FDescriptorPool::FDescriptorPool(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CDescriptorPool::CDescriptorPool(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_DescriptorPool(VK_NULL_HANDLE)
 {
 }
 
-FDescriptorPool::~FDescriptorPool()
+CDescriptorPool::~CDescriptorPool()
 {
     if (m_DescriptorPool != VK_NULL_HANDLE)
     {
@@ -74,9 +74,9 @@ FDescriptorPool::~FDescriptorPool()
     }
 }
 
-void FDescriptorPool::SetDebugName(const char* DebugName)
+void CDescriptorPool::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -86,7 +86,7 @@ void FDescriptorPool::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_DescriptorPool);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);

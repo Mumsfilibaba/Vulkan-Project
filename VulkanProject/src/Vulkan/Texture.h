@@ -2,9 +2,9 @@
 #include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
-class FDevice;
+class CDevice;
 
-struct FTextureParams
+struct STextureParams
 {
     VkImageUsageFlags  Usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     VkFormat           Format        = VK_FORMAT_UNDEFINED;
@@ -17,14 +17,14 @@ struct FTextureParams
     uint32_t NumArraySlices = 1;
 };
 
-class FTexture : public FDeviceChild
+class CTexture : public CDeviceChild
 {
 public:
-    static FTexture* Create(FDevice* pDevice, const FTextureParams& Params);
-    static FTexture* CreateWithData(FDevice* pDevice, const FTextureParams& Params, const void* pSource);
+    static CTexture* Create(CDevice* pDevice, const STextureParams& Params);
+    static CTexture* CreateWithData(CDevice* pDevice, const STextureParams& Params, const void* pSource);
 
-    FTexture(FDevice* pDevice);
-    ~FTexture();
+    CTexture(CDevice* pDevice);
+    ~CTexture();
     
     void SetDebugName(const char* DebugName);
 

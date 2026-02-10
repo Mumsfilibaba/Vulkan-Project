@@ -1,7 +1,7 @@
 #ifndef HW_RAY_TRACE_COMMON_GLSL
 #define HW_RAY_TRACE_COMMON_GLSL
 
-struct FRayPayLoad
+struct SRayPayLoad
 {
     vec3  HitNormal;
     vec3  HitTangent;
@@ -14,7 +14,7 @@ struct FRayPayLoad
     bool  bFromInside;
 };
 
-struct FSceneSettings 
+struct SSceneSettings 
 {
     // 0-16
     uint NumMaterials;

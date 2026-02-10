@@ -2,9 +2,9 @@
 #include "Device.h"
 #include "Extensions.h"
 
-FDescriptorSetLayout* FDescriptorSetLayout::Create(FDevice* pDevice, const FDescriptorSetLayoutParams& Params)
+CDescriptorSetLayout* CDescriptorSetLayout::Create(CDevice* pDevice, const SDescriptorSetLayoutParams& Params)
 {
-    FDescriptorSetLayout* pDescriptorSetLayout = new FDescriptorSetLayout(pDevice);
+    CDescriptorSetLayout* pDescriptorSetLayout = new CDescriptorSetLayout(pDevice);
     
     VkDescriptorSetLayoutCreateInfo DescriptorLayoutCreateInfo;
     ZERO_STRUCT(&DescriptorLayoutCreateInfo);
@@ -26,13 +26,13 @@ FDescriptorSetLayout* FDescriptorSetLayout::Create(FDevice* pDevice, const FDesc
     }
 }
 
-FDescriptorSetLayout::FDescriptorSetLayout(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CDescriptorSetLayout::CDescriptorSetLayout(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_DescriptorSetLayout(VK_NULL_HANDLE)
 {
 }
 
-FDescriptorSetLayout::~FDescriptorSetLayout()
+CDescriptorSetLayout::~CDescriptorSetLayout()
 {
     if (m_DescriptorSetLayout != VK_NULL_HANDLE)
     {
@@ -41,9 +41,9 @@ FDescriptorSetLayout::~FDescriptorSetLayout()
     }
 }
 
-void FDescriptorSetLayout::SetDebugName(const char* DebugName)
+void CDescriptorSetLayout::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -53,7 +53,7 @@ void FDescriptorSetLayout::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_DescriptorSetLayout);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);

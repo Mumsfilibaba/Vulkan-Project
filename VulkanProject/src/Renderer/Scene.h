@@ -7,9 +7,9 @@
 #define MAX_MATERIALS 1024
 #define MAX_NUM_MESHES 1024
 
-class FSampler;
+class CSampler;
 
-struct FMeshInfo
+struct SMeshInfo
 {
     uint64_t VertexBufferAddress = 0;
     uint64_t IndexBufferAddress  = 0;
@@ -43,7 +43,7 @@ enum class ESceneType
     RoughTransparentGlassSpheres,
 };
 
-struct FSceneSettings
+struct SSceneSettings
 {
     EViewMode       ViewMode;
     EBackgroundType BackgroundType;
@@ -55,18 +55,18 @@ struct FSceneSettings
 };
 
 
-struct FScene : public IScene
+struct SScene : public IScene
 {
-    struct FSceneModel
+    struct SSceneModel
     {
-        std::shared_ptr<FModel> Model;
+        std::shared_ptr<SModel> Model;
         glm::vec3               Position;
         glm::vec3               Scale;
         glm::vec3               Rotation;
     };
 
-    FScene(FDevice* pDevice);
-    virtual ~FScene();
+    SScene(CDevice* pDevice);
+    virtual ~SScene();
 
     // IScene Interface
     virtual void Initialize() override;
@@ -78,32 +78,32 @@ struct FScene : public IScene
     virtual float GetFieldOfView() const override { return m_Settings.FieldOfView; }
     virtual float GetExposure() const override { return m_Settings.Exposure; }
 
-    virtual FCamera& GetCamera() override { return m_Camera; }
-    virtual const FCamera& GetCamera() const override { return m_Camera; }
+    virtual CCamera& GetCamera() override { return m_Camera; }
+    virtual const CCamera& GetCamera() const override { return m_Camera; }
 
-    void AddModel(const std::shared_ptr<FModel>& Model, const glm::vec3& Position = glm::vec3(0.0f), const glm::vec3& Scale = glm::vec3(1.0f), const glm::vec3& Rotation = glm::vec3(0.0f))
+    void AddModel(const std::shared_ptr<SModel>& Model, const glm::vec3& Position = glm::vec3(0.0f), const glm::vec3& Scale = glm::vec3(1.0f), const glm::vec3& Rotation = glm::vec3(0.0f))
     {
         m_ModelInstances.push_back({ Model, Position, Scale, Rotation });
     }
 
     // Cache the device
-    FDevice* m_pDevice;
+    CDevice* m_pDevice;
 
     // Camera
-    FCamera                    m_Camera;
-    FSceneSettings             m_Settings;
-    std::vector<FSceneModel>   m_ModelInstances;
+    CCamera                    m_Camera;
+    SSceneSettings             m_Settings;
+    std::vector<SSceneModel>   m_ModelInstances;
 
     // Materials
-    FSampler*                  m_pMaterialSampler;
-    std::vector<FMaterialGLSL> m_GpuMaterials;
+    CSampler*                  m_pMaterialSampler;
+    std::vector<SMaterialGLSL> m_GpuMaterials;
 
     // Vulkan Resources
-    FAccelerationStructure*    m_pTopLevelAS;
-    std::vector<FMeshInfo>     m_MeshInfoBuffer;
+    CAccelerationStructure*    m_pTopLevelAS;
+    std::vector<SMeshInfo>     m_MeshInfoBuffer;
 };
 
-struct FSceneFactory
+struct SceneFactory
 {
-    static FScene* CreateScene(ESceneType SceneType);
+    static SScene* CreateScene(ESceneType SceneType);
 };

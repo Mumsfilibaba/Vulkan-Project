@@ -6,7 +6,7 @@
 #include "Vulkan/Buffer.h"
 #include "Vulkan/BindlessManager.h"
 
-FScene::FScene(FDevice* pDevice)
+SScene::SScene(CDevice* pDevice)
     : IScene()
     , m_pDevice(pDevice)
     , m_Camera()
@@ -25,16 +25,16 @@ FScene::FScene(FDevice* pDevice)
     m_Settings.GradientLightStrength = 4.0f;
 }
 
-FScene::~FScene()
+SScene::~SScene()
 {
-    if (FDevice* pDevice = FApplication::Get().GetDevice())
+    if (CDevice* pDevice = CApplication::Get().GetDevice())
     {
         pDevice->WaitForIdle();
 
         // Cleanup any textures from the BindlessManager
-        for (const FSceneModel& ModelInstance : m_ModelInstances)
+        for (const SSceneModel& ModelInstance : m_ModelInstances)
         {
-            for (const FMaterial& Material : ModelInstance.Model->Materials)
+            for (const SMaterial& Material : ModelInstance.Model->Materials)
             {
                 if (Material.AlbedoTex)
                     pDevice->GetBindlessManager().RemoveImageView(Material.AlbedoTex->GetTextureView()->GetImageView());
@@ -59,12 +59,12 @@ FScene::~FScene()
     SAFE_DELETE(m_pMaterialSampler);
 }
 
-void FScene::Initialize()
+void SScene::Initialize()
 {
-    FDevice* pDevice = FApplication::Get().GetDevice();
+    CDevice* pDevice = CApplication::Get().GetDevice();
 
     // Create Sampler for materials
-    FSamplerParams SamplerParams = {};
+    SSamplerParams SamplerParams = {};
     SamplerParams.MagFilter     = VK_FILTER_LINEAR;
     SamplerParams.MinFilter     = VK_FILTER_LINEAR;
     SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -75,13 +75,13 @@ void FScene::Initialize()
     SamplerParams.MaxLod        = 1000;
     SamplerParams.MaxAnisotropy = 1.0f;
 
-    m_pMaterialSampler = FSampler::Create(pDevice, SamplerParams);
+    m_pMaterialSampler = CSampler::Create(pDevice, SamplerParams);
     assert(m_pMaterialSampler != nullptr);
     m_pMaterialSampler->SetDebugName("MaterialSampler");
 
     // Create a default material
     const size_t DefaultMaterialIndex = m_GpuMaterials.size();
-    FMaterialGLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
+    SMaterialGLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
     ShaderMaterial.AlbedoColor           = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
     ShaderMaterial.EmissiveColor         = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
     ShaderMaterial.SpecularColor         = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
@@ -91,27 +91,27 @@ void FScene::Initialize()
     ShaderMaterial.IncidenceOfRefraction = 1.0f;
     ShaderMaterial.RefractionChance      = 0.0f;
     ShaderMaterial.RefractionRoughness   = 0.0f;
-    ShaderMaterial.AlbedoTexIndex        = FBindlessManager::InvalidBindlessID;
-    ShaderMaterial.NormalTexIndex        = FBindlessManager::InvalidBindlessID;
-    ShaderMaterial.AlphaMaskTexIndex     = FBindlessManager::InvalidBindlessID;
-    ShaderMaterial.RoughnessTexIndex     = FBindlessManager::InvalidBindlessID;
-    ShaderMaterial.MetallicTexIndex      = FBindlessManager::InvalidBindlessID;
+    ShaderMaterial.AlbedoTexIndex        = CBindlessManager::InvalidBindlessID;
+    ShaderMaterial.NormalTexIndex        = CBindlessManager::InvalidBindlessID;
+    ShaderMaterial.AlphaMaskTexIndex     = CBindlessManager::InvalidBindlessID;
+    ShaderMaterial.RoughnessTexIndex     = CBindlessManager::InvalidBindlessID;
+    ShaderMaterial.MetallicTexIndex      = CBindlessManager::InvalidBindlessID;
 
-    const auto AddImageViewToBindlessManager = [](const std::shared_ptr<FTextureResource>& Texture, FSampler* pSampler)
+    const auto AddImageViewToBindlessManager = [](const std::shared_ptr<CTextureResource>& Texture, CSampler* pSampler)
     {
         if (Texture)
         {
-            FDevice* pDevice = FApplication::Get().GetDevice();
+            CDevice* pDevice = CApplication::Get().GetDevice();
             return pDevice->GetBindlessManager().AddImageView(Texture->GetTextureView()->GetImageView(), pSampler->GetSampler());
         }
         else
         {
-            return FBindlessManager::InvalidBindlessID;
+            return CBindlessManager::InvalidBindlessID;
         }
     };
 
-    FAccelerationStructureTLASParams TLASParams;
-    for (const FSceneModel& ModelInstance : m_ModelInstances)
+    SAccelerationStructureTLASParams TLASParams;
+    for (const SSceneModel& ModelInstance : m_ModelInstances)
     {
         // Translate
         glm::mat4 TransformMatrix = glm::identity<glm::mat4>();
@@ -127,7 +127,7 @@ void FScene::Initialize()
         memcpy(&TransformMatrixVk, glm::value_ptr(TransformMatrix), sizeof(VkTransformMatrixKHR));
 
         const size_t MeshInfoOffset = m_MeshInfoBuffer.size();
-        FTLASInstance& TLASInstance = TLASParams.Instances.emplace_back();
+        STLASInstance& TLASInstance = TLASParams.Instances.emplace_back();
         TLASInstance.TransformMatrix     = TransformMatrixVk;
         TLASInstance.pBLAS               = ModelInstance.Model->pAccelerationStructure;
         TLASInstance.InstanceCustomIndex = MeshInfoOffset;
@@ -136,9 +136,9 @@ void FScene::Initialize()
         const size_t MaterialOffset = m_GpuMaterials.size();
         if (!ModelInstance.Model->Materials.empty())
         {
-            for (const FMaterial& Material : ModelInstance.Model->Materials)
+            for (const SMaterial& Material : ModelInstance.Model->Materials)
             {
-                FMaterialGLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
+                SMaterialGLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
                 ShaderMaterial.AlbedoColor           = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
                 ShaderMaterial.EmissiveColor         = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
                 ShaderMaterial.SpecularColor         = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
@@ -159,9 +159,9 @@ void FScene::Initialize()
         }
 
         // Construct GPU mesh information
-        for (const FModel::FSubMesh& SubMesh : ModelInstance.Model->SubMeshes)
+        for (const SModel::SSubMesh& SubMesh : ModelInstance.Model->SubMeshes)
         {
-            FMeshInfo& MeshInfo = m_MeshInfoBuffer.emplace_back();
+            SMeshInfo& MeshInfo = m_MeshInfoBuffer.emplace_back();
             MeshInfo.VertexBufferAddress = ModelInstance.Model->pVertexBuffer->GetDeviceAddress().deviceAddress;
             MeshInfo.IndexBufferAddress  = ModelInstance.Model->pIndexBuffer->GetDeviceAddress().deviceAddress;
             MeshInfo.IndexBufferAddress += SubMesh.IndexOffset * sizeof(uint32_t);
@@ -171,25 +171,25 @@ void FScene::Initialize()
         }
     }
 
-    m_pTopLevelAS = FAccelerationStructure::CreateTLAS(pDevice, TLASParams);
+    m_pTopLevelAS = CAccelerationStructure::CreateTLAS(pDevice, TLASParams);
     assert(m_pTopLevelAS != nullptr);
 }
 
-void FScene::Reset()
+void SScene::Reset()
 {
     m_Camera.Reset();
 }
 
-FScene* FSceneFactory::CreateScene(ESceneType SceneType)
+SScene* SceneFactory::CreateScene(ESceneType SceneType)
 {
-    FDevice* pDevice = FApplication::Get().GetDevice();
+    CDevice* pDevice = CApplication::Get().GetDevice();
 
-    FScene* pScene = new FScene(pDevice);
+    SScene* pScene = new SScene(pDevice);
     switch (SceneType)
     {
     case ESceneType::Spheres:
     {
-        std::shared_ptr<FModel> pSphereModel = std::make_shared<FModel>();
+        std::shared_ptr<SModel> pSphereModel = std::make_shared<SModel>();
         pSphereModel->LoadFromFile(RESOURCE_PATH"/models/sphere.obj", pDevice);
 
         pScene->AddModel(pSphereModel, glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.5f));
@@ -201,7 +201,7 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
 
     case ESceneType::CornellBox:
     {
-        std::shared_ptr<FModel> pSphereModel = std::make_shared<FModel>();
+        std::shared_ptr<SModel> pSphereModel = std::make_shared<SModel>();
         pSphereModel->LoadFromFile(RESOURCE_PATH"/models/sphere.obj", pDevice);
 
         pScene->AddModel(pSphereModel, glm::vec3( 2.0f, 2.5f, 1.5f), glm::vec3(0.25f));
@@ -214,7 +214,7 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
         pScene->AddModel(pSphereModel, glm::vec3( 0.0f, 0.75f, -0.5f), glm::vec3(0.7f));
         pScene->AddModel(pSphereModel, glm::vec3(-2.2f, 0.75f, -0.5f), glm::vec3(0.7f));
 
-        std::shared_ptr<FModel> pPlaneModel = std::make_shared<FModel>();
+        std::shared_ptr<SModel> pPlaneModel = std::make_shared<SModel>();
         pPlaneModel->LoadFromFile(RESOURCE_PATH"/models/plane.obj", pDevice);
 
         constexpr float PI      = glm::pi<float>();
@@ -229,12 +229,12 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
 
     case ESceneType::Triangles:
     {
-        std::shared_ptr<FModel> pChessModel = std::make_shared<FModel>();
+        std::shared_ptr<SModel> pChessModel = std::make_shared<SModel>();
         pChessModel->LoadFromFile(RESOURCE_PATH"/models/queen.obj", pDevice);
 
         pScene->AddModel(pChessModel);
 
-        std::shared_ptr<FModel> pPlaneModel = std::make_shared<FModel>();
+        std::shared_ptr<SModel> pPlaneModel = std::make_shared<SModel>();
         pPlaneModel->LoadFromFile(RESOURCE_PATH"/models/plane.obj", pDevice);
 
         constexpr float PI      = glm::pi<float>();
@@ -249,7 +249,7 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
 
     case ESceneType::Sponza:
     {
-        std::shared_ptr<FModel> pSponzaModel = std::make_shared<FModel>();
+        std::shared_ptr<SModel> pSponzaModel = std::make_shared<SModel>();
         pSponzaModel->LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj", pDevice);
 
         pScene->AddModel(pSponzaModel);
@@ -262,7 +262,7 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
     case ESceneType::RoughTransparentGlassSpheres:
     {
         // Spheres
-        std::shared_ptr<FModel> pSphereModel = std::make_shared<FModel>();
+        std::shared_ptr<SModel> pSphereModel = std::make_shared<SModel>();
         pSphereModel->LoadFromFile(RESOURCE_PATH"/models/sphere.obj", pDevice);
 
         constexpr int32_t NumSpheres        = 7;
@@ -283,7 +283,7 @@ FScene* FSceneFactory::CreateScene(ESceneType SceneType)
         }
 
         // Quads
-        std::shared_ptr<FModel> pPlaneModel = std::make_shared<FModel>();
+        std::shared_ptr<SModel> pPlaneModel = std::make_shared<SModel>();
         pPlaneModel->LoadFromFile(RESOURCE_PATH"/models/plane.obj", pDevice);
 
         // Roof Quad

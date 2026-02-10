@@ -2,9 +2,9 @@
 #include "DeviceChild.h"
 #include <vulkan/vulkan.h>
 
-class FDevice;
+class CDevice;
 
-struct FSamplerParams
+struct SSamplerParams
 {
     VkFilter             MagFilter;
     VkFilter             MinFilter;
@@ -22,13 +22,13 @@ struct FSamplerParams
     VkBorderColor        BorderColor;
 };
 
-class FSampler : public FDeviceChild
+class CSampler : public CDeviceChild
 {
 public:
-    static FSampler* Create(FDevice* pDevice, const FSamplerParams& Params);
+    static CSampler* Create(CDevice* pDevice, const SSamplerParams& Params);
     
-    FSampler(FDevice* pDevice);
-    ~FSampler();
+    CSampler(CDevice* pDevice);
+    ~CSampler();
 
     void SetDebugName(const char* DebugName);
     

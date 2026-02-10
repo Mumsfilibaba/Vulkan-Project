@@ -100,22 +100,22 @@ namespace GUI
         }
 
         // Global Objects
-        FDevice*              pDevice;
-        FSwapchain*           pSwapchain;
-        FRenderPass*          pRenderPass;
-        FDescriptorPool*      pDescriptorPool;
-        FDescriptorSetLayout* pDescriptorSetLayout;
-        FPipelineLayout*      pPipelineLayout;
-        FGraphicsPipeline*    pPipeline;
-        FShaderModule*        pShaderModuleVert;
-        FShaderModule*        pShaderModuleFrag;
+        CDevice*              pDevice;
+        CSwapchain*           pSwapchain;
+        CRenderPass*          pRenderPass;
+        CDescriptorPool*      pDescriptorPool;
+        CDescriptorSetLayout* pDescriptorSetLayout;
+        CPipelineLayout*      pPipelineLayout;
+        CGraphicsPipeline*    pPipeline;
+        CShaderModule*        pShaderModuleVert;
+        CShaderModule*        pShaderModuleFrag;
 
         // Font Data
-        FSampler*             pFontSampler;
-        FSampler*             pImageSampler;
-        FTexture*             pFontTexture;
-        FTextureView*         pFontTextureView;
-        FDescriptorSet*       pFontDescriptorSet;
+        CSampler*             pFontSampler;
+        CSampler*             pImageSampler;
+        CTexture*             pFontTexture;
+        CTextureView*         pFontTextureView;
+        CDescriptorSet*       pFontDescriptorSet;
 
         // MainWindow Data
         uint32_t              LastViewportWidth;
@@ -138,9 +138,9 @@ namespace GUI
             SAFE_DELETE(pCommandBuffer);
         }
 
-        FBuffer*        pVertexBuffer;
-        FBuffer*        pIndexBuffer;
-        FCommandBuffer* pCommandBuffer;
+        CBuffer*        pVertexBuffer;
+        CBuffer*        pIndexBuffer;
+        CCommandBuffer* pCommandBuffer;
     };
     
     struct ImGuiViewportData
@@ -172,7 +172,7 @@ namespace GUI
                 return false;
             }
 
-            for (FFramebuffer* pFramebuffer : Framebuffers)
+            for (CFramebuffer* pFramebuffer : Framebuffers)
             {
                 VkExtent2D FrameBufferExtent = pFramebuffer->GetExtent();
                 VkExtent2D SwapChainExtent   = pSwapchain->GetExtent();
@@ -187,9 +187,9 @@ namespace GUI
         }
 
         GLFWwindow*                       pWindow;
-        FSwapchain*                       pSwapchain;
-        FRenderPass*                      pRenderPass;
-        std::vector<FFramebuffer*>        Framebuffers;
+        CSwapchain*                       pSwapchain;
+        CRenderPass*                      pRenderPass;
+        std::vector<CFramebuffer*>        Framebuffers;
         std::vector<ImGuiFrameRenderData> FrameData;
         VkClearValue                      ClearValues;
 
@@ -974,13 +974,13 @@ namespace GUI
             ImGuiIO& UIstate = ImGui::GetIO();
             UIstate.Fonts->GetTexDataAsRGBA32(&Pixels, &Width, &Height);
 
-            FTextureParams TextureParams = {};
+            STextureParams TextureParams = {};
             TextureParams.Format    = VK_FORMAT_R8G8B8A8_UNORM;
             TextureParams.ImageType = VK_IMAGE_TYPE_2D;
             TextureParams.Width     = Width;
             TextureParams.Height    = Height;
 
-            pRendererBackend->pFontTexture = FTexture::CreateWithData(pRendererBackend->pDevice, TextureParams, Pixels);
+            pRendererBackend->pFontTexture = CTexture::CreateWithData(pRendererBackend->pDevice, TextureParams, Pixels);
             if (!pRendererBackend->pFontTexture)
             {
                 return false;
@@ -990,10 +990,10 @@ namespace GUI
                 pRendererBackend->pFontTexture->SetDebugName("Font Texture");
             }
 
-            FTextureViewParams TextureViewParams = {};
+            STextureViewParams TextureViewParams = {};
             TextureViewParams.pTexture = pRendererBackend->pFontTexture;
 
-            pRendererBackend->pFontTextureView = FTextureView::Create(pRendererBackend->pDevice, TextureViewParams);
+            pRendererBackend->pFontTextureView = CTextureView::Create(pRendererBackend->pDevice, TextureViewParams);
             if (!pRendererBackend->pFontTextureView)
             {
                 return false;
@@ -1123,14 +1123,14 @@ namespace GUI
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         if (!pRendererBackend->pShaderModuleVert)
         {
-            pRendererBackend->pShaderModuleVert = FShaderModule::Create(pRendererBackend->pDevice, __glsl_shader_vert_spv, sizeof(__glsl_shader_vert_spv), "main");
+            pRendererBackend->pShaderModuleVert = CShaderModule::Create(pRendererBackend->pDevice, __glsl_shader_vert_spv, sizeof(__glsl_shader_vert_spv), "main");
             assert(pRendererBackend->pShaderModuleVert != nullptr);
             pRendererBackend->pShaderModuleVert->SetDebugName("ImGui VertexShader");
         }
 
         if (!pRendererBackend->pShaderModuleFrag)
         {
-            pRendererBackend->pShaderModuleFrag = FShaderModule::Create(pRendererBackend->pDevice, __glsl_shader_frag_spv, sizeof(__glsl_shader_frag_spv), "main");
+            pRendererBackend->pShaderModuleFrag = CShaderModule::Create(pRendererBackend->pDevice, __glsl_shader_frag_spv, sizeof(__glsl_shader_frag_spv), "main");
             assert(pRendererBackend->pShaderModuleFrag != nullptr);
             pRendererBackend->pShaderModuleFrag->SetDebugName("ImGui FragmentShader");
         }
@@ -1143,7 +1143,7 @@ namespace GUI
 
         if (!pRendererBackend->pPipeline)
         {
-            FGraphicsPipelineStateParams GraphicsPipelineStateParams = {};
+            SGraphicsPipelineStateParams GraphicsPipelineStateParams = {};
             GraphicsPipelineStateParams.pVertexShader   = pRendererBackend->pShaderModuleVert;
             GraphicsPipelineStateParams.pFragmentShader = pRendererBackend->pShaderModuleFrag;
             GraphicsPipelineStateParams.pRenderPass     = pRendererBackend->pRenderPass;
@@ -1177,7 +1177,7 @@ namespace GUI
             GraphicsPipelineStateParams.FrontFace    = VK_FRONT_FACE_COUNTER_CLOCKWISE;
             GraphicsPipelineStateParams.bBlendEnable = true;
 
-            pRendererBackend->pPipeline = FGraphicsPipeline::Create(pRendererBackend->pDevice, GraphicsPipelineStateParams);
+            pRendererBackend->pPipeline = CGraphicsPipeline::Create(pRendererBackend->pDevice, GraphicsPipelineStateParams);
             assert(pRendererBackend->pPipeline != nullptr);
             pRendererBackend->pPipeline->SetDebugName("ImGui Pipeline");
         }
@@ -1189,7 +1189,7 @@ namespace GUI
         if (!pRendererBackend->pFontSampler)
         {
             // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
-            FSamplerParams SamplerParams = {};
+            SSamplerParams SamplerParams = {};
             SamplerParams.MagFilter     = VK_FILTER_LINEAR;
             SamplerParams.MinFilter     = VK_FILTER_LINEAR;
             SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -1200,14 +1200,14 @@ namespace GUI
             SamplerParams.MaxLod        = 1000;
             SamplerParams.MaxAnisotropy = 1.0f;
 
-            pRendererBackend->pFontSampler = FSampler::Create(pRendererBackend->pDevice, SamplerParams);
+            pRendererBackend->pFontSampler = CSampler::Create(pRendererBackend->pDevice, SamplerParams);
             assert(pRendererBackend->pFontSampler != nullptr);
             pRendererBackend->pFontSampler->SetDebugName("ImGui FontSampler");
         }
 
         if (!pRendererBackend->pImageSampler)
         {
-            FSamplerParams SamplerParams = {};
+            SSamplerParams SamplerParams = {};
             SamplerParams.MagFilter     = VK_FILTER_NEAREST;
             SamplerParams.MinFilter     = VK_FILTER_NEAREST;
             SamplerParams.MipmapMode    = VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -1218,7 +1218,7 @@ namespace GUI
             SamplerParams.MaxLod        = 1000;
             SamplerParams.MaxAnisotropy = 1.0f;
 
-            pRendererBackend->pImageSampler = FSampler::Create(pRendererBackend->pDevice, SamplerParams);
+            pRendererBackend->pImageSampler = CSampler::Create(pRendererBackend->pDevice, SamplerParams);
             assert(pRendererBackend->pImageSampler != nullptr);
             pRendererBackend->pImageSampler->SetDebugName("ImGui ImageSampler");
         }
@@ -1230,55 +1230,55 @@ namespace GUI
             Binding[0].descriptorCount = 1;
             Binding[0].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-            FDescriptorSetLayoutParams DescriptorSetLayoutParams = {};
+            SDescriptorSetLayoutParams DescriptorSetLayoutParams = {};
             DescriptorSetLayoutParams.NumBindings = 1;
             DescriptorSetLayoutParams.pBindings   = Binding;
 
-            pRendererBackend->pDescriptorSetLayout = FDescriptorSetLayout::Create(pRendererBackend->pDevice, DescriptorSetLayoutParams);
+            pRendererBackend->pDescriptorSetLayout = CDescriptorSetLayout::Create(pRendererBackend->pDevice, DescriptorSetLayoutParams);
             assert(pRendererBackend->pDescriptorSetLayout != nullptr);
             pRendererBackend->pDescriptorSetLayout->SetDebugName("ImGui DescriptorSetLayout");
         }
 
         if (!pRendererBackend->pDescriptorPool)
         {
-            FDescriptorPoolParams DescriptorPoolParams = {};
+            SDescriptorPoolParams DescriptorPoolParams = {};
             DescriptorPoolParams.MaxSets                  = 1024;
             DescriptorPoolParams.NumCombinedImageSamplers = 1024;
 
-            pRendererBackend->pDescriptorPool = FDescriptorPool::Create(pRendererBackend->pDevice, DescriptorPoolParams);
+            pRendererBackend->pDescriptorPool = CDescriptorPool::Create(pRendererBackend->pDevice, DescriptorPoolParams);
             assert(pRendererBackend->pDescriptorPool != nullptr);
             pRendererBackend->pDescriptorPool->SetDebugName("ImGui DescriptorPool");
         }
         
         if (!pRendererBackend->pFontDescriptorSet)
         {
-            pRendererBackend->pFontDescriptorSet = FDescriptorSet::Create(pRendererBackend->pDevice, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
+            pRendererBackend->pFontDescriptorSet = CDescriptorSet::Create(pRendererBackend->pDevice, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
             assert(pRendererBackend->pFontDescriptorSet != nullptr);
             pRendererBackend->pFontDescriptorSet->SetDebugName("ImGui FontDescriptorSet");
         }
 
         if (!pRendererBackend->pPipelineLayout)
         {
-            FPipelineLayoutParams PipelineLayoutParams = {};
+            SPipelineLayoutParams PipelineLayoutParams = {};
             PipelineLayoutParams.ppLayouts        = &pRendererBackend->pDescriptorSetLayout;
             PipelineLayoutParams.NumLayouts       = 1;
             PipelineLayoutParams.NumPushConstants = 4;
 
-            pRendererBackend->pPipelineLayout = FPipelineLayout::Create(pRendererBackend->pDevice, PipelineLayoutParams);
+            pRendererBackend->pPipelineLayout = CPipelineLayout::Create(pRendererBackend->pDevice, PipelineLayoutParams);
             assert(pRendererBackend->pPipelineLayout != nullptr);
             pRendererBackend->pPipelineLayout->SetDebugName("ImGui PipelineLayout");
         }
 
         if (!pRendererBackend->pRenderPass)
         {
-            FRenderPassAttachment Attachment = {};
+            SRenderPassAttachment Attachment = {};
             Attachment.Format = pRendererBackend->pSwapchain->GetFormat();
 
-            FRenderPassParams RenderPassParams = {};
+            SRenderPassParams RenderPassParams = {};
             RenderPassParams.ColorAttachmentCount = 1;
             RenderPassParams.pColorAttachments    = &Attachment;
 
-            pRendererBackend->pRenderPass = FRenderPass::Create(pRendererBackend->pDevice, RenderPassParams);
+            pRendererBackend->pRenderPass = CRenderPass::Create(pRendererBackend->pDevice, RenderPassParams);
             assert(pRendererBackend->pRenderPass != nullptr);
             pRendererBackend->pRenderPass->SetDebugName("ImGui RenderPass");
         }
@@ -1295,7 +1295,7 @@ namespace GUI
 
     static void ImGuiDestroyFramebuffers(ImGuiViewportData* pViewportData)
     {
-        for (FFramebuffer* pFramebuffer : pViewportData->Framebuffers)
+        for (CFramebuffer* pFramebuffer : pViewportData->Framebuffers)
         {
             SAFE_DELETE(pFramebuffer);
         }
@@ -1306,13 +1306,13 @@ namespace GUI
         pViewportData->FrameData.clear();
     }
 
-    static void ImGuiCreateFramebuffers(FDevice* pDevice, ImGuiViewportData* pViewportData)
+    static void ImGuiCreateFramebuffers(CDevice* pDevice, ImGuiViewportData* pViewportData)
     {
         // SwapChain extent
         VkExtent2D extent = pViewportData->pSwapchain->GetExtent();
 
         // Create Framebuffers
-        FFramebufferParams FramebufferParams = {};
+        SFramebufferParams FramebufferParams = {};
         FramebufferParams.pRenderPass     = pViewportData->pRenderPass;
         FramebufferParams.AttachmentCount = 1;
         FramebufferParams.Width           = extent.width;
@@ -1326,7 +1326,7 @@ namespace GUI
             VkImageView ImageView = pViewportData->pSwapchain->GetImageView(i);
             FramebufferParams.pAttachMents = &ImageView;
 
-            FFramebuffer* pFramebuffer = FFramebuffer::Create(pDevice, FramebufferParams);
+            CFramebuffer* pFramebuffer = CFramebuffer::Create(pDevice, FramebufferParams);
             assert(pFramebuffer != nullptr);
 
             pFramebuffer->SetDebugName("ImGui FrameBuffer");
@@ -1334,9 +1334,9 @@ namespace GUI
         }
     }
     
-    static void ImGuiCreateWindowRenderBuffers(FDevice* pDevice, ImGuiViewportData* pViewportData)
+    static void ImGuiCreateWindowRenderBuffers(CDevice* pDevice, ImGuiViewportData* pViewportData)
     {
-        FCommandBufferParams CommandBufferParams = {};
+        SCommandBufferParams CommandBufferParams = {};
         CommandBufferParams.Level     = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         CommandBufferParams.QueueType = ECommandQueueType::Graphics;
 
@@ -1345,7 +1345,7 @@ namespace GUI
 
         for (uint32_t i = 0; i < NumBackbuffers; i++)
         {
-            FCommandBuffer* pCommandBuffer = FCommandBuffer::Create(pDevice, CommandBufferParams);
+            CCommandBuffer* pCommandBuffer = CCommandBuffer::Create(pDevice, CommandBufferParams);
             assert(pCommandBuffer != nullptr);
 
             const std::string DebugName = "ImGui CommandBuffer[" + std::to_string(i) + "]";
@@ -1363,10 +1363,10 @@ namespace GUI
             pViewport->RendererUserData = pViewportData;
 
             // Create Swapchain
-            pViewportData->pSwapchain = FSwapchain::Create(pRendererBackend->pDevice, pViewportData->pWindow);
+            pViewportData->pSwapchain = CSwapchain::Create(pRendererBackend->pDevice, pViewportData->pWindow);
 
             // Create RenderPass for this Viewport
-            FRenderPassAttachment Attachment = {};
+            SRenderPassAttachment Attachment = {};
             Attachment.Format = pViewportData->pSwapchain->GetFormat();
 
             if (pViewport->Flags & ImGuiViewportFlags_NoRendererClear)
@@ -1374,11 +1374,11 @@ namespace GUI
                 Attachment.LoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             }
 
-            FRenderPassParams RenderPassParams = {};
+            SRenderPassParams RenderPassParams = {};
             RenderPassParams.ColorAttachmentCount = 1;
             RenderPassParams.pColorAttachments    = &Attachment;
 
-            pViewportData->pRenderPass = FRenderPass::Create(pRendererBackend->pDevice, RenderPassParams);
+            pViewportData->pRenderPass = CRenderPass::Create(pRendererBackend->pDevice, RenderPassParams);
             assert(pViewportData->pRenderPass != nullptr);
             pViewportData->pRenderPass->SetDebugName("ImGui Viewport RenderPass");
 
@@ -1430,7 +1430,7 @@ namespace GUI
         }
     }
     
-    static void CreateOrResizeBuffer(FBuffer** ppBuffer, VkDeviceSize Size, VkBufferUsageFlags Usage)
+    static void CreateOrResizeBuffer(CBuffer** ppBuffer, VkDeviceSize Size, VkBufferUsageFlags Usage)
     {
         assert(ppBuffer != nullptr);
 
@@ -1440,13 +1440,13 @@ namespace GUI
             delete *ppBuffer;
         }
 
-        FBufferParams BufferParams;
+        SBufferParams BufferParams;
         BufferParams.Usage            = Usage;
         BufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
         BufferParams.Size             = Size;
 
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
-        FBuffer* pBuffer = FBuffer::Create(pRendererBackend->pDevice, BufferParams, nullptr);
+        CBuffer* pBuffer = CBuffer::Create(pRendererBackend->pDevice, BufferParams, nullptr);
         if (!pBuffer)
         {
             assert(false);
@@ -1457,7 +1457,7 @@ namespace GUI
         *ppBuffer = pBuffer;
     }
     
-    static void ImGuiSetupRenderState(ImDrawData* pDrawData, FCommandBuffer* pCommandBuffer, FGraphicsPipeline* pPipeline, const ImGuiFrameRenderData& RenderData, int Width, int Height)
+    static void ImGuiSetupRenderState(ImDrawData* pDrawData, CCommandBuffer* pCommandBuffer, CGraphicsPipeline* pPipeline, const ImGuiFrameRenderData& RenderData, int Width, int Height)
     {
         ImGuiRendererBackendData* pRendererbackend = ImGuiGetRendererBackendData();
 
@@ -1501,7 +1501,7 @@ namespace GUI
     }
 
     // Render function
-    static void ImGuiRenderDrawData(ImDrawData* pDrawData, FCommandBuffer* pCommandBuffer)
+    static void ImGuiRenderDrawData(ImDrawData* pDrawData, CCommandBuffer* pCommandBuffer)
     {
         ImGuiRendererBackendData* pRendererbackend = ImGuiGetRendererBackendData();
 
@@ -1625,7 +1625,7 @@ namespace GUI
                     pCommandBuffer->SetScissorRect(Scissor);
 
                     // Retrieve DescriptorSet
-                    FDescriptorSet* pDescriptorSet = reinterpret_cast<FDescriptorSet*>(pDrawCmd->TextureId);
+                    CDescriptorSet* pDescriptorSet = reinterpret_cast<CDescriptorSet*>(pDrawCmd->TextureId);
                     if constexpr (sizeof(ImTextureID) < sizeof(ImU64))
                     {
                         // We don't support texture switches if ImTextureID hasn't been redefined to be 64-bit. Do a flaky check that other textures haven't been used.
@@ -1665,19 +1665,19 @@ namespace GUI
             return;
         }
 
-        FSwapchain* pSwapchain = pViewportData->pSwapchain;
+        CSwapchain* pSwapchain = pViewportData->pSwapchain;
         const uint32_t FrameIndex = pSwapchain->GetCurrentBackBufferIndex();
 
         ImGuiFrameRenderData& RenderData = pViewportData->FrameData[FrameIndex];
 
-        FCommandBuffer* pCommandBuffer = RenderData.pCommandBuffer;
+        CCommandBuffer* pCommandBuffer = RenderData.pCommandBuffer;
         pCommandBuffer->Reset();
         pCommandBuffer->Begin();
 
         const VkClearValue* pClearValues = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? nullptr : &pViewportData->ClearValues;
         const uint32_t ClearValueCount   = (pViewport->Flags & ImGuiViewportFlags_NoRendererClear) ? 0 : 1;
 
-        FFramebuffer* pFramebuffer = pViewportData->Framebuffers[FrameIndex];
+        CFramebuffer* pFramebuffer = pViewportData->Framebuffers[FrameIndex];
         pCommandBuffer->BeginRenderPass(pViewportData->pRenderPass, pFramebuffer, pClearValues, ClearValueCount);
 
         ImGuiRenderDrawData(pViewport->DrawData, pCommandBuffer);
@@ -1717,7 +1717,7 @@ namespace GUI
         UIPlatformState.Renderer_SwapBuffers   = ImGuiRendererSwapBuffers;
     }
 
-    static void ImguiInitRendererBackend(GLFWwindow* pWindow, FDevice* pDevice, FSwapchain* pSwapchain)
+    static void ImguiInitRendererBackend(GLFWwindow* pWindow, CDevice* pDevice, CSwapchain* pSwapchain)
     {
         ImGuiIO& UIState = ImGui::GetIO();
         assert(UIState.BackendRendererUserData == nullptr);
@@ -1934,7 +1934,7 @@ namespace GUI
     /*///////////////////////////////////////////////////////////////////////////////////////////*/
     /* Public API */
     
-    void InitializeImgui(GLFWwindow* pWindow, FDevice* pDevice, FSwapchain* pSwapchain)
+    void InitializeImgui(GLFWwindow* pWindow, CDevice* pDevice, CSwapchain* pSwapchain)
     {
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
@@ -2055,14 +2055,14 @@ namespace GUI
         SAFE_DELETE(pRendererBackend);
     }
     
-    FDescriptorSet* AllocateTextureID(FTextureView* pTextureView)
+    CDescriptorSet* AllocateTextureID(CTextureView* pTextureView)
     {
         assert(pTextureView != nullptr);
 
         ImGuiRendererBackendData* pRendererBackend = ImGuiGetRendererBackendData();
         assert(pRendererBackend != nullptr);
 
-        FDescriptorSet* pDescriptorSet = FDescriptorSet::Create(pRendererBackend->pDevice, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
+        CDescriptorSet* pDescriptorSet = CDescriptorSet::Create(pRendererBackend->pDevice, pRendererBackend->pDescriptorPool, pRendererBackend->pDescriptorSetLayout);
         if (!pDescriptorSet)
         {
             return nullptr;

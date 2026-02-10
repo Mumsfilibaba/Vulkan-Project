@@ -1,6 +1,6 @@
 #pragma once
 
-class FCamera;
+class CCamera;
 
 struct IScene
 {
@@ -13,6 +13,6 @@ struct IScene
     virtual float GetFieldOfView() const = 0;
     virtual float GetExposure() const = 0;
 
-    virtual FCamera& GetCamera() = 0;
-    virtual const FCamera& GetCamera() const = 0;
+    virtual CCamera& GetCamera() = 0;
+    virtual const CCamera& GetCamera() const = 0;
 };

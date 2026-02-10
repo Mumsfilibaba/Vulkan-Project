@@ -3,9 +3,9 @@
 #include "Texture.h"
 #include "Extensions.h"
 
-FTextureView* FTextureView::Create(FDevice* pDevice, const FTextureViewParams& Params)
+CTextureView* CTextureView::Create(CDevice* pDevice, const STextureViewParams& Params)
 {
-    FTextureView* pTextureView = new FTextureView(pDevice);
+    CTextureView* pTextureView = new CTextureView(pDevice);
 
     VkImageViewCreateInfo TextureViewCreateInfo = {};
     ZERO_STRUCT(&TextureViewCreateInfo);
@@ -40,13 +40,13 @@ FTextureView* FTextureView::Create(FDevice* pDevice, const FTextureViewParams& P
     }
 }
 
-FTextureView::FTextureView(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CTextureView::CTextureView(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_ImageView(VK_NULL_HANDLE)
 {
 }
 
-FTextureView::~FTextureView()
+CTextureView::~CTextureView()
 {
     if (m_ImageView != VK_NULL_HANDLE)
     {
@@ -55,9 +55,9 @@ FTextureView::~FTextureView()
     }
 }
 
-void FTextureView::SetDebugName(const char* DebugName)
+void CTextureView::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -67,7 +67,7 @@ void FTextureView::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_ImageView);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);

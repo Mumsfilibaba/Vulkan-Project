@@ -2,9 +2,9 @@
 #include "Device.h"
 #include "Extensions.h"
 
-FSampler* FSampler::Create(FDevice* pDevice, const FSamplerParams& Params)
+CSampler* CSampler::Create(CDevice* pDevice, const SSamplerParams& Params)
 {
-    FSampler* pSampler = new FSampler(pDevice);
+    CSampler* pSampler = new CSampler(pDevice);
     
     VkSamplerCreateInfo SamplerCreateInfo;
     ZERO_STRUCT(&SamplerCreateInfo);
@@ -39,13 +39,13 @@ FSampler* FSampler::Create(FDevice* pDevice, const FSamplerParams& Params)
     }
 }
     
-FSampler::FSampler(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CSampler::CSampler(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_Sampler(VK_NULL_HANDLE)
 {
 }
 
-FSampler::~FSampler()
+CSampler::~CSampler()
 {
     if (m_Sampler != VK_NULL_HANDLE)
     {
@@ -54,9 +54,9 @@ FSampler::~FSampler()
     }
 }
 
-void FSampler::SetDebugName(const char* DebugName)
+void CSampler::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -66,7 +66,7 @@ void FSampler::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Sampler);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);

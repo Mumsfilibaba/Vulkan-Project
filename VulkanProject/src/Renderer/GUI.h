@@ -2,19 +2,19 @@
 #include "Core.h"
 #include <ImGui/ImGui.h>
 
-class FDevice;
-class FDescriptorSet;
-class FTextureView;
-class FSwapchain;
+class CDevice;
+class CDescriptorSet;
+class CTextureView;
+class CSwapchain;
 
 namespace GUI
 {
-    void InitializeImgui(GLFWwindow* pWindow, FDevice* pDevice, FSwapchain* pSwapchain);
+    void InitializeImgui(GLFWwindow* pWindow, CDevice* pDevice, CSwapchain* pSwapchain);
     void TickImGui();
     void RenderImGui();
     void ReleaseImGui();
 
     void OnSwapchainRecreated();
 
-    FDescriptorSet* AllocateTextureID(FTextureView* pTextureView);
+    CDescriptorSet* AllocateTextureID(CTextureView* pTextureView);
 }

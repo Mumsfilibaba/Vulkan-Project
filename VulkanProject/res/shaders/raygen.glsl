@@ -57,17 +57,17 @@ layout(binding = 4) uniform RandomBufferObject
 
 layout(binding = 5) uniform SceneBufferObject 
 {
-    FSceneSettings Settings;
+    SSceneSettings Settings;
 } uScene;
 
 layout(binding = 7) buffer MaterialBuffer
 {
-    FMaterial Materials[];
+    SMaterial Materials[];
 };
 
 layout (set = 1, binding = 0) uniform sampler2D uTextures[];
 
-layout(location = 0) rayPayloadEXT FRayPayLoad RayPayLoad;
+layout(location = 0) rayPayloadEXT SRayPayLoad RayPayLoad;
 
 float FresnelReflectAmount(float N1, float N2, vec3 Normal, vec3 Incident, float F0, float F90)
 {
@@ -121,7 +121,7 @@ vec3 GetColorForRay(in vec3 Origin, in vec3 Direction, inout uint RandomSeed)
         traceRayEXT(uAccelerationStructure, gl_RayFlagsNoneEXT , 0xff, 0, 0, 0, Origin.xyz, MinT, Direction.xyz, MaxT, 0);
 
         const uint MaterialIndex = min(RayPayLoad.HitMaterialIndex, uScene.Settings.NumMaterials - 1);
-        FMaterial Material = Materials[MaterialIndex];
+        SMaterial Material = Materials[MaterialIndex];
 
         // Perform NormalMapping
         vec3 Normal;
@@ -295,7 +295,7 @@ vec3 GetNormalForRay(in vec3 Origin, in vec3 Direction)
     }
 
     const uint MaterialIndex = min(RayPayLoad.HitMaterialIndex, uScene.Settings.NumMaterials - 1);
-    FMaterial Material = Materials[MaterialIndex];
+    SMaterial Material = Materials[MaterialIndex];
 
     vec3 Normal;
     if (Material.NormalTexIndex != INVALID_BINDLESS_ID)
@@ -398,7 +398,7 @@ vec3 GetAlbedoForRay(in vec3 Origin, in vec3 Direction)
     }
 
     const uint MaterialIndex = min(RayPayLoad.HitMaterialIndex, uScene.Settings.NumMaterials - 1);
-    FMaterial Material = Materials[MaterialIndex];
+    SMaterial Material = Materials[MaterialIndex];
     if (Material.AlbedoTexIndex != INVALID_BINDLESS_ID)
     {
         return texture(uTextures[Material.AlbedoTexIndex], RayPayLoad.HitTexCoord).rgb;

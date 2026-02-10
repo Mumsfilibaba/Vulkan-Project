@@ -1,18 +1,18 @@
 #pragma once
 #include "DeviceChild.h"
 
-class FDevice;
-class FTextureView;
+class CDevice;
+class CTextureView;
 
-class FBindlessManager : public FDeviceChild
+class CBindlessManager : public CDeviceChild
 {
 public:
-    static FBindlessManager* Create(FDevice* pDevice);
+    static CBindlessManager* Create(CDevice* pDevice);
 
     static constexpr const uint32_t InvalidBindlessID = static_cast<uint32_t>(-1);
     
-    FBindlessManager(FDevice* pDevice);
-    ~FBindlessManager();
+    CBindlessManager(CDevice* pDevice);
+    ~CBindlessManager();
 
     // Returns a Bindless ID
     uint32_t AddImageView(VkImageView ImageView, VkSampler Sampler);

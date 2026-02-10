@@ -2,19 +2,19 @@
 #include "ScenePrimitives.h"
 #include "MathHelper.h"
 
-class FBuffer;
-class FAccelerationStructure;
-class FTextureResource;
-class FDevice;
+class CBuffer;
+class CAccelerationStructure;
+class CTextureResource;
+class CDevice;
 
-struct FVertex
+struct SVertex
 {
     static VkVertexInputBindingDescription* GetBindingDescription()
     {
         static VkVertexInputBindingDescription BindingDescriptions[1];
 
         BindingDescriptions[0].binding   = 0;
-        BindingDescriptions[0].stride    = sizeof(FVertex);
+        BindingDescriptions[0].stride    = sizeof(SVertex);
         BindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         return BindingDescriptions;
@@ -27,27 +27,27 @@ struct FVertex
         AttributeDescriptions[0].binding  = 0;
         AttributeDescriptions[0].location = 0;
         AttributeDescriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
-        AttributeDescriptions[0].offset   = offsetof(FVertex, Position);
+        AttributeDescriptions[0].offset   = offsetof(SVertex, Position);
 
         AttributeDescriptions[1].binding  = 0;
         AttributeDescriptions[1].location = 1;
         AttributeDescriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
-        AttributeDescriptions[1].offset   = offsetof(FVertex, Normal);
+        AttributeDescriptions[1].offset   = offsetof(SVertex, Normal);
 
         AttributeDescriptions[2].binding  = 0;
         AttributeDescriptions[2].location = 2;
         AttributeDescriptions[2].format   = VK_FORMAT_R32G32B32_SFLOAT;
-        AttributeDescriptions[2].offset   = offsetof(FVertex, Tangent);
+        AttributeDescriptions[2].offset   = offsetof(SVertex, Tangent);
 
         AttributeDescriptions[3].binding  = 0;
         AttributeDescriptions[3].location = 3;
         AttributeDescriptions[3].format   = VK_FORMAT_R32G32_SFLOAT;
-        AttributeDescriptions[3].offset   = offsetof(FVertex, TexCoord);
+        AttributeDescriptions[3].offset   = offsetof(SVertex, TexCoord);
 
         return AttributeDescriptions;
     }
 
-    bool operator==(const FVertex& Other) const
+    bool operator==(const SVertex& Other) const
     {
         return Position == Other.Position && Normal == Other.Normal && Tangent == Other.Tangent && TexCoord == Other.TexCoord;
     }
@@ -58,9 +58,9 @@ struct FVertex
     glm::vec2 TexCoord;
 };
 
-struct FVertexHasher
+struct SVertexHasher
 {
-    size_t operator()(const FVertex& Vertex) const
+    size_t operator()(const SVertex& Vertex) const
     {
         size_t CurrentHash = std::hash<glm::vec3>()(Vertex.Position);
         Hash::Combine(CurrentHash, Vertex.Normal);
@@ -70,14 +70,14 @@ struct FVertexHasher
     }
 };
 
-struct FVertexPosition
+struct SVertexPosition
 {
     static VkVertexInputBindingDescription* GetBindingDescription()
     {
         static VkVertexInputBindingDescription BindingDescriptions[1];
 
         BindingDescriptions[0].binding   = 0;
-        BindingDescriptions[0].stride    = sizeof(FVertexPosition);
+        BindingDescriptions[0].stride    = sizeof(SVertexPosition);
         BindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         return BindingDescriptions;
@@ -90,12 +90,12 @@ struct FVertexPosition
         AttributeDescriptions[0].binding  = 0;
         AttributeDescriptions[0].location = 0;
         AttributeDescriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
-        AttributeDescriptions[0].offset   = offsetof(FVertexPosition, Position);
+        AttributeDescriptions[0].offset   = offsetof(SVertexPosition, Position);
 
         return AttributeDescriptions;
     }
 
-    bool operator==(const FVertexPosition& Other) const
+    bool operator==(const SVertexPosition& Other) const
     {
         return Position == Other.Position;
     }
@@ -103,28 +103,28 @@ struct FVertexPosition
     glm::vec3 Position;
 };
 
-struct FVertexPosOnlyHasher
+struct SVertexPosOnlyHasher
 {
-    size_t operator()(const FVertexPosition& Vertex) const
+    size_t operator()(const SVertexPosition& Vertex) const
     {
         return std::hash<glm::vec3>()(Vertex.Position);
     }
 };
 
-struct FMaterial
+struct SMaterial
 {
-    std::shared_ptr<FTextureResource> AlbedoTex;
-    std::shared_ptr<FTextureResource> NormalTex;
-    std::shared_ptr<FTextureResource> AlphaMaskTex;
-    std::shared_ptr<FTextureResource> RoughnessTex;
-    std::shared_ptr<FTextureResource> MetallicTex;
+    std::shared_ptr<CTextureResource> AlbedoTex;
+    std::shared_ptr<CTextureResource> NormalTex;
+    std::shared_ptr<CTextureResource> AlphaMaskTex;
+    std::shared_ptr<CTextureResource> RoughnessTex;
+    std::shared_ptr<CTextureResource> MetallicTex;
 };
 
-struct FModel
+struct SModel
 {
-    struct FSubMesh
+    struct SSubMesh
     {
-        FSubMesh()
+        SSubMesh()
             : IndexCount(0)
             , IndexOffset(0)
             , VertexCount(0)
@@ -140,19 +140,19 @@ struct FModel
         int32_t  MaterialIndex;
     };
 
-    FModel();
-    ~FModel();
+    SModel();
+    ~SModel();
 
-    bool LoadFromFile(const std::string& filepath, FDevice* pDevice);
+    bool LoadFromFile(const std::string& filepath, CDevice* pDevice);
 
-    FBuffer*                pVertexBuffer;
-    FBuffer*                pIndexBuffer;
+    CBuffer*                pVertexBuffer;
+    CBuffer*                pIndexBuffer;
     uint32_t                VertexCount;
     uint32_t                IndexCount;
-    FAccelerationStructure* pAccelerationStructure;
+    CAccelerationStructure* pAccelerationStructure;
 
-    std::vector<FSubMesh>   SubMeshes;
+    std::vector<SSubMesh>   SubMeshes;
     std::vector<uint32_t>   Indicies;
-    std::vector<FVertex>    Vertices;
-    std::vector<FMaterial>  Materials;
+    std::vector<SVertex>    Vertices;
+    std::vector<SMaterial>  Materials;
 };

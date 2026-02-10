@@ -3,7 +3,7 @@
 
 int main()
 {
-    FApplication* pApp = FApplication::Create();
+    CApplication* pApp = CApplication::Create();
     if (!pApp->Init())
     {
         return 1;

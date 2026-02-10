@@ -2,9 +2,9 @@
 #include "Device.h"
 #include "Extensions.h"
 
-FRenderPass* FRenderPass::Create(FDevice* pDevice, const FRenderPassParams& Params)
+CRenderPass* CRenderPass::Create(CDevice* pDevice, const SRenderPassParams& Params)
 {
-    FRenderPass* pRenderPass = new FRenderPass(pDevice);
+    CRenderPass* pRenderPass = new CRenderPass(pDevice);
 
     std::vector<VkAttachmentReference>   ColorAttachmentRefInfos;
     std::vector<VkAttachmentDescription> AttachmentsInfos;
@@ -106,13 +106,13 @@ FRenderPass* FRenderPass::Create(FDevice* pDevice, const FRenderPassParams& Para
     }
 }
 
-FRenderPass::FRenderPass(FDevice* pDevice)
-    : FDeviceChild(pDevice)
+CRenderPass::CRenderPass(CDevice* pDevice)
+    : CDeviceChild(pDevice)
     , m_RenderPass(VK_NULL_HANDLE)
 {
 }
 
-FRenderPass::~FRenderPass()
+CRenderPass::~CRenderPass()
 {
     if (m_RenderPass)
     {
@@ -121,9 +121,9 @@ FRenderPass::~FRenderPass()
     }
 }
 
-void FRenderPass::SetDebugName(const char* DebugName)
+void CRenderPass::SetDebugName(const char* DebugName)
 {
-    if (FExtensions::vkSetDebugUtilsObjectNameEXT)
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
     {
         VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
         ZERO_STRUCT(&DebugNameInfo);
@@ -133,7 +133,7 @@ void FRenderPass::SetDebugName(const char* DebugName)
         DebugNameInfo.pObjectName  = DebugName;
         DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_RenderPass);
 
-        VkResult Result = FExtensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
         if (Result != VK_SUCCESS)
         {
             LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
