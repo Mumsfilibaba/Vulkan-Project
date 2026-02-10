@@ -141,6 +141,8 @@ private:
     uint32_t m_ViewportWidth;
     uint32_t m_ViewportHeight;
     bool     m_bViewportHasFocus;
+    bool     m_bIsRightMouseDown;
+    glm::vec2 m_LastMousePosition;
 
     // Scene textures
     CDescriptorSet* m_pOutputTextureDescriptorSet;

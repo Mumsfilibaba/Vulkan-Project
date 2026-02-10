@@ -47,6 +47,8 @@ CBaseRenderer::CBaseRenderer()
     , m_ViewportWidth(0)
     , m_ViewportHeight(0)
     , m_bViewportHasFocus(false)
+    , m_bIsRightMouseDown(false)
+    , m_LastMousePosition(0.0f)
 {
 }
 
@@ -299,6 +301,7 @@ void CBaseRenderer::Tick(float DeltaTime)
     if (m_bViewportHasFocus)
     {
         glm::vec3 Translation(0.0f);
+        glm::vec3 Rotation(0.0f);
         if (Input::IsKeyDown(GLFW_KEY_W))
         {
             Translation.z = CameraSpeed * DeltaTime;
@@ -319,26 +322,24 @@ void CBaseRenderer::Tick(float DeltaTime)
 
         GetScene()->GetCamera().Move(Translation);
 
-        // Camera rotation
-        constexpr float CameraRotationSpeed = glm::pi<float>() / 2;
+        // Camera rotation with mouse (RMB drag)
+        constexpr float CameraMouseSensitivity = 0.0025f;
+        if (Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT))
+        {
+            const glm::vec2 MousePosition = Input::GetMousePosition();
+            if (m_bIsRightMouseDown)
+            {
+                const glm::vec2 MouseDelta = MousePosition - m_LastMousePosition;
+                Rotation.x += MouseDelta.y * CameraMouseSensitivity;
+                Rotation.y += MouseDelta.x * CameraMouseSensitivity;
+            }
 
-        glm::vec3 Rotation(0.0f);
-        if (Input::IsKeyDown(GLFW_KEY_LEFT))
-        {
-            Rotation.y = -CameraRotationSpeed * DeltaTime;
+            m_LastMousePosition = MousePosition;
+            m_bIsRightMouseDown = true;
         }
-        else if (Input::IsKeyDown(GLFW_KEY_RIGHT))
+        else
         {
-            Rotation.y = CameraRotationSpeed * DeltaTime;
-        }
-
-        if (Input::IsKeyDown(GLFW_KEY_UP))
-        {
-            Rotation.x = -CameraRotationSpeed * DeltaTime;
-        }
-        else if (Input::IsKeyDown(GLFW_KEY_DOWN))
-        {
-            Rotation.x = CameraRotationSpeed * DeltaTime;
+            m_bIsRightMouseDown = false;
         }
 
         GetScene()->GetCamera().Rotate(Rotation);
@@ -354,6 +355,10 @@ void CBaseRenderer::Tick(float DeltaTime)
         {
             ReloadShaders();
         }
+    }
+    else
+    {
+        m_bIsRightMouseDown = false;
     }
 
     // Update
