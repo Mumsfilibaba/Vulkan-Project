@@ -3,7 +3,7 @@
 #include "Renderer/GUI.h"
 #include "Renderer/RayTracer.h"
 
-#define ENABLE_HW_RT 1
+#define ENABLE_HARDWARE_RT 0
 
 extern bool GIsRunning = false;
 

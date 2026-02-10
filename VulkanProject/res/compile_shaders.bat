@@ -1,14 +1,11 @@
 @echo off
+setlocal EnableDelayedExpansion
 
-:: Set the working directory to the location of the script
 cd %~dp0
 
-:: Check if VK_SDK_PATH is set
 if not defined VK_SDK_PATH (
-    :: If VK_SDK_PATH is not set, check if VULKAN_SDK is set
     if not defined VULKAN_SDK (
         echo Error: Vulkan SDK environment variable not set.
-        :: pause
         exit /b 1
     ) else (
         set VULKAN_SDK_PATH=%VULKAN_SDK%
@@ -17,19 +14,59 @@ if not defined VK_SDK_PATH (
     set VULKAN_SDK_PATH=%VK_SDK_PATH%
 )
 
-:: Build paths to glslc.exe and shader files using environment variables
 set GLSLC_PATH=%VULKAN_SDK_PATH%\Bin\glslc.exe
+if not defined DXC_PATH (
+    set DXC_PATH=%VULKAN_SDK_PATH%\Bin\dxc.exe
+)
 
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=vertex   shaders/vertex.glsl        -o shaders/vertex.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=vertex   shaders/aabb_debug_vs.glsl -o shaders/aabb_debug_vs.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=fragment shaders/aabb_debug_fs.glsl -o shaders/aabb_debug_fs.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=vertex   shaders/fullscreenVS.glsl  -o shaders/fullscreenVS.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=fragment shaders/fragment.glsl      -o shaders/fragment.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=fragment shaders/tonemap.glsl       -o shaders/tonemap.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=compute  shaders/raytracer.glsl     -o shaders/raytracer.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=compute  shaders/cubemapgen.glsl    -o shaders/cubemapgen.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rgen     shaders/raygen.glsl        -o shaders/raygen.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rmiss    shaders/miss.glsl          -o shaders/miss.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rchit    shaders/closesthit.glsl    -o shaders/closesthit.spv
-%GLSLC_PATH% -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rahit    shaders/anyhit.glsl        -o shaders/anyhit.spv
+if not exist "%GLSLC_PATH%" (
+    echo Error: glslc not found at "%GLSLC_PATH%".
+    exit /b 1
+)
+
+set USE_DXC=1
+if defined SHADER_USE_DXC (
+    set USE_DXC=%SHADER_USE_DXC%
+)
+
+echo Shader compile mode: USE_DXC=%USE_DXC%
+
+if "%USE_DXC%"=="0" (
+    echo Error: migrated shaders no longer have GLSL fallback. Set SHADER_USE_DXC=1.
+    exit /b 1
+)
+
+if not exist "%DXC_PATH%" (
+    echo Error: DXC not found at "%DXC_PATH%".
+    exit /b 1
+)
+
+echo Compiling migrated HLSL shaders with DXC...
+"%DXC_PATH%" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/vertex.hlsl        -Fo shaders/vertex.spv
+if errorlevel 1 exit /b 1
+"%DXC_PATH%" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/aabb_debug_vs.hlsl -Fo shaders/aabb_debug_vs.spv
+if errorlevel 1 exit /b 1
+"%DXC_PATH%" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T ps_6_0 -E main shaders/aabb_debug_fs.hlsl -Fo shaders/aabb_debug_fs.spv
+if errorlevel 1 exit /b 1
+"%DXC_PATH%" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/fullscreenVS.hlsl  -Fo shaders/fullscreenVS.spv
+if errorlevel 1 exit /b 1
+"%DXC_PATH%" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T ps_6_0 -E main shaders/fragment.hlsl      -Fo shaders/fragment.spv
+if errorlevel 1 exit /b 1
+"%DXC_PATH%" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T ps_6_0 -E main shaders/tonemap.hlsl       -Fo shaders/tonemap.spv
+if errorlevel 1 exit /b 1
+"%DXC_PATH%" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T cs_6_0 -E main shaders/cubemapgen.hlsl    -Fo shaders/cubemapgen.spv
+if errorlevel 1 exit /b 1
+"%DXC_PATH%" -spirv -fspv-target-env=vulkan1.2 -fspv-extension=SPV_KHR_ray_tracing -T lib_6_6 -E main shaders/miss.hlsl -Fo shaders/miss.spv
+if errorlevel 1 exit /b 1
+
+echo Compiling remaining GLSL shaders with glslc...
+"%GLSLC_PATH%" -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=compute  shaders/raytracer.glsl     -o shaders/raytracer.spv
+if errorlevel 1 exit /b 1
+"%GLSLC_PATH%" -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rgen     shaders/raygen.glsl        -o shaders/raygen.spv
+if errorlevel 1 exit /b 1
+"%GLSLC_PATH%" -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rchit    shaders/closesthit.glsl    -o shaders/closesthit.spv
+if errorlevel 1 exit /b 1
+"%GLSLC_PATH%" -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rahit    shaders/anyhit.glsl        -o shaders/anyhit.spv
+if errorlevel 1 exit /b 1
+
 pause
