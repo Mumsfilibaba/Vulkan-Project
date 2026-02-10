@@ -1,4 +1,4 @@
-git submodule init
-git submodule update
-git submodule foreach --recursive git pull origin master
+git submodule sync --recursive
+git submodule update --init --recursive
+git submodule update --remote --recursive
 pause

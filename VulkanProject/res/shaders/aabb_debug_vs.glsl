@@ -30,7 +30,7 @@ layout(push_constant, std430) uniform PushConstant
     vec4 Color;
 } Constants;
 
-layout(std430, binding = 1) buffer MatrixBuffer
+layout(std430, binding = 1) readonly buffer MatrixBuffer
 {
     mat4 InstanceMatrices[];
 };
