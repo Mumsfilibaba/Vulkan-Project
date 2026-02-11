@@ -243,7 +243,7 @@ public:
     bool IsFinishedOnGPU() const
     {
         VkResult Result = vkGetFenceStatus(GetDevice()->GetDevice(), m_Fence);
-        return Result == VK_NOT_READY;
+        return Result == VK_SUCCESS;
     }
 
     void WaitForAndResetFences()

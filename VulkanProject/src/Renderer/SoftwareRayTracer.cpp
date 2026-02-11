@@ -1199,63 +1199,61 @@ void CSoftwareRayTracer::ReloadShaders()
 {
     static bool bIsCompiling = false;
 
-    if (!bIsCompiling)
+    if (bIsCompiling)
     {
-        bIsCompiling = true;
-
-        std::async(std::launch::async, [this]()
-        {
-            // Compile the shaders
-            auto Result = std::system(SHADER_SCRIPT_PATH);
-            if (Result != 0)
-            {
-                LOG("FAILED to Compile Shaders\n");
-                bIsCompiling = false;
-                return false;
-            }
-
-            // Upload the new shaders
-            LOG("Compiled Shaders Successfully\n");
-
-            // Create shader and pipeline
-            CShaderModule* pComputeShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/raytracer.spv");
-            if (!pComputeShader)
-            {
-                LOG("FAILED to create ComputeShader\n");
-                bIsCompiling = false;
-                return false;
-            }
-
-            SComputePipelineStateParams pipelineParams = {};
-            pipelineParams.pShader         = pComputeShader;
-            pipelineParams.pPipelineLayout = m_pRayTracingPipelineLayout;
-
-            CComputePipeline* pComputePipeline  = CComputePipeline::Create(GetDevice(), pipelineParams);
-            if (!pComputePipeline)
-            {
-                LOG("FAILED to create ComputePipeline\n");
-                SAFE_DELETE(pComputeShader);
-                bIsCompiling = false;
-                return false;
-            }
-            else
-            {
-                pComputePipeline->SetDebugName("RayTracingPass Pipeline");
-            }
-
-            GetDevice()->WaitForIdle();
-            pComputePipeline = m_pRayTracingPipeline.exchange(pComputePipeline);
-
-            SAFE_DELETE(pComputeShader);
-            SAFE_DELETE(pComputePipeline);
-
-            // Reset the image
-            ResetImage();
-
-            bIsCompiling = false;
-            return true;
-        });
+        return;
     }
+
+    bIsCompiling = true;
+
+    // Compile the shaders
+    auto Result = std::system(SHADER_SCRIPT_PATH);
+    if (Result != 0)
+    {
+        LOG("FAILED to Compile Shaders\n");
+        bIsCompiling = false;
+        return;
+    }
+
+    // Upload the new shaders
+    LOG("Compiled Shaders Successfully\n");
+
+    // Create shader and pipeline
+    CShaderModule* pComputeShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/raytracer.spv");
+    if (!pComputeShader)
+    {
+        LOG("FAILED to create ComputeShader\n");
+        bIsCompiling = false;
+        return;
+    }
+
+    SComputePipelineStateParams pipelineParams = {};
+    pipelineParams.pShader         = pComputeShader;
+    pipelineParams.pPipelineLayout = m_pRayTracingPipelineLayout;
+
+    CComputePipeline* pComputePipeline = CComputePipeline::Create(GetDevice(), pipelineParams);
+    if (!pComputePipeline)
+    {
+        LOG("FAILED to create ComputePipeline\n");
+        SAFE_DELETE(pComputeShader);
+        bIsCompiling = false;
+        return;
+    }
+    else
+    {
+        pComputePipeline->SetDebugName("RayTracingPass Pipeline");
+    }
+
+    GetDevice()->WaitForIdle();
+    pComputePipeline = m_pRayTracingPipeline.exchange(pComputePipeline);
+
+    SAFE_DELETE(pComputeShader);
+    SAFE_DELETE(pComputePipeline);
+
+    // Reset the image
+    ResetImage();
+
+    bIsCompiling = false;
 }
 
 void CSoftwareRayTracer::UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer)

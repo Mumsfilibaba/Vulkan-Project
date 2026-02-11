@@ -7,6 +7,14 @@
 #include "Vulkan/Device.h"
 #include <tiny_obj_loader.h>
 
+struct SVec3Hasher
+{
+    size_t operator()(const glm::vec3& Value) const
+    {
+        return Hash::Value(Value);
+    }
+};
+
 static std::string ExtractPath(const std::string& Path)
 {
     const size_t Position = Path.find_last_of("/\\");
@@ -158,7 +166,7 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice, bool bG
 
                 // Positions must be present
                 const size_t BasePositionIndex = 3 * Index.vertex_index;
-                assert(BasePositionIndex >= 0);
+                assert((BasePositionIndex + 2) < TinyObjAttrib.vertices.size());
 
                 SVertex Vertex = {};
                 
@@ -241,7 +249,7 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice, bool bG
         LOG("Generating smooth vertex normals for model '%s'...\n", Filepath.c_str());
 
         std::vector<glm::vec3> NormalAccumulation(NewVertices.size(), glm::vec3(0.0f));
-        std::unordered_map<glm::vec3, glm::vec3> PositionNormalAccumulation;
+        std::unordered_map<glm::vec3, glm::vec3, SVec3Hasher> PositionNormalAccumulation;
 
         for (size_t i = 0; i < NewIndices.size(); i += 3)
         {
@@ -410,7 +418,9 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice, bool bG
         SAccelerationStructureBLASParams BLASParams;
         for (const SModel::SSubMesh& SubMesh : NewSubmeshes)
         {
-            const bool bHasAlphaMask = (SubMesh.MaterialIndex >= 0) ? (NewMaterials[SubMesh.MaterialIndex].AlphaMaskTex != nullptr) : false;
+            const bool bHasAlphaMask = (SubMesh.MaterialIndex >= 0 && static_cast<size_t>(SubMesh.MaterialIndex) < NewMaterials.size())
+                ? (NewMaterials[SubMesh.MaterialIndex].AlphaMaskTex != nullptr)
+                : false;
 
             SBLASGeometry& Geometry = BLASParams.Geometries.emplace_back();
             Geometry.Flags              = bHasAlphaMask ? 0 : VK_GEOMETRY_OPAQUE_BIT_KHR;

@@ -22,6 +22,7 @@ public:
 
     static CApplication& Get()
     {
+        assert(ApplicationInstance != nullptr);
         return *ApplicationInstance;
     }
 
@@ -34,7 +35,7 @@ public:
     bool CreateWindow();
 
     void OnWindowMinimized(GLFWwindow* pWindow, int32_t Minimized);
-    void OnWindowResize(GLFWwindow* pWindow, uint32_t width, uint32_t height);
+    void OnWindowResize(GLFWwindow* pWindow, int32_t width, int32_t height);
     void OnWindowClose(GLFWwindow* pWindow);
 
     GLFWwindow* GetWindow()

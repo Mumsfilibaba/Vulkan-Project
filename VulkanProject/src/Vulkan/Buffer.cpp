@@ -66,6 +66,10 @@ CBuffer* CBuffer::Create(CDevice* pDevice, const SBufferParams& Params, CDeviceM
         if (Result != VK_SUCCESS)
         {
             LOG("vkAllocateMemory failed. Error: %d\n", Result);
+            vkDestroyBuffer(pDevice->GetDevice(), pBuffer->m_Buffer, nullptr);
+            pBuffer->m_Buffer = VK_NULL_HANDLE;
+            SAFE_DELETE(pBuffer);
+            return nullptr;
         }
         else
         {
@@ -213,10 +217,12 @@ CBuffer::CBuffer(CDevice* pDevice, CDeviceMemoryAllocator* pAllocator)
     , m_pAllocator(pAllocator)
     , m_Buffer(VK_NULL_HANDLE)
     , m_DeviceMemory(VK_NULL_HANDLE)
+    , m_DeviceAddress()
     , m_Size(0)
     , m_AllocatedSize(0)
     , m_Allocation()
 {
+    m_DeviceAddress.deviceAddress = 0;
 }
 
 CBuffer::~CBuffer()

@@ -62,7 +62,7 @@ struct SVertexHasher
 {
     size_t operator()(const SVertex& Vertex) const
     {
-        size_t CurrentHash = std::hash<glm::vec3>()(Vertex.Position);
+        size_t CurrentHash = Hash::Value(Vertex.Position);
         Hash::Combine(CurrentHash, Vertex.Normal);
         Hash::Combine(CurrentHash, Vertex.Tangent);
         Hash::Combine(CurrentHash, Vertex.TexCoord);
@@ -107,7 +107,7 @@ struct SVertexPosOnlyHasher
 {
     size_t operator()(const SVertexPosition& Vertex) const
     {
-        return std::hash<glm::vec3>()(Vertex.Position);
+        return Hash::Value(Vertex.Position);
     }
 };
 

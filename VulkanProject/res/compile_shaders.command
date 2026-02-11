@@ -15,14 +15,7 @@ else
     DXC_EXE="/usr/local/bin/dxc"
 fi
 
-USE_DXC_VALUE="${SHADER_USE_DXC:-1}"
-echo "Shader compile mode: USE_DXC=${USE_DXC_VALUE}"
 OUTPUT_DIR="shaders/compiled_shaders"
-
-if [ "${USE_DXC_VALUE}" = "0" ]; then
-    echo "Error: migrated shaders no longer have GLSL fallback. Set SHADER_USE_DXC=1."
-    exit 1
-fi
 
 if [ ! -x "${DXC_EXE}" ]; then
     echo "Error: DXC not found at '${DXC_EXE}'"
@@ -31,7 +24,7 @@ fi
 
 mkdir -p "${OUTPUT_DIR}" || exit 1
 
-echo "Compiling migrated HLSL shaders with DXC..."
+echo "Compiling HLSL shaders with DXC..."
 "${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/vertex.hlsl        -Fo "${OUTPUT_DIR}/vertex.spv" || exit 1
 "${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/aabb_debug_vs.hlsl -Fo "${OUTPUT_DIR}/aabb_debug_vs.spv" || exit 1
 "${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T ps_6_0 -E main shaders/aabb_debug_fs.hlsl -Fo "${OUTPUT_DIR}/aabb_debug_fs.spv" || exit 1

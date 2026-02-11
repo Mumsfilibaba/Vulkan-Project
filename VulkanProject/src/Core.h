@@ -26,7 +26,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
-#include <glm/gtx/hash.hpp>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -62,11 +61,14 @@
 #endif
 
 #define SAFE_DELETE(pObject) \
-    if (pObject) \
+    do \
     { \
-        delete (pObject); \
-        pObject = nullptr; \
-    }
+        if (pObject) \
+        { \
+            delete (pObject); \
+            pObject = nullptr; \
+        } \
+    } while(false)
 
 #define LOG(Message, ...) \
     do \

@@ -497,11 +497,11 @@ void CBaseRenderer::OnRenderUI()
         ImGui::Text("Performance:");
         ImGui::Separator();
 
-        const uint32_t CpuCurrentFPS = static_cast<uint32_t>(1000.0f / m_LastCPUTime);
+        const uint32_t CpuCurrentFPS = (m_LastCPUTime > 0.0f) ? static_cast<uint32_t>(1000.0f / m_LastCPUTime) : 0u;
         ImGui::Text("[CPU FPS] %u", CpuCurrentFPS);
         ImGui::Text("[CPU Time] %.4f", m_LastCPUTime);
 
-        const uint32_t GpuCurrentFPS = static_cast<uint32_t>(1000.0f / m_LastGPUTime);
+        const uint32_t GpuCurrentFPS = (m_LastGPUTime > 0.0f) ? static_cast<uint32_t>(1000.0f / m_LastGPUTime) : 0u;
         ImGui::Text("[GPU FPS] %u", GpuCurrentFPS);
         ImGui::Text("[GPU Time] %.4f", m_LastGPUTime);
 

@@ -213,10 +213,19 @@ bool CSwapchain::CreateSwapchain()
     // Get the images and create ImageViews
     uint32_t RealImageCount = 0;
     vkGetSwapchainImagesKHR(GetDevice()->GetDevice(), m_Swapchain, &RealImageCount, nullptr);
+    if (RealImageCount == 0)
+    {
+        LOG("Swapchain returned zero images\n");
+        return false;
+    }
+
     if (RealImageCount < m_ImageCount)
     {
         LOG("WARNING: Less images than requested in swapchain\n");
     }
+
+    m_ImageCount = RealImageCount;
+    m_FrameData.resize(m_ImageCount);
 
     std::vector<VkImage> Images(RealImageCount);
     vkGetSwapchainImagesKHR(GetDevice()->GetDevice(), m_Swapchain, &RealImageCount, Images.data());

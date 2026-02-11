@@ -161,9 +161,9 @@ CAccelerationStructure* CAccelerationStructure::CreateBLAS(CDevice* pDevice, con
 
         AccelerationStructureGeometries.push_back(AccelerationStructureGeometry);
 
-        // Number of triangles (Ensure that the VertexCount is a multiplier of 3)
-        const uint32_t NumTriangles = Geometry.IndexBufferCount / 3;
-        assert((Geometry.IndexBufferCount % 3) == 0);
+        // Number of triangles from indexed or non-indexed geometry.
+        const uint32_t NumTriangles = Geometry.pIndexBuffer ? (Geometry.IndexBufferCount / 3) : (Geometry.VertexBufferCount / 3);
+        assert(Geometry.pIndexBuffer ? ((Geometry.IndexBufferCount % 3) == 0) : ((Geometry.VertexBufferCount % 3) == 0));
         MaxPrimitiveCounts.emplace_back(NumTriangles);
 
         VkAccelerationStructureBuildRangeInfoKHR AccelerationStructureBuildRangeInfo = { };
@@ -535,6 +535,10 @@ CAccelerationStructure* CAccelerationStructure::CreateTLAS(CDevice* pDevice, con
 
 CAccelerationStructure::CAccelerationStructure(CDevice* pDevice)
     : CDeviceChild(pDevice)
+    , m_DeviceAddress(0)
+    , m_DeviceMemory(VK_NULL_HANDLE)
+    , m_Buffer(VK_NULL_HANDLE)
+    , m_AccelerationStructure(VK_NULL_HANDLE)
 {
 }
 

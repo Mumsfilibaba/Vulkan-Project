@@ -18,18 +18,7 @@ if not defined DXC_PATH (
     set DXC_PATH=%VULKAN_SDK_PATH%\Bin\dxc.exe
 )
 
-set USE_DXC=1
-if defined SHADER_USE_DXC (
-    set USE_DXC=%SHADER_USE_DXC%
-)
-
-echo Shader compile mode: USE_DXC=%USE_DXC%
 set OUTPUT_DIR=shaders/compiled_shaders
-
-if "%USE_DXC%"=="0" (
-    echo Error: migrated shaders no longer have GLSL fallback. Set SHADER_USE_DXC=1.
-    exit /b 1
-)
 
 if not exist "%DXC_PATH%" (
     echo Error: DXC not found at "%DXC_PATH%".
@@ -41,7 +30,7 @@ if not exist "%OUTPUT_DIR%" (
     if errorlevel 1 exit /b 1
 )
 
-echo Compiling migrated HLSL shaders with DXC...
+echo Compiling HLSL shaders with DXC...
 "%DXC_PATH%" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/vertex.hlsl        -Fo %OUTPUT_DIR%/vertex.spv
 if errorlevel 1 exit /b 1
 "%DXC_PATH%" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/aabb_debug_vs.hlsl -Fo %OUTPUT_DIR%/aabb_debug_vs.spv

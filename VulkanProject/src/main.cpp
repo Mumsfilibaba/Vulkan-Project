@@ -6,6 +6,7 @@ int main()
     CApplication* pApp = CApplication::Create();
     if (!pApp->Init())
     {
+        pApp->Release();
         return 1;
     }
     

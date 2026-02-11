@@ -188,13 +188,33 @@ CTextureResource* CTextureResource::LoadFromFile(CDevice* pDevice, const char* F
     }
     
     // Get the file size
-    fseek(File, 0, SEEK_END);
-    int32_t FileSize = ftell(File);
+    if (fseek(File, 0, SEEK_END) != 0)
+    {
+        fclose(File);
+        LOG("Failed to seek '%s'\n", Filepath);
+        return nullptr;
+    }
+
+    const long FileSizeLong = ftell(File);
+    if (FileSizeLong <= 0)
+    {
+        fclose(File);
+        LOG("Invalid file size for '%s'\n", Filepath);
+        return nullptr;
+    }
+
+    const size_t FileSize = static_cast<size_t>(FileSizeLong);
     rewind(File);
     
     std::vector<uint8_t> FileData;
     FileData.resize(FileSize);
-    fread(FileData.data(), FileData.size(), sizeof(uint8_t), File);
+    const size_t NumReadBytes = fread(FileData.data(), sizeof(uint8_t), FileData.size(), File);
+    fclose(File);
+    if (NumReadBytes != FileData.size())
+    {
+        LOG("Failed to read '%s'\n", Filepath);
+        return nullptr;
+    }
     
     // Retrieve info about the file
     int32_t Width        = 0;

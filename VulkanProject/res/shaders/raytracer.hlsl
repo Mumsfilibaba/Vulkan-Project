@@ -274,6 +274,25 @@ void HitMesh(uint RootBoxIndex, SRay Ray, inout SRayPayLoad PayLoad, inout int2 
 
                 if (HitInfo.Dist > PayLoad.MinT && HitInfo.Dist < PayLoad.MaxT && HitInfo.Dist < PayLoad.T)
                 {
+                    STriangle Triangle = Triangles[TriangleIndex];
+                    uint MaterialIndex = min((uint)Triangle.MaterialIndex, uScene.NumMaterials - 1);
+                    SMaterial Material = Materials[MaterialIndex];
+
+                    if (Material.AlphaMaskTexIndex != INVALID_BINDLESS_ID)
+                    {
+                        float2 TexCoords0 = Vertices[Indicies.x].TexCoord.xy;
+                        float2 TexCoords1 = Vertices[Indicies.y].TexCoord.xy;
+                        float2 TexCoords2 = Vertices[Indicies.z].TexCoord.xy;
+
+                        float3 Barycentrics = float3(HitInfo.BaryCentrics, 1.0 - (HitInfo.BaryCentrics.x + HitInfo.BaryCentrics.y));
+                        float2 TexCoords = (Barycentrics.x * TexCoords1) + (Barycentrics.y * TexCoords2) + (Barycentrics.z * TexCoords0);
+                        float Alpha = uTextures[Material.AlphaMaskTexIndex].SampleLevel(uTexturesSampler, TexCoords, 0.0).r;
+                        if (Alpha < 0.9)
+                        {
+                            continue;
+                        }
+                    }
+
                     PayLoad.T            = HitInfo.Dist;
                     LastTriangleHitIndex = (int)TriangleIndex;
                     LastHitInfo          = HitInfo;

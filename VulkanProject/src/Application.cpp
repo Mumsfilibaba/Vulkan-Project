@@ -3,7 +3,7 @@
 #include "Renderer/GUI.h"
 #include "Renderer/RayTracer.h"
 
-#define ENABLE_HARDWARE_RT 1
+#define ENABLE_HARDWARE_RT 0
 
 extern bool GIsRunning = false;
 
@@ -17,9 +17,12 @@ CApplication* CApplication::Create()
 
 CApplication::CApplication()
     : m_pWindow(nullptr)
+    , m_pRenderer(nullptr)
     , m_pDevice(nullptr)
+    , m_pSwapchain(nullptr)
     , m_Width(1440)
     , m_Height(900)
+    , m_bIsMinimized(false)
 {
 }
 
@@ -50,7 +53,7 @@ bool CApplication::Init()
     if (!glfwVulkanSupported())
     {
         LOG("GLFW: Vulkan Not Supported\n");
-        return 1;
+        return false;
     }
     
     // Init Vulkan
@@ -69,6 +72,11 @@ bool CApplication::Init()
     
     // Create SwapChain
     m_pSwapchain = CSwapchain::Create(m_pDevice, m_pWindow);
+    if (!m_pSwapchain)
+    {
+        LOG("Failed to create Swapchain\n");
+        return false;
+    }
 
     // Initialize ImGui
     GUI::InitializeImgui(m_pWindow, m_pDevice, m_pSwapchain);
@@ -141,7 +149,7 @@ void CApplication::OnWindowMinimized(GLFWwindow* pWindow, int32_t Minimized)
     }
 }
 
-void CApplication::OnWindowResize(GLFWwindow* pWindow, uint32_t Width, uint32_t Height)
+void CApplication::OnWindowResize(GLFWwindow* pWindow, int32_t Width, int32_t Height)
 {
     // This happens when we minimize a window
     if (Width > 0 && Height > 0)
@@ -150,7 +158,7 @@ void CApplication::OnWindowResize(GLFWwindow* pWindow, uint32_t Width, uint32_t 
         m_Height = Height;
 
         // Resize the swapchain
-        m_pSwapchain->Resize(Width, m_Height);
+        m_pSwapchain->Resize(static_cast<uint32_t>(Width), static_cast<uint32_t>(Height));
 
         // Ensure that ImGui can create necessary resources for the main window
         GUI::OnSwapchainRecreated();
@@ -202,15 +210,37 @@ void CApplication::Tick()
 
 void CApplication::Release()
 {
-    m_pDevice->WaitForIdle();
-    m_pRenderer->Release();
+    if (m_pDevice)
+    {
+        m_pDevice->WaitForIdle();
+    }
 
-    GUI::ReleaseImGui();
+    if (m_pRenderer)
+    {
+        m_pRenderer->Release();
+        m_pRenderer = nullptr;
+    }
+
+    if (m_pSwapchain || m_pDevice)
+    {
+        GUI::ReleaseImGui();
+    }
 
     SAFE_DELETE(m_pSwapchain);
-    m_pDevice->Destroy();
 
-    glfwDestroyWindow(m_pWindow);
+    if (m_pDevice)
+    {
+        m_pDevice->Destroy();
+        m_pDevice = nullptr;
+    }
+
+    if (m_pWindow)
+    {
+        glfwDestroyWindow(m_pWindow);
+        m_pWindow = nullptr;
+    }
+
     glfwTerminate();
+
     delete this;
 }

@@ -120,7 +120,7 @@ void SBvhBuilder::BuildHierarchy()
                 {
                     SBvhTriangle& Triangle = Triangles[TriangleIndex];
 
-                    const int32_t BinIndex = std::min(SAH_NUM_BINS - 1, static_cast<int32_t>(((Triangle.Center[Axis] - BoxMin) * Scale)));
+                    const int32_t BinIndex = std::max(0, std::min(SAH_NUM_BINS - 1, static_cast<int32_t>(((Triangle.Center[Axis] - BoxMin) * Scale))));
                     Bins[BinIndex].TriangleCount++;
                     for (size_t i = 0; i < 3; i++)
                     {
