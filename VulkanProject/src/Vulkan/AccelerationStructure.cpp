@@ -337,7 +337,18 @@ CAccelerationStructure* CAccelerationStructure::CreateTLAS(CDevice* pDevice, con
     for (const STLASInstance& InstanceParams : Params.Instances)
     {
         VkAccelerationStructureInstanceKHR Instance = { };
-        Instance.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        Instance.flags = 0;
+
+		if (InstanceParams.bFlipTriangleFacing)
+		{
+			Instance.flags |= VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR;
+		}
+
+        if (InstanceParams.bDisableCulling)
+        {
+            Instance.flags |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        }
+        
         Instance.instanceCustomIndex                    = InstanceParams.InstanceCustomIndex;
         Instance.instanceShaderBindingTableRecordOffset = 0;
         Instance.mask                                   = 0xff;

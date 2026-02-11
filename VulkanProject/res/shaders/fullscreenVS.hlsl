@@ -15,7 +15,7 @@ VSOutput main(uint vertexIndex : SV_VertexID)
         float2(-1.0, 3.0)
     };
 
-    output.position = float4(positions[vertexIndex], 0.0, 1.0);
+    output.position  = float4(positions[vertexIndex], 0.0, 1.0);
     output.fragCoord = (positions[vertexIndex] + float2(1.0, 1.0)) * 0.5;
     return output;
 }

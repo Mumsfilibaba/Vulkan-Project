@@ -1,8 +1,8 @@
 #ifndef MATH_HLSLI
 #define MATH_HLSLI
 
-static const float PI = 3.14159265358979;
-static const float TWO_PI = 6.28318530717958;
+static const float PI           = 3.14159265358979;
+static const float TWO_PI       = 6.28318530717958;
 static const float LARGE_NUMBER = 1e30f;
 
 float3 RealReflect(float3 v, float3 n)

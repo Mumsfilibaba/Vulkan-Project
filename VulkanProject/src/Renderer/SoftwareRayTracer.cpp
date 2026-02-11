@@ -317,6 +317,8 @@ void CSoftwareRayTracer::RenderUI()
             {
                 "Render",
                 "Normals",
+                "Geometric Normals",
+                "Tangents",
                 "Albedo",
                 "Barycentrics",
                 "TexCoords",
@@ -344,21 +346,29 @@ void CSoftwareRayTracer::RenderUI()
                 }
                 else if (CurrentViewMode == 2)
                 {
-                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Albedo;
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::GeometricNormals;
                 }
                 else if (CurrentViewMode == 3)
                 {
-                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Barycentrics;
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Tangents;
                 }
                 else if (CurrentViewMode == 4)
                 {
-                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::TexCoords;
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Albedo;
                 }
                 else if (CurrentViewMode == 5)
                 {
-                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::BVHIntersection;
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Barycentrics;
                 }
                 else if (CurrentViewMode == 6)
+                {
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::TexCoords;
+                }
+                else if (CurrentViewMode == 7)
+                {
+                    m_pScene->m_Settings.ViewMode = ESoftwareViewMode::BVHIntersection;
+                }
+                else if (CurrentViewMode == 8)
                 {
                     m_pScene->m_Settings.ViewMode = ESoftwareViewMode::Debug;
                 }
@@ -515,7 +525,7 @@ void CSoftwareRayTracer::RenderUI()
         uint32_t ImguiID = 0;
         {
             uint32_t Index = 1;
-            for (SSphereGLSL& Sphere : m_pScene->m_Spheres)
+            for (SSphereHLSL& Sphere : m_pScene->m_Spheres)
             {
                 ImGui::PushID(ImguiID++);
 
@@ -536,7 +546,7 @@ void CSoftwareRayTracer::RenderUI()
 
         {
             uint32_t Index = 1;
-            for (SQuadGLSL& Quad : m_pScene->m_Quads)
+            for (SQuadHLSL& Quad : m_pScene->m_Quads)
             {
                 ImGui::PushID(ImguiID++);
 
@@ -561,7 +571,7 @@ void CSoftwareRayTracer::RenderUI()
 
         {
             uint32_t Index = 1;
-            for (SMeshGLSL& Mesh : m_pScene->m_Meshes)
+            for (SMeshHLSL& Mesh : m_pScene->m_Meshes)
             {
                 ImGui::PushID(ImguiID++);
 
@@ -579,7 +589,7 @@ void CSoftwareRayTracer::RenderUI()
 
         {
             uint32_t Index = 1;
-            for (SMaterialGLSL& Material : m_pScene->m_GpuMaterials)
+            for (SMaterialHLSL& Material : m_pScene->m_GpuMaterials)
             {
                 ImGui::PushID(ImguiID++);
                 ImGui::Text("Material %d", Index++);
@@ -764,9 +774,9 @@ void CSoftwareRayTracer::CreateRayTracingResources()
     m_pRayTracingPipelineLayout->SetDebugName("RayTracingPass PipelineLayout");
 
     // Create RayTracing shader and pipeline
-    CShaderModule* pComputeShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/raytracer.spv");
+    CShaderModule* pComputeShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/raytracer.spv");
     assert(pComputeShader != nullptr);
-    pComputeShader->SetDebugName(RESOURCE_PATH"/shaders/raytracer.spv");
+    pComputeShader->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/raytracer.spv");
 
     SComputePipelineStateParams PipelineParams = {};
     PipelineParams.pShader         = pComputeShader;
@@ -824,21 +834,21 @@ void CSoftwareRayTracer::CreateDebugViewResources()
     m_pDebugAABBPipelineLayout->SetDebugName("DebugPass AABB PipelineLayout");
 
     // PipelineState, RenderPass and Shaders
-    CShaderModule* pVertex = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/vertex.spv");
+    CShaderModule* pVertex = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/vertex.spv");
     assert(pVertex != nullptr);
-    pVertex->SetDebugName(RESOURCE_PATH"/shaders/vertex.spv");
+    pVertex->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/vertex.spv");
 
-    CShaderModule* pAABBVertex = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/aabb_debug_vs.spv");
+    CShaderModule* pAABBVertex = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/aabb_debug_vs.spv");
     assert(pAABBVertex != nullptr);
-    pAABBVertex->SetDebugName(RESOURCE_PATH"/shaders/aabb_debug_vs.spv");
+    pAABBVertex->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/aabb_debug_vs.spv");
 
-    CShaderModule* pFragment = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/fragment.spv");
+    CShaderModule* pFragment = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/fragment.spv");
     assert(pFragment != nullptr);
-    pFragment->SetDebugName(RESOURCE_PATH"/shaders/fragment.spv");
+    pFragment->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/fragment.spv");
 
-    CShaderModule* pAABBFragment = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/aabb_debug_fs.spv");
+    CShaderModule* pAABBFragment = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/aabb_debug_fs.spv");
     assert(pAABBFragment != nullptr);
-    pAABBFragment->SetDebugName(RESOURCE_PATH"/shaders/aabb_debug_fs.spv");
+    pAABBFragment->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/aabb_debug_fs.spv");
 
     SRenderPassAttachment ColorAttachments[1];
     ColorAttachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
@@ -963,7 +973,7 @@ void CSoftwareRayTracer::CreateGlobalBuffers()
 
     // QuadBuffer
     SBufferParams QuadBufferParams;
-    QuadBufferParams.Size             = sizeof(SQuadGLSL) * MAX_QUADS;
+    QuadBufferParams.Size             = sizeof(SQuadHLSL) * MAX_QUADS;
     QuadBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     QuadBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -973,7 +983,7 @@ void CSoftwareRayTracer::CreateGlobalBuffers()
 
     // SphereBuffer
     SBufferParams SphereBufferParams;
-    SphereBufferParams.Size             = sizeof(SSphereGLSL) * MAX_SPHERES;
+    SphereBufferParams.Size             = sizeof(SSphereHLSL) * MAX_SPHERES;
     SphereBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     SphereBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1012,7 +1022,7 @@ void CSoftwareRayTracer::CreateGlobalBuffers()
 
     // TriangleBuffer
     SBufferParams TriangleBufferParams;
-    TriangleBufferParams.Size             = sizeof(STriangleInfoGLSL) * MAX_TRIANGLES;
+    TriangleBufferParams.Size             = sizeof(STriangleInfoHLSL) * MAX_TRIANGLES;
     TriangleBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     TriangleBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1022,7 +1032,7 @@ void CSoftwareRayTracer::CreateGlobalBuffers()
 
     // TriangleMeshesBuffer
     SBufferParams MeshBufferParams;
-    MeshBufferParams.Size             = sizeof(SMeshGLSL) * MAX_TRIANGLEMESHES;
+    MeshBufferParams.Size             = sizeof(SMeshHLSL) * MAX_TRIANGLEMESHES;
     MeshBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     MeshBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1032,7 +1042,7 @@ void CSoftwareRayTracer::CreateGlobalBuffers()
 
     // MaterialBuffer
     SBufferParams MaterialBufferParams;
-    MaterialBufferParams.Size             = sizeof(SMaterialGLSL) * MAX_MATERIALS;
+    MaterialBufferParams.Size             = sizeof(SMaterialHLSL) * MAX_MATERIALS;
     MaterialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     MaterialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1208,7 +1218,7 @@ void CSoftwareRayTracer::ReloadShaders()
             LOG("Compiled Shaders Successfully\n");
 
             // Create shader and pipeline
-            CShaderModule* pComputeShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/raytracer.spv");
+            CShaderModule* pComputeShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/raytracer.spv");
             if (!pComputeShader)
             {
                 LOG("FAILED to create ComputeShader\n");
@@ -1324,29 +1334,29 @@ void CSoftwareRayTracer::UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer)
     if (!m_pScene->m_Quads.empty())
     {
         pCommandBuffer->FillBuffer(m_pQuadBuffer, 0, m_pQuadBuffer->GetSize(), 0);
-        assert((sizeof(SQuadGLSL) * m_pScene->m_Quads.size()) <= m_pQuadBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pQuadBuffer, 0, sizeof(SQuadGLSL) * m_pScene->m_Quads.size(), m_pScene->m_Quads.data());
+        assert((sizeof(SQuadHLSL) * m_pScene->m_Quads.size()) <= m_pQuadBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pQuadBuffer, 0, sizeof(SQuadHLSL) * m_pScene->m_Quads.size(), m_pScene->m_Quads.data());
     }
 
     if (!m_pScene->m_Spheres.empty())
     {
         pCommandBuffer->FillBuffer(m_pSphereBuffer, 0, m_pSphereBuffer->GetSize(), 0);
-        assert((sizeof(SSphereGLSL) * m_pScene->m_Spheres.size()) <= m_pSphereBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(SSphereGLSL) * m_pScene->m_Spheres.size(), m_pScene->m_Spheres.data());
+        assert((sizeof(SSphereHLSL) * m_pScene->m_Spheres.size()) <= m_pSphereBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pSphereBuffer, 0, sizeof(SSphereHLSL) * m_pScene->m_Spheres.size(), m_pScene->m_Spheres.data());
     }
 
     if (!m_pScene->m_Meshes.empty())
     {
         pCommandBuffer->FillBuffer(m_pMeshBuffer, 0, m_pMeshBuffer->GetSize(), 0);
-        assert((sizeof(SMeshGLSL) * m_pScene->m_Meshes.size()) <= m_pMeshBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(SMeshGLSL) * m_pScene->m_Meshes.size(), m_pScene->m_Meshes.data());
+        assert((sizeof(SMeshHLSL) * m_pScene->m_Meshes.size()) <= m_pMeshBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMeshBuffer, 0, sizeof(SMeshHLSL) * m_pScene->m_Meshes.size(), m_pScene->m_Meshes.data());
     }
 
     if (!m_pScene->m_GpuMaterials.empty())
     {
         pCommandBuffer->FillBuffer(m_pMaterialBuffer, 0, m_pMaterialBuffer->GetSize(), 0);
-        assert((sizeof(SMaterialGLSL) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(SMaterialGLSL) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
+        assert((sizeof(SMaterialHLSL) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(SMaterialHLSL) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
     }
 
     // Barrier before reading the buffer from the shader

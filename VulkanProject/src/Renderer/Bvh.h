@@ -105,7 +105,7 @@ struct SBvhAccelerationStructure
 
     void Build(const SModel& Model, uint32_t MaxDepth);
 
-    std::vector<STriangleInfoGLSL>  m_TriangleInfo;
+    std::vector<STriangleInfoHLSL>  m_TriangleInfo;
     std::vector<uint32_t>           m_Indicies;
     std::vector<SShaderBoundingBox> m_BoundingBoxes;
 

@@ -3,16 +3,16 @@
 #include "Renderer/GUI.h"
 #include "Renderer/RayTracer.h"
 
-#define ENABLE_HARDWARE_RT 0
+#define ENABLE_HARDWARE_RT 1
 
 extern bool GIsRunning = false;
 
-CApplication* CApplication::GAppInstance = nullptr;
+CApplication* CApplication::ApplicationInstance = nullptr;
 
 CApplication* CApplication::Create()
 {
-    GAppInstance = new CApplication();
-    return GAppInstance;
+    ApplicationInstance = new CApplication();
+    return ApplicationInstance;
 }
 
 CApplication::CApplication()
@@ -73,7 +73,7 @@ bool CApplication::Init()
     // Initialize ImGui
     GUI::InitializeImgui(m_pWindow, m_pDevice, m_pSwapchain);
 
-#if ENABLE_HW_RT
+#if ENABLE_HARDWARE_RT
     if (m_pDevice->IsRayTracingSupported())
     {
         m_pRenderer = new CRayTracer();
@@ -108,17 +108,17 @@ bool CApplication::CreateWindow()
         // Setup callbacks
         glfwSetWindowIconifyCallback(m_pWindow, [](GLFWwindow* pWindow, int32_t Minimized)
         {
-            GAppInstance->OnWindowMinimized(pWindow, Minimized);
+            ApplicationInstance->OnWindowMinimized(pWindow, Minimized);
         });
 
         glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow* pWindow)
         {
-            GAppInstance->OnWindowClose(pWindow);
+            ApplicationInstance->OnWindowClose(pWindow);
         });
 
         glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow* pWindow, int32_t Width, int32_t Height)
         {
-            GAppInstance->OnWindowResize(pWindow, Width, Height);
+            ApplicationInstance->OnWindowResize(pWindow, Width, Height);
         });
 
         return true;

@@ -9,7 +9,7 @@ enum class EObjectType : uint32_t
     Mesh     = 3
 };
 
-struct SSphereGLSL
+struct SSphereHLSL
 {
     // 0-16
     glm::vec3 Position;
@@ -23,7 +23,7 @@ struct SSphereGLSL
     uint32_t Padding2;
 };
 
-struct SQuadGLSL
+struct SQuadHLSL
 {
     // 0-16
     glm::vec4 Position;
@@ -40,13 +40,13 @@ struct SQuadGLSL
     uint32_t Padding2;
 };
 
-struct SMeshGLSL
+struct SMeshHLSL
 {
     // 0-8
     uint32_t BoundingBoxIndex;
 };
 
-struct SMaterialGLSL
+struct SMaterialHLSL
 {
     // 0-16
     glm::vec4 AlbedoColor;
@@ -76,7 +76,7 @@ struct SMaterialGLSL
     uint32_t Padding1;
 };
 
-struct STriangleInfoGLSL
+struct STriangleInfoHLSL
 {
     // 0-4
     int32_t MaterialIndex;

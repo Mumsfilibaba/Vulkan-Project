@@ -22,7 +22,7 @@ public:
 
     static CApplication& Get()
     {
-        return *GAppInstance;
+        return *ApplicationInstance;
     }
 
     CApplication();
@@ -58,5 +58,5 @@ private:
 
     std::chrono::time_point<std::chrono::system_clock> m_LastTime;
 
-    static CApplication* GAppInstance;
+    static CApplication* ApplicationInstance;
 };

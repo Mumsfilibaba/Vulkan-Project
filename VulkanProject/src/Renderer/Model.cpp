@@ -47,7 +47,7 @@ SModel::~SModel()
     SAFE_DELETE(pAccelerationStructure);
 }
 
-bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
+bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice, bool bGenerateSmoothNormals)
 {
     tinyobj::attrib_t                TinyObjAttrib;
     std::vector<tinyobj::shape_t>    TinyObjShapes;
@@ -125,6 +125,9 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
     std::vector<uint32_t> NewIndices;
 
     std::unordered_map<SVertex, uint32_t, SVertexHasher> UniqueVertices;
+    std::vector<bool> VertexImportedNormals;
+
+    bool bModelHasMissingNormals = false;
     for (const tinyobj::shape_t& Shape : TinyObjShapes)
     {
         // Start at index zero for each mesh and loop until all indices are processed
@@ -157,7 +160,9 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
                 const size_t BasePositionIndex = 3 * Index.vertex_index;
                 assert(BasePositionIndex >= 0);
 
-                SVertex Vertex;
+                SVertex Vertex = {};
+                
+                // Position
                 Vertex.Position =
                 {
                     TinyObjAttrib.vertices[BasePositionIndex + 0],
@@ -165,8 +170,9 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
                     TinyObjAttrib.vertices[BasePositionIndex + 2],
                 };
 
-                // Check for normals
-                if (Index.normal_index >= 0)
+                // Normals
+                const bool bHasImportedNormal = (Index.normal_index >= 0);
+                if (bHasImportedNormal)
                 {
                     const size_t BaseNormalIndex = 3 * Index.normal_index;
                     Vertex.Normal =
@@ -176,8 +182,16 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
                         TinyObjAttrib.normals[BaseNormalIndex + 2],
                     };
                 }
+                else
+                {
+                    bModelHasMissingNormals = true;
+                    Vertex.Normal = glm::vec3(0.0f);
+                }
 
-                // Check for UVs
+                // Tangent
+                Vertex.Tangent = glm::vec3(0.0f, 0.0f, 0.0f);
+
+                // Texcoords
                 if (Index.texcoord_index >= 0)
                 {
                     const size_t BaseTexCoordIndex = 2 * Index.texcoord_index;
@@ -187,14 +201,25 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
                         1.0f - TinyObjAttrib.texcoords[BaseTexCoordIndex + 1],
                     };
                 }
-
-                if (UniqueVertices.count(Vertex) == 0)
+                else
                 {
-                    UniqueVertices[Vertex] = static_cast<uint32_t>(NewVertices.size());
-                    NewVertices.push_back(Vertex);
+                    Vertex.TexCoord = glm::vec2(0.0f, 0.0f);
                 }
 
-                NewIndices.push_back(UniqueVertices[Vertex]);
+                auto UniqueIt = UniqueVertices.find(Vertex);
+                if (UniqueIt == UniqueVertices.end())
+                {
+                    const uint32_t NewVertexIndex = static_cast<uint32_t>(NewVertices.size());
+                    UniqueVertices[Vertex] = NewVertexIndex;
+
+                    NewVertices.push_back(Vertex);
+                    NewIndices.push_back(NewVertexIndex);
+                    VertexImportedNormals.push_back(bHasImportedNormal);
+                }
+                else
+                {
+                    NewIndices.push_back(UniqueIt->second);
+                }
             }
 
             SubMesh.VertexCount = NewVertices.size() - SubMesh.VertexOffset;
@@ -209,6 +234,109 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
     // Ensure everything is correct
     const size_t TriangleCount = NewIndices.size() / 3;
     assert((NewIndices.size() % 3) == 0);
+
+    // Optional smooth-normal generation (kept behind explicit flag).
+    if (bGenerateSmoothNormals)
+    {
+        LOG("Generating smooth vertex normals for model '%s'...\n", Filepath.c_str());
+
+        std::vector<glm::vec3> NormalAccumulation(NewVertices.size(), glm::vec3(0.0f));
+        std::unordered_map<glm::vec3, glm::vec3> PositionNormalAccumulation;
+
+        for (size_t i = 0; i < NewIndices.size(); i += 3)
+        {
+            const uint32_t Index0 = NewIndices[i + 0];
+            const uint32_t Index1 = NewIndices[i + 1];
+            const uint32_t Index2 = NewIndices[i + 2];
+
+            const glm::vec3& Position0 = NewVertices[Index0].Position;
+            const glm::vec3& Position1 = NewVertices[Index1].Position;
+            const glm::vec3& Position2 = NewVertices[Index2].Position;
+
+            const glm::vec3 FaceNormal = glm::cross(Position1 - Position0, Position2 - Position0);
+            if (glm::dot(FaceNormal, FaceNormal) > 0.0f)
+            {
+                NormalAccumulation[Index0] += FaceNormal;
+                NormalAccumulation[Index1] += FaceNormal;
+                NormalAccumulation[Index2] += FaceNormal;
+
+                PositionNormalAccumulation[Position0] += FaceNormal;
+                PositionNormalAccumulation[Position1] += FaceNormal;
+                PositionNormalAccumulation[Position2] += FaceNormal;
+            }
+        }
+
+        for (size_t i = 0; i < NewVertices.size(); i++)
+        {
+            glm::vec3 SmoothedNormal = NormalAccumulation[i];
+            auto It = PositionNormalAccumulation.find(NewVertices[i].Position);
+            if (It != PositionNormalAccumulation.end())
+            {
+                SmoothedNormal = It->second;
+            }
+
+            if (glm::dot(SmoothedNormal, SmoothedNormal) > 0.0f)
+            {
+                NewVertices[i].Normal = glm::normalize(SmoothedNormal);
+            }
+        }
+    }
+    else if (bModelHasMissingNormals)
+    {
+        LOG("Model '%s' has missing normals. Generating face normals for missing vertices...\n", Filepath.c_str());
+
+        std::vector<uint32_t> VertexUseCount(NewVertices.size(), 0u);
+        for (uint32_t Index : NewIndices)
+        {
+            VertexUseCount[Index]++;
+        }
+
+        for (size_t i = 0; i < NewIndices.size(); i += 3)
+        {
+            const uint32_t Index0 = NewIndices[i + 0];
+            const uint32_t Index1 = NewIndices[i + 1];
+            const uint32_t Index2 = NewIndices[i + 2];
+
+            const glm::vec3& Position0 = NewVertices[Index0].Position;
+            const glm::vec3& Position1 = NewVertices[Index1].Position;
+            const glm::vec3& Position2 = NewVertices[Index2].Position;
+
+            glm::vec3 FaceNormal = glm::cross(Position1 - Position0, Position2 - Position0);
+            if (glm::dot(FaceNormal, FaceNormal) <= 0.0f)
+            {
+                continue;
+            }
+
+            FaceNormal = glm::normalize(FaceNormal);
+
+            uint32_t TriangleIndices[3] = { Index0, Index1, Index2 };
+            for (size_t Corner = 0; Corner < 3; Corner++)
+            {
+                uint32_t CurrentIndex = TriangleIndices[Corner];
+                if (VertexImportedNormals[CurrentIndex] != 0u)
+                {
+                    continue;
+                }
+
+                if (VertexUseCount[CurrentIndex] > 1u)
+                {
+                    SVertex SplitVertex = NewVertices[CurrentIndex];
+                    SplitVertex.Normal = FaceNormal;
+
+                    const uint32_t SplitIndex = static_cast<uint32_t>(NewVertices.size());
+                    NewVertices.push_back(SplitVertex);
+                    VertexImportedNormals.push_back(1u);
+
+                    NewIndices[i + Corner] = SplitIndex;
+                    VertexUseCount[CurrentIndex]--;
+                }
+                else
+                {
+                    NewVertices[CurrentIndex].Normal = FaceNormal;
+                }
+            }
+        }
+    }
 
     LOG("... finished loading model '%s'\n", Filepath.c_str());
     LOG("Calculating Tangents...\n");
@@ -244,7 +372,7 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
     for (size_t i = 0; i < NewVertices.size(); i++)
     {
         glm::vec3 Tangent = glm::normalize(TangentAccumulation[i]);
-        NewVertices[i].Tangent = glm::vec4(Tangent, 0.0);
+        NewVertices[i].Tangent = Tangent;
     }
 
     LOG("... Finished calculating Tangents\n");
@@ -252,8 +380,8 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
     assert(NewIndices.size() < UINT32_MAX);
 
     SBufferParams VertexBufferParams = { };
-    VertexBufferParams.Size  = NewVertices.size() * sizeof(SVertex);
-    VertexBufferParams.Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+    VertexBufferParams.Size             = NewVertices.size() * sizeof(SVertex);
+    VertexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
     pVertexBuffer = CBuffer::CreateWithData(pDevice, VertexBufferParams, nullptr, NewVertices.data());
@@ -261,8 +389,8 @@ bool SModel::LoadFromFile(const std::string& Filepath, CDevice* pDevice)
     VertexCount = NewVertices.size();
 
     SBufferParams IndexBufferParams = { };
-    IndexBufferParams.Size  = NewIndices.size() * sizeof(uint32_t);
-    IndexBufferParams.Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
+    IndexBufferParams.Size             = NewIndices.size() * sizeof(uint32_t);
+    IndexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_INPUT;
     IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
 
     pIndexBuffer = CBuffer::CreateWithData(pDevice, IndexBufferParams, nullptr, NewIndices.data());

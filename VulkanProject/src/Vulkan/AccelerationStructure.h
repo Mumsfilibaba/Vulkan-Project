@@ -28,9 +28,11 @@ struct SAccelerationStructureBLASParams
 
 struct STLASInstance
 {
-    VkTransformMatrixKHR    TransformMatrix;
-    CAccelerationStructure* pBLAS;
-    uint32_t                InstanceCustomIndex;
+    VkTransformMatrixKHR    TransformMatrix     = { };
+    CAccelerationStructure* pBLAS               = nullptr;
+    uint32_t                InstanceCustomIndex = 0;
+    bool                    bDisableCulling      = false;
+    bool                    bFlipTriangleFacing = false; 
 };
 
 struct SAccelerationStructureTLASParams

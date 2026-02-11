@@ -94,6 +94,12 @@ void SModelScene::Initialize()
     // Setup Camera
     Reset();
 
+    if (Type == EModelSceneType::Default)
+    {
+		glm::vec3 Translation(0.0f, 0.0f, -1.0f);
+		m_Camera.Move(Translation);
+    }
+
     // Cache Device
     CDevice* pDevice = CApplication::Get().GetDevice();
 
@@ -152,7 +158,7 @@ void SModelScene::Initialize()
 
     // CPU Triangle Buffer
     SBufferParams TriangleBufferParams;
-    TriangleBufferParams.Size             = sizeof(STriangleInfoGLSL) * m_TriangleInfo.size();
+    TriangleBufferParams.Size             = sizeof(STriangleInfoHLSL) * m_TriangleInfo.size();
     TriangleBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     TriangleBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -250,7 +256,7 @@ void SModelScene::Initialize()
 
     for (const SMaterial& Material : m_Materials)
     {
-        SMaterialGLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
+        SMaterialHLSL& ShaderMaterial = m_GpuMaterials.emplace_back();
         ShaderMaterial.AlbedoColor           = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
         ShaderMaterial.EmissiveColor         = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
         ShaderMaterial.SpecularColor         = glm::vec4(0.95f, 0.95f, 0.95f, 1.0f);
@@ -269,26 +275,33 @@ void SModelScene::Initialize()
         ShaderMaterial.MetallicTexIndex  = AddImageViewToBindlessManager(Material.MetallicTex, m_pMaterialSampler);
     }
 
+    const uint32_t WallMaterialIndex  = static_cast<uint32_t>(m_GpuMaterials.size());
+    const uint32_t RightMaterialIndex = WallMaterialIndex + 1;
+    const uint32_t LeftMaterialIndex  = WallMaterialIndex + 2;
+    const uint32_t LightMaterialIndex = WallMaterialIndex + 3;
+
     // Quads
 #if 1
     if (Type == EModelSceneType::Default)
     {
         // Floor Quad
-        m_Quads.push_back({ glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), 0 });
+        m_Quads.push_back({ glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), WallMaterialIndex });
         // Front Quad
-        m_Quads.push_back({ glm::vec4(-1.0f, 2.0f, -1.0f, 0.0f), glm::vec4(0.0f, -2.0f, 0.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), 0 });
+        m_Quads.push_back({ glm::vec4(-1.0f, 2.0f, -1.0f, 0.0f), glm::vec4(0.0f, -2.0f, 0.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), WallMaterialIndex });
         // Roof Quad
-        m_Quads.push_back({ glm::vec4(-1.0f, 2.0f, 1.0f, 0.0f), glm::vec4(0.0f, 0.0f, -2.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), 0 });
+        m_Quads.push_back({ glm::vec4(-1.0f, 2.0f, 1.0f, 0.0f), glm::vec4(0.0f, 0.0f, -2.0f, 0.0f), glm::vec4(2.0f, 0.0f, 0.0f, 0.0f), WallMaterialIndex });
         // Right Quad
-        m_Quads.push_back({ glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f), glm::vec4(0.0f, 2.0f, 0.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), 1 });
+        m_Quads.push_back({ glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f), glm::vec4(0.0f, 2.0f, 0.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), RightMaterialIndex });
         // Left Quad
-        m_Quads.push_back({ glm::vec4(1.0f, 2.0f, -1.0f, 0.0f), glm::vec4(0.0f, -2.0f, 0.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), 2 });
+        m_Quads.push_back({ glm::vec4(1.0f, 2.0f, -1.0f, 0.0f), glm::vec4(0.0f, -2.0f, 0.0f, 0.0f), glm::vec4(0.0f, 0.0f, 2.0f, 0.0f), LeftMaterialIndex });
         // Light Quad
-        m_Quads.push_back({ glm::vec4(0.5f, 1.999f, 0.2f, 0.0f), glm::vec4(0.0f, 0.0f, -0.4f, 0.0f), glm::vec4(0.4f, 0.0f, 0.0f, 0.0f), 3 });
+        m_Quads.push_back({ glm::vec4(0.5f, 1.95f, 0.2f, 0.0f), glm::vec4(0.0f, 0.0f, -0.4f, 0.0f), glm::vec4(0.4f, 0.0f, 0.0f, 0.0f), LightMaterialIndex });
     }
 #endif
 
     // Materials
+
+    // Standard Wall material
     m_GpuMaterials.push_back(
     {
         glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
@@ -309,6 +322,7 @@ void SModelScene::Initialize()
         0, 0
     });
 
+	// Right Wall Material
     m_GpuMaterials.push_back(
     {
         glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
@@ -329,6 +343,7 @@ void SModelScene::Initialize()
         0, 0
     });
 
+    // Left Wall Material
     m_GpuMaterials.push_back(
     {
         glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
@@ -349,45 +364,25 @@ void SModelScene::Initialize()
         0, 0
     });
 
-    // Light
+    // Emissive
     m_GpuMaterials.push_back(
     {
-        glm::vec4( 0.0f,  0.0f,  0.0f, 1.0f),
-        glm::vec4(40.0f, 36.0f, 28.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        // padding
-        0, 0
-    });
-
-    m_GpuMaterials.push_back(
-    {
-        glm::vec4(0.9f, 0.9f, 0.9f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-        glm::vec4(0.9f, 0.9f, 0.9f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.1f,
-        0.9f,
-        1.0f,
-        0.0f,
-        0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        // padding
-        0, 0
+		glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+		glm::vec4(40.0f, 40.0f, 40.0f, 1.0f),
+		glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+		glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+		0.0f,
+		0.0f,
+		1.0f,
+		0.0f,
+		0.0f,
+		CBindlessManager::InvalidBindlessID,
+		CBindlessManager::InvalidBindlessID,
+		CBindlessManager::InvalidBindlessID,
+		CBindlessManager::InvalidBindlessID,
+		CBindlessManager::InvalidBindlessID,
+		// padding
+		0, 0
     });
 }
 
@@ -604,22 +599,22 @@ void SSphereScene::Initialize()
         // Light Material
         m_GpuMaterials.push_back(
         {
-            glm::vec4(0.0f,  0.0f,  0.0f, 1.0f),
-            glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
-            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-            0.0f,
-            0.0f,
-            0.0f,
-            0.0f,
-            0.0f,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            // padding
-            0, 0
+		    glm::vec4(0.0f,  0.0f,  0.0f, 1.0f),
+		    glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
+		    glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+		    glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+		    0.0f,
+		    0.0f,
+            1.0f,
+		    0.0f,
+		    0.0f,
+		    CBindlessManager::InvalidBindlessID,
+		    CBindlessManager::InvalidBindlessID,
+		    CBindlessManager::InvalidBindlessID,
+		    CBindlessManager::InvalidBindlessID,
+		    CBindlessManager::InvalidBindlessID,
+		    // padding
+		    0, 0
         });
 
         // Spheres
@@ -757,8 +752,10 @@ void SCornellBoxScene::Initialize()
     m_Quads.push_back({ glm::vec4(-3.0f, 0.0f, -2.0f, 0.0f), glm::vec4(0.0f, 0.0f, 4.0f, 0.0f), glm::vec4(6.0f, 0.0f, 0.0f, 0.0f), 0 });
     // Front Quad
     m_Quads.push_back({ glm::vec4(-3.0f, 4.0f, -2.0f, 0.0f), glm::vec4(0.0f, -4.0f, 0.0f, 0.0f), glm::vec4(6.0f, 0.0f, 0.0f, 0.0f), 0 });
-    // Back Quad - NOTE: Disabled to let some light into the box for now
-    // m_Quads.push_back({ glm::vec4(-2.0f, 0.0f, 2.0f, 0.0f), glm::vec4(0.0f, 4.0f, 0.0f, 0.0f), glm::vec4(4.0f, 0.0f, 0.0f, 0.0f), 4 });
+    // Back Quad
+#if 0 // NOTE: Disabled to let some light into the box for now
+    m_Quads.push_back({ glm::vec4(-2.0f, 0.0f, 2.0f, 0.0f), glm::vec4(0.0f, 4.0f, 0.0f, 0.0f), glm::vec4(4.0f, 0.0f, 0.0f, 0.0f), 4 });
+#endif
     // Roof Quad
     m_Quads.push_back({ glm::vec4(-3.0f, 4.0f, 2.0f, 0.0f), glm::vec4(0.0f, 0.0f, -4.0f, 0.0f), glm::vec4(6.0f, 0.0f, 0.0f, 0.0f), 0 });
     // Right Quad

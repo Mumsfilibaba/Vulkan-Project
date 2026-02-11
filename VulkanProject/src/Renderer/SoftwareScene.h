@@ -23,13 +23,15 @@ class CSampler;
 
 enum class ESoftwareViewMode : uint32_t
 {
-    Render          = 0,
-    Normals         = 1,
-    Albedo          = 2,
-    Barycentrics    = 3,
-    TexCoords       = 4,
-    BVHIntersection = 5,
-    Debug           = 6,
+    Render           = 0,
+    Normals          = 1,
+    GeometricNormals = 2,
+    Tangents         = 3,
+    Albedo           = 4,
+    Barycentrics     = 5,
+    TexCoords        = 6,
+    BVHIntersection  = 7,
+    Debug            = 8,
 };
 
 struct SSoftwareSceneSettings
@@ -66,11 +68,11 @@ struct SSoftwareScene : public IScene
 
     // Materials
     std::vector<SMaterial>     m_Materials;
-    std::vector<SMaterialGLSL> m_GpuMaterials;
+    std::vector<SMaterialHLSL> m_GpuMaterials;
 
     // Other primitive data
-    std::vector<SSphereGLSL>   m_Spheres;
-    std::vector<SQuadGLSL>     m_Quads;
+    std::vector<SSphereHLSL>   m_Spheres;
+    std::vector<SQuadHLSL>     m_Quads;
 
     // BVH Container
     SBvhAccelerationStructure  m_AccelerationStructure;
@@ -79,8 +81,8 @@ struct SSoftwareScene : public IScene
     std::vector<SVertexPosition>   m_VertexPositions;
     std::vector<SVertex>           m_Vertices;
     std::vector<uint32_t>          m_Indicies;
-    std::vector<SMeshGLSL>         m_Meshes;
-    std::vector<STriangleInfoGLSL> m_TriangleInfo;
+    std::vector<SMeshHLSL>         m_Meshes;
+    std::vector<STriangleInfoHLSL> m_TriangleInfo;
 
     // CPU Buffers
     CBuffer*  m_pVertexPositionsBuffer;

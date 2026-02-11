@@ -7,14 +7,6 @@ elif [ -n "${VULKAN_SDK}" ]; then
     VULKAN_SDK_PATH="${VULKAN_SDK}"
 fi
 
-if [ -n "${GLSLC_PATH}" ]; then
-    GLSLC_EXE="${GLSLC_PATH}"
-elif [ -n "${VULKAN_SDK_PATH}" ] && [ -x "${VULKAN_SDK_PATH}/Bin/glslc" ]; then
-    GLSLC_EXE="${VULKAN_SDK_PATH}/Bin/glslc"
-else
-    GLSLC_EXE="/usr/local/bin/glslc"
-fi
-
 if [ -n "${DXC_PATH}" ]; then
     DXC_EXE="${DXC_PATH}"
 elif [ -n "${VULKAN_SDK_PATH}" ] && [ -x "${VULKAN_SDK_PATH}/Bin/dxc" ]; then
@@ -23,13 +15,9 @@ else
     DXC_EXE="/usr/local/bin/dxc"
 fi
 
-if [ ! -x "${GLSLC_EXE}" ]; then
-    echo "Error: glslc not found at '${GLSLC_EXE}'"
-    exit 1
-fi
-
 USE_DXC_VALUE="${SHADER_USE_DXC:-1}"
 echo "Shader compile mode: USE_DXC=${USE_DXC_VALUE}"
+OUTPUT_DIR="shaders/compiled_shaders"
 
 if [ "${USE_DXC_VALUE}" = "0" ]; then
     echo "Error: migrated shaders no longer have GLSL fallback. Set SHADER_USE_DXC=1."
@@ -41,18 +29,20 @@ if [ ! -x "${DXC_EXE}" ]; then
     exit 1
 fi
 
-echo "Compiling migrated HLSL shaders with DXC..."
-"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/vertex.hlsl        -Fo shaders/vertex.spv || exit 1
-"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/aabb_debug_vs.hlsl -Fo shaders/aabb_debug_vs.spv || exit 1
-"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T ps_6_0 -E main shaders/aabb_debug_fs.hlsl -Fo shaders/aabb_debug_fs.spv || exit 1
-"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/fullscreenVS.hlsl  -Fo shaders/fullscreenVS.spv || exit 1
-"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T ps_6_0 -E main shaders/fragment.hlsl      -Fo shaders/fragment.spv || exit 1
-"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T ps_6_0 -E main shaders/tonemap.hlsl       -Fo shaders/tonemap.spv || exit 1
-"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T cs_6_0 -E main shaders/cubemapgen.hlsl    -Fo shaders/cubemapgen.spv || exit 1
-"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fspv-extension=SPV_KHR_ray_tracing -T lib_6_6 -E main shaders/miss.hlsl -Fo shaders/miss.spv || exit 1
+mkdir -p "${OUTPUT_DIR}" || exit 1
 
-echo "Compiling remaining GLSL shaders with glslc..."
-"${GLSLC_EXE}" -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=compute  shaders/raytracer.glsl     -o shaders/raytracer.spv || exit 1
-"${GLSLC_EXE}" -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rgen     shaders/raygen.glsl        -o shaders/raygen.spv || exit 1
-"${GLSLC_EXE}" -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rchit    shaders/closesthit.glsl    -o shaders/closesthit.spv || exit 1
-"${GLSLC_EXE}" -O -fhlsl-offsets --target-spv=spv1.5 --target-env=vulkan1.2 -fshader-stage=rahit    shaders/anyhit.glsl        -o shaders/anyhit.spv || exit 1
+echo "Compiling migrated HLSL shaders with DXC..."
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/vertex.hlsl        -Fo "${OUTPUT_DIR}/vertex.spv" || exit 1
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/aabb_debug_vs.hlsl -Fo "${OUTPUT_DIR}/aabb_debug_vs.spv" || exit 1
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T ps_6_0 -E main shaders/aabb_debug_fs.hlsl -Fo "${OUTPUT_DIR}/aabb_debug_fs.spv" || exit 1
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T vs_6_0 -E main shaders/fullscreenVS.hlsl  -Fo "${OUTPUT_DIR}/fullscreenVS.spv" || exit 1
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T ps_6_0 -E main shaders/fragment.hlsl      -Fo "${OUTPUT_DIR}/fragment.spv" || exit 1
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T ps_6_0 -E main shaders/tonemap.hlsl       -Fo "${OUTPUT_DIR}/tonemap.spv" || exit 1
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -T cs_6_0 -E main shaders/cubemapgen.hlsl    -Fo "${OUTPUT_DIR}/cubemapgen.spv" || exit 1
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fspv-extension=SPV_KHR_ray_tracing -T lib_6_6 -E main shaders/miss.hlsl -Fo "${OUTPUT_DIR}/miss.spv" || exit 1
+
+echo "Compiling ray tracing shaders with DXC..."
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -fspv-extension=SPV_EXT_descriptor_indexing -T cs_6_0 -E main shaders/raytracer.hlsl -Fo "${OUTPUT_DIR}/raytracer.spv" || exit 1
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -fspv-extension=SPV_KHR_ray_tracing -fspv-extension=SPV_EXT_descriptor_indexing -T lib_6_6 -E main shaders/raygen.hlsl -Fo "${OUTPUT_DIR}/raygen.spv" || exit 1
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -fspv-extension=SPV_KHR_ray_tracing -fspv-extension=SPV_KHR_physical_storage_buffer -T lib_6_6 -E main shaders/closesthit.hlsl -Fo "${OUTPUT_DIR}/closesthit.spv" || exit 1
+"${DXC_EXE}" -spirv -fspv-target-env=vulkan1.2 -fvk-use-dx-layout -fspv-extension=SPV_KHR_ray_tracing -fspv-extension=SPV_KHR_physical_storage_buffer -fspv-extension=SPV_EXT_descriptor_indexing -T lib_6_6 -E main shaders/anyhit.hlsl -Fo "${OUTPUT_DIR}/anyhit.spv" || exit 1

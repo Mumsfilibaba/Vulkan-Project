@@ -64,8 +64,8 @@ bool CTextureResource::InitLoader(CDevice* pDevice)
     s_pCubeMapGenPipelineLayout->SetDebugName("CubeMapGen PipelineLayout");
 
     // Create shader and pipeline
-    CShaderModule* pComputeShader = CShaderModule::CreateFromFile(pDevice, "main", RESOURCE_PATH"/shaders/cubemapgen.spv");
-    pComputeShader->SetDebugName(RESOURCE_PATH"/shaders/cubemapgen.spv");
+    CShaderModule* pComputeShader = CShaderModule::CreateFromFile(pDevice, "main", RESOURCE_PATH"/shaders/compiled_shaders/cubemapgen.spv");
+    pComputeShader->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/cubemapgen.spv");
 
     SComputePipelineStateParams PipelineParams = {};
     PipelineParams.pShader         = pComputeShader;

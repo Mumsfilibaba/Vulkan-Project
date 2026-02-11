@@ -380,7 +380,7 @@ void SBvhAccelerationStructure::Build(const SModel& Model, uint32_t MaxDepth)
     m_Indicies.reserve(BoundingBoxBuilder.Triangles.size() * 3);
     for (const SBvhTriangle& Triangle : BoundingBoxBuilder.Triangles)
     {
-        STriangleInfoGLSL& TriangleInfo = m_TriangleInfo.emplace_back();
+        STriangleInfoHLSL& TriangleInfo = m_TriangleInfo.emplace_back();
         TriangleInfo.MaterialIndex = Triangle.MaterialIndex;
 
         for (size_t i = 0; i < 3; i++)

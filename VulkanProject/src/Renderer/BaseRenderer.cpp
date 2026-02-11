@@ -211,13 +211,13 @@ void CBaseRenderer::CreateTonemappingResources()
     m_pTonemappingPipelineLayout->SetDebugName("TonemappingPass PipelineLayout");
 
     // PipelineState, RenderPass and Shaders
-    CShaderModule* pVertex = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/fullscreenVS.spv");
+    CShaderModule* pVertex = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/fullscreenVS.spv");
     assert(pVertex != nullptr);
-    pVertex->SetDebugName(RESOURCE_PATH"/shaders/fullscreenVS.spv");
+    pVertex->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/fullscreenVS.spv");
 
-    CShaderModule* pFragment = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/tonemap.spv");
+    CShaderModule* pFragment = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/tonemap.spv");
     assert(pFragment != nullptr);
-    pFragment->SetDebugName(RESOURCE_PATH"/shaders/tonemap.spv");
+    pFragment->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/tonemap.spv");
 
     SRenderPassAttachment Attachments[1];
     Attachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;

@@ -19,39 +19,35 @@ SamplerState sourceSampler : register(s0, space0);
 [[vk::binding(1, 0)]]
 RWTexture2DArray<float4> outCubeTexture : register(u1, space0);
 
-static const float2 invAtan = float2(0.1591f, 0.3183f);
-
-static const float3x3 rotateUv[6] =
-{
-    float3x3( 0.0,  0.0,  1.0,
-              0.0, -1.0,  0.0,
-             -1.0,  0.0,  0.0),
-    float3x3( 0.0,  0.0, -1.0,
-              0.0, -1.0,  0.0,
-              1.0,  0.0,  0.0),
-    float3x3( 1.0,  0.0,  0.0,
-              0.0,  0.0,  1.0,
-              0.0,  1.0,  0.0),
-    float3x3( 1.0,  0.0,  0.0,
-              0.0,  0.0, -1.0,
-              0.0, -1.0,  0.0),
-    float3x3( 1.0,  0.0,  0.0,
-              0.0, -1.0,  0.0,
-              0.0,  0.0,  1.0),
-    float3x3(-1.0,  0.0,  0.0,
-              0.0, -1.0,  0.0,
-              0.0,  0.0, -1.0)
-};
+static const float2 invAtan = float2(0.15915494309f, 0.31830988618f); // (1 / 2PI, 1 / PI)
 
 [numthreads(NUM_THREADS, NUM_THREADS, 1)]
 void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
     const uint3 texCoord = dispatchThreadID;
-    const float2 uvs = (float2(texCoord.xy) / float(pushConstants.cubeMapSize));
-    float3 direction = float3(uvs - 0.5, 0.5);
+    const uint  face     = texCoord.z;
 
-    direction = normalize(mul(direction, rotateUv[texCoord.z]));
+    float2 uv = ((float2(texCoord.xy) + 0.5f) / float(pushConstants.cubeMapSize)) * 2.0f - 1.0f;
+    uv.y = -uv.y;
 
-    const float2 panoramaTexCoords = float2(atan2(direction.x, direction.z), acos(direction.y)) * invAtan;
-    outCubeTexture[uint3(dispatchThreadID)] = sourceTexture.SampleLevel(sourceSampler, panoramaTexCoords, 0.0);
+    float3 direction = float3(0.0f, 0.0f, 0.0f);
+    if (face == 0)       
+        direction = normalize(float3( 1.0f,  uv.y, -uv.x)); // +X
+    else if (face == 1)  
+        direction = normalize(float3(-1.0f,  uv.y,  uv.x)); // -X
+    else if (face == 2)  
+        direction = normalize(float3( uv.x,  1.0f, -uv.y)); // +Y
+    else if (face == 3)  
+        direction = normalize(float3( uv.x, -1.0f,  uv.y)); // -Y
+    else if (face == 4)  
+        direction = normalize(float3( uv.x,  uv.y,  1.0f)); // +Z
+    else                 
+        direction = normalize(float3(-uv.x,  uv.y, -1.0f)); // -Z
+
+    // Use polar angle for V so +Y maps to top of the panorama.
+    float2 panoramaTexCoords;
+    panoramaTexCoords.x = atan2(direction.z, direction.x) * invAtan.x + 0.5f;
+    panoramaTexCoords.y = acos(clamp(direction.y, -1.0f, 1.0f)) * invAtan.y;
+
+    outCubeTexture[texCoord] = sourceTexture.SampleLevel(sourceSampler, panoramaTexCoords, 0.0f);
 }

@@ -9,9 +9,11 @@ struct SCameraBuffer
     float4x4 view;
     float4x4 inverseProjection;
     float4x4 inverseView;
-    float4 position;
-    float4 forward;
-    float fieldOfViewDegrees;
+    float4   position;
+    float4   forward;
+    float    fieldOfViewDegrees;
+    
+    // Padding
     uint padding0;
     uint padding1;
     uint padding2;

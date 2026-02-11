@@ -9,21 +9,25 @@ struct SRayPayLoad
     float3 HitBarycentrics;
     float3 MissEmissive;
     float2 HitTexCoord;
-    uint HitMaterialIndex;
-    float HitT;
-    uint bFromInside;
+    uint   HitMaterialIndex;
+    float  HitT;
+    uint   bFromInside;
 };
 
 struct SSceneSettings
 {
-    uint NumMaterials;
-    uint BackgroundType;
-    uint NumBounces;
-    uint ViewMode;
+    // 0-16
+    uint  NumMaterials;
+    uint  BackgroundType;
+    uint  NumBounces;
+    uint  ViewMode;
+    // 16-20
     float GradientLightStrength;
-    uint Padding0;
-    uint Padding1;
-    uint Padding2;
+    
+    // Padding
+    uint  Padding0;
+    uint  Padding1;
+    uint  Padding2;
 };
 
 #endif

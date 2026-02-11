@@ -13,16 +13,19 @@ struct SMeshInfo
 {
     uint64_t VertexBufferAddress = 0;
     uint64_t IndexBufferAddress  = 0;
-    uint64_t MaterialIndex       = 0;
+    uint32_t MaterialIndex       = 0;
+    uint32_t Flags               = 0;
 };
 
 enum class EViewMode : uint32_t
 {
-    Render       = 0,
-    Normals      = 1,
-    Albedo       = 2,
-    Barycentrics = 3,
-    TexCoords    = 4,
+    Render           = 0,
+    Normals          = 1,
+    GeometricNormals = 2,
+    Tangents         = 3,
+    Albedo           = 4,
+    Barycentrics     = 5,
+    TexCoords        = 6,
 };
 
 enum class EBackgroundType : uint32_t
@@ -54,7 +57,6 @@ struct SSceneSettings
     float           CameraSpeed;
 };
 
-
 struct SScene : public IScene
 {
     struct SSceneModel
@@ -63,6 +65,9 @@ struct SScene : public IScene
         glm::vec3               Position;
         glm::vec3               Scale;
         glm::vec3               Rotation;
+        int32_t                 MaterialOverride;
+        bool                    bDisableCulling;
+        bool                    bFlipTriangleFacing;
     };
 
     SScene(CDevice* pDevice);
@@ -78,12 +83,13 @@ struct SScene : public IScene
     virtual float GetFieldOfView() const override { return m_Settings.FieldOfView; }
     virtual float GetExposure() const override { return m_Settings.Exposure; }
 
-    virtual CCamera& GetCamera() override { return m_Camera; }
+    virtual       CCamera& GetCamera()       override { return m_Camera; }
     virtual const CCamera& GetCamera() const override { return m_Camera; }
 
-    void AddModel(const std::shared_ptr<SModel>& Model, const glm::vec3& Position = glm::vec3(0.0f), const glm::vec3& Scale = glm::vec3(1.0f), const glm::vec3& Rotation = glm::vec3(0.0f))
+    void AddModel(const std::shared_ptr<SModel>& Model, const glm::vec3& Position = glm::vec3(0.0f), const glm::vec3& Scale = glm::vec3(1.0f), 
+        const glm::vec3& Rotation = glm::vec3(0.0f), int32_t MaterialOverride = -1, bool bDisableCulling = true, bool bFlipTriangleFacing = false)
     {
-        m_ModelInstances.push_back({ Model, Position, Scale, Rotation });
+        m_ModelInstances.push_back({ Model, Position, Scale, Rotation, MaterialOverride, bDisableCulling, bFlipTriangleFacing });
     }
 
     // Cache the device
@@ -96,7 +102,7 @@ struct SScene : public IScene
 
     // Materials
     CSampler*                  m_pMaterialSampler;
-    std::vector<SMaterialGLSL> m_GpuMaterials;
+    std::vector<SMaterialHLSL> m_GpuMaterials;
 
     // Vulkan Resources
     CAccelerationStructure*    m_pTopLevelAS;

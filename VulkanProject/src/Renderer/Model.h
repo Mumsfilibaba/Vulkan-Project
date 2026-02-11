@@ -143,7 +143,7 @@ struct SModel
     SModel();
     ~SModel();
 
-    bool LoadFromFile(const std::string& filepath, CDevice* pDevice);
+    bool LoadFromFile(const std::string& filepath, CDevice* pDevice, bool bGenerateSmoothNormals = false);
 
     CBuffer*                pVertexBuffer;
     CBuffer*                pIndexBuffer;

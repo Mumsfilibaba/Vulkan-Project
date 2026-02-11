@@ -110,21 +110,21 @@ void CRayTracer::CreateResources()
     assert(m_pRayTracingPipelineLayout != nullptr);
     m_pRayTracingPipelineLayout->SetDebugName("RayTracingPass PipelineLayout");
 
-    CShaderModule* pRayGenShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/raygen.spv");
+    CShaderModule* pRayGenShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/raygen.spv");
     assert(pRayGenShader != nullptr);
-    pRayGenShader->SetDebugName(RESOURCE_PATH"/shaders/raygen.spv");
+    pRayGenShader->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/raygen.spv");
 
-    CShaderModule* pRayMissShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/miss.spv");
+    CShaderModule* pRayMissShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/miss.spv");
     assert(pRayMissShader != nullptr);
-    pRayMissShader->SetDebugName(RESOURCE_PATH"/shaders/miss.spv");
+    pRayMissShader->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/miss.spv");
 
-    CShaderModule* pRayClosestHitShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/closesthit.spv");
+    CShaderModule* pRayClosestHitShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/closesthit.spv");
     assert(pRayClosestHitShader != nullptr);
-    pRayClosestHitShader->SetDebugName(RESOURCE_PATH"/shaders/closesthit.spv");
+    pRayClosestHitShader->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/closesthit.spv");
 
-    CShaderModule* pRayAnyHitShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/anyhit.spv");
+    CShaderModule* pRayAnyHitShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/anyhit.spv");
     assert(pRayAnyHitShader != nullptr);
-    pRayAnyHitShader->SetDebugName(RESOURCE_PATH"/shaders/anyhit.spv");
+    pRayAnyHitShader->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/anyhit.spv");
 
     SRayTracingPipelineStateParams PipelineParams;
     PipelineParams.pRayGenShader        = pRayGenShader;
@@ -266,6 +266,8 @@ void CRayTracer::RenderUI()
             {
                 "Render",
                 "Normals",
+                "Geometric Normals",
+                "Tangents",
                 "Albedo",
                 "Barycentrics",
                 "TexCoords",
@@ -291,13 +293,21 @@ void CRayTracer::RenderUI()
                 }
                 else if (CurrentViewMode == 2)
                 {
-                    m_pScene->m_Settings.ViewMode = EViewMode::Albedo;
+                    m_pScene->m_Settings.ViewMode = EViewMode::GeometricNormals;
                 }
                 else if (CurrentViewMode == 3)
                 {
-                    m_pScene->m_Settings.ViewMode = EViewMode::Barycentrics;
+                    m_pScene->m_Settings.ViewMode = EViewMode::Tangents;
                 }
                 else if (CurrentViewMode == 4)
+                {
+                    m_pScene->m_Settings.ViewMode = EViewMode::Albedo;
+                }
+                else if (CurrentViewMode == 5)
+                {
+                    m_pScene->m_Settings.ViewMode = EViewMode::Barycentrics;
+                }
+                else if (CurrentViewMode == 6)
                 {
                     m_pScene->m_Settings.ViewMode = EViewMode::TexCoords;
                 }
@@ -375,7 +385,6 @@ void CRayTracer::RenderUI()
                 }
 
                 assert(m_pScene != nullptr);
-                m_pScene->Initialize();
                 ResetImage();
 
                 m_pScene->m_Settings.ViewMode = ViewMode;
@@ -492,7 +501,7 @@ void CRayTracer::CreateGlobalBuffers()
     if (!m_pScene->m_GpuMaterials.empty())
     {
         SBufferParams MaterialBufferParams;
-        MaterialBufferParams.Size             = MAX_MATERIALS * sizeof(SMaterialGLSL);
+        MaterialBufferParams.Size             = MAX_MATERIALS * sizeof(SMaterialHLSL);
         MaterialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
         MaterialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -515,8 +524,8 @@ void CRayTracer::UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer)
     if (!m_pScene->m_GpuMaterials.empty())
     {
         pCommandBuffer->FillBuffer(m_pMaterialBuffer, 0, m_pMaterialBuffer->GetSize(), 0);
-        assert((sizeof(SMaterialGLSL) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
-        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(SMaterialGLSL) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
+        assert((sizeof(SMaterialHLSL) * m_pScene->m_GpuMaterials.size()) <= m_pMaterialBuffer->GetSize());
+        pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(SMaterialHLSL) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
     }
 
     // Barrier before reading the buffer from the shader

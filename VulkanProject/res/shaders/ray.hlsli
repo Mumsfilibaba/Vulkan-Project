@@ -15,12 +15,12 @@ struct SRayPayLoad
     float3 Position;
     float3 BaryCentrics;
     float2 TexCoords;
-    float T;
-    float MinT;
-    float MaxT;
-    uint MaterialIndex;
-    uint bFrontFace;
-    uint bFromInside;
+    float  T;
+    float  MinT;
+    float  MaxT;
+    uint   MaterialIndex;
+    uint   bFrontFace;
+    uint   bFromInside;
 };
 
 #endif

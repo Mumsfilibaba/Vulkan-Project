@@ -36,7 +36,7 @@ void main(inout SRayPayLoad rayPayload)
     }
     else if (sceneBuffer.settings.BackgroundType == BACKGROUND_TYPE_SKYBOX)
     {
-        const float3 rayDir = normalize(WorldRayDirection());
+        float3 rayDir = normalize(WorldRayDirection());
         const float4 skyboxColor = cubeTexture.SampleLevel(cubeTextureSampler, rayDir, 0.0);
         rayPayload.MissEmissive = skyboxColor.rgb;
     }

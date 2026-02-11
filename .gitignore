@@ -7,4 +7,3 @@
 /.vscode
 /Vulkan-Project.xcworkspace
 **/VulkanProject.xcodeproj/**
-*.spv

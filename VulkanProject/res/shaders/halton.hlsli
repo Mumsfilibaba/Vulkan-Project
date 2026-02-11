@@ -14,18 +14,21 @@ float RadicalInverse2(uint bits)
 float RadicalInverse3(uint a)
 {
     const float oneMinusEpsilon = 0.99999994f;
-    const uint base = 3;
+
+    const uint  base    = 3;
     const float invBase = 1.0f / float(base);
 
-    uint reversedDigits = 0;
+    uint  reversedDigits = 0;
     float invBaseN = 1.0f;
 
     while (a != 0)
     {
-        const uint next = a / base;
+        const uint next  = a / base;
         const uint digit = a - next * base;
+
         reversedDigits = reversedDigits * base + digit;
         invBaseN *= invBase;
+        
         a = next;
     }
 
