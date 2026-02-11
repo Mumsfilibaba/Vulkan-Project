@@ -526,6 +526,15 @@ bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
     ZERO_STRUCT(&m_EnabledDeviceFeatures12);
     m_EnabledDeviceFeatures12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 
+    ZERO_STRUCT(&m_EnabledDeviceDynamicRenderingFeatures);
+    m_EnabledDeviceDynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+
+    if (!m_DeviceDynamicRenderingFeatures.dynamicRendering)
+    {
+        LOG("'DynamicRendering' is not supported by adapter\n");
+        return false;
+    }
+
     if (m_DeviceFeatures12.bufferDeviceAddress)
         m_EnabledDeviceFeatures12.bufferDeviceAddress = VK_TRUE;
     if (m_DeviceFeatures12.hostQueryReset)
@@ -535,9 +544,12 @@ bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
     if (m_DeviceFeatures12.scalarBlockLayout)
         m_EnabledDeviceFeatures12.scalarBlockLayout = VK_TRUE;
 
+    m_EnabledDeviceFeatures12.pNext = &m_EnabledDeviceDynamicRenderingFeatures;
+    m_EnabledDeviceDynamicRenderingFeatures.dynamicRendering = m_DeviceDynamicRenderingFeatures.dynamicRendering;
+
     if (m_DeviceRayTracingFeatures.rayTracingPipeline)
     {
-        m_EnabledDeviceFeatures12.pNext = &m_EnabledDeviceRayTracingFeatures;
+        m_EnabledDeviceDynamicRenderingFeatures.pNext = &m_EnabledDeviceRayTracingFeatures;
         m_EnabledDeviceRayTracingFeatures.rayTracingPipeline = VK_TRUE;
     }
 
@@ -777,7 +789,10 @@ bool CDevice::QueryDeviceExtensionFunctions()
         GET_DEVICE_EXTENTION_FUNC(vkCmdSetRayTracingPipelineStackSizeKHR);
     }
 
-#undef GET_DEVICE_EXTENSION_FUNC
+    GET_DEVICE_EXTENTION_FUNC(vkCmdBeginRenderingKHR);
+    GET_DEVICE_EXTENTION_FUNC(vkCmdEndRenderingKHR);
+
+#undef GET_DEVICE_EXTENTION_FUNC
     return true;
 }
 
@@ -786,13 +801,18 @@ void CDevice::QueryPhysicalDeviceFeatures()
     ZERO_STRUCT(&m_DeviceAccelerationStructureFeatures);
     m_DeviceAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 
+    ZERO_STRUCT(&m_DeviceFeatures12);
+    m_DeviceFeatures12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+
+    ZERO_STRUCT(&m_DeviceDynamicRenderingFeatures);
+    m_DeviceDynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+
     ZERO_STRUCT(&m_DeviceRayTracingFeatures);
     m_DeviceRayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
     m_DeviceRayTracingFeatures.pNext = &m_DeviceAccelerationStructureFeatures;
 
-    ZERO_STRUCT(&m_DeviceFeatures12);
-    m_DeviceFeatures12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-    m_DeviceFeatures12.pNext = &m_DeviceRayTracingFeatures;
+    m_DeviceFeatures12.pNext = &m_DeviceDynamicRenderingFeatures;
+    m_DeviceDynamicRenderingFeatures.pNext = &m_DeviceRayTracingFeatures;
 
     ZERO_STRUCT(&m_DeviceFeatures);
     m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -873,5 +893,6 @@ std::vector<const char*> CDevice::GetRequiredDeviceExtensions()
     DeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     DeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
     DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+    DeviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
     return DeviceExtensions;
 }

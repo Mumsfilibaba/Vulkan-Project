@@ -8,11 +8,35 @@
 #include "Query.h"
 #include "PipelineLayout.h"
 #include "Extensions.h"
+#include <vector>
 
 struct SCommandBufferParams
 {
     VkCommandBufferLevel Level;
     ECommandQueueType    QueueType;
+};
+
+struct SRenderingAttachment
+{
+    VkImageView            ImageView        = VK_NULL_HANDLE;
+    VkImageLayout          ImageLayout      = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkAttachmentLoadOp     LoadOp           = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    VkAttachmentStoreOp    StoreOp          = VK_ATTACHMENT_STORE_OP_STORE;
+    VkClearValue           ClearValue       = {};
+    VkResolveModeFlagBits  ResolveMode      = VK_RESOLVE_MODE_NONE;
+    VkImageView            ResolveImageView = VK_NULL_HANDLE;
+    VkImageLayout          ResolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+};
+
+struct SRenderingParams
+{
+    const SRenderingAttachment* pColorAttachments    = nullptr;
+    uint32_t                    ColorAttachmentCount = 0;
+    const SRenderingAttachment* pDepthAttachment     = nullptr;
+    const SRenderingAttachment* pStencilAttachment   = nullptr;
+    VkRect2D                    RenderArea           = {};
+    uint32_t                    LayerCount           = 1;
+    uint32_t                    ViewMask             = 0;
 };
 
 class CCommandBuffer : public CDeviceChild
@@ -65,6 +89,74 @@ public:
         RenderPassInfo.clearValueCount   = ClearValuesCount;
 
         vkCmdBeginRenderPass(m_CommandBuffer, &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        m_NumCommands++;
+    }
+
+    void BeginRendering(const SRenderingParams& Params)
+    {
+        VkRenderingInfo RenderingInfo = {};
+        RenderingInfo.sType                = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+        RenderingInfo.renderArea           = Params.RenderArea;
+        RenderingInfo.layerCount           = Params.LayerCount;
+        RenderingInfo.viewMask             = Params.ViewMask;
+        RenderingInfo.colorAttachmentCount = Params.ColorAttachmentCount;
+
+        std::vector<VkRenderingAttachmentInfo> ColorAttachments;
+        if (Params.ColorAttachmentCount > 0)
+        {
+            assert(Params.pColorAttachments != nullptr);
+
+            ColorAttachments.reserve(Params.ColorAttachmentCount);
+            for (uint32_t i = 0; i < Params.ColorAttachmentCount; i++)
+            {
+                VkRenderingAttachmentInfo Attachment = {};
+                Attachment.sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+                Attachment.imageView          = Params.pColorAttachments[i].ImageView;
+                Attachment.imageLayout        = Params.pColorAttachments[i].ImageLayout;
+                Attachment.loadOp             = Params.pColorAttachments[i].LoadOp;
+                Attachment.storeOp            = Params.pColorAttachments[i].StoreOp;
+                Attachment.clearValue         = Params.pColorAttachments[i].ClearValue;
+                Attachment.resolveMode        = Params.pColorAttachments[i].ResolveMode;
+                Attachment.resolveImageView   = Params.pColorAttachments[i].ResolveImageView;
+                Attachment.resolveImageLayout = Params.pColorAttachments[i].ResolveImageLayout;
+                ColorAttachments.push_back(Attachment);
+            }
+        }
+
+        RenderingInfo.pColorAttachments = ColorAttachments.data();
+
+        VkRenderingAttachmentInfo DepthAttachmentInfo = {};
+        if (Params.pDepthAttachment)
+        {
+            DepthAttachmentInfo.sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+            DepthAttachmentInfo.imageView          = Params.pDepthAttachment->ImageView;
+            DepthAttachmentInfo.imageLayout        = Params.pDepthAttachment->ImageLayout;
+            DepthAttachmentInfo.loadOp             = Params.pDepthAttachment->LoadOp;
+            DepthAttachmentInfo.storeOp            = Params.pDepthAttachment->StoreOp;
+            DepthAttachmentInfo.clearValue         = Params.pDepthAttachment->ClearValue;
+            DepthAttachmentInfo.resolveMode        = Params.pDepthAttachment->ResolveMode;
+            DepthAttachmentInfo.resolveImageView   = Params.pDepthAttachment->ResolveImageView;
+            DepthAttachmentInfo.resolveImageLayout = Params.pDepthAttachment->ResolveImageLayout;
+            RenderingInfo.pDepthAttachment = &DepthAttachmentInfo;
+        }
+
+        VkRenderingAttachmentInfo StencilAttachmentInfo = {};
+        if (Params.pStencilAttachment)
+        {
+            StencilAttachmentInfo.sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+            StencilAttachmentInfo.imageView          = Params.pStencilAttachment->ImageView;
+            StencilAttachmentInfo.imageLayout        = Params.pStencilAttachment->ImageLayout;
+            StencilAttachmentInfo.loadOp             = Params.pStencilAttachment->LoadOp;
+            StencilAttachmentInfo.storeOp            = Params.pStencilAttachment->StoreOp;
+            StencilAttachmentInfo.clearValue         = Params.pStencilAttachment->ClearValue;
+            StencilAttachmentInfo.resolveMode        = Params.pStencilAttachment->ResolveMode;
+            StencilAttachmentInfo.resolveImageView   = Params.pStencilAttachment->ResolveImageView;
+            StencilAttachmentInfo.resolveImageLayout = Params.pStencilAttachment->ResolveImageLayout;
+            RenderingInfo.pStencilAttachment = &StencilAttachmentInfo;
+        }
+
+        assert(Extensions::vkCmdBeginRenderingKHR != nullptr);
+        Extensions::vkCmdBeginRenderingKHR(m_CommandBuffer, &RenderingInfo);
         m_NumCommands++;
     }
 
@@ -228,6 +320,13 @@ public:
     void EndRenderPass()
     {
         vkCmdEndRenderPass(m_CommandBuffer);
+        m_NumCommands++;
+    }
+
+    void EndRendering()
+    {
+        assert(Extensions::vkCmdEndRenderingKHR != nullptr);
+        Extensions::vkCmdEndRenderingKHR(m_CommandBuffer);
         m_NumCommands++;
     }
 

@@ -91,13 +91,11 @@ private:
     CGraphicsPipeline*    m_pDebugPipeline;
     CGraphicsPipeline*    m_pDebugPipelineWireframe;
     CGraphicsPipeline*    m_pDebugAABBPipeline;
-    CRenderPass*          m_pDebugRenderPass;
     CPipelineLayout*      m_pDebugPipelineLayout;
     CPipelineLayout*      m_pDebugAABBPipelineLayout;
     CDescriptorSetLayout* m_pDebugDescriptorSetLayout;
     CDescriptorSet*       m_pDebugDescriptorSet0;
     CDescriptorSet*       m_pDebugDescriptorSet1;
-    CFramebuffer*         m_pDebugFramebuffer;
     CTexture*             m_pDepthBufferTexture;
     CTextureView*         m_pDepthBufferTextureView;
 };

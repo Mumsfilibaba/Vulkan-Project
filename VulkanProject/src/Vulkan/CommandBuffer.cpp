@@ -232,6 +232,22 @@ void CCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkI
         SourceStage      = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         DestinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     }
+    else if (OldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && NewLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        Barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        Barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        SourceStage      = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        DestinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
+    else if (OldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && NewLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        Barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        Barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        SourceStage      = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        DestinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
     else
     {
         LOG("Unsupported layout transition!\n");

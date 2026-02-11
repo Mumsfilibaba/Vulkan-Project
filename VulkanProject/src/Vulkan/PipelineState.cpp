@@ -46,8 +46,8 @@ CGraphicsPipeline* CGraphicsPipeline::Create(CDevice* pDevice, const SGraphicsPi
 {
     CGraphicsPipeline* pPipeline = new CGraphicsPipeline(pDevice);
     assert(Params.pVertexShader != nullptr);
-    assert(Params.pRenderPass != nullptr);
     assert(Params.pPipelineLayout != nullptr);
+    assert(Params.pRenderPass != nullptr || Params.ColorAttachmentFormatCount > 0 || Params.DepthAttachmentFormat != VK_FORMAT_UNDEFINED || Params.StencilAttachmentFormat != VK_FORMAT_UNDEFINED);
     
     std::vector<VkPipelineShaderStageCreateInfo> ShaderStages;
 
@@ -136,11 +136,12 @@ CGraphicsPipeline* CGraphicsPipeline::Create(CDevice* pDevice, const SGraphicsPi
     VkPipelineColorBlendStateCreateInfo ColorBlendingCreateInfo;
     ZERO_STRUCT(&ColorBlendingCreateInfo);
     
+    const bool bHasColorAttachment = Params.pRenderPass != nullptr || Params.ColorAttachmentFormatCount > 0;
     ColorBlendingCreateInfo.sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     ColorBlendingCreateInfo.logicOpEnable   = VK_FALSE;
     ColorBlendingCreateInfo.logicOp         = VK_LOGIC_OP_COPY;
-    ColorBlendingCreateInfo.attachmentCount = 1;
-    ColorBlendingCreateInfo.pAttachments    = &ColorBlendAttachment;
+    ColorBlendingCreateInfo.attachmentCount = bHasColorAttachment ? 1u : 0u;
+    ColorBlendingCreateInfo.pAttachments    = bHasColorAttachment ? &ColorBlendAttachment : nullptr;
 
     VkDynamicState DynamicStates[] =
     {
@@ -154,8 +155,6 @@ CGraphicsPipeline* CGraphicsPipeline::Create(CDevice* pDevice, const SGraphicsPi
     DynamicStateInfoCreateInfo.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     DynamicStateInfoCreateInfo.pDynamicStates    = DynamicStates;
     DynamicStateInfoCreateInfo.dynamicStateCount = 2;
-
-    assert(Params.pRenderPass != nullptr);
 
     VkPipelineDepthStencilStateCreateInfo DepthStencilCreateInfo;
     ZERO_STRUCT(&DepthStencilCreateInfo);
@@ -182,11 +181,27 @@ CGraphicsPipeline* CGraphicsPipeline::Create(CDevice* pDevice, const SGraphicsPi
     PipelineCreateInfo.pDepthStencilState  = Params.bDepthEnable ? &DepthStencilCreateInfo : nullptr;
     PipelineCreateInfo.pColorBlendState    = &ColorBlendingCreateInfo;
     PipelineCreateInfo.pDynamicState       = &DynamicStateInfoCreateInfo;
-    PipelineCreateInfo.renderPass          = Params.pRenderPass->GetRenderPass();
     PipelineCreateInfo.layout              = Params.pPipelineLayout->GetPipelineLayout();
     PipelineCreateInfo.subpass             = 0;
     PipelineCreateInfo.basePipelineHandle  = VK_NULL_HANDLE;
     PipelineCreateInfo.basePipelineIndex   = -1;
+
+    VkPipelineRenderingCreateInfo RenderingCreateInfo = {};
+    if (Params.pRenderPass)
+    {
+        PipelineCreateInfo.renderPass = Params.pRenderPass->GetRenderPass();
+    }
+    else
+    {
+        RenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+        RenderingCreateInfo.colorAttachmentCount    = Params.ColorAttachmentFormatCount;
+        RenderingCreateInfo.pColorAttachmentFormats = Params.pColorAttachmentFormats;
+        RenderingCreateInfo.depthAttachmentFormat   = Params.DepthAttachmentFormat;
+        RenderingCreateInfo.stencilAttachmentFormat = Params.StencilAttachmentFormat;
+
+        PipelineCreateInfo.renderPass = VK_NULL_HANDLE;
+        PipelineCreateInfo.pNext      = &RenderingCreateInfo;
+    }
 
     VkResult Result = vkCreateGraphicsPipelines(pDevice->GetDevice(), VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &pPipeline->m_Pipeline);
     if (Result != VK_SUCCESS)

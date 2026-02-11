@@ -30,3 +30,6 @@ PFN_vkGetRayTracingCaptureReplayShaderGroupHandlesKHR Extensions::vkGetRayTracin
 PFN_vkCmdTraceRaysIndirectKHR                         Extensions::vkCmdTraceRaysIndirectKHR                         = nullptr;
 PFN_vkGetRayTracingShaderGroupStackSizeKHR            Extensions::vkGetRayTracingShaderGroupStackSizeKHR            = nullptr;
 PFN_vkCmdSetRayTracingPipelineStackSizeKHR            Extensions::vkCmdSetRayTracingPipelineStackSizeKHR            = nullptr;
+
+PFN_vkCmdBeginRenderingKHR                            Extensions::vkCmdBeginRenderingKHR                            = nullptr;
+PFN_vkCmdEndRenderingKHR                              Extensions::vkCmdEndRenderingKHR                              = nullptr;

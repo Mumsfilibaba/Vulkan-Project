@@ -113,6 +113,7 @@ private:
     // Enable Device Features
     VkPhysicalDeviceFeatures2                        m_EnabledDeviceFeatures;
     VkPhysicalDeviceVulkan12Features                 m_EnabledDeviceFeatures12;
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR      m_EnabledDeviceDynamicRenderingFeatures;
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR    m_EnabledDeviceRayTracingFeatures;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR m_EnabledDeviceAccelerationStructureFeatures;
 
@@ -120,6 +121,7 @@ private:
     VkPhysicalDeviceProperties2                      m_DeviceProperties;
     VkPhysicalDeviceFeatures2                        m_DeviceFeatures;
     VkPhysicalDeviceVulkan12Features                 m_DeviceFeatures12;
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR      m_DeviceDynamicRenderingFeatures;
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR    m_DeviceRayTracingFeatures;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR m_DeviceAccelerationStructureFeatures;
 

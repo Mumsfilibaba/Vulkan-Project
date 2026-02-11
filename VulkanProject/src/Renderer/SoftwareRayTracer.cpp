@@ -5,7 +5,6 @@
 #include "GUI.h"
 #include "TextureResource.h"
 #include "Vulkan/Buffer.h"
-#include "Vulkan/Framebuffer.h"
 #include "Vulkan/ShaderModule.h"
 #include "Vulkan/PipelineState.h"
 #include "Vulkan/CommandBuffer.h"
@@ -44,13 +43,11 @@ CSoftwareRayTracer::CSoftwareRayTracer()
     , m_pDebugPipeline(nullptr)
     , m_pDebugPipelineWireframe(nullptr)
     , m_pDebugAABBPipeline(nullptr)
-    , m_pDebugRenderPass(nullptr)
     , m_pDebugPipelineLayout(nullptr)
     , m_pDebugAABBPipelineLayout(nullptr)
     , m_pDebugDescriptorSetLayout(nullptr)
     , m_pDebugDescriptorSet0(nullptr)
     , m_pDebugDescriptorSet1(nullptr)
-    , m_pDebugFramebuffer(nullptr)
     , m_pDepthBufferTexture(nullptr)
     , m_pDepthBufferTextureView(nullptr)
 {
@@ -98,13 +95,11 @@ void CSoftwareRayTracer::ReleaseResources()
     SAFE_DELETE(m_pDebugPipeline);
     SAFE_DELETE(m_pDebugPipelineWireframe);
     SAFE_DELETE(m_pDebugAABBPipeline);
-    SAFE_DELETE(m_pDebugRenderPass);
     SAFE_DELETE(m_pDebugPipelineLayout);
     SAFE_DELETE(m_pDebugAABBPipelineLayout);
     SAFE_DELETE(m_pDebugDescriptorSetLayout);
     SAFE_DELETE(m_pDebugDescriptorSet0);
     SAFE_DELETE(m_pDebugDescriptorSet1);
-    SAFE_DELETE(m_pDebugFramebuffer);
 
     SAFE_DELETE(m_pDepthBufferTexture);
     SAFE_DELETE(m_pDepthBufferTextureView);
@@ -192,18 +187,37 @@ void CSoftwareRayTracer::PerformDebugPass(CCommandBuffer* pCommandBuffer)
     ClearColor[0].color        = { 0.0f, 0.0f, 0.0f, 1.0f };
     ClearColor[1].depthStencil = { 1.0f, 0 };
 
+    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    SRenderingAttachment ColorAttachment = {};
+    ColorAttachment.ImageView       = m_pOutputTextureView->GetImageView();
+    ColorAttachment.ImageLayout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    ColorAttachment.LoadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    ColorAttachment.StoreOp         = VK_ATTACHMENT_STORE_OP_STORE;
+    ColorAttachment.ClearValue      = ClearColor[0];
+
+    SRenderingAttachment DepthAttachment = {};
+    DepthAttachment.ImageView      = m_pDepthBufferTextureView->GetImageView();
+    DepthAttachment.ImageLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    DepthAttachment.LoadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    DepthAttachment.StoreOp        = VK_ATTACHMENT_STORE_OP_STORE;
+    DepthAttachment.ClearValue     = ClearColor[1];
+
+    SRenderingParams RenderingParams = {};
+    RenderingParams.pColorAttachments    = &ColorAttachment;
+    RenderingParams.ColorAttachmentCount = 1;
+    RenderingParams.pDepthAttachment     = &DepthAttachment;
+    RenderingParams.RenderArea.offset    = { 0, 0 };
+    RenderingParams.RenderArea.extent    = { GetViewportWidth(), GetViewportHeight() };
+
+    pCommandBuffer->BeginRendering(RenderingParams);
+
     if (!m_pScene->m_pVertexPositionsBuffer || !m_pScene->m_pIndexBuffer)
     {
-        // Begin RenderPass (Only clear the image when the buffers are invalid)
-        pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, ClearColor, 2);
-
-        // End RenderPass
-        pCommandBuffer->EndRenderPass();
+        pCommandBuffer->EndRendering();
+        pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
         return;
     }
-
-    // Begin RenderPass
-    pCommandBuffer->BeginRenderPass(m_pDebugRenderPass, m_pDebugFramebuffer, ClearColor, 2);
 
     // Set viewport
     VkViewport Viewport;
@@ -303,8 +317,8 @@ void CSoftwareRayTracer::PerformDebugPass(CCommandBuffer* pCommandBuffer)
         pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, NumInstances, 0, 0, 0);
     }
 
-    // End RenderPass
-    pCommandBuffer->EndRenderPass();
+    pCommandBuffer->EndRendering();
+    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void CSoftwareRayTracer::RenderUI()
@@ -850,25 +864,6 @@ void CSoftwareRayTracer::CreateDebugViewResources()
     assert(pAABBFragment != nullptr);
     pAABBFragment->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/aabb_debug_fs.spv");
 
-    SRenderPassAttachment ColorAttachments[1];
-    ColorAttachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
-    ColorAttachments[0].InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    ColorAttachments[0].FinalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-    SRenderPassAttachment DepthAttachment[1];
-    DepthAttachment[0].Format        = VK_FORMAT_D24_UNORM_S8_UINT;
-    DepthAttachment[0].InitialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    DepthAttachment[0].FinalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    SRenderPassParams RenderPassParams = {};
-    RenderPassParams.pColorAttachments    = ColorAttachments;
-    RenderPassParams.ColorAttachmentCount = 1;
-    RenderPassParams.pDepthAttachment     = DepthAttachment;
-
-    m_pDebugRenderPass = CRenderPass::Create(GetDevice(), RenderPassParams);
-    assert(m_pDebugRenderPass != nullptr);
-    m_pDebugRenderPass->SetDebugName("DebugPass RenderPass");
-
     SGraphicsPipelineStateParams DebugPassPipelineParams = {};
     DebugPassPipelineParams.pBindingDescriptions      = SVertexPosition::GetBindingDescription();
     DebugPassPipelineParams.BindingDescriptionCount   = 1;
@@ -876,7 +871,10 @@ void CSoftwareRayTracer::CreateDebugViewResources()
     DebugPassPipelineParams.AttributeDescriptionCount = 1;
     DebugPassPipelineParams.pVertexShader             = pVertex;
     DebugPassPipelineParams.pFragmentShader           = pFragment;
-    DebugPassPipelineParams.pRenderPass               = m_pDebugRenderPass;
+    VkFormat DebugColorFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    DebugPassPipelineParams.pColorAttachmentFormats   = &DebugColorFormat;
+    DebugPassPipelineParams.ColorAttachmentFormatCount = 1;
+    DebugPassPipelineParams.DepthAttachmentFormat     = VK_FORMAT_D24_UNORM_S8_UINT;
     DebugPassPipelineParams.pPipelineLayout           = m_pDebugPipelineLayout;
     DebugPassPipelineParams.bDepthEnable              = true;
 
@@ -896,7 +894,9 @@ void CSoftwareRayTracer::CreateDebugViewResources()
     DebugPassPipelineParams.AttributeDescriptionCount = 1;
     DebugPassPipelineParams.pVertexShader             = pAABBVertex;
     DebugPassPipelineParams.pFragmentShader           = pAABBFragment;
-    DebugPassPipelineParams.pRenderPass               = m_pDebugRenderPass;
+    DebugPassPipelineParams.pColorAttachmentFormats   = &DebugColorFormat;
+    DebugPassPipelineParams.ColorAttachmentFormatCount = 1;
+    DebugPassPipelineParams.DepthAttachmentFormat     = VK_FORMAT_D24_UNORM_S8_UINT;
     DebugPassPipelineParams.pPipelineLayout           = m_pDebugAABBPipelineLayout;
     DebugPassPipelineParams.Topology                  = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
     DebugPassPipelineParams.bDepthEnable              = true;
@@ -1153,7 +1153,6 @@ bool CSoftwareRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Hei
 
     SAFE_DELETE(m_pDepthBufferTexture);
     SAFE_DELETE(m_pDepthBufferTextureView);
-    SAFE_DELETE(m_pDebugFramebuffer);
 
     // Create depth-buffer texture for the viewport
     STextureParams DepthBufferParams = {};
@@ -1177,22 +1176,7 @@ bool CSoftwareRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Hei
         m_pDepthBufferTextureView->SetDebugName("DepthBufferView");
     }
 
-    // Create Framebuffer for the DebugView stage
-    VkImageView DebugPassImageViews[] =
-    {
-        m_pOutputTextureView->GetImageView(),
-        m_pDepthBufferTextureView->GetImageView()
-    };
-    
-    SFramebufferParams FramebufferParams = {};
-    FramebufferParams.AttachmentCount = 2;
-    FramebufferParams.Width           = Width;
-    FramebufferParams.Height          = Height;
-    FramebufferParams.pRenderPass     = m_pDebugRenderPass;
-    FramebufferParams.pAttachMents    = DebugPassImageViews;
-
-    m_pDebugFramebuffer = CFramebuffer::Create(GetDevice(), FramebufferParams);
-    m_pDebugFramebuffer->SetDebugName("DebugPass FrameBuffer");
+    return true;
 }
 
 void CSoftwareRayTracer::ReloadShaders()

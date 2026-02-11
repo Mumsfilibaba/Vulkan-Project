@@ -33,4 +33,8 @@ struct Extensions
     static PFN_vkCmdTraceRaysIndirectKHR                         vkCmdTraceRaysIndirectKHR;
     static PFN_vkGetRayTracingShaderGroupStackSizeKHR            vkGetRayTracingShaderGroupStackSizeKHR;
     static PFN_vkCmdSetRayTracingPipelineStackSizeKHR            vkCmdSetRayTracingPipelineStackSizeKHR;
+
+    // Dynamic Rendering
+    static PFN_vkCmdBeginRenderingKHR                            vkCmdBeginRenderingKHR;
+    static PFN_vkCmdEndRenderingKHR                              vkCmdEndRenderingKHR;
 };

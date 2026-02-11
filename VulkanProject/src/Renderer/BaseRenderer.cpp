@@ -31,12 +31,10 @@ CBaseRenderer::CBaseRenderer()
     , m_pSkyboxSampler(nullptr)
     , m_pTonemapSampler(nullptr)
     , m_pTonemappingPipeline(nullptr)
-    , m_pTonemappingRenderPass(nullptr)
     , m_pTonemappingPipelineLayout(nullptr)
     , m_pTonemappingDescriptorSetLayout(nullptr)
     , m_pTonemappingDescriptorSet0(nullptr)
     , m_pTonemappingDescriptorSet1(nullptr)
-    , m_pTonemappingFramebuffer(nullptr)
     , m_pCameraBuffer(nullptr)
     , m_pRandomBuffer(nullptr)
     , m_pTonemappingBuffer(nullptr)
@@ -219,19 +217,6 @@ void CBaseRenderer::CreateTonemappingResources()
     assert(pFragment != nullptr);
     pFragment->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/tonemap.spv");
 
-    SRenderPassAttachment Attachments[1];
-    Attachments[0].Format        = VK_FORMAT_R8G8B8A8_UNORM;
-    Attachments[0].InitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    Attachments[0].FinalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-    SRenderPassParams RenderPassParams = {};
-    RenderPassParams.ColorAttachmentCount = 1;
-    RenderPassParams.pColorAttachments    = Attachments;
-
-    m_pTonemappingRenderPass = CRenderPass::Create(GetDevice(), RenderPassParams);
-    assert(m_pTonemappingRenderPass != nullptr);
-    m_pTonemappingRenderPass->SetDebugName("TonemappingPass RenderPass");
-
     SGraphicsPipelineStateParams TonemappingPipelineParams = {};
     TonemappingPipelineParams.pBindingDescriptions      = nullptr;
     TonemappingPipelineParams.BindingDescriptionCount   = 0;
@@ -239,7 +224,9 @@ void CBaseRenderer::CreateTonemappingResources()
     TonemappingPipelineParams.AttributeDescriptionCount = 0;
     TonemappingPipelineParams.pVertexShader             = pVertex;
     TonemappingPipelineParams.pFragmentShader           = pFragment;
-    TonemappingPipelineParams.pRenderPass               = m_pTonemappingRenderPass;
+    VkFormat TonemapColorFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    TonemappingPipelineParams.pColorAttachmentFormats   = &TonemapColorFormat;
+    TonemappingPipelineParams.ColorAttachmentFormatCount = 1;
     TonemappingPipelineParams.pPipelineLayout           = m_pTonemappingPipelineLayout;
 
     m_pTonemappingPipeline = CGraphicsPipeline::Create(GetDevice(), TonemappingPipelineParams);
@@ -257,9 +244,21 @@ void CBaseRenderer::PerformTonemapping(CCommandBuffer* pCommandBuffer)
     TonemappingBuffer.Exposure = GetScene()->GetExposure();
     pCommandBuffer->UpdateBuffer(m_pTonemappingBuffer, 0, sizeof(STonemappingBuffer), &TonemappingBuffer);
 
-    // Begin RenderPass
-    VkClearValue ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-    pCommandBuffer->BeginRenderPass(m_pTonemappingRenderPass, m_pTonemappingFramebuffer, &ClearColor, 1);
+    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    SRenderingAttachment ColorAttachment = {};
+    ColorAttachment.ImageView         = m_pOutputTextureView->GetImageView();
+    ColorAttachment.ImageLayout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    ColorAttachment.LoadOp            = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    ColorAttachment.StoreOp           = VK_ATTACHMENT_STORE_OP_STORE;
+    ColorAttachment.ClearValue.color  = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    SRenderingParams RenderingParams = {};
+    RenderingParams.pColorAttachments    = &ColorAttachment;
+    RenderingParams.ColorAttachmentCount = 1;
+    RenderingParams.RenderArea.offset    = { 0, 0 };
+    RenderingParams.RenderArea.extent    = { m_ViewportWidth, m_ViewportHeight };
+    pCommandBuffer->BeginRendering(RenderingParams);
 
     // Set viewport
     VkViewport Viewport = { 0.0f, 0.0f, float(m_ViewportWidth), float(m_ViewportHeight), 0.0f, 1.0f };
@@ -285,8 +284,8 @@ void CBaseRenderer::PerformTonemapping(CCommandBuffer* pCommandBuffer)
     // Draw
     pCommandBuffer->DrawInstanced(3, 1, 0, 0);
 
-    // End RenderPass
-    pCommandBuffer->EndRenderPass();
+    pCommandBuffer->EndRendering();
+    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void CBaseRenderer::Tick(float DeltaTime)
@@ -577,11 +576,9 @@ void CBaseRenderer::Release()
     SAFE_DELETE(m_pOutputTexture);
     SAFE_DELETE(m_pOutputTextureView);
 
-    SAFE_DELETE(m_pTonemappingRenderPass);
     SAFE_DELETE(m_pTonemappingPipeline);
     SAFE_DELETE(m_pTonemappingPipelineLayout);
     SAFE_DELETE(m_pTonemappingDescriptorSetLayout);
-    SAFE_DELETE(m_pTonemappingFramebuffer);
 
     SAFE_DELETE(m_pCameraBuffer);
     SAFE_DELETE(m_pRandomBuffer);
@@ -609,7 +606,6 @@ bool CBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
         SAFE_DELETE(m_pSceneTextureView1);
         SAFE_DELETE(m_pOutputTexture);
         SAFE_DELETE(m_pOutputTextureView);
-        SAFE_DELETE(m_pTonemappingFramebuffer);
         SAFE_DELETE(m_pOutputTextureDescriptorSet);
 
         ReleaseDescriptorSets();
@@ -677,19 +673,6 @@ bool CBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
         assert(m_pOutputTextureView != nullptr);
         m_pOutputTextureView->SetDebugName("OutputTextureView");
     }
-
-    // Create Framebuffer for the tonemap stage
-    VkImageView ImageView = m_pOutputTextureView->GetImageView();
-
-    SFramebufferParams FramebufferParams = {};
-    FramebufferParams.AttachmentCount = 1;
-    FramebufferParams.Width           = m_ViewportWidth;
-    FramebufferParams.Height          = m_ViewportHeight;
-    FramebufferParams.pRenderPass     = m_pTonemappingRenderPass;
-    FramebufferParams.pAttachMents    = &ImageView;
-
-    m_pTonemappingFramebuffer = CFramebuffer::Create(m_pDevice, FramebufferParams);
-    m_pTonemappingFramebuffer->SetDebugName("TonemappingPass FrameBuffer");
 
     // UI DescriptorSet
     m_pOutputTextureDescriptorSet = GUI::AllocateTextureID(m_pOutputTextureView);

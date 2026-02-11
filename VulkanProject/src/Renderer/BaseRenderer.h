@@ -12,10 +12,8 @@ class CSampler;
 class CBuffer;
 class CGraphicsPipeline;
 class CComputePipeline;
-class CRenderPass;
 class CPipelineLayout;
 class CDescriptorSetLayout;
-class CFramebuffer;
 
 struct STonemappingBuffer
 {
@@ -153,10 +151,8 @@ private:
     // ToneMapping
     CBuffer*              m_pTonemappingBuffer;
     CGraphicsPipeline*    m_pTonemappingPipeline;
-    CRenderPass*          m_pTonemappingRenderPass;
     CPipelineLayout*      m_pTonemappingPipelineLayout;
     CDescriptorSetLayout* m_pTonemappingDescriptorSetLayout;
     CDescriptorSet*       m_pTonemappingDescriptorSet0;
     CDescriptorSet*       m_pTonemappingDescriptorSet1;
-    CFramebuffer*         m_pTonemappingFramebuffer;
 };

@@ -19,6 +19,10 @@ struct SGraphicsPipelineStateParams
     bool                               bBlendEnable              = false;
     bool                               bDepthEnable              = false;
     CRenderPass*                       pRenderPass               = nullptr;
+    VkFormat*                          pColorAttachmentFormats   = nullptr;
+    uint32_t                           ColorAttachmentFormatCount = 0;
+    VkFormat                           DepthAttachmentFormat     = VK_FORMAT_UNDEFINED;
+    VkFormat                           StencilAttachmentFormat   = VK_FORMAT_UNDEFINED;
     CPipelineLayout*                   pPipelineLayout           = nullptr;
     CShaderModule*                     pVertexShader             = nullptr;
     CShaderModule*                     pFragmentShader           = nullptr;
