@@ -10,17 +10,17 @@ struct SMeshInfo
 };
 
 struct SSceneBuffer { SSceneSettings Settings; };
-[[vk::binding(5)]]
+[[vk::binding(16)]]
 ConstantBuffer<SSceneBuffer> uScene;
 
-[[vk::binding(6)]]
+[[vk::binding(5)]]
 StructuredBuffer<SMeshInfo> MeshInfos;
 
-[[vk::binding(7)]]
+[[vk::binding(6)]]
 StructuredBuffer<SMaterial> Materials;
 
-[[vk::binding(0, 1)]] Texture2D<float4> uTextures[];
-[[vk::binding(0, 1)]] SamplerState uTexturesSampler : register(s0, space1);
+[[vk::binding(0)]] Texture2D<float4> uTextures[];
+[[vk::binding(0)]] SamplerState uTexturesSampler : register(s0);
 
 static const uint VERTEX_STRIDE   = 44;
 static const uint TEXCOORD_OFFSET = 36;
@@ -60,14 +60,6 @@ void main(inout SRayPayLoad rayPayload, in BuiltInTriangleIntersectionAttributes
 
     uint materialIndex = min(meshInfo.MaterialIndex, uScene.Settings.NumMaterials - 1);
     SMaterial material = Materials[materialIndex];
-
-    // Match software quad behavior (front-face only) for opaque surfaces.
-    // Keep back-faces for refractive materials so transmission still works.
-    if (HitKind() == HIT_KIND_TRIANGLE_BACK_FACE && material.RefractionChance <= 0.0f)
-    {
-        IgnoreHit();
-        return;
-    }
 
     if (material.AlphaMaskTexIndex != INVALID_BINDLESS_ID)
     {

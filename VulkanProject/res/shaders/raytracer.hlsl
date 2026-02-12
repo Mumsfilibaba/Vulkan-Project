@@ -28,17 +28,17 @@
 #define ENABLE_QUAD_BACK_FACE_CULLING 1
 #define ENABLE_RUSSIAN_ROULETTE 1
 
-[[vk::binding(0)]] RWTexture2D<float4> uOutput;
-[[vk::binding(1)]] RWTexture2D<float4> uPreviousFrame;
+[[vk::binding(2)]] RWTexture2D<float4> uOutput;
+[[vk::binding(3)]] RWTexture2D<float4> uPreviousFrame;
 
-[[vk::combinedImageSampler]][[vk::binding(2)]]
+[[vk::combinedImageSampler]][[vk::binding(4)]]
 TextureCube<float4> uSkybox : register(t2);
 
-[[vk::combinedImageSampler]][[vk::binding(2)]]
+[[vk::combinedImageSampler]][[vk::binding(4)]]
 SamplerState uSkyboxSampler : register(s2);
 
-[[vk::binding(0, 1)]] Texture2D<float4> uTextures[];
-[[vk::binding(0, 1)]] SamplerState uTexturesSampler : register(s0, space1);
+[[vk::binding(0)]] Texture2D<float4> uTextures[];
+[[vk::binding(0)]] SamplerState uTexturesSampler : register(s0);
 
 struct SCameraBuffer
 {
@@ -81,24 +81,24 @@ struct SSceneBuffer
     uint  Padding1;
 };
 
-[[vk::binding(3)]]
+[[vk::binding(14)]]
 ConstantBuffer<SCameraBuffer> uCamera;
 
-[[vk::binding(4)]]
+[[vk::binding(15)]]
 ConstantBuffer<SRandomBuffer> uRandom;
 
-[[vk::binding(5)]]
+[[vk::binding(16)]]
 ConstantBuffer<SSceneBuffer> uScene;
 
-[[vk::binding(6)]]  StructuredBuffer<SQuad>           Quads;
-[[vk::binding(7)]]  StructuredBuffer<SSphere>         Spheres;
-[[vk::binding(8)]]  StructuredBuffer<SMaterial>       Materials;
-[[vk::binding(9)]]  StructuredBuffer<SVertexPosition> VertexPositions;
-[[vk::binding(10)]] StructuredBuffer<SVertex>         Vertices;
-[[vk::binding(11)]] StructuredBuffer<uint3>           Indices;
-[[vk::binding(12)]] StructuredBuffer<STriangle>       Triangles;
-[[vk::binding(13)]] StructuredBuffer<SMesh>           Meshes;
-[[vk::binding(14)]] StructuredBuffer<SBoundingBox>    BvhNodes;
+[[vk::binding(5)]]  StructuredBuffer<SQuad>           Quads;
+[[vk::binding(6)]]  StructuredBuffer<SSphere>         Spheres;
+[[vk::binding(7)]]  StructuredBuffer<SMaterial>       Materials;
+[[vk::binding(8)]]  StructuredBuffer<SVertexPosition> VertexPositions;
+[[vk::binding(9)]]  StructuredBuffer<SVertex>         Vertices;
+[[vk::binding(10)]] StructuredBuffer<uint3>           Indices;
+[[vk::binding(11)]] StructuredBuffer<STriangle>       Triangles;
+[[vk::binding(12)]] StructuredBuffer<SMesh>           Meshes;
+[[vk::binding(13)]] StructuredBuffer<SBoundingBox>    BvhNodes;
 
 bool IsAlmostZero(float3 Value)
 {
@@ -826,6 +826,7 @@ float3 GetColorForRay_BvhDebug(SRay Ray)
 [numthreads(NUM_THREADS, NUM_THREADS, 1)]
 void main(uint3 DispatchThreadId : SV_DispatchThreadID)
 {
+    const bool bWritePrimary = (uRandom.FrameIndex & 1) == 0;
     const int2 Pixel = (int2)DispatchThreadId.xy;
 
     uint2 Dim;
@@ -848,43 +849,99 @@ void main(uint3 DispatchThreadId : SV_DispatchThreadID)
     if (uScene.ViewMode == VIEW_MODE_RENDER)
     {
         float3 SampleColor   = GetColorForRay(Ray, RandomSeed);
-        float4 PreviousColor = uPreviousFrame[Pixel];
+        float4 PreviousColor = bWritePrimary ? uPreviousFrame[Pixel] : uOutput[Pixel];
         float3 CurrentColor  = lerp(PreviousColor.rgb, SampleColor, 1.0 / (float)(uRandom.FrameIndex + 1));
-        uOutput[Pixel] = float4(CurrentColor, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[Pixel] = float4(CurrentColor, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[Pixel] = float4(CurrentColor, 1.0);
+        }
     }
     else if (uScene.ViewMode == VIEW_MODE_NORMALS)
     {
         float3 HitNormal = GetNormalForRay(Ray);
-        uOutput[Pixel] = float4(HitNormal, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[Pixel] = float4(HitNormal, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[Pixel] = float4(HitNormal, 1.0);
+        }
     }
     else if (uScene.ViewMode == VIEW_MODE_GEOMETRIC_NORMALS)
     {
         float3 HitNormal = GetGeometricNormalForRay(Ray);
-        uOutput[Pixel] = float4(HitNormal, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[Pixel] = float4(HitNormal, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[Pixel] = float4(HitNormal, 1.0);
+        }
     }
     else if (uScene.ViewMode == VIEW_MODE_TANGENTS)
     {
         float3 HitTangent = GetTangentForRay(Ray);
-        uOutput[Pixel] = float4(HitTangent, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[Pixel] = float4(HitTangent, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[Pixel] = float4(HitTangent, 1.0);
+        }
     }
     else if (uScene.ViewMode == VIEW_MODE_ALBEDO)
     {
         float3 HitAlbedo = GetAlbedoForRay(Ray);
-        uOutput[Pixel] = float4(HitAlbedo, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[Pixel] = float4(HitAlbedo, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[Pixel] = float4(HitAlbedo, 1.0);
+        }
     }
     else if (uScene.ViewMode == VIEW_MODE_BARYCENTRICS)
     {
         float3 HitBarycentrics = GetBarycentricsForRay(Ray);
-        uOutput[Pixel] = float4(HitBarycentrics, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[Pixel] = float4(HitBarycentrics, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[Pixel] = float4(HitBarycentrics, 1.0);
+        }
     }
     else if (uScene.ViewMode == VIEW_MODE_TEXCOORDS)
     {
         float3 HitTexCoords = GetTexCoordsForRay(Ray);
-        uOutput[Pixel] = float4(HitTexCoords, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[Pixel] = float4(HitTexCoords, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[Pixel] = float4(HitTexCoords, 1.0);
+        }
     }
     else if (uScene.ViewMode == VIEW_MODE_BVH_INTERSECTION)
     {
         float3 Color = GetColorForRay_BvhDebug(Ray);
-        uOutput[Pixel] = float4(Color, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[Pixel] = float4(Color, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[Pixel] = float4(Color, 1.0);
+        }
     }
 }

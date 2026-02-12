@@ -33,3 +33,10 @@ PFN_vkCmdSetRayTracingPipelineStackSizeKHR            Extensions::vkCmdSetRayTra
 
 PFN_vkCmdBeginRenderingKHR                            Extensions::vkCmdBeginRenderingKHR                            = nullptr;
 PFN_vkCmdEndRenderingKHR                              Extensions::vkCmdEndRenderingKHR                              = nullptr;
+
+PFN_vkGetDescriptorSetLayoutSizeEXT                   Extensions::vkGetDescriptorSetLayoutSizeEXT                   = nullptr;
+PFN_vkGetDescriptorSetLayoutBindingOffsetEXT          Extensions::vkGetDescriptorSetLayoutBindingOffsetEXT          = nullptr;
+PFN_vkGetDescriptorEXT                                Extensions::vkGetDescriptorEXT                                = nullptr;
+PFN_vkCmdBindDescriptorBuffersEXT                     Extensions::vkCmdBindDescriptorBuffersEXT                     = nullptr;
+PFN_vkCmdSetDescriptorBufferOffsetsEXT                Extensions::vkCmdSetDescriptorBufferOffsetsEXT                = nullptr;
+PFN_vkCmdBindDescriptorBufferEmbeddedSamplersEXT      Extensions::vkCmdBindDescriptorBufferEmbeddedSamplersEXT      = nullptr;

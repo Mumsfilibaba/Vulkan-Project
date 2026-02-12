@@ -9,14 +9,14 @@ struct SSceneBuffer
     SSceneSettings settings;
 };
 
-[[vk::binding(5, 0)]]
-ConstantBuffer<SSceneBuffer> sceneBuffer : register(b5, space0);
+[[vk::binding(16)]]
+ConstantBuffer<SSceneBuffer> sceneBuffer : register(b16);
 
-[[vk::combinedImageSampler]][[vk::binding(0, 1)]]
-TextureCube<float4> cubeTexture : register(t0, space1);
+[[vk::combinedImageSampler]][[vk::binding(4)]]
+TextureCube<float4> cubeTexture : register(t0);
 
-[[vk::combinedImageSampler]][[vk::binding(0, 1)]]
-SamplerState cubeTextureSampler : register(s0, space1);
+[[vk::combinedImageSampler]][[vk::binding(4)]]
+SamplerState cubeTextureSampler : register(s0);
 
 [shader("miss")]
 void main(inout SRayPayLoad rayPayload)

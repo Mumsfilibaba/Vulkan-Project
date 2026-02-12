@@ -3,6 +3,7 @@
 #include "RenderPass.h"
 #include "Device.h"
 #include "PipelineLayout.h"
+#include "BindlessManager.h"
 #include "Extensions.h"
 #include "Helpers.h"
 #include "MathHelper.h"
@@ -185,6 +186,12 @@ CGraphicsPipeline* CGraphicsPipeline::Create(CDevice* pDevice, const SGraphicsPi
     PipelineCreateInfo.subpass             = 0;
     PipelineCreateInfo.basePipelineHandle  = VK_NULL_HANDLE;
     PipelineCreateInfo.basePipelineIndex   = -1;
+    PipelineCreateInfo.flags               = 0;
+
+    if (Params.pPipelineLayout->IsBindlessEnabled() && pDevice->GetBindlessManager().UsesDescriptorBuffer())
+    {
+        PipelineCreateInfo.flags |= VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
+    }
 
     VkPipelineRenderingCreateInfo RenderingCreateInfo = {};
     if (Params.pRenderPass)
@@ -243,6 +250,12 @@ CComputePipeline* CComputePipeline::Create(CDevice* pDevice, const SComputePipel
     PipelineCreateInfo.basePipelineIndex = -1;
     PipelineCreateInfo.layout            = Params.pPipelineLayout->GetPipelineLayout();
     PipelineCreateInfo.stage             = ShaderStageInfo;
+    PipelineCreateInfo.flags             = 0;
+
+    if (Params.pPipelineLayout->IsBindlessEnabled() && pDevice->GetBindlessManager().UsesDescriptorBuffer())
+    {
+        PipelineCreateInfo.flags |= VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
+    }
 
     VkResult Result = vkCreateComputePipelines(pDevice->GetDevice(), VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &pPipeline->m_Pipeline);
     if (Result != VK_SUCCESS)
@@ -353,6 +366,12 @@ CRayTracingPipeline* CRayTracingPipeline::Create(class CDevice* pDevice, const S
     PipelineCreateInfo.pGroups                      = ShaderGroups.data();
     PipelineCreateInfo.maxPipelineRayRecursionDepth = Params.MaxPipelineRayRecursionDepth;
     PipelineCreateInfo.layout                       = Params.pPipelineLayout->GetPipelineLayout();
+    PipelineCreateInfo.flags                        = 0;
+
+    if (Params.pPipelineLayout->IsBindlessEnabled() && pDevice->GetBindlessManager().UsesDescriptorBuffer())
+    {
+        PipelineCreateInfo.flags |= VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
+    }
 
     VkResult Result = Extensions::vkCreateRayTracingPipelinesKHR(pDevice->GetDevice(), VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &pPipeline->m_Pipeline);
     if (Result != VK_SUCCESS)

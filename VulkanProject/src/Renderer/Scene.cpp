@@ -107,11 +107,11 @@ void SScene::Initialize()
     ShaderMaterial.IncidenceOfRefraction = 1.0f;
     ShaderMaterial.RefractionChance      = 0.0f;
     ShaderMaterial.RefractionRoughness   = 0.0f;
-    ShaderMaterial.AlbedoTexIndex        = CBindlessManager::InvalidBindlessID;
-    ShaderMaterial.NormalTexIndex        = CBindlessManager::InvalidBindlessID;
-    ShaderMaterial.AlphaMaskTexIndex     = CBindlessManager::InvalidBindlessID;
-    ShaderMaterial.RoughnessTexIndex     = CBindlessManager::InvalidBindlessID;
-    ShaderMaterial.MetallicTexIndex      = CBindlessManager::InvalidBindlessID;
+    ShaderMaterial.AlbedoTexIndex        = IBindlessManager::InvalidBindlessID;
+    ShaderMaterial.NormalTexIndex        = IBindlessManager::InvalidBindlessID;
+    ShaderMaterial.AlphaMaskTexIndex     = IBindlessManager::InvalidBindlessID;
+    ShaderMaterial.RoughnessTexIndex     = IBindlessManager::InvalidBindlessID;
+    ShaderMaterial.MetallicTexIndex      = IBindlessManager::InvalidBindlessID;
 
     const auto AddImageViewToBindlessManager = [](const std::shared_ptr<CTextureResource>& Texture, CSampler* pSampler)
     {
@@ -122,7 +122,7 @@ void SScene::Initialize()
         }
         else
         {
-            return CBindlessManager::InvalidBindlessID;
+            return IBindlessManager::InvalidBindlessID;
         }
     };
 
@@ -224,11 +224,11 @@ SScene* SceneFactory::CreateScene(ESceneType SceneType)
         Material.IncidenceOfRefraction = IncidenceOfRefraction;
         Material.RefractionChance      = RefractionChance;
         Material.RefractionRoughness   = RefractionRoughness;
-        Material.AlbedoTexIndex        = CBindlessManager::InvalidBindlessID;
-        Material.NormalTexIndex        = CBindlessManager::InvalidBindlessID;
-        Material.AlphaMaskTexIndex     = CBindlessManager::InvalidBindlessID;
-        Material.RoughnessTexIndex     = CBindlessManager::InvalidBindlessID;
-        Material.MetallicTexIndex      = CBindlessManager::InvalidBindlessID;
+        Material.AlbedoTexIndex        = IBindlessManager::InvalidBindlessID;
+        Material.NormalTexIndex        = IBindlessManager::InvalidBindlessID;
+        Material.AlphaMaskTexIndex     = IBindlessManager::InvalidBindlessID;
+        Material.RoughnessTexIndex     = IBindlessManager::InvalidBindlessID;
+        Material.MetallicTexIndex      = IBindlessManager::InvalidBindlessID;
         return static_cast<int32_t>(pScene->m_GpuMaterials.size() - 1);
     };
 

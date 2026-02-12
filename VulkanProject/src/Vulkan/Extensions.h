@@ -37,4 +37,12 @@ struct Extensions
     // Dynamic Rendering
     static PFN_vkCmdBeginRenderingKHR                            vkCmdBeginRenderingKHR;
     static PFN_vkCmdEndRenderingKHR                              vkCmdEndRenderingKHR;
+
+    // Descriptor Buffer
+    static PFN_vkGetDescriptorSetLayoutSizeEXT                   vkGetDescriptorSetLayoutSizeEXT;
+    static PFN_vkGetDescriptorSetLayoutBindingOffsetEXT          vkGetDescriptorSetLayoutBindingOffsetEXT;
+    static PFN_vkGetDescriptorEXT                                vkGetDescriptorEXT;
+    static PFN_vkCmdBindDescriptorBuffersEXT                     vkCmdBindDescriptorBuffersEXT;
+    static PFN_vkCmdSetDescriptorBufferOffsetsEXT                vkCmdSetDescriptorBufferOffsetsEXT;
+    static PFN_vkCmdBindDescriptorBufferEmbeddedSamplersEXT      vkCmdBindDescriptorBufferEmbeddedSamplersEXT;
 };

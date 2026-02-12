@@ -17,6 +17,7 @@ Texture2D<float4> sourceTexture : register(t0, space0);
 SamplerState sourceSampler : register(s0, space0);
 
 [[vk::binding(1, 0)]]
+[[vk::image_format("rgba16f")]]
 RWTexture2DArray<float4> outCubeTexture : register(u1, space0);
 
 static const float2 invAtan = float2(0.15915494309f, 0.31830988618f); // (1 / 2PI, 1 / PI)

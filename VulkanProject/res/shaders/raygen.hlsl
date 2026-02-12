@@ -16,9 +16,9 @@
 #define ENABLE_RUSSIAN_ROULETTE 1
 #define HW_RAY_FLAGS RAY_FLAG_CULL_BACK_FACING_TRIANGLES
 
-[[vk::binding(0)]] RaytracingAccelerationStructure uAccelerationStructure;
-[[vk::binding(1)]] RWTexture2D<float4> uOutput;
-[[vk::binding(2)]] RWTexture2D<float4> uPreviousFrame;
+[[vk::binding(1)]] RaytracingAccelerationStructure uAccelerationStructure;
+[[vk::binding(2)]] RWTexture2D<float4> uOutput;
+[[vk::binding(3)]] RWTexture2D<float4> uPreviousFrame;
 
 struct SCameraBuffer
 {
@@ -49,20 +49,20 @@ struct SSceneBuffer
     SSceneSettings Settings;
 };
 
-[[vk::binding(3)]]
+[[vk::binding(14)]]
 ConstantBuffer<SCameraBuffer> uCamera;
 
-[[vk::binding(4)]]
+[[vk::binding(15)]]
 ConstantBuffer<SRandomBuffer> uRandom;
 
-[[vk::binding(5)]]
+[[vk::binding(16)]]
 ConstantBuffer<SSceneBuffer> uScene;
 
-[[vk::binding(7)]]
+[[vk::binding(6)]]
 StructuredBuffer<SMaterial> MaterialBuffer;
 
-[[vk::binding(0, 1)]] Texture2D<float4> uTextures[];
-[[vk::binding(0, 1)]] SamplerState uTexturesSampler : register(s0, space1);
+[[vk::binding(0)]] Texture2D<float4> uTextures[];
+[[vk::binding(0)]] SamplerState uTexturesSampler : register(s0);
 
 float FresnelReflectAmount(float N1, float N2, float3 Normal, float3 Incident, float F0, float F90);
 
@@ -77,6 +77,7 @@ float3 GetAlbedoForRay(float3 Origin, float3 Direction, RayDesc rayDesc);
 [shader("raygeneration")]
 void main()
 {
+    const bool bWritePrimary = (uRandom.FrameIndex & 1) == 0;
     uint3 launchId   = DispatchRaysIndex();
     uint3 launchSize = DispatchRaysDimensions();
     uint  RandomSeed = InitRandom(launchId.xy, launchSize.x, uRandom.FrameIndex);
@@ -116,39 +117,88 @@ void main()
     {
         SampleColor = GetColorForRay(Origin, Direction, RandomSeed, rayDesc);
 
-        float4 PreviousColor = uPreviousFrame[launchId.xy];
+        float4 PreviousColor = bWritePrimary ? uPreviousFrame[launchId.xy] : uOutput[launchId.xy];
         float3 CurrentColor  = lerp(PreviousColor.rgb, SampleColor, 1.0 / (float)(uRandom.FrameIndex + 1));
-        uOutput[launchId.xy] = float4(CurrentColor, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[launchId.xy] = float4(CurrentColor, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[launchId.xy] = float4(CurrentColor, 1.0);
+        }
     }
     else if (uScene.Settings.ViewMode == VIEW_MODE_NORMALS)
     {
         SampleColor = GetNormalForRay(Origin, Direction, rayDesc);
-        uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[launchId.xy] = float4(SampleColor, 1.0);
+        }
     }
     else if (uScene.Settings.ViewMode == VIEW_MODE_GEOMETRIC_NORMALS)
     {
         SampleColor = GetGeometricNormalForRay(Origin, Direction, rayDesc);
-        uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[launchId.xy] = float4(SampleColor, 1.0);
+        }
     }
     else if (uScene.Settings.ViewMode == VIEW_MODE_TANGENTS)
     {
         SampleColor = GetTangentForRay(Origin, Direction, rayDesc);
-        uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[launchId.xy] = float4(SampleColor, 1.0);
+        }
     }
     else if (uScene.Settings.ViewMode == VIEW_MODE_ALBEDO)
     {
         SampleColor = GetAlbedoForRay(Origin, Direction, rayDesc);
-        uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[launchId.xy] = float4(SampleColor, 1.0);
+        }
     }
     else if (uScene.Settings.ViewMode == VIEW_MODE_BARYCENTRICS)
     {
         SampleColor = GetBarycentricsForRay(Origin, Direction, rayDesc);
-        uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[launchId.xy] = float4(SampleColor, 1.0);
+        }
     }
     else if (uScene.Settings.ViewMode == VIEW_MODE_TEXCOORDS)
     {
         SampleColor = GetTexCoordsForRay(Origin, Direction, rayDesc);
-        uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        if (bWritePrimary)
+        {
+            uOutput[launchId.xy] = float4(SampleColor, 1.0);
+        }
+        else
+        {
+            uPreviousFrame[launchId.xy] = float4(SampleColor, 1.0);
+        }
     }
 }
 

@@ -56,6 +56,7 @@ CDevice::CDevice()
     , m_bValidationEnabled(false)
     , m_bRayTracingSupported(false)
     , m_bBindlessSupported(false)
+    , m_bDescriptorBufferSupported(false)
 {
 }
 
@@ -82,17 +83,6 @@ CDevice::~CDevice()
     {
         vkDestroyInstance(m_Instance, nullptr);
         m_Instance = VK_NULL_HANDLE;
-    }
-}
-
-uint32_t CDevice::GetQueueFamilyIndex(ECommandQueueType Type)
-{
-    switch (Type)
-    {
-        case ECommandQueueType::Graphics: return m_QueueFamilyIndices.Graphics;
-        case ECommandQueueType::Compute:  return m_QueueFamilyIndices.Compute;
-        case ECommandQueueType::Transfer: return m_QueueFamilyIndices.Transfer;
-        default: return (uint32_t)-1;
     }
 }
 
@@ -165,6 +155,17 @@ void CDevice::Destroy()
     delete this;
 }
 
+uint32_t CDevice::GetQueueFamilyIndex(ECommandQueueType Type)
+{
+    switch (Type)
+    {
+        case ECommandQueueType::Graphics: return m_QueueFamilyIndices.Graphics;
+        case ECommandQueueType::Compute:  return m_QueueFamilyIndices.Compute;
+        case ECommandQueueType::Transfer: return m_QueueFamilyIndices.Transfer;
+        default: return (uint32_t)-1;
+    }
+}
+
 bool CDevice::Init(const SDeviceParams& Params)
 {
     m_bValidationEnabled = Params.bEnableValidation;
@@ -210,7 +211,7 @@ bool CDevice::Init(const SDeviceParams& Params)
     // Create BindlessManager
     if (m_bBindlessSupported)
     {
-        m_pBindlessManager = CBindlessManager::Create(this);
+        m_pBindlessManager = IBindlessManager::Create(this);
         if (!m_pBindlessManager)
         {
             return false;
@@ -328,6 +329,7 @@ bool CDevice::CreateInstance(const SDeviceParams& Params)
     if (m_bValidationEnabled)
     {
         const char* ValidationLayerName = "VK_LAYER_KHRONOS_validation";
+
         uint32_t InstanceLayerCount;
         vkEnumerateInstanceLayerProperties(&InstanceLayerCount, nullptr);
         std::vector<VkLayerProperties> InstanceLayerProperties(InstanceLayerCount);
@@ -456,12 +458,23 @@ bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
     std::vector<VkExtensionProperties> AvailableDeviceExtension(DeviceExtensionCount);
     vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &DeviceExtensionCount, AvailableDeviceExtension.data());
 
-    bool bEnableDeviceSubset = false;
+    bool bEnableDeviceSubset                  = false;
+    bool bDescriptorBufferExtensionAvailable  = false;
+    bool bSynchronization2ExtensionAvailable  = false;
+
     for (VkExtensionProperties Extension : AvailableDeviceExtension)
     {
         if (strcmp(Extension.extensionName, "VK_KHR_portability_subset") == 0)
         {
             bEnableDeviceSubset = true;
+        }
+        else if (strcmp(Extension.extensionName, VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME) == 0)
+        {
+            bDescriptorBufferExtensionAvailable = true;
+        }
+        else if (strcmp(Extension.extensionName, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME) == 0)
+        {
+            bSynchronization2ExtensionAvailable = true;
         }
     }
 
@@ -481,20 +494,37 @@ bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
     {
         DeviceExtensions.push_back("VK_KHR_portability_subset");
     }
+    const bool bEnableDescriptorBufferExtension = bDescriptorBufferExtensionAvailable && bSynchronization2ExtensionAvailable;
+    if (bEnableDescriptorBufferExtension)
+    {
+        DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME);
+        DeviceExtensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+    }
+    else if (bDescriptorBufferExtensionAvailable && !bSynchronization2ExtensionAvailable)
+    {
+        LOG("VK_EXT_descriptor_buffer is available but VK_KHR_synchronization2 is missing. Descriptor buffer path is disabled.\n");
+    }
 
     if (Params.bEnableRayTracing)
     {
         bool bRayTracingPipelinesSupported    = false;
         bool bAccelerationStructuresSupported = false;
         bool bDeferredHostOPerationsSupported = false;
+
         for (VkExtensionProperties Extension : AvailableDeviceExtension)
         {
             if (strcmp(Extension.extensionName, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0)
+            {
                 bRayTracingPipelinesSupported = true;
+            }
             if (strcmp(Extension.extensionName, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) == 0)
+            {
                 bAccelerationStructuresSupported = true;
+            }
             if (strcmp(Extension.extensionName, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) == 0)
+            {
                 bDeferredHostOPerationsSupported = true;
+            }
         }
 
         if (bRayTracingPipelinesSupported && bAccelerationStructuresSupported && bDeferredHostOPerationsSupported)
@@ -517,7 +547,9 @@ bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
     m_EnabledDeviceAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 
     if (m_DeviceAccelerationStructureFeatures.accelerationStructure)
+    {
         m_EnabledDeviceAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
+    }
 
     ZERO_STRUCT(&m_EnabledDeviceRayTracingFeatures);
     m_EnabledDeviceRayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
@@ -529,6 +561,9 @@ bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
     ZERO_STRUCT(&m_EnabledDeviceDynamicRenderingFeatures);
     m_EnabledDeviceDynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
 
+    ZERO_STRUCT(&m_EnabledDeviceDescriptorBufferFeatures);
+    m_EnabledDeviceDescriptorBufferFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_FEATURES_EXT;
+
     if (!m_DeviceDynamicRenderingFeatures.dynamicRendering)
     {
         LOG("'DynamicRendering' is not supported by adapter\n");
@@ -536,20 +571,48 @@ bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
     }
 
     if (m_DeviceFeatures12.bufferDeviceAddress)
+    {
         m_EnabledDeviceFeatures12.bufferDeviceAddress = VK_TRUE;
+    }
     if (m_DeviceFeatures12.hostQueryReset)
+    {
         m_EnabledDeviceFeatures12.hostQueryReset = VK_TRUE;
+    }
     if (m_DeviceFeatures12.descriptorIndexing)
+    {
         m_EnabledDeviceFeatures12.descriptorIndexing = VK_TRUE;
+    }
     if (m_DeviceFeatures12.scalarBlockLayout)
+    {
         m_EnabledDeviceFeatures12.scalarBlockLayout = VK_TRUE;
+    }
 
-    m_EnabledDeviceFeatures12.pNext = &m_EnabledDeviceDynamicRenderingFeatures;
+    m_EnabledDeviceFeatures12.pNext                          = &m_EnabledDeviceDynamicRenderingFeatures;
     m_EnabledDeviceDynamicRenderingFeatures.dynamicRendering = m_DeviceDynamicRenderingFeatures.dynamicRendering;
+    m_EnabledDeviceDynamicRenderingFeatures.pNext            = nullptr;
+
+    m_bDescriptorBufferSupported = bEnableDescriptorBufferExtension && m_DeviceDescriptorBufferFeatures.descriptorBuffer && m_DeviceFeatures12.bufferDeviceAddress;
+    if (m_bDescriptorBufferSupported)
+    {
+        m_EnabledDeviceDescriptorBufferFeatures.descriptorBuffer                   = VK_TRUE;
+        m_EnabledDeviceDescriptorBufferFeatures.descriptorBufferCaptureReplay      = m_DeviceDescriptorBufferFeatures.descriptorBufferCaptureReplay;
+        m_EnabledDeviceDescriptorBufferFeatures.descriptorBufferImageLayoutIgnored = m_DeviceDescriptorBufferFeatures.descriptorBufferImageLayoutIgnored;
+        m_EnabledDeviceDescriptorBufferFeatures.descriptorBufferPushDescriptors    = m_DeviceDescriptorBufferFeatures.descriptorBufferPushDescriptors;
+
+        m_EnabledDeviceDynamicRenderingFeatures.pNext = &m_EnabledDeviceDescriptorBufferFeatures;
+    }
 
     if (m_DeviceRayTracingFeatures.rayTracingPipeline)
     {
-        m_EnabledDeviceDynamicRenderingFeatures.pNext = &m_EnabledDeviceRayTracingFeatures;
+        if (m_bDescriptorBufferSupported)
+        {
+            m_EnabledDeviceDescriptorBufferFeatures.pNext = &m_EnabledDeviceRayTracingFeatures;
+        }
+        else
+        {
+            m_EnabledDeviceDynamicRenderingFeatures.pNext = &m_EnabledDeviceRayTracingFeatures;
+        }
+
         m_EnabledDeviceRayTracingFeatures.rayTracingPipeline = VK_TRUE;
     }
 
@@ -558,11 +621,17 @@ bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
     m_EnabledDeviceFeatures.pNext = &m_EnabledDeviceFeatures12;
 
     if (m_DeviceFeatures.features.fillModeNonSolid)
+    {
         m_EnabledDeviceFeatures.features.fillModeNonSolid = VK_TRUE;
+    }
     if (m_DeviceFeatures.features.samplerAnisotropy)
+    {
         m_EnabledDeviceFeatures.features.samplerAnisotropy = VK_TRUE;
+    }
     if (m_DeviceFeatures.features.shaderInt64)
+    {
         m_EnabledDeviceFeatures.features.shaderInt64 = VK_TRUE;
+    }
 
     const bool bBindlessSupported =
         m_DeviceFeatures12.descriptorBindingPartiallyBound && m_DeviceFeatures12.runtimeDescriptorArray &&
@@ -629,7 +698,6 @@ bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
         vkGetDeviceQueue(m_Device, m_QueueFamilyIndices.Compute, 0, &m_ComputeQueue);
 
         m_bBindlessSupported = bBindlessSupported;
-
         QueryPhysicalDeviceFeatures();
         QueryDeviceExtensionFunctions();
         return true;
@@ -638,16 +706,6 @@ bool CDevice::CreateDeviceAndQueues(const SDeviceParams& Params)
     {
         return false;
     }
-}
-
-void CDevice::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& CreateInfo)
-{
-    ZERO_STRUCT(&CreateInfo);
-    
-    CreateInfo.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    CreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    CreateInfo.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    CreateInfo.pfnUserCallback = VulkanDebugCallback;
 }
 
 bool CDevice::QueryPhysicalDevice(const SDeviceParams& Params)
@@ -792,43 +850,40 @@ bool CDevice::QueryDeviceExtensionFunctions()
     GET_DEVICE_EXTENTION_FUNC(vkCmdBeginRenderingKHR);
     GET_DEVICE_EXTENTION_FUNC(vkCmdEndRenderingKHR);
 
+    if (m_bDescriptorBufferSupported)
+    {
+        GET_DEVICE_EXTENTION_FUNC(vkGetDescriptorSetLayoutSizeEXT);
+        GET_DEVICE_EXTENTION_FUNC(vkGetDescriptorSetLayoutBindingOffsetEXT);
+        GET_DEVICE_EXTENTION_FUNC(vkGetDescriptorEXT);
+        GET_DEVICE_EXTENTION_FUNC(vkCmdBindDescriptorBuffersEXT);
+        GET_DEVICE_EXTENTION_FUNC(vkCmdSetDescriptorBufferOffsetsEXT);
+        GET_DEVICE_EXTENTION_FUNC(vkCmdBindDescriptorBufferEmbeddedSamplersEXT);
+    }
+
 #undef GET_DEVICE_EXTENTION_FUNC
     return true;
 }
 
-void CDevice::QueryPhysicalDeviceFeatures()
+void CDevice::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& CreateInfo)
 {
-    ZERO_STRUCT(&m_DeviceAccelerationStructureFeatures);
-    m_DeviceAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-
-    ZERO_STRUCT(&m_DeviceFeatures12);
-    m_DeviceFeatures12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-
-    ZERO_STRUCT(&m_DeviceDynamicRenderingFeatures);
-    m_DeviceDynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
-
-    ZERO_STRUCT(&m_DeviceRayTracingFeatures);
-    m_DeviceRayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-    m_DeviceRayTracingFeatures.pNext = &m_DeviceAccelerationStructureFeatures;
-
-    m_DeviceFeatures12.pNext = &m_DeviceDynamicRenderingFeatures;
-    m_DeviceDynamicRenderingFeatures.pNext = &m_DeviceRayTracingFeatures;
-
-    ZERO_STRUCT(&m_DeviceFeatures);
-    m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    m_DeviceFeatures.pNext = &m_DeviceFeatures12;
-
-    vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &m_DeviceFeatures);
+    ZERO_STRUCT(&CreateInfo);
     
-    ZERO_STRUCT(&m_DeviceRayTracingProperties);
-    m_DeviceRayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+    CreateInfo.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    CreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    CreateInfo.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    CreateInfo.pfnUserCallback = VulkanDebugCallback;
+}
 
-    ZERO_STRUCT(&m_DeviceProperties);
-    m_DeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-    m_DeviceProperties.pNext = &m_DeviceRayTracingProperties;
+std::vector<const char*> CDevice::GetRequiredDeviceExtensions()
+{
+    std::vector<const char*> DeviceExtensions;
+    DeviceExtensions.reserve(16);
 
-    vkGetPhysicalDeviceProperties2(m_PhysicalDevice, &m_DeviceProperties);
-    vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &m_DeviceMemoryProperties);
+    DeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    DeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+    DeviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+    return DeviceExtensions;
 }
 
 // Helper function
@@ -885,14 +940,45 @@ SQueueFamilyIndices CDevice::GetQueueFamilyIndices(VkPhysicalDevice PhysicalDevi
     return Indices;
 }
 
-std::vector<const char*> CDevice::GetRequiredDeviceExtensions()
+void CDevice::QueryPhysicalDeviceFeatures()
 {
-    std::vector<const char*> DeviceExtensions;
-    DeviceExtensions.reserve(16);
+    ZERO_STRUCT(&m_DeviceAccelerationStructureFeatures);
+    m_DeviceAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 
-    DeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    DeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-    DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-    DeviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
-    return DeviceExtensions;
+    ZERO_STRUCT(&m_DeviceFeatures12);
+    m_DeviceFeatures12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+
+    ZERO_STRUCT(&m_DeviceDynamicRenderingFeatures);
+    m_DeviceDynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+
+    ZERO_STRUCT(&m_DeviceDescriptorBufferFeatures);
+    m_DeviceDescriptorBufferFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_FEATURES_EXT;
+
+    ZERO_STRUCT(&m_DeviceRayTracingFeatures);
+    m_DeviceRayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+    m_DeviceRayTracingFeatures.pNext = &m_DeviceAccelerationStructureFeatures;
+
+    m_DeviceFeatures12.pNext               = &m_DeviceDynamicRenderingFeatures;
+    m_DeviceDynamicRenderingFeatures.pNext = &m_DeviceDescriptorBufferFeatures;
+    m_DeviceDescriptorBufferFeatures.pNext = &m_DeviceRayTracingFeatures;
+
+    ZERO_STRUCT(&m_DeviceFeatures);
+    m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    m_DeviceFeatures.pNext = &m_DeviceFeatures12;
+
+    vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &m_DeviceFeatures);
+    
+    ZERO_STRUCT(&m_DeviceRayTracingProperties);
+    m_DeviceRayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+
+    ZERO_STRUCT(&m_DeviceDescriptorBufferProperties);
+    m_DeviceDescriptorBufferProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT;
+
+    ZERO_STRUCT(&m_DeviceProperties);
+    m_DeviceProperties.sType                 = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    m_DeviceProperties.pNext                 = &m_DeviceDescriptorBufferProperties;
+    m_DeviceDescriptorBufferProperties.pNext = &m_DeviceRayTracingProperties;
+
+    vkGetPhysicalDeviceProperties2(m_PhysicalDevice, &m_DeviceProperties);
+    vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &m_DeviceMemoryProperties);
 }

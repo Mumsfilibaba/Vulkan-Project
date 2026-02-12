@@ -3,7 +3,7 @@
 
 class CSwapchain;
 class CCommandBuffer;
-class CBindlessManager;
+class IBindlessManager;
 
 enum class ECommandQueueType
 {
@@ -58,12 +58,17 @@ public:
         return m_pBindlessManager != nullptr;
     }
 
+    bool IsDescriptorBufferSupported() const
+    {
+        return m_bDescriptorBufferSupported;
+    }
+
     bool IsRayTracingSupported() const 
     {
         return m_bRayTracingSupported;
     }
 
-    CBindlessManager& GetBindlessManager() const
+    IBindlessManager& GetBindlessManager() const
     {
         assert(IsBindlessSupported());
         return *m_pBindlessManager;
@@ -77,6 +82,11 @@ public:
     const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& GetRayTracingProperties() const
     {
         return m_DeviceRayTracingProperties;
+    }
+
+    const VkPhysicalDeviceDescriptorBufferPropertiesEXT& GetDescriptorBufferProperties() const
+    {
+        return m_DeviceDescriptorBufferProperties;
     }
 
     float GetTimestampPeriod() const
@@ -102,7 +112,7 @@ private:
     VkDevice                 m_Device;
 
     // Bindless
-    CBindlessManager* m_pBindlessManager;
+    IBindlessManager* m_pBindlessManager;
 
     // Queues
     VkQueue m_GraphicsQueue;
@@ -114,6 +124,7 @@ private:
     VkPhysicalDeviceFeatures2                        m_EnabledDeviceFeatures;
     VkPhysicalDeviceVulkan12Features                 m_EnabledDeviceFeatures12;
     VkPhysicalDeviceDynamicRenderingFeaturesKHR      m_EnabledDeviceDynamicRenderingFeatures;
+    VkPhysicalDeviceDescriptorBufferFeaturesEXT      m_EnabledDeviceDescriptorBufferFeatures;
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR    m_EnabledDeviceRayTracingFeatures;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR m_EnabledDeviceAccelerationStructureFeatures;
 
@@ -122,15 +133,18 @@ private:
     VkPhysicalDeviceFeatures2                        m_DeviceFeatures;
     VkPhysicalDeviceVulkan12Features                 m_DeviceFeatures12;
     VkPhysicalDeviceDynamicRenderingFeaturesKHR      m_DeviceDynamicRenderingFeatures;
+    VkPhysicalDeviceDescriptorBufferFeaturesEXT      m_DeviceDescriptorBufferFeatures;
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR    m_DeviceRayTracingFeatures;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR m_DeviceAccelerationStructureFeatures;
 
     // Device Properties
     VkPhysicalDeviceMemoryProperties                 m_DeviceMemoryProperties;
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR  m_DeviceRayTracingProperties;
+    VkPhysicalDeviceDescriptorBufferPropertiesEXT    m_DeviceDescriptorBufferProperties;
     SQueueFamilyIndices                              m_QueueFamilyIndices;
 
     bool m_bValidationEnabled   : 1;
     bool m_bRayTracingSupported : 1;
     bool m_bBindlessSupported   : 1;
+    bool m_bDescriptorBufferSupported : 1;
 };

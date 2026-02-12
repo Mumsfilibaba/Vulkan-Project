@@ -3,7 +3,7 @@
 #include "Renderer/GUI.h"
 #include "Renderer/RayTracer.h"
 
-#define ENABLE_HARDWARE_RT 0
+#define ENABLE_HARDWARE_RT 1
 
 extern bool GIsRunning = false;
 
@@ -102,77 +102,6 @@ bool CApplication::Init()
     return true;
 }
 
-bool CApplication::CreateWindow()
-{
-    // Setup window
-    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_TRUE);
-    glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-    // Create window
-    m_pWindow = glfwCreateWindow(m_Width, m_Height, "Vulkan Project", nullptr, nullptr);
-    if (m_pWindow)
-    {
-        // Setup callbacks
-        glfwSetWindowIconifyCallback(m_pWindow, [](GLFWwindow* pWindow, int32_t Minimized)
-        {
-            ApplicationInstance->OnWindowMinimized(pWindow, Minimized);
-        });
-
-        glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow* pWindow)
-        {
-            ApplicationInstance->OnWindowClose(pWindow);
-        });
-
-        glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow* pWindow, int32_t Width, int32_t Height)
-        {
-            ApplicationInstance->OnWindowResize(pWindow, Width, Height);
-        });
-
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-void CApplication::OnWindowMinimized(GLFWwindow* pWindow, int32_t Minimized)
-{
-    if (Minimized)
-    {
-        m_bIsMinimized = true;
-    }
-    else
-    {
-        m_bIsMinimized = false;
-    }
-}
-
-void CApplication::OnWindowResize(GLFWwindow* pWindow, int32_t Width, int32_t Height)
-{
-    // This happens when we minimize a window
-    if (Width > 0 && Height > 0)
-    {
-        m_Width  = Width;
-        m_Height = Height;
-
-        // Resize the swapchain
-        m_pSwapchain->Resize(static_cast<uint32_t>(Width), static_cast<uint32_t>(Height));
-
-        // Ensure that ImGui can create necessary resources for the main window
-        GUI::OnSwapchainRecreated();
-    }
-}
-
-void CApplication::OnWindowClose(GLFWwindow* pWindow)
-{
-    if (pWindow == m_pWindow)
-    {
-        GIsRunning = false;
-    }
-}
-
 void CApplication::Tick()
 {
     auto CurrentTime = std::chrono::system_clock::now();
@@ -243,4 +172,75 @@ void CApplication::Release()
     glfwTerminate();
 
     delete this;
+}
+
+bool CApplication::CreateWindow()
+{
+    // Setup window
+    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_TRUE);
+    glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+    // Create window
+    m_pWindow = glfwCreateWindow(m_Width, m_Height, "Vulkan Project", nullptr, nullptr);
+    if (m_pWindow)
+    {
+        // Setup callbacks
+        glfwSetWindowIconifyCallback(m_pWindow, [](GLFWwindow* pWindow, int32_t Minimized)
+        {
+            ApplicationInstance->OnWindowMinimized(pWindow, Minimized);
+        });
+
+        glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow* pWindow)
+        {
+            ApplicationInstance->OnWindowClose(pWindow);
+        });
+
+        glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow* pWindow, int32_t Width, int32_t Height)
+        {
+            ApplicationInstance->OnWindowResize(pWindow, Width, Height);
+        });
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void CApplication::OnWindowMinimized(GLFWwindow* pWindow, int32_t Minimized)
+{
+    if (Minimized)
+    {
+        m_bIsMinimized = true;
+    }
+    else
+    {
+        m_bIsMinimized = false;
+    }
+}
+
+void CApplication::OnWindowResize(GLFWwindow* pWindow, int32_t Width, int32_t Height)
+{
+    // This happens when we minimize a window
+    if (Width > 0 && Height > 0)
+    {
+        m_Width  = Width;
+        m_Height = Height;
+
+        // Resize the swapchain
+        m_pSwapchain->Resize(static_cast<uint32_t>(Width), static_cast<uint32_t>(Height));
+
+        // Ensure that ImGui can create necessary resources for the main window
+        GUI::OnSwapchainRecreated();
+    }
+}
+
+void CApplication::OnWindowClose(GLFWwindow* pWindow)
+{
+    if (pWindow == m_pWindow)
+    {
+        GIsRunning = false;
+    }
 }

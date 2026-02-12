@@ -52,7 +52,8 @@ public:
 
     void SetDebugName(const char* DebugName);
 
-    void PipelineBarrier(VkPipelineStageFlags SrcStageMask, VkPipelineStageFlags DstStageMask, VkDependencyFlags DependencyFlags, uint32_t MemoryBarrierCount, const VkMemoryBarrier* pMemoryBarriers, uint32_t BufferMemoryBarrierCount, const VkBufferMemoryBarrier* pBufferMemoryBarriers, uint32_t ImageMemoryBarrierCount, const VkImageMemoryBarrier* pImageMemoryBarriers)
+    void PipelineBarrier(VkPipelineStageFlags SrcStageMask, VkPipelineStageFlags DstStageMask, VkDependencyFlags DependencyFlags, uint32_t MemoryBarrierCount, 
+        const VkMemoryBarrier* pMemoryBarriers, uint32_t BufferMemoryBarrierCount, const VkBufferMemoryBarrier* pBufferMemoryBarriers, uint32_t ImageMemoryBarrierCount, const VkImageMemoryBarrier* pImageMemoryBarriers)
     {
         vkCmdPipelineBarrier(m_CommandBuffer, SrcStageMask, DstStageMask, DependencyFlags, MemoryBarrierCount, pMemoryBarriers, BufferMemoryBarrierCount, pBufferMemoryBarriers, ImageMemoryBarrierCount, pImageMemoryBarriers);
         m_NumCommands++;
@@ -156,6 +157,7 @@ public:
         }
 
         assert(Extensions::vkCmdBeginRenderingKHR != nullptr);
+
         Extensions::vkCmdBeginRenderingKHR(m_CommandBuffer, &RenderingInfo);
         m_NumCommands++;
     }
@@ -181,6 +183,7 @@ public:
     void WriteTimestamp(CQuery* pQuery, VkPipelineStageFlagBits PipelineStage, uint32_t QueryIndex)
     {
         assert(pQuery != nullptr);
+
         vkCmdWriteTimestamp(m_CommandBuffer, PipelineStage, pQuery->GetQueryPool(), QueryIndex);
         m_NumCommands++;
     }
@@ -189,6 +192,7 @@ public:
     {
         assert(pInfos != nullptr);
         assert(ppBuildRangeInfos != nullptr);
+
         Extensions::vkCmdBuildAccelerationStructuresKHR(m_CommandBuffer, InfoCount, pInfos, ppBuildRangeInfos);
         m_NumCommands++;
     }
@@ -196,6 +200,7 @@ public:
     void BindGraphicsPipelineState(CGraphicsPipeline* pPipelineState)
     {
         assert(pPipelineState != nullptr);
+        
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineState->GetPipeline());
         m_NumCommands++;
     }
@@ -203,6 +208,7 @@ public:
     void BindComputePipelineState(CComputePipeline* pPipelineState)
     {
         assert(pPipelineState != nullptr);
+        
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineState->GetPipeline());
         m_NumCommands++;
     }
@@ -210,6 +216,7 @@ public:
     void BindRayTracingPipelineState(CRayTracingPipeline* pPipelineState)
     {
         assert(pPipelineState != nullptr);
+
         vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pPipelineState->GetPipeline());
         m_NumCommands++;
     }
@@ -218,6 +225,7 @@ public:
     {
         assert(pDescriptorSet != nullptr);
         assert(pPipelineLayout != nullptr);
+        
         VkDescriptorSet DescriptorSet = pDescriptorSet->GetDescriptorSet();
         vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipelineLayout->GetPipelineLayout(), DescriptorSetIndex, 1, &DescriptorSet, 0, nullptr);
         m_NumCommands++;
@@ -227,6 +235,7 @@ public:
     {
         assert(pDescriptorSet != nullptr);
         assert(pPipelineLayout != nullptr);
+
         VkDescriptorSet DescriptorSet = pDescriptorSet->GetDescriptorSet();
         vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pPipelineLayout->GetPipelineLayout(), DescriptorSetIndex, 1, &DescriptorSet, 0, nullptr);
         m_NumCommands++;
@@ -236,6 +245,7 @@ public:
     {
         assert(pDescriptorSet != nullptr);
         assert(pPipelineLayout != nullptr);
+        
         VkDescriptorSet DescriptorSet = pDescriptorSet->GetDescriptorSet();
         vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pPipelineLayout->GetPipelineLayout(), DescriptorSetIndex, 1, &DescriptorSet, 0, nullptr);
         m_NumCommands++;
@@ -245,7 +255,7 @@ public:
     {
         assert(pBuffer != nullptr);
 
-        VkBuffer Buffer[] = { pBuffer->GetBuffer() };
+        VkBuffer     Buffer[]  = { pBuffer->GetBuffer() };
         VkDeviceSize Offsets[] = { Offset };
         vkCmdBindVertexBuffers(m_CommandBuffer, Slot, 1, Buffer, Offsets);
         m_NumCommands++;
@@ -254,6 +264,7 @@ public:
     void BindIndexBuffer(CBuffer* pBuffer, VkDeviceSize Offset, VkIndexType IndexType)
     {
         assert(pBuffer != nullptr);
+
         vkCmdBindIndexBuffer(m_CommandBuffer, pBuffer->GetBuffer(), Offset, IndexType);
         m_NumCommands++;
     }
@@ -261,6 +272,7 @@ public:
     void PushConstants(CPipelineLayout* pPipelineLayout, VkShaderStageFlags StageFlags, uint32_t Offset, uint32_t Size, const void* pData)
     {
         assert(pPipelineLayout != nullptr);
+        
         vkCmdPushConstants(m_CommandBuffer, pPipelineLayout->GetPipelineLayout(), StageFlags, Offset, Size, pData);
         m_NumCommands++;
     }
@@ -269,6 +281,7 @@ public:
     {
         assert(pBuffer != nullptr);
         assert(DataSize < 65536); // Ensure that we are within the allowed Size
+        
         vkCmdUpdateBuffer(m_CommandBuffer, pBuffer->GetBuffer(), DstOffset, DataSize, pData);
         m_NumCommands++;
     }
@@ -276,6 +289,7 @@ public:
     void FillBuffer(CBuffer* pBuffer, VkDeviceSize DstOffset, VkDeviceSize Size, uint32_t Data)
     {
         assert(pBuffer != nullptr);
+
         vkCmdFillBuffer(m_CommandBuffer, pBuffer->GetBuffer(), DstOffset, Size, Data);
         m_NumCommands++;
     }
@@ -313,6 +327,7 @@ public:
     void TraceRays(CRayTracingPipeline* pPipelineState, uint32_t Width, uint32_t Height, uint32_t Depth)
     {
         assert(pPipelineState != nullptr);
+
         Extensions::vkCmdTraceRaysKHR(m_CommandBuffer, pPipelineState->GetRayGenSBT(), pPipelineState->GetRayMissSBT(), pPipelineState->GetRayHitSBT(), pPipelineState->GetRayCallableSBT(), Width, Height, Depth);
         m_NumCommands++;
     }

@@ -96,8 +96,8 @@ void SModelScene::Initialize()
 
     if (Type == EModelSceneType::Default)
     {
-		glm::vec3 Translation(0.0f, 0.0f, -1.0f);
-		m_Camera.Move(Translation);
+        glm::vec3 Translation(0.0f, 0.0f, -1.0f);
+        m_Camera.Move(Translation);
     }
 
     // Cache Device
@@ -250,7 +250,7 @@ void SModelScene::Initialize()
         }
         else
         {
-            return CBindlessManager::InvalidBindlessID;
+            return IBindlessManager::InvalidBindlessID;
         }
     };
 
@@ -313,16 +313,16 @@ void SModelScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
 
-	// Right Wall Material
+    // Right Wall Material
     m_GpuMaterials.push_back(
     {
         glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
@@ -334,11 +334,11 @@ void SModelScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -355,11 +355,11 @@ void SModelScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -367,22 +367,22 @@ void SModelScene::Initialize()
     // Emissive
     m_GpuMaterials.push_back(
     {
-		glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-		glm::vec4(40.0f, 40.0f, 40.0f, 1.0f),
-		glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-		glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-		0.0f,
-		0.0f,
-		1.0f,
-		0.0f,
-		0.0f,
-		CBindlessManager::InvalidBindlessID,
-		CBindlessManager::InvalidBindlessID,
-		CBindlessManager::InvalidBindlessID,
-		CBindlessManager::InvalidBindlessID,
-		CBindlessManager::InvalidBindlessID,
-		// padding
-		0, 0
+        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+        glm::vec4(40.0f, 40.0f, 40.0f, 1.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+        0.0f,
+        0.0f,
+        1.0f,
+        0.0f,
+        0.0f,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        // padding
+        0, 0
     });
 }
 
@@ -431,11 +431,11 @@ void SSphereScene::Initialize()
             1.0f,
             0.0f,
             0.0f,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
             // padding
             0, 0
         });
@@ -452,11 +452,11 @@ void SSphereScene::Initialize()
             1.0f,
             0.0f,
             0.0f,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
             // padding
             0, 0
         });
@@ -473,11 +473,11 @@ void SSphereScene::Initialize()
             1.0f,
             0.0f,
             0.0f,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
             // padding
             0, 0
         });
@@ -494,11 +494,11 @@ void SSphereScene::Initialize()
             1.0f,
             0.0f,
             0.0f,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
             // padding
             0, 0
         });
@@ -566,11 +566,11 @@ void SSphereScene::Initialize()
             1.0f,
             0.0f,
             0.0f,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
             // padding
             0, 0
         });
@@ -587,11 +587,11 @@ void SSphereScene::Initialize()
             1.0f,
             0.0f,
             0.0f,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
-            CBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
             // padding
             0, 0
         });
@@ -599,22 +599,22 @@ void SSphereScene::Initialize()
         // Light Material
         m_GpuMaterials.push_back(
         {
-		    glm::vec4(0.0f,  0.0f,  0.0f, 1.0f),
-		    glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
-		    glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-		    glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-		    0.0f,
-		    0.0f,
+            glm::vec4(0.0f,  0.0f,  0.0f, 1.0f),
+            glm::vec4(20.0f, 18.0f, 14.0f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            0.0f,
+            0.0f,
             1.0f,
-		    0.0f,
-		    0.0f,
-		    CBindlessManager::InvalidBindlessID,
-		    CBindlessManager::InvalidBindlessID,
-		    CBindlessManager::InvalidBindlessID,
-		    CBindlessManager::InvalidBindlessID,
-		    CBindlessManager::InvalidBindlessID,
-		    // padding
-		    0, 0
+            0.0f,
+            0.0f,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            // padding
+            0, 0
         });
 
         // Spheres
@@ -646,11 +646,11 @@ void SSphereScene::Initialize()
                     IncidenceOfRefraction,
                     1.0f,
                     0.0f,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
                     // padding
                     0, 0
                 });
@@ -672,11 +672,11 @@ void SSphereScene::Initialize()
                     1.1f,
                     1.0f,
                     Roughness,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
                     // padding
                     0, 0
                 });
@@ -698,11 +698,11 @@ void SSphereScene::Initialize()
                     1.1f,
                     1.0f,
                     Roughness,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
-                    CBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
+                    IBindlessManager::InvalidBindlessID,
                     // padding
                     0, 0
                 });
@@ -788,11 +788,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -808,11 +808,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -828,11 +828,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -849,11 +849,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -870,11 +870,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -890,11 +890,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -910,11 +910,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -930,11 +930,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -950,11 +950,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -971,11 +971,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -991,11 +991,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });
@@ -1011,11 +1011,11 @@ void SCornellBoxScene::Initialize()
         1.0f,
         0.0f,
         0.0f,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
-        CBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
+        IBindlessManager::InvalidBindlessID,
         // padding
         0, 0
     });

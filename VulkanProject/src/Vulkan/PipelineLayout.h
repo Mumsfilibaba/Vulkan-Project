@@ -33,7 +33,13 @@ public:
         return m_BindlessDescriptorSetIndex;
     }
 
+    bool IsBindlessEnabled() const
+    {
+        return m_bBindlessEnabled;
+    }
+
 private:
     VkPipelineLayout m_PipelineLayout;
     uint32_t         m_BindlessDescriptorSetIndex;
+    bool             m_bBindlessEnabled;
 };

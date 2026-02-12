@@ -7,6 +7,7 @@
 CPipelineLayout* CPipelineLayout::Create(CDevice* pDevice, const SPipelineLayoutParams& Params)
 {
     CPipelineLayout* pPipelineLayout = new CPipelineLayout(pDevice);
+    pPipelineLayout->m_bBindlessEnabled = Params.bEnableBindless;
 
     std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
     DescriptorSetLayouts.reserve(Params.NumLayouts);
@@ -62,6 +63,7 @@ CPipelineLayout::CPipelineLayout(CDevice* pDevice)
     : CDeviceChild(pDevice)
     , m_PipelineLayout(VK_NULL_HANDLE)
     , m_BindlessDescriptorSetIndex(uint32_t(-1))
+    , m_bBindlessEnabled(false)
 {
 }
 

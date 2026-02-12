@@ -27,7 +27,7 @@ CBaseRenderer::CBaseRenderer()
     , m_pOutputTextureView(nullptr)
     , m_pOutputTextureDescriptorSet(nullptr)
     , m_pSkybox(nullptr)
-    , m_SkyboxBindlessIndex(CBindlessManager::InvalidBindlessID)
+    , m_SkyboxBindlessIndex(IBindlessManager::InvalidBindlessID)
     , m_pSkyboxSampler(nullptr)
     , m_pTonemapSampler(nullptr)
     , m_pTonemappingPipeline(nullptr)
@@ -171,121 +171,54 @@ void CBaseRenderer::Init(CDevice* pDevice, CSwapchain* pSwapchain)
     CreateOrResizeSceneTexture(1280, 720);
 }
 
-void CBaseRenderer::CreateTonemappingResources()
+void CBaseRenderer::Release()
 {
-    // Create Tonemap DescriptorSetLayout
-    constexpr uint32_t NumTonemappingBindings = 2;
-    VkDescriptorSetLayoutBinding TonemappingBindings[NumTonemappingBindings];
+    GetDevice()->WaitForIdle();
 
-    // Output Image
-    TonemappingBindings[0].binding            = 0;
-    TonemappingBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    TonemappingBindings[0].descriptorCount    = 1;
-    TonemappingBindings[0].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-    TonemappingBindings[0].pImmutableSamplers = nullptr;
+    CTextureResource::ReleaseLoader();
 
-    // Settings Buffer
-    TonemappingBindings[1].binding            = 1;
-    TonemappingBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    TonemappingBindings[1].descriptorCount    = 1;
-    TonemappingBindings[1].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-    TonemappingBindings[1].pImmutableSamplers = nullptr;
-
-    SDescriptorSetLayoutParams TonemappingDescriptorSetLayoutParams;
-    TonemappingDescriptorSetLayoutParams.pBindings   = TonemappingBindings;
-    TonemappingDescriptorSetLayoutParams.NumBindings = NumTonemappingBindings;
-
-    m_pTonemappingDescriptorSetLayout = CDescriptorSetLayout::Create(GetDevice(), TonemappingDescriptorSetLayoutParams);
-    assert(m_pTonemappingDescriptorSetLayout != nullptr);
-    m_pTonemappingDescriptorSetLayout->SetDebugName("TonemappingPass DescriptorSetLayout");
-
-    // Create Tonemapping PipelineLayout
-    SPipelineLayoutParams ToneMappingPipelineLayoutParams;
-    ToneMappingPipelineLayoutParams.ppLayouts  = &m_pTonemappingDescriptorSetLayout;
-    ToneMappingPipelineLayoutParams.NumLayouts = 1;
-
-    m_pTonemappingPipelineLayout = CPipelineLayout::Create(GetDevice(), ToneMappingPipelineLayoutParams);
-    assert(m_pTonemappingPipelineLayout != nullptr);
-    m_pTonemappingPipelineLayout->SetDebugName("TonemappingPass PipelineLayout");
-
-    // PipelineState, RenderPass and Shaders
-    CShaderModule* pVertex = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/fullscreenVS.spv");
-    assert(pVertex != nullptr);
-    pVertex->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/fullscreenVS.spv");
-
-    CShaderModule* pFragment = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/tonemap.spv");
-    assert(pFragment != nullptr);
-    pFragment->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/tonemap.spv");
-
-    SGraphicsPipelineStateParams TonemappingPipelineParams = {};
-    TonemappingPipelineParams.pBindingDescriptions      = nullptr;
-    TonemappingPipelineParams.BindingDescriptionCount   = 0;
-    TonemappingPipelineParams.pAttributeDescriptions    = nullptr;
-    TonemappingPipelineParams.AttributeDescriptionCount = 0;
-    TonemappingPipelineParams.pVertexShader             = pVertex;
-    TonemappingPipelineParams.pFragmentShader           = pFragment;
-    VkFormat TonemapColorFormat = VK_FORMAT_R8G8B8A8_UNORM;
-    TonemappingPipelineParams.pColorAttachmentFormats   = &TonemapColorFormat;
-    TonemappingPipelineParams.ColorAttachmentFormatCount = 1;
-    TonemappingPipelineParams.pPipelineLayout           = m_pTonemappingPipelineLayout;
-
-    m_pTonemappingPipeline = CGraphicsPipeline::Create(GetDevice(), TonemappingPipelineParams);
-    assert(m_pTonemappingPipeline != nullptr);
-    m_pTonemappingPipeline->SetDebugName("TonemappingPass Pipeline");
-
-    delete pVertex;
-    delete pFragment;
-}
-
-void CBaseRenderer::PerformTonemapping(CCommandBuffer* pCommandBuffer)
-{
-    // Update Tonemap Settings
-    STonemappingBuffer TonemappingBuffer = {};
-    TonemappingBuffer.Exposure = GetScene()->GetExposure();
-    pCommandBuffer->UpdateBuffer(m_pTonemappingBuffer, 0, sizeof(STonemappingBuffer), &TonemappingBuffer);
-
-    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-
-    SRenderingAttachment ColorAttachment = {};
-    ColorAttachment.ImageView         = m_pOutputTextureView->GetImageView();
-    ColorAttachment.ImageLayout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    ColorAttachment.LoadOp            = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    ColorAttachment.StoreOp           = VK_ATTACHMENT_STORE_OP_STORE;
-    ColorAttachment.ClearValue.color  = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-    SRenderingParams RenderingParams = {};
-    RenderingParams.pColorAttachments    = &ColorAttachment;
-    RenderingParams.ColorAttachmentCount = 1;
-    RenderingParams.RenderArea.offset    = { 0, 0 };
-    RenderingParams.RenderArea.extent    = { m_ViewportWidth, m_ViewportHeight };
-    pCommandBuffer->BeginRendering(RenderingParams);
-
-    // Set viewport
-    VkViewport Viewport = { 0.0f, 0.0f, float(m_ViewportWidth), float(m_ViewportHeight), 0.0f, 1.0f };
-    pCommandBuffer->SetViewport(Viewport);
-
-    VkRect2D scissor = { { 0, 0}, { m_ViewportWidth, m_ViewportHeight } };
-    pCommandBuffer->SetScissorRect(scissor);
-
-    // Bind pipeline
-    pCommandBuffer->BindGraphicsPipelineState(m_pTonemappingPipeline);
-
-    // Perform Tonemapping
-    const uint64_t Frame = (m_FrameIndex % 2);
-    if (Frame == 0)
+    for (CQuery* Query : m_TimestampQueries)
     {
-        pCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet0, 0);
-    }
-    else
-    {
-        pCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet1, 0);
+        SAFE_DELETE(Query);
     }
 
-    // Draw
-    pCommandBuffer->DrawInstanced(3, 1, 0, 0);
+    for (CCommandBuffer* CommandBuffer : m_CommandBuffers)
+    {
+        SAFE_DELETE(CommandBuffer);
+    }
 
-    pCommandBuffer->EndRendering();
-    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    m_CommandBuffers.clear();
+    m_TimestampQueries.clear();
+
+    SAFE_DELETE(m_pOutputTextureDescriptorSet);
+
+    // Release DescriptorSets
+    ReleaseDescriptorSets();
+
+    // Release Renderer Specific resources
+    ReleaseResources();
+
+    SAFE_DELETE(m_pSkybox);
+
+    SAFE_DELETE(m_pSkyboxSampler);
+    SAFE_DELETE(m_pTonemapSampler);
+    SAFE_DELETE(m_pSceneTexture1);
+    SAFE_DELETE(m_pSceneTextureView1);
+    SAFE_DELETE(m_pSceneTexture0);
+    SAFE_DELETE(m_pSceneTextureView0);
+    SAFE_DELETE(m_pOutputTexture);
+    SAFE_DELETE(m_pOutputTextureView);
+
+    SAFE_DELETE(m_pTonemappingPipeline);
+    SAFE_DELETE(m_pTonemappingPipelineLayout);
+    SAFE_DELETE(m_pTonemappingDescriptorSetLayout);
+
+    SAFE_DELETE(m_pCameraBuffer);
+    SAFE_DELETE(m_pRandomBuffer);
+    SAFE_DELETE(m_pTonemappingBuffer);
+
+    SAFE_DELETE(m_pDescriptorPool);
+    SAFE_DELETE(m_pDeviceAllocator);
 }
 
 void CBaseRenderer::Tick(float DeltaTime)
@@ -538,56 +471,6 @@ void CBaseRenderer::OnRenderUI()
     RenderUI();
 }
 
-void CBaseRenderer::Release()
-{
-    GetDevice()->WaitForIdle();
-
-    CTextureResource::ReleaseLoader();
-
-    for (CQuery* Query : m_TimestampQueries)
-    {
-        SAFE_DELETE(Query);
-    }
-
-    for (CCommandBuffer* CommandBuffer : m_CommandBuffers)
-    {
-        SAFE_DELETE(CommandBuffer);
-    }
-
-    m_CommandBuffers.clear();
-    m_TimestampQueries.clear();
-
-    SAFE_DELETE(m_pOutputTextureDescriptorSet);
-
-    // Release DescriptorSets
-    ReleaseDescriptorSets();
-
-    // Release Renderer Specific resources
-    ReleaseResources();
-
-    SAFE_DELETE(m_pSkybox);
-
-    SAFE_DELETE(m_pSkyboxSampler);
-    SAFE_DELETE(m_pTonemapSampler);
-    SAFE_DELETE(m_pSceneTexture1);
-    SAFE_DELETE(m_pSceneTextureView1);
-    SAFE_DELETE(m_pSceneTexture0);
-    SAFE_DELETE(m_pSceneTextureView0);
-    SAFE_DELETE(m_pOutputTexture);
-    SAFE_DELETE(m_pOutputTextureView);
-
-    SAFE_DELETE(m_pTonemappingPipeline);
-    SAFE_DELETE(m_pTonemappingPipelineLayout);
-    SAFE_DELETE(m_pTonemappingDescriptorSetLayout);
-
-    SAFE_DELETE(m_pCameraBuffer);
-    SAFE_DELETE(m_pRandomBuffer);
-    SAFE_DELETE(m_pTonemappingBuffer);
-
-    SAFE_DELETE(m_pDescriptorPool);
-    SAFE_DELETE(m_pDeviceAllocator);
-}
-
 bool CBaseRenderer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
 {
     // If the SceneTexture does not exist yet, we just create the resource directly
@@ -714,11 +597,14 @@ void CBaseRenderer::ReleaseDescriptorSets()
 
 void CBaseRenderer::CreateGlobalBuffers()
 {
+    const VkBufferUsageFlags DescriptorBufferExtraUsage =
+        GetDevice()->IsDescriptorBufferSupported() ? VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT : 0;
+
     // Camera
     SBufferParams CameraBufferParams;
     CameraBufferParams.Size             = sizeof(SCameraBuffer);
     CameraBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    CameraBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    CameraBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
 
     m_pCameraBuffer = CBuffer::Create(GetDevice(), CameraBufferParams, GetDeviceAllocator());
     assert(m_pCameraBuffer != nullptr);
@@ -728,7 +614,7 @@ void CBaseRenderer::CreateGlobalBuffers()
     SBufferParams RandomBufferParams;
     RandomBufferParams.Size             = sizeof(SRandomBuffer);
     RandomBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    RandomBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    RandomBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
 
     m_pRandomBuffer = CBuffer::Create(GetDevice(), RandomBufferParams, GetDeviceAllocator());
     assert(m_pRandomBuffer != nullptr);
@@ -743,4 +629,121 @@ void CBaseRenderer::CreateGlobalBuffers()
     m_pTonemappingBuffer = CBuffer::Create(GetDevice(), TonemappingBufferParams, GetDeviceAllocator());
     assert(m_pTonemappingBuffer != nullptr);
     m_pTonemappingBuffer->SetDebugName("TonemappingBuffer");
+}
+
+void CBaseRenderer::CreateTonemappingResources()
+{
+    // Create Tonemap DescriptorSetLayout
+    constexpr uint32_t NumTonemappingBindings = 2;
+    VkDescriptorSetLayoutBinding TonemappingBindings[NumTonemappingBindings];
+
+    // Output Image
+    TonemappingBindings[0].binding            = 0;
+    TonemappingBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    TonemappingBindings[0].descriptorCount    = 1;
+    TonemappingBindings[0].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+    TonemappingBindings[0].pImmutableSamplers = nullptr;
+
+    // Settings Buffer
+    TonemappingBindings[1].binding            = 1;
+    TonemappingBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    TonemappingBindings[1].descriptorCount    = 1;
+    TonemappingBindings[1].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+    TonemappingBindings[1].pImmutableSamplers = nullptr;
+
+    SDescriptorSetLayoutParams TonemappingDescriptorSetLayoutParams;
+    TonemappingDescriptorSetLayoutParams.pBindings   = TonemappingBindings;
+    TonemappingDescriptorSetLayoutParams.NumBindings = NumTonemappingBindings;
+
+    m_pTonemappingDescriptorSetLayout = CDescriptorSetLayout::Create(GetDevice(), TonemappingDescriptorSetLayoutParams);
+    assert(m_pTonemappingDescriptorSetLayout != nullptr);
+    m_pTonemappingDescriptorSetLayout->SetDebugName("TonemappingPass DescriptorSetLayout");
+
+    // Create Tonemapping PipelineLayout
+    SPipelineLayoutParams ToneMappingPipelineLayoutParams;
+    ToneMappingPipelineLayoutParams.ppLayouts  = &m_pTonemappingDescriptorSetLayout;
+    ToneMappingPipelineLayoutParams.NumLayouts = 1;
+
+    m_pTonemappingPipelineLayout = CPipelineLayout::Create(GetDevice(), ToneMappingPipelineLayoutParams);
+    assert(m_pTonemappingPipelineLayout != nullptr);
+    m_pTonemappingPipelineLayout->SetDebugName("TonemappingPass PipelineLayout");
+
+    // PipelineState, RenderPass and Shaders
+    CShaderModule* pVertex = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/fullscreenVS.spv");
+    assert(pVertex != nullptr);
+    pVertex->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/fullscreenVS.spv");
+
+    CShaderModule* pFragment = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/tonemap.spv");
+    assert(pFragment != nullptr);
+    pFragment->SetDebugName(RESOURCE_PATH"/shaders/compiled_shaders/tonemap.spv");
+
+    SGraphicsPipelineStateParams TonemappingPipelineParams = {};
+    TonemappingPipelineParams.pBindingDescriptions      = nullptr;
+    TonemappingPipelineParams.BindingDescriptionCount   = 0;
+    TonemappingPipelineParams.pAttributeDescriptions    = nullptr;
+    TonemappingPipelineParams.AttributeDescriptionCount = 0;
+    TonemappingPipelineParams.pVertexShader             = pVertex;
+    TonemappingPipelineParams.pFragmentShader           = pFragment;
+    VkFormat TonemapColorFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    TonemappingPipelineParams.pColorAttachmentFormats   = &TonemapColorFormat;
+    TonemappingPipelineParams.ColorAttachmentFormatCount = 1;
+    TonemappingPipelineParams.pPipelineLayout           = m_pTonemappingPipelineLayout;
+
+    m_pTonemappingPipeline = CGraphicsPipeline::Create(GetDevice(), TonemappingPipelineParams);
+    assert(m_pTonemappingPipeline != nullptr);
+    m_pTonemappingPipeline->SetDebugName("TonemappingPass Pipeline");
+
+    delete pVertex;
+    delete pFragment;
+}
+
+void CBaseRenderer::PerformTonemapping(CCommandBuffer* pCommandBuffer)
+{
+    // Update Tonemap Settings
+    STonemappingBuffer TonemappingBuffer = {};
+    TonemappingBuffer.Exposure = GetScene()->GetExposure();
+    pCommandBuffer->UpdateBuffer(m_pTonemappingBuffer, 0, sizeof(STonemappingBuffer), &TonemappingBuffer);
+
+    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    SRenderingAttachment ColorAttachment = {};
+    ColorAttachment.ImageView         = m_pOutputTextureView->GetImageView();
+    ColorAttachment.ImageLayout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    ColorAttachment.LoadOp            = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    ColorAttachment.StoreOp           = VK_ATTACHMENT_STORE_OP_STORE;
+    ColorAttachment.ClearValue.color  = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    SRenderingParams RenderingParams = {};
+    RenderingParams.pColorAttachments    = &ColorAttachment;
+    RenderingParams.ColorAttachmentCount = 1;
+    RenderingParams.RenderArea.offset    = { 0, 0 };
+    RenderingParams.RenderArea.extent    = { m_ViewportWidth, m_ViewportHeight };
+    pCommandBuffer->BeginRendering(RenderingParams);
+
+    // Set viewport
+    VkViewport Viewport = { 0.0f, 0.0f, float(m_ViewportWidth), float(m_ViewportHeight), 0.0f, 1.0f };
+    pCommandBuffer->SetViewport(Viewport);
+
+    VkRect2D scissor = { { 0, 0}, { m_ViewportWidth, m_ViewportHeight } };
+    pCommandBuffer->SetScissorRect(scissor);
+
+    // Bind pipeline
+    pCommandBuffer->BindGraphicsPipelineState(m_pTonemappingPipeline);
+
+    // Perform Tonemapping
+    const uint64_t Frame = (m_FrameIndex % 2);
+    if (Frame == 0)
+    {
+        pCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet0, 0);
+    }
+    else
+    {
+        pCommandBuffer->BindGraphicsDescriptorSet(m_pTonemappingPipelineLayout, m_pTonemappingDescriptorSet1, 0);
+    }
+
+    // Draw
+    pCommandBuffer->DrawInstanced(3, 1, 0, 0);
+
+    pCommandBuffer->EndRendering();
+    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }

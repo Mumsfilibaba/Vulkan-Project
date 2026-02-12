@@ -91,52 +91,14 @@ CCommandBuffer::~CCommandBuffer()
     }
 }
 
-void CCommandBuffer::SetDebugName(const char* DebugName)
-{
-    if (Extensions::vkSetDebugUtilsObjectNameEXT)
-    {
-        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
-        ZERO_STRUCT(&DebugNameInfo);
-
-        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-        DebugNameInfo.objectType   = VK_OBJECT_TYPE_COMMAND_BUFFER;
-        DebugNameInfo.pObjectName  = DebugName;
-        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_CommandBuffer);
-
-        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
-        if (Result != VK_SUCCESS)
-        {
-            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
-        }
-
-        DebugNameInfo.objectType   = VK_OBJECT_TYPE_COMMAND_POOL;
-        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_CommandPool);
-
-        Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
-        if (Result != VK_SUCCESS)
-        {
-            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
-        }
-
-        DebugNameInfo.objectType   = VK_OBJECT_TYPE_FENCE;
-        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Fence);
-
-        Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
-        if (Result != VK_SUCCESS)
-        {
-            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
-        }
-    }
-}
-
 void CCommandBuffer::BindBindlessDescriptors(CPipelineLayout* pPipelineLayout, VkPipelineBindPoint BindPoint)
 {
     assert(pPipelineLayout != nullptr);
     assert(pPipelineLayout->GetBindlessDescriptorSetIndex() != uint32_t(-1));
-    
-    CBindlessManager& BindlessManager = GetDevice()->GetBindlessManager();
-    VkDescriptorSet BindlessDescriptorSet = BindlessManager.GetDescriptorSet();
-    vkCmdBindDescriptorSets(m_CommandBuffer, BindPoint, pPipelineLayout->GetPipelineLayout(), pPipelineLayout->GetBindlessDescriptorSetIndex(), 1, &BindlessDescriptorSet, 0, nullptr);
+
+    IBindlessManager& BindlessManager = GetDevice()->GetBindlessManager();
+    BindlessManager.BindToCommandBuffer(this, pPipelineLayout, BindPoint);
+
     m_NumCommands++;
 }
 
@@ -256,4 +218,42 @@ void CCommandBuffer::TransitionImage(VkImage Image, VkImageLayout OldLayout, VkI
     }
 
     PipelineBarrier(SourceStage, DestinationStage, 0, 0, nullptr, 0, nullptr, 1, &Barrier);
+}
+
+void CCommandBuffer::SetDebugName(const char* DebugName)
+{
+    if (Extensions::vkSetDebugUtilsObjectNameEXT)
+    {
+        VkDebugUtilsObjectNameInfoEXT DebugNameInfo;
+        ZERO_STRUCT(&DebugNameInfo);
+
+        DebugNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_COMMAND_BUFFER;
+        DebugNameInfo.pObjectName  = DebugName;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_CommandBuffer);
+
+        VkResult Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
+        }
+
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_COMMAND_POOL;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_CommandPool);
+
+        Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
+        }
+
+        DebugNameInfo.objectType   = VK_OBJECT_TYPE_FENCE;
+        DebugNameInfo.objectHandle = reinterpret_cast<uint64_t>(m_Fence);
+
+        Result = Extensions::vkSetDebugUtilsObjectNameEXT(GetDevice()->GetDevice(), &DebugNameInfo);
+        if (Result != VK_SUCCESS)
+        {
+            LOG("Failed to set name '%s'. Error: %d\n", DebugNameInfo.pObjectName, Result);
+        }
+    }
 }

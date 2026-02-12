@@ -57,6 +57,42 @@ CSoftwareRayTracer::~CSoftwareRayTracer()
 {
 }
 
+bool CSoftwareRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
+{
+    if (!CBaseRenderer::CreateOrResizeSceneTexture(Width, Height))
+    {
+        // No resize happened so we return here as well
+        return false;
+    }
+
+    SAFE_DELETE(m_pDepthBufferTexture);
+    SAFE_DELETE(m_pDepthBufferTextureView);
+
+    // Create depth-buffer texture for the viewport
+    STextureParams DepthBufferParams = {};
+    DepthBufferParams.Format        = VK_FORMAT_D24_UNORM_S8_UINT;
+    DepthBufferParams.ImageType     = VK_IMAGE_TYPE_2D;
+    DepthBufferParams.Width         = Width;
+    DepthBufferParams.Height        = Height;
+    DepthBufferParams.Usage         = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    DepthBufferParams.InitialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    
+    m_pDepthBufferTexture = CTexture::Create(GetDevice(), DepthBufferParams);
+    assert(m_pDepthBufferTexture != nullptr);
+    m_pDepthBufferTexture->SetDebugName("DepthBuffer");
+    
+    {
+        STextureViewParams TextureViewParams = {};
+        TextureViewParams.pTexture = m_pDepthBufferTexture;
+        
+        m_pDepthBufferTextureView = CTextureView::Create(GetDevice(), TextureViewParams);
+        assert(m_pDepthBufferTextureView != nullptr);
+        m_pDepthBufferTextureView->SetDebugName("DepthBufferView");
+    }
+
+    return true;
+}
+
 void CSoftwareRayTracer::CreateResources()
 {
     // Create scene
@@ -105,220 +141,52 @@ void CSoftwareRayTracer::ReleaseResources()
     SAFE_DELETE(m_pDepthBufferTextureView);
 }
 
-void CSoftwareRayTracer::Render(CCommandBuffer* pCommandBuffer)
+void CSoftwareRayTracer::CreateDescriptorSets()
 {
-    // Update global buffers
-    UpdateGlobalBuffers(pCommandBuffer);
+    // Create common DescriptorSets
+    CBaseRenderer::CreateDescriptorSets();
 
-    if (m_pScene->m_Settings.ViewMode != ESoftwareViewMode::Debug)
-    {
-        // Perform RayTracing
-        PerformRayTracing(pCommandBuffer);
+    // RayTracing Pass (fully bindless)
+    GetDevice()->GetBindlessManager().BindStorageImage(m_pSceneTextureView0->GetImageView(), 2);
+    GetDevice()->GetBindlessManager().BindStorageImage(m_pSceneTextureView1->GetImageView(), 3);
+    GetDevice()->GetBindlessManager().BindCombinedImageSampler(m_pSkybox->GetTextureView()->GetImageView(), m_pSkyboxSampler->GetSampler(), 4);
+    GetDevice()->GetBindlessManager().BindStorageBuffer(m_pQuadBuffer->GetBuffer(), m_pQuadBuffer->GetSize(), 5);
+    GetDevice()->GetBindlessManager().BindStorageBuffer(m_pSphereBuffer->GetBuffer(), m_pSphereBuffer->GetSize(), 6);
+    GetDevice()->GetBindlessManager().BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), m_pMaterialBuffer->GetSize(), 7);
+    GetDevice()->GetBindlessManager().BindStorageBuffer(m_pVertexPositionsBuffer->GetBuffer(), m_pVertexPositionsBuffer->GetSize(), 8);
+    GetDevice()->GetBindlessManager().BindStorageBuffer(m_pVertexBuffer->GetBuffer(), m_pVertexBuffer->GetSize(), 9);
+    GetDevice()->GetBindlessManager().BindStorageBuffer(m_pIndexBuffer->GetBuffer(), m_pIndexBuffer->GetSize(), 10);
+    GetDevice()->GetBindlessManager().BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), m_pTriangleBuffer->GetSize(), 11);
+    GetDevice()->GetBindlessManager().BindStorageBuffer(m_pMeshBuffer->GetBuffer(), m_pMeshBuffer->GetSize(), 12);
+    GetDevice()->GetBindlessManager().BindStorageBuffer(m_pBvhBuffer->GetBuffer(), m_pBvhBuffer->GetSize(), 13);
+    GetDevice()->GetBindlessManager().BindUniformBuffer(m_pCameraBuffer->GetBuffer(), m_pCameraBuffer->GetSize(), 14);
+    GetDevice()->GetBindlessManager().BindUniformBuffer(m_pRandomBuffer->GetBuffer(), m_pRandomBuffer->GetSize(), 15);
+    GetDevice()->GetBindlessManager().BindUniformBuffer(m_pSceneSettingsBuffer->GetBuffer(), m_pSceneSettingsBuffer->GetSize(), 16);
 
-        // Scene textures are assumed to be in GENERAL when CBaseRenderer::Render is called
-        pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-        pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    // Debug Pass
+    m_pDebugDescriptorSet0 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
+    assert(m_pDebugDescriptorSet0 != nullptr);
+    m_pDebugDescriptorSet0->SetDebugName("DebugPass DescriptorSet0");
 
-        // Tonemapping
-        PerformTonemapping(pCommandBuffer);
+    m_pDebugDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
+    m_pDebugDescriptorSet0->BindStorageBuffer(m_pAABBInstanceBuffer->GetBuffer(), 1);
+    
+    m_pDebugDescriptorSet1 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
+    assert(m_pDebugDescriptorSet1 != nullptr);
+    m_pDebugDescriptorSet1->SetDebugName("DebugPass DescriptorSet1");
 
-        // Scene textures are assumed to be in GENERAL when CBaseRenderer::Render is called so let's put it back into the correct format
-        pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
-        pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
-    }
-    else
-    {
-        // Rasterize triangle models and display the BVH
-        PerformDebugPass(pCommandBuffer);
-    }
+    m_pDebugDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
+    m_pDebugDescriptorSet1->BindStorageBuffer(m_pAABBInstanceBuffer->GetBuffer(), 1);
 }
 
-void CSoftwareRayTracer::PerformRayTracing(CCommandBuffer* pCommandBuffer)
+void CSoftwareRayTracer::ReleaseDescriptorSets()
 {
-    // Update Scene
-    SSoftwareSceneBuffer SceneBuffer = {};
-    SceneBuffer.NumQuads              = m_pScene->m_Quads.size();
-    SceneBuffer.NumSpheres            = m_pScene->m_Spheres.size();
-    SceneBuffer.NumMaterials          = m_pScene->m_GpuMaterials.size();
-    SceneBuffer.NumMeshes             = m_pScene->m_Meshes.size();
-    SceneBuffer.NumBvhNodes           = m_pScene->m_AccelerationStructure.m_BoundingBoxes.size();
-    SceneBuffer.NumTriangles          = m_pScene->m_AccelerationStructure.m_TriangleInfo.size();
-    SceneBuffer.BackgroundType        = m_pScene->m_Settings.BackgroundType;
-    SceneBuffer.NumBounces            = m_pScene->m_Settings.NumBounces;
-    SceneBuffer.ViewMode              = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
-    SceneBuffer.GradientLightStrength = m_pScene->m_Settings.GradientLightStrength;
-    
-    pCommandBuffer->UpdateBuffer(m_pSceneSettingsBuffer, 0, sizeof(SSoftwareSceneBuffer), &SceneBuffer);
+    CBaseRenderer::ReleaseDescriptorSets();
 
-    // Barrier before reading the buffer from the shader
-    VkMemoryBarrier MemoryBarrier;
-    MemoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    MemoryBarrier.pNext         = nullptr;
-    MemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    MemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    pCommandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &MemoryBarrier, 0, nullptr, 0, nullptr);
-
-    // Bind pipeline and descriptorSet
-    pCommandBuffer->BindComputePipelineState(m_pRayTracingPipeline.load());
-
-    const uint64_t Frame = GetFrameIndex() % 2;
-    if (Frame == 0)
-    {
-        pCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet0, 0);
-    }
-    else
-    {
-        pCommandBuffer->BindComputeDescriptorSet(m_pRayTracingPipelineLayout, m_pRayTracingDescriptorSet1, 0);
-    }
-
-    pCommandBuffer->BindBindlessDescriptors(m_pRayTracingPipelineLayout, VK_PIPELINE_BIND_POINT_COMPUTE);
-
-    // Dispatch RayTracing
-    const uint32_t Threads = 16;
-    VkExtent2D DispatchSize = { Math::AlignUp(m_pSceneTexture0->GetWidth(), Threads) / Threads, Math::AlignUp(m_pSceneTexture0->GetHeight(), Threads) / Threads };
-    pCommandBuffer->Dispatch(DispatchSize.width, DispatchSize.height, 1);
-}
-
-void CSoftwareRayTracer::PerformDebugPass(CCommandBuffer* pCommandBuffer)
-{
-    // Define clear colors
-    VkClearValue ClearColor[2];
-    ClearColor[0].color        = { 0.0f, 0.0f, 0.0f, 1.0f };
-    ClearColor[1].depthStencil = { 1.0f, 0 };
-
-    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-
-    SRenderingAttachment ColorAttachment = {};
-    ColorAttachment.ImageView       = m_pOutputTextureView->GetImageView();
-    ColorAttachment.ImageLayout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    ColorAttachment.LoadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    ColorAttachment.StoreOp         = VK_ATTACHMENT_STORE_OP_STORE;
-    ColorAttachment.ClearValue      = ClearColor[0];
-
-    SRenderingAttachment DepthAttachment = {};
-    DepthAttachment.ImageView      = m_pDepthBufferTextureView->GetImageView();
-    DepthAttachment.ImageLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    DepthAttachment.LoadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    DepthAttachment.StoreOp        = VK_ATTACHMENT_STORE_OP_STORE;
-    DepthAttachment.ClearValue     = ClearColor[1];
-
-    SRenderingParams RenderingParams = {};
-    RenderingParams.pColorAttachments    = &ColorAttachment;
-    RenderingParams.ColorAttachmentCount = 1;
-    RenderingParams.pDepthAttachment     = &DepthAttachment;
-    RenderingParams.RenderArea.offset    = { 0, 0 };
-    RenderingParams.RenderArea.extent    = { GetViewportWidth(), GetViewportHeight() };
-
-    pCommandBuffer->BeginRendering(RenderingParams);
-
-    if (!m_pScene->m_pVertexPositionsBuffer || !m_pScene->m_pIndexBuffer)
-    {
-        pCommandBuffer->EndRendering();
-        pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-        return;
-    }
-
-    // Set viewport
-    VkViewport Viewport;
-    Viewport.width    =  static_cast<float>(GetViewportWidth());
-    Viewport.height   = -static_cast<float>(GetViewportHeight());
-    Viewport.minDepth =  0.0f;
-    Viewport.maxDepth =  1.0f;
-    Viewport.x        =  0.0f;
-    Viewport.y        =  static_cast<float>(GetViewportHeight());
-
-    pCommandBuffer->SetViewport(Viewport);
-
-    VkRect2D scissor = { { 0, 0}, { GetViewportWidth(), GetViewportHeight() } };
-    pCommandBuffer->SetScissorRect(scissor);
-    
-    // Draw Mesh
-    {
-        pCommandBuffer->BindGraphicsPipelineState(m_pDebugPipeline);
-
-        const glm::vec4 Color = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
-        pCommandBuffer->PushConstants(m_pDebugPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::vec4), glm::value_ptr(Color));
-
-        // Bind DescriptorSets
-        const uint64_t Frame = GetFrameIndex() % 2;
-        if (Frame == 0)
-        {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0, 0);
-        }
-        else
-        {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1, 0);
-        }
-
-        // Set Vertex- and IndexBuffer
-        pCommandBuffer->BindVertexBuffer(m_pScene->m_pVertexPositionsBuffer, 0, 0);
-        pCommandBuffer->BindIndexBuffer(m_pScene->m_pIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-        // Draw
-        const size_t IndexCount = m_pScene->m_Indicies.size();
-        pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
-    }
-
-    // Draw wire-frame
-    {
-        pCommandBuffer->BindGraphicsPipelineState(m_pDebugPipelineWireframe);
-
-        const glm::vec4 Color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-        pCommandBuffer->PushConstants(m_pDebugPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::vec4), glm::value_ptr(Color));
-
-        // Bind DescriptorSets
-        const uint64_t Frame = GetFrameIndex() % 2;
-        if (Frame == 0)
-        {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0, 0);
-        }
-        else
-        {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1, 0);
-        }
-
-        // Set Vertex- and IndexBuffer
-        pCommandBuffer->BindVertexBuffer(m_pScene->m_pVertexPositionsBuffer, 0, 0);
-        pCommandBuffer->BindIndexBuffer(m_pScene->m_pIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-        // Draw
-        const size_t IndexCount = m_pScene->m_Indicies.size();
-        pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
-    }
-
-    // Draw the bounding boxes
-    {
-        pCommandBuffer->BindGraphicsPipelineState(m_pDebugAABBPipeline);
-
-        // Bind DescriptorSets
-        const uint64_t Frame = GetFrameIndex() % 2;
-        if (Frame == 0)
-        {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet0, 0);
-        }
-        else
-        {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet1, 0);
-        }
-
-        pCommandBuffer->BindVertexBuffer(m_pAABBVertexBuffer, 0, 0);
-        pCommandBuffer->BindIndexBuffer(m_pAABBIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-        struct SAABBDebugData
-        {
-            glm::vec4 Color;
-        } DebugData;
-
-        DebugData.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
-        pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(SAABBDebugData), &DebugData);
-
-        const uint32_t NumInstances = static_cast<uint32_t>(m_pScene->m_AccelerationStructure.m_BoundingBoxes.size());
-        pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, NumInstances, 0, 0, 0);
-    }
-
-    pCommandBuffer->EndRendering();
-    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    SAFE_DELETE(m_pRayTracingDescriptorSet0);
+    SAFE_DELETE(m_pRayTracingDescriptorSet1);
+    SAFE_DELETE(m_pDebugDescriptorSet0);
+    SAFE_DELETE(m_pDebugDescriptorSet1);
 }
 
 void CSoftwareRayTracer::RenderUI()
@@ -658,129 +526,217 @@ void CSoftwareRayTracer::RenderUI()
     }
 }
 
-void CSoftwareRayTracer::CreateRayTracingResources()
+void CSoftwareRayTracer::ReloadShaders()
 {
-    // Create RayTracing DescriptorSetLayout
-    constexpr uint32_t NumRayTracingBindings = 15;
-    VkDescriptorSetLayoutBinding RayTracingBindings[NumRayTracingBindings];
+    static bool bIsCompiling = false;
 
-    // OutputImage
-    RayTracingBindings[0].binding            = 0;
-    RayTracingBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    RayTracingBindings[0].descriptorCount    = 1;
-    RayTracingBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[0].pImmutableSamplers = nullptr;
+    if (bIsCompiling)
+    {
+        return;
+    }
 
-    // AccumulationImage
-    RayTracingBindings[1].binding            = 1;
-    RayTracingBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    RayTracingBindings[1].descriptorCount    = 1;
-    RayTracingBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[1].pImmutableSamplers = nullptr;
+    bIsCompiling = true;
 
-    // Skybox
-    RayTracingBindings[2].binding            = 2;
-    RayTracingBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    RayTracingBindings[2].descriptorCount    = 1;
-    RayTracingBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[2].pImmutableSamplers = nullptr;
+    // Compile the shaders
+    auto Result = std::system(SHADER_SCRIPT_PATH);
+    if (Result != 0)
+    {
+        LOG("FAILED to Compile Shaders\n");
+        bIsCompiling = false;
+        return;
+    }
 
-    // CameraBuffer
-    RayTracingBindings[3].binding            = 3;
-    RayTracingBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    RayTracingBindings[3].descriptorCount    = 1;
-    RayTracingBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[3].pImmutableSamplers = nullptr;
+    // Upload the new shaders
+    LOG("Compiled Shaders Successfully\n");
 
-    // RandomBuffer
-    RayTracingBindings[4].binding            = 4;
-    RayTracingBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    RayTracingBindings[4].descriptorCount    = 1;
-    RayTracingBindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[4].pImmutableSamplers = nullptr;
+    // Create shader and pipeline
+    CShaderModule* pComputeShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/raytracer.spv");
+    if (!pComputeShader)
+    {
+        LOG("FAILED to create ComputeShader\n");
+        bIsCompiling = false;
+        return;
+    }
+
+    SComputePipelineStateParams pipelineParams = {};
+    pipelineParams.pShader         = pComputeShader;
+    pipelineParams.pPipelineLayout = m_pRayTracingPipelineLayout;
+
+    CComputePipeline* pComputePipeline = CComputePipeline::Create(GetDevice(), pipelineParams);
+    if (!pComputePipeline)
+    {
+        LOG("FAILED to create ComputePipeline\n");
+        SAFE_DELETE(pComputeShader);
+        bIsCompiling = false;
+        return;
+    }
+    else
+    {
+        pComputePipeline->SetDebugName("RayTracingPass Pipeline");
+    }
+
+    GetDevice()->WaitForIdle();
+    pComputePipeline = m_pRayTracingPipeline.exchange(pComputePipeline);
+
+    SAFE_DELETE(pComputeShader);
+    SAFE_DELETE(pComputePipeline);
+
+    // Reset the image
+    ResetImage();
+
+    bIsCompiling = false;
+}
+
+void CSoftwareRayTracer::Render(CCommandBuffer* pCommandBuffer)
+{
+    // Update global buffers
+    UpdateGlobalBuffers(pCommandBuffer);
+
+    if (m_pScene->m_Settings.ViewMode != ESoftwareViewMode::Debug)
+    {
+        // Perform RayTracing
+        PerformRayTracing(pCommandBuffer);
+
+        // Scene textures are assumed to be in GENERAL when CBaseRenderer::Render is called
+        pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+        pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+        // Tonemapping
+        PerformTonemapping(pCommandBuffer);
+
+        // Scene textures are assumed to be in GENERAL when CBaseRenderer::Render is called so let's put it back into the correct format
+        pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+        pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    }
+    else
+    {
+        // Rasterize triangle models and display the BVH
+        PerformDebugPass(pCommandBuffer);
+    }
+}
+
+void CSoftwareRayTracer::CreateGlobalBuffers()
+{
+    CBaseRenderer::CreateGlobalBuffers();
+    const VkBufferUsageFlags DescriptorBufferExtraUsage =
+        GetDevice()->IsDescriptorBufferSupported() ? VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT : 0;
 
     // SceneBuffer
-    RayTracingBindings[5].binding            = 5;
-    RayTracingBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    RayTracingBindings[5].descriptorCount    = 1;
-    RayTracingBindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[5].pImmutableSamplers = nullptr;
+    SBufferParams SceneBufferParams;
+    SceneBufferParams.Size             = sizeof(SSoftwareSceneBuffer);
+    SceneBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    SceneBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
 
-    // QuadsBuffer
-    RayTracingBindings[6].binding            = 6;
-    RayTracingBindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    RayTracingBindings[6].descriptorCount    = 1;
-    RayTracingBindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[6].pImmutableSamplers = nullptr;
+    m_pSceneSettingsBuffer = CBuffer::Create(GetDevice(), SceneBufferParams, GetDeviceAllocator());
+    assert(m_pSceneSettingsBuffer != nullptr);
+    m_pSceneSettingsBuffer->SetDebugName("SceneBuffer");
 
-    // SpheresBuffer
-    RayTracingBindings[7].binding            = 7;
-    RayTracingBindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    RayTracingBindings[7].descriptorCount    = 1;
-    RayTracingBindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[7].pImmutableSamplers = nullptr;
+    // QuadBuffer
+    SBufferParams QuadBufferParams;
+    QuadBufferParams.Size             = sizeof(SQuadHLSL) * MAX_QUADS;
+    QuadBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    QuadBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
 
-    // MaterialBuffer
-    RayTracingBindings[8].binding            = 8;
-    RayTracingBindings[8].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    RayTracingBindings[8].descriptorCount    = 1;
-    RayTracingBindings[8].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[8].pImmutableSamplers = nullptr;
+    m_pQuadBuffer = CBuffer::Create(GetDevice(), QuadBufferParams, GetDeviceAllocator());
+    assert(m_pQuadBuffer != nullptr);
+    m_pQuadBuffer->SetDebugName("QuadBuffer");
 
-    // VertexPositionsBuffer
-    RayTracingBindings[9].binding            = 9;
-    RayTracingBindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    RayTracingBindings[9].descriptorCount    = 1;
-    RayTracingBindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[9].pImmutableSamplers = nullptr;
+    // SphereBuffer
+    SBufferParams SphereBufferParams;
+    SphereBufferParams.Size             = sizeof(SSphereHLSL) * MAX_SPHERES;
+    SphereBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    SphereBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
+
+    m_pSphereBuffer = CBuffer::Create(GetDevice(), SphereBufferParams, GetDeviceAllocator());
+    assert(m_pSphereBuffer != nullptr);
+    m_pSphereBuffer->SetDebugName("SphereBuffer");
 
     // VertexBuffer
-    RayTracingBindings[10].binding            = 10;
-    RayTracingBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    RayTracingBindings[10].descriptorCount    = 1;
-    RayTracingBindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[10].pImmutableSamplers = nullptr;
+    SBufferParams VertexPositionsBufferParams;
+    VertexPositionsBufferParams.Size             = sizeof(SVertexPosition) * MAX_VERTICES;
+    VertexPositionsBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    VertexPositionsBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
+
+    m_pVertexPositionsBuffer = CBuffer::Create(GetDevice(), VertexPositionsBufferParams, GetDeviceAllocator());
+    assert(m_pVertexPositionsBuffer != nullptr);
+    m_pVertexPositionsBuffer->SetDebugName("VertexPositionsBuffer");
+
+    SBufferParams VertexBufferParams;
+    VertexBufferParams.Size             = sizeof(SVertex) * MAX_VERTICES;
+    VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    VertexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
+
+    m_pVertexBuffer = CBuffer::Create(GetDevice(), VertexBufferParams, GetDeviceAllocator());
+    assert(m_pVertexBuffer != nullptr);
+    m_pVertexBuffer->SetDebugName("VertexBuffer");
 
     // IndexBuffer
-    RayTracingBindings[11].binding            = 11;
-    RayTracingBindings[11].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    RayTracingBindings[11].descriptorCount    = 1;
-    RayTracingBindings[11].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[11].pImmutableSamplers = nullptr;
+    SBufferParams IndexBufferParams;
+    IndexBufferParams.Size             = (sizeof(uint32_t) * 3) * MAX_TRIANGLES;
+    IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    IndexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
+
+    m_pIndexBuffer = CBuffer::Create(GetDevice(), IndexBufferParams, GetDeviceAllocator());
+    assert(m_pIndexBuffer  != nullptr);
+    m_pIndexBuffer->SetDebugName("IndexBuffer");
 
     // TriangleBuffer
-    RayTracingBindings[12].binding            = 12;
-    RayTracingBindings[12].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    RayTracingBindings[12].descriptorCount    = 1;
-    RayTracingBindings[12].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[12].pImmutableSamplers = nullptr;
+    SBufferParams TriangleBufferParams;
+    TriangleBufferParams.Size             = sizeof(STriangleInfoHLSL) * MAX_TRIANGLES;
+    TriangleBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    TriangleBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
 
-    // MeshBuffer
-    RayTracingBindings[13].binding            = 13;
-    RayTracingBindings[13].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    RayTracingBindings[13].descriptorCount    = 1;
-    RayTracingBindings[13].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[13].pImmutableSamplers = nullptr;
+    m_pTriangleBuffer = CBuffer::Create(GetDevice(), TriangleBufferParams, GetDeviceAllocator());
+    assert(m_pTriangleBuffer != nullptr);
+    m_pTriangleBuffer->SetDebugName("TriangleBuffer");
 
-    // BVH-Buffer
-    RayTracingBindings[14].binding            = 14;
-    RayTracingBindings[14].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    RayTracingBindings[14].descriptorCount    = 1;
-    RayTracingBindings[14].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-    RayTracingBindings[14].pImmutableSamplers = nullptr;
+    // TriangleMeshesBuffer
+    SBufferParams MeshBufferParams;
+    MeshBufferParams.Size             = sizeof(SMeshHLSL) * MAX_TRIANGLEMESHES;
+    MeshBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    MeshBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
 
-    SDescriptorSetLayoutParams RayTracingDescriptorSetLayoutParams;
-    RayTracingDescriptorSetLayoutParams.pBindings   = RayTracingBindings;
-    RayTracingDescriptorSetLayoutParams.NumBindings = NumRayTracingBindings;
+    m_pMeshBuffer = CBuffer::Create(GetDevice(), MeshBufferParams, GetDeviceAllocator());
+    assert(m_pMeshBuffer != nullptr);
+    m_pMeshBuffer->SetDebugName("MeshBuffer");
 
-    m_pRayTracingDescriptorSetLayout = CDescriptorSetLayout::Create(GetDevice(), RayTracingDescriptorSetLayoutParams);
-    assert(m_pRayTracingDescriptorSetLayout != nullptr);
-    m_pRayTracingDescriptorSetLayout->SetDebugName("RayTracingPass DescriptorSetLayout");
+    // MaterialBuffer
+    SBufferParams MaterialBufferParams;
+    MaterialBufferParams.Size             = sizeof(SMaterialHLSL) * MAX_MATERIALS;
+    MaterialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    MaterialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
 
+    m_pMaterialBuffer = CBuffer::Create(GetDevice(), MaterialBufferParams, GetDeviceAllocator());
+    assert(m_pMaterialBuffer != nullptr);
+    m_pMaterialBuffer->SetDebugName("MaterialBuffer");
+
+    // BoundingBoxBuffer
+    SBufferParams BoundingBoxBufferParams;
+    BoundingBoxBufferParams.Size             = sizeof(SShaderBoundingBox) * MAX_BVH_NODES;
+    BoundingBoxBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    BoundingBoxBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
+
+    m_pBvhBuffer = CBuffer::Create(GetDevice(), BoundingBoxBufferParams, GetDeviceAllocator());
+    assert(m_pBvhBuffer != nullptr);
+    m_pBvhBuffer->SetDebugName("BVHBuffer");
+
+    // Debug AABB instance buffer
+    SBufferParams AABBInstanceBufferParams;
+    AABBInstanceBufferParams.Size             = sizeof(glm::mat4) * MAX_BVH_NODES;
+    AABBInstanceBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    AABBInstanceBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pAABBInstanceBuffer = CBuffer::Create(GetDevice(), AABBInstanceBufferParams, GetDeviceAllocator());
+    assert(m_pAABBInstanceBuffer != nullptr);
+    m_pAABBInstanceBuffer->SetDebugName("Debug AABB Instance Buffer");
+}
+
+void CSoftwareRayTracer::CreateRayTracingResources()
+{
     // Create RayTracing PipelineLayout
     SPipelineLayoutParams RayTracingPipelineLayoutParams;
-    RayTracingPipelineLayoutParams.ppLayouts       = &m_pRayTracingDescriptorSetLayout;
-    RayTracingPipelineLayoutParams.NumLayouts      = 1;
+    RayTracingPipelineLayoutParams.ppLayouts       = nullptr;
+    RayTracingPipelineLayoutParams.NumLayouts      = 0;
     RayTracingPipelineLayoutParams.bEnableBindless = true;
 
     m_pRayTracingPipelineLayout = CPipelineLayout::Create(GetDevice(), RayTracingPipelineLayoutParams);
@@ -957,289 +913,6 @@ void CSoftwareRayTracer::CreateDebugViewResources()
     m_pAABBIndexBuffer->SetDebugName("AABBIndexBuffer");
 }
 
-void CSoftwareRayTracer::CreateGlobalBuffers()
-{
-    CBaseRenderer::CreateGlobalBuffers();
-
-    // SceneBuffer
-    SBufferParams SceneBufferParams;
-    SceneBufferParams.Size             = sizeof(SSoftwareSceneBuffer);
-    SceneBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    SceneBufferParams.Usage            = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pSceneSettingsBuffer = CBuffer::Create(GetDevice(), SceneBufferParams, GetDeviceAllocator());
-    assert(m_pSceneSettingsBuffer != nullptr);
-    m_pSceneSettingsBuffer->SetDebugName("SceneBuffer");
-
-    // QuadBuffer
-    SBufferParams QuadBufferParams;
-    QuadBufferParams.Size             = sizeof(SQuadHLSL) * MAX_QUADS;
-    QuadBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    QuadBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pQuadBuffer = CBuffer::Create(GetDevice(), QuadBufferParams, GetDeviceAllocator());
-    assert(m_pQuadBuffer != nullptr);
-    m_pQuadBuffer->SetDebugName("QuadBuffer");
-
-    // SphereBuffer
-    SBufferParams SphereBufferParams;
-    SphereBufferParams.Size             = sizeof(SSphereHLSL) * MAX_SPHERES;
-    SphereBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    SphereBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pSphereBuffer = CBuffer::Create(GetDevice(), SphereBufferParams, GetDeviceAllocator());
-    assert(m_pSphereBuffer != nullptr);
-    m_pSphereBuffer->SetDebugName("SphereBuffer");
-
-    // VertexBuffer
-    SBufferParams VertexPositionsBufferParams;
-    VertexPositionsBufferParams.Size             = sizeof(SVertexPosition) * MAX_VERTICES;
-    VertexPositionsBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    VertexPositionsBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pVertexPositionsBuffer = CBuffer::Create(GetDevice(), VertexPositionsBufferParams, GetDeviceAllocator());
-    assert(m_pVertexPositionsBuffer != nullptr);
-    m_pVertexPositionsBuffer->SetDebugName("VertexPositionsBuffer");
-
-    SBufferParams VertexBufferParams;
-    VertexBufferParams.Size             = sizeof(SVertex) * MAX_VERTICES;
-    VertexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    VertexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pVertexBuffer = CBuffer::Create(GetDevice(), VertexBufferParams, GetDeviceAllocator());
-    assert(m_pVertexBuffer != nullptr);
-    m_pVertexBuffer->SetDebugName("VertexBuffer");
-
-    // IndexBuffer
-    SBufferParams IndexBufferParams;
-    IndexBufferParams.Size             = (sizeof(uint32_t) * 3) * MAX_TRIANGLES;
-    IndexBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    IndexBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pIndexBuffer = CBuffer::Create(GetDevice(), IndexBufferParams, GetDeviceAllocator());
-    assert(m_pIndexBuffer  != nullptr);
-    m_pIndexBuffer->SetDebugName("IndexBuffer");
-
-    // TriangleBuffer
-    SBufferParams TriangleBufferParams;
-    TriangleBufferParams.Size             = sizeof(STriangleInfoHLSL) * MAX_TRIANGLES;
-    TriangleBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    TriangleBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pTriangleBuffer = CBuffer::Create(GetDevice(), TriangleBufferParams, GetDeviceAllocator());
-    assert(m_pTriangleBuffer != nullptr);
-    m_pTriangleBuffer->SetDebugName("TriangleBuffer");
-
-    // TriangleMeshesBuffer
-    SBufferParams MeshBufferParams;
-    MeshBufferParams.Size             = sizeof(SMeshHLSL) * MAX_TRIANGLEMESHES;
-    MeshBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    MeshBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pMeshBuffer = CBuffer::Create(GetDevice(), MeshBufferParams, GetDeviceAllocator());
-    assert(m_pMeshBuffer != nullptr);
-    m_pMeshBuffer->SetDebugName("MeshBuffer");
-
-    // MaterialBuffer
-    SBufferParams MaterialBufferParams;
-    MaterialBufferParams.Size             = sizeof(SMaterialHLSL) * MAX_MATERIALS;
-    MaterialBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    MaterialBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pMaterialBuffer = CBuffer::Create(GetDevice(), MaterialBufferParams, GetDeviceAllocator());
-    assert(m_pMaterialBuffer != nullptr);
-    m_pMaterialBuffer->SetDebugName("MaterialBuffer");
-
-    // BoundingBoxBuffer
-    SBufferParams BoundingBoxBufferParams;
-    BoundingBoxBufferParams.Size             = sizeof(SShaderBoundingBox) * MAX_BVH_NODES;
-    BoundingBoxBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    BoundingBoxBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pBvhBuffer = CBuffer::Create(GetDevice(), BoundingBoxBufferParams, GetDeviceAllocator());
-    assert(m_pBvhBuffer != nullptr);
-    m_pBvhBuffer->SetDebugName("BVHBuffer");
-
-    // Debug AABB instance buffer
-    SBufferParams AABBInstanceBufferParams;
-    AABBInstanceBufferParams.Size             = sizeof(glm::mat4) * MAX_BVH_NODES;
-    AABBInstanceBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    AABBInstanceBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    m_pAABBInstanceBuffer = CBuffer::Create(GetDevice(), AABBInstanceBufferParams, GetDeviceAllocator());
-    assert(m_pAABBInstanceBuffer != nullptr);
-    m_pAABBInstanceBuffer->SetDebugName("Debug AABB Instance Buffer");
-}
-
-void CSoftwareRayTracer::CreateDescriptorSets()
-{
-    // Create common DescriptorSets
-    CBaseRenderer::CreateDescriptorSets();
-
-    // RayTracing Pass
-    m_pRayTracingDescriptorSet0 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pRayTracingDescriptorSetLayout);
-    assert(m_pRayTracingDescriptorSet0 != nullptr);
-    m_pRayTracingDescriptorSet0->SetDebugName("RayTracingPass DescriptorSet0");
-
-    m_pRayTracingDescriptorSet0->BindStorageImage(m_pSceneTextureView0->GetImageView(), 0);
-    m_pRayTracingDescriptorSet0->BindStorageImage(m_pSceneTextureView1->GetImageView(), 1);
-    m_pRayTracingDescriptorSet0->BindCombinedImageSampler(m_pSkybox->GetTextureView()->GetImageView(), m_pSkyboxSampler->GetSampler(), 2);
-    m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 3);
-    m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 4);
-    m_pRayTracingDescriptorSet0->BindUniformBuffer(m_pSceneSettingsBuffer->GetBuffer(), 5);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pQuadBuffer->GetBuffer(), 6);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 7);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pVertexPositionsBuffer->GetBuffer(), 9);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 10);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pIndexBuffer->GetBuffer(), 11);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 12);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 13);
-    m_pRayTracingDescriptorSet0->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 14);
-    
-    m_pRayTracingDescriptorSet1 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pRayTracingDescriptorSetLayout);
-    assert(m_pRayTracingDescriptorSet1 != nullptr);
-    m_pRayTracingDescriptorSet1->SetDebugName("RayTracingPass DescriptorSet1");
-
-    m_pRayTracingDescriptorSet1->BindStorageImage(m_pSceneTextureView1->GetImageView(), 0);
-    m_pRayTracingDescriptorSet1->BindStorageImage(m_pSceneTextureView0->GetImageView(), 1);
-    m_pRayTracingDescriptorSet1->BindCombinedImageSampler(m_pSkybox->GetTextureView()->GetImageView(), m_pSkyboxSampler->GetSampler(), 2);
-    m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 3);
-    m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pRandomBuffer->GetBuffer(), 4);
-    m_pRayTracingDescriptorSet1->BindUniformBuffer(m_pSceneSettingsBuffer->GetBuffer(), 5);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pQuadBuffer->GetBuffer(), 6);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pSphereBuffer->GetBuffer(), 7);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMaterialBuffer->GetBuffer(), 8);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pVertexPositionsBuffer->GetBuffer(), 9);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pVertexBuffer->GetBuffer(), 10);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pIndexBuffer->GetBuffer(), 11);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pTriangleBuffer->GetBuffer(), 12);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 13);
-    m_pRayTracingDescriptorSet1->BindStorageBuffer(m_pBvhBuffer->GetBuffer(), 14);
-
-    // Debug Pass
-    m_pDebugDescriptorSet0 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
-    assert(m_pDebugDescriptorSet0 != nullptr);
-    m_pDebugDescriptorSet0->SetDebugName("DebugPass DescriptorSet0");
-
-    m_pDebugDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
-    m_pDebugDescriptorSet0->BindStorageBuffer(m_pAABBInstanceBuffer->GetBuffer(), 1);
-    
-    m_pDebugDescriptorSet1 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
-    assert(m_pDebugDescriptorSet1 != nullptr);
-    m_pDebugDescriptorSet1->SetDebugName("DebugPass DescriptorSet1");
-
-    m_pDebugDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
-    m_pDebugDescriptorSet1->BindStorageBuffer(m_pAABBInstanceBuffer->GetBuffer(), 1);
-}
-
-void CSoftwareRayTracer::ReleaseDescriptorSets()
-{
-    CBaseRenderer::ReleaseDescriptorSets();
-
-    SAFE_DELETE(m_pRayTracingDescriptorSet0);
-    SAFE_DELETE(m_pRayTracingDescriptorSet1);
-    SAFE_DELETE(m_pDebugDescriptorSet0);
-    SAFE_DELETE(m_pDebugDescriptorSet1);
-}
-
-bool CSoftwareRayTracer::CreateOrResizeSceneTexture(uint32_t Width, uint32_t Height)
-{
-    if (!CBaseRenderer::CreateOrResizeSceneTexture(Width, Height))
-    {
-        // No resize happened so we return here as well
-        return false;
-    }
-
-    SAFE_DELETE(m_pDepthBufferTexture);
-    SAFE_DELETE(m_pDepthBufferTextureView);
-
-    // Create depth-buffer texture for the viewport
-    STextureParams DepthBufferParams = {};
-    DepthBufferParams.Format        = VK_FORMAT_D24_UNORM_S8_UINT;
-    DepthBufferParams.ImageType     = VK_IMAGE_TYPE_2D;
-    DepthBufferParams.Width         = Width;
-    DepthBufferParams.Height        = Height;
-    DepthBufferParams.Usage         = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    DepthBufferParams.InitialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    
-    m_pDepthBufferTexture = CTexture::Create(GetDevice(), DepthBufferParams);
-    assert(m_pDepthBufferTexture != nullptr);
-    m_pDepthBufferTexture->SetDebugName("DepthBuffer");
-    
-    {
-        STextureViewParams TextureViewParams = {};
-        TextureViewParams.pTexture = m_pDepthBufferTexture;
-        
-        m_pDepthBufferTextureView = CTextureView::Create(GetDevice(), TextureViewParams);
-        assert(m_pDepthBufferTextureView != nullptr);
-        m_pDepthBufferTextureView->SetDebugName("DepthBufferView");
-    }
-
-    return true;
-}
-
-void CSoftwareRayTracer::ReloadShaders()
-{
-    static bool bIsCompiling = false;
-
-    if (bIsCompiling)
-    {
-        return;
-    }
-
-    bIsCompiling = true;
-
-    // Compile the shaders
-    auto Result = std::system(SHADER_SCRIPT_PATH);
-    if (Result != 0)
-    {
-        LOG("FAILED to Compile Shaders\n");
-        bIsCompiling = false;
-        return;
-    }
-
-    // Upload the new shaders
-    LOG("Compiled Shaders Successfully\n");
-
-    // Create shader and pipeline
-    CShaderModule* pComputeShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/raytracer.spv");
-    if (!pComputeShader)
-    {
-        LOG("FAILED to create ComputeShader\n");
-        bIsCompiling = false;
-        return;
-    }
-
-    SComputePipelineStateParams pipelineParams = {};
-    pipelineParams.pShader         = pComputeShader;
-    pipelineParams.pPipelineLayout = m_pRayTracingPipelineLayout;
-
-    CComputePipeline* pComputePipeline = CComputePipeline::Create(GetDevice(), pipelineParams);
-    if (!pComputePipeline)
-    {
-        LOG("FAILED to create ComputePipeline\n");
-        SAFE_DELETE(pComputeShader);
-        bIsCompiling = false;
-        return;
-    }
-    else
-    {
-        pComputePipeline->SetDebugName("RayTracingPass Pipeline");
-    }
-
-    GetDevice()->WaitForIdle();
-    pComputePipeline = m_pRayTracingPipeline.exchange(pComputePipeline);
-
-    SAFE_DELETE(pComputeShader);
-    SAFE_DELETE(pComputePipeline);
-
-    // Reset the image
-    ResetImage();
-
-    bIsCompiling = false;
-}
-
 void CSoftwareRayTracer::UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer)
 {
     // Update GPU buffers
@@ -1349,4 +1022,182 @@ void CSoftwareRayTracer::UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer)
     MemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     pCommandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &MemoryBarrier, 0, nullptr, 0, nullptr);
+}
+
+void CSoftwareRayTracer::PerformRayTracing(CCommandBuffer* pCommandBuffer)
+{
+    // Update Scene
+    SSoftwareSceneBuffer SceneBuffer = {};
+    SceneBuffer.NumQuads              = m_pScene->m_Quads.size();
+    SceneBuffer.NumSpheres            = m_pScene->m_Spheres.size();
+    SceneBuffer.NumMaterials          = m_pScene->m_GpuMaterials.size();
+    SceneBuffer.NumMeshes             = m_pScene->m_Meshes.size();
+    SceneBuffer.NumBvhNodes           = m_pScene->m_AccelerationStructure.m_BoundingBoxes.size();
+    SceneBuffer.NumTriangles          = m_pScene->m_AccelerationStructure.m_TriangleInfo.size();
+    SceneBuffer.BackgroundType        = m_pScene->m_Settings.BackgroundType;
+    SceneBuffer.NumBounces            = m_pScene->m_Settings.NumBounces;
+    SceneBuffer.ViewMode              = static_cast<uint32_t>(m_pScene->m_Settings.ViewMode);
+    SceneBuffer.GradientLightStrength = m_pScene->m_Settings.GradientLightStrength;
+    
+    pCommandBuffer->UpdateBuffer(m_pSceneSettingsBuffer, 0, sizeof(SSoftwareSceneBuffer), &SceneBuffer);
+
+    // Barrier before reading the buffer from the shader
+    VkMemoryBarrier MemoryBarrier;
+    MemoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    MemoryBarrier.pNext         = nullptr;
+    MemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    MemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    pCommandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &MemoryBarrier, 0, nullptr, 0, nullptr);
+
+    // Bind pipeline and descriptorSet
+    pCommandBuffer->BindComputePipelineState(m_pRayTracingPipeline.load());
+
+    pCommandBuffer->BindBindlessDescriptors(m_pRayTracingPipelineLayout, VK_PIPELINE_BIND_POINT_COMPUTE);
+
+    // Dispatch RayTracing
+    const uint32_t Threads = 16;
+    VkExtent2D DispatchSize = { Math::AlignUp(m_pSceneTexture0->GetWidth(), Threads) / Threads, Math::AlignUp(m_pSceneTexture0->GetHeight(), Threads) / Threads };
+    pCommandBuffer->Dispatch(DispatchSize.width, DispatchSize.height, 1);
+}
+
+void CSoftwareRayTracer::PerformDebugPass(CCommandBuffer* pCommandBuffer)
+{
+    // Define clear colors
+    VkClearValue ClearColor[2];
+    ClearColor[0].color        = { 0.0f, 0.0f, 0.0f, 1.0f };
+    ClearColor[1].depthStencil = { 1.0f, 0 };
+
+    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    SRenderingAttachment ColorAttachment = {};
+    ColorAttachment.ImageView       = m_pOutputTextureView->GetImageView();
+    ColorAttachment.ImageLayout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    ColorAttachment.LoadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    ColorAttachment.StoreOp         = VK_ATTACHMENT_STORE_OP_STORE;
+    ColorAttachment.ClearValue      = ClearColor[0];
+
+    SRenderingAttachment DepthAttachment = {};
+    DepthAttachment.ImageView      = m_pDepthBufferTextureView->GetImageView();
+    DepthAttachment.ImageLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    DepthAttachment.LoadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    DepthAttachment.StoreOp        = VK_ATTACHMENT_STORE_OP_STORE;
+    DepthAttachment.ClearValue     = ClearColor[1];
+
+    SRenderingParams RenderingParams = {};
+    RenderingParams.pColorAttachments    = &ColorAttachment;
+    RenderingParams.ColorAttachmentCount = 1;
+    RenderingParams.pDepthAttachment     = &DepthAttachment;
+    RenderingParams.RenderArea.offset    = { 0, 0 };
+    RenderingParams.RenderArea.extent    = { GetViewportWidth(), GetViewportHeight() };
+
+    pCommandBuffer->BeginRendering(RenderingParams);
+
+    if (!m_pScene->m_pVertexPositionsBuffer || !m_pScene->m_pIndexBuffer)
+    {
+        pCommandBuffer->EndRendering();
+        pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+        return;
+    }
+
+    // Set viewport
+    VkViewport Viewport;
+    Viewport.width    =  static_cast<float>(GetViewportWidth());
+    Viewport.height   = -static_cast<float>(GetViewportHeight());
+    Viewport.minDepth =  0.0f;
+    Viewport.maxDepth =  1.0f;
+    Viewport.x        =  0.0f;
+    Viewport.y        =  static_cast<float>(GetViewportHeight());
+
+    pCommandBuffer->SetViewport(Viewport);
+
+    VkRect2D scissor = { { 0, 0}, { GetViewportWidth(), GetViewportHeight() } };
+    pCommandBuffer->SetScissorRect(scissor);
+    
+    // Draw Mesh
+    {
+        pCommandBuffer->BindGraphicsPipelineState(m_pDebugPipeline);
+
+        const glm::vec4 Color = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
+        pCommandBuffer->PushConstants(m_pDebugPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::vec4), glm::value_ptr(Color));
+
+        // Bind DescriptorSets
+        const uint64_t Frame = GetFrameIndex() % 2;
+        if (Frame == 0)
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0, 0);
+        }
+        else
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1, 0);
+        }
+
+        // Set Vertex- and IndexBuffer
+        pCommandBuffer->BindVertexBuffer(m_pScene->m_pVertexPositionsBuffer, 0, 0);
+        pCommandBuffer->BindIndexBuffer(m_pScene->m_pIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        // Draw
+        const size_t IndexCount = m_pScene->m_Indicies.size();
+        pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
+    }
+
+    // Draw wire-frame
+    {
+        pCommandBuffer->BindGraphicsPipelineState(m_pDebugPipelineWireframe);
+
+        const glm::vec4 Color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+        pCommandBuffer->PushConstants(m_pDebugPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::vec4), glm::value_ptr(Color));
+
+        // Bind DescriptorSets
+        const uint64_t Frame = GetFrameIndex() % 2;
+        if (Frame == 0)
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0, 0);
+        }
+        else
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1, 0);
+        }
+
+        // Set Vertex- and IndexBuffer
+        pCommandBuffer->BindVertexBuffer(m_pScene->m_pVertexPositionsBuffer, 0, 0);
+        pCommandBuffer->BindIndexBuffer(m_pScene->m_pIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        // Draw
+        const size_t IndexCount = m_pScene->m_Indicies.size();
+        pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
+    }
+
+    // Draw the bounding boxes
+    {
+        pCommandBuffer->BindGraphicsPipelineState(m_pDebugAABBPipeline);
+
+        // Bind DescriptorSets
+        const uint64_t Frame = GetFrameIndex() % 2;
+        if (Frame == 0)
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet0, 0);
+        }
+        else
+        {
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet1, 0);
+        }
+
+        pCommandBuffer->BindVertexBuffer(m_pAABBVertexBuffer, 0, 0);
+        pCommandBuffer->BindIndexBuffer(m_pAABBIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        struct SAABBDebugData
+        {
+            glm::vec4 Color;
+        } DebugData;
+
+        DebugData.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+        pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(SAABBDebugData), &DebugData);
+
+        const uint32_t NumInstances = static_cast<uint32_t>(m_pScene->m_AccelerationStructure.m_BoundingBoxes.size());
+        pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, NumInstances, 0, 0, 0);
+    }
+
+    pCommandBuffer->EndRendering();
+    pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }

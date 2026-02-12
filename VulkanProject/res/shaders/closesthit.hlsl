@@ -9,7 +9,7 @@ struct SMeshInfo
     uint     Flags;
 };
 
-[[vk::binding(6)]]
+[[vk::binding(5)]]
 StructuredBuffer<SMeshInfo> MeshInfos;
 
 // Must match C++ SVertex packing in Model.h exactly.
