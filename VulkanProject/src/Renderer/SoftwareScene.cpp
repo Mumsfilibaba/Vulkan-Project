@@ -275,6 +275,16 @@ void SModelScene::Initialize()
         ShaderMaterial.MetallicTexIndex  = AddImageViewToBindlessManager(Material.MetallicTex, m_pMaterialSampler);
     }
 
+    // Sponza materials are non-emissive in the source MTL. Force-zero emissive to avoid
+    // accidental lighting caused by fallback/index edge cases in the software path.
+    if (Type == EModelSceneType::Sponza)
+    {
+        for (SMaterialHLSL& ShaderMaterial : m_GpuMaterials)
+        {
+            ShaderMaterial.EmissiveColor = glm::vec4(0.0f);
+        }
+    }
+
     const uint32_t WallMaterialIndex  = static_cast<uint32_t>(m_GpuMaterials.size());
     const uint32_t RightMaterialIndex = WallMaterialIndex + 1;
     const uint32_t LeftMaterialIndex  = WallMaterialIndex + 2;
@@ -299,91 +309,94 @@ void SModelScene::Initialize()
     }
 #endif
 
-    // Materials
-
-    // Standard Wall material
-    m_GpuMaterials.push_back(
+    if (Type == EModelSceneType::Default)
     {
-        glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.0f,
-        0.9f,
-        1.0f,
-        0.0f,
-        0.0f,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        // padding
-        0, 0
-    });
+        // Materials
 
-    // Right Wall Material
-    m_GpuMaterials.push_back(
-    {
-        glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.0f,
-        0.9f,
-        1.0f,
-        0.0f,
-        0.0f,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        // padding
-        0, 0
-    });
+        // Standard Wall material
+        m_GpuMaterials.push_back(
+        {
+            glm::vec4(0.7f, 0.7f, 0.7f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            0.0f,
+            0.9f,
+            1.0f,
+            0.0f,
+            0.0f,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            // padding
+            0, 0
+        });
 
-    // Left Wall Material
-    m_GpuMaterials.push_back(
-    {
-        glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.0f,
-        0.9f,
-        1.0f,
-        0.0f,
-        0.0f,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        // padding
-        0, 0
-    });
+        // Right Wall Material
+        m_GpuMaterials.push_back(
+        {
+            glm::vec4(0.7f, 0.1f, 0.1f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            0.0f,
+            0.9f,
+            1.0f,
+            0.0f,
+            0.0f,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            // padding
+            0, 0
+        });
 
-    // Emissive
-    m_GpuMaterials.push_back(
-    {
-        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-        glm::vec4(40.0f, 40.0f, 40.0f, 1.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
-        0.0f,
-        0.0f,
-        1.0f,
-        0.0f,
-        0.0f,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        IBindlessManager::InvalidBindlessID,
-        // padding
-        0, 0
-    });
+        // Left Wall Material
+        m_GpuMaterials.push_back(
+        {
+            glm::vec4(0.1f, 0.7f, 0.1f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            0.0f,
+            0.9f,
+            1.0f,
+            0.0f,
+            0.0f,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            // padding
+            0, 0
+        });
+
+        // Emissive
+        m_GpuMaterials.push_back(
+        {
+            glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+            glm::vec4(40.0f, 40.0f, 40.0f, 1.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+            0.0f,
+            0.0f,
+            1.0f,
+            0.0f,
+            0.0f,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            IBindlessManager::InvalidBindlessID,
+            // padding
+            0, 0
+        });
+    }
 }
 
 void SModelScene::Reset()

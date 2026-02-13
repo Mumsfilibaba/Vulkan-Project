@@ -1,28 +1,17 @@
 struct VSInput
 {
-    [[vk::location(0)]] float3 inPosition : POSITION0;
+    [[vk::location(0)]] float3 InPosition : POSITION0;
 };
 
-struct SCameraBuffer
-{
-    float4x4 projection;
-    float4x4 view;
-    float4x4 inverseProjection;
-    float4x4 inverseView;
-    float4   position;
-    float4   forward;
-    float    fieldOfViewDegrees;
-    
-    // Padding
-    uint padding0;
-    uint padding1;
-    uint padding2;
-};
+#define COMMON_STRUCTS_NO_HW_RAYTRACE
+#include "common_structs.hlsli"
 
 [[vk::binding(0, 0)]]
-ConstantBuffer<SCameraBuffer> cameraBuffer : register(b0, space0);
+ConstantBuffer<SCameraBuffer> CameraBuffer : register(b0, space0);
 
-float4 main(VSInput input) : SV_Position
+float4 main(VSInput InputData) : SV_Position
 {
-    return mul(mul(cameraBuffer.projection, cameraBuffer.view), float4(input.inPosition, 1.0));
+    return mul(mul(CameraBuffer.Projection, CameraBuffer.View), float4(InputData.InPosition, 1.0));
 }
+
+

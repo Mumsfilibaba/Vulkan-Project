@@ -27,7 +27,6 @@ struct SMaterial
     // 92-100
     uint MetallicTexIndex;
     uint RoughnessTexIndex;
-
     // Padding
     uint Padding0;
     uint Padding1;
@@ -43,7 +42,6 @@ struct SQuad
     float4 Edge1;
     // 48-52
     uint MaterialIndex;
-
     // Padding
     uint Padding0;
     uint Padding1;
@@ -56,7 +54,6 @@ struct SSphere
     float4 PositionAndRadius;
     // 16-20
     uint MaterialIndex;
-    
     // Padding
     uint Padding0;
     uint Padding1;
@@ -90,8 +87,9 @@ struct SMesh
 
 struct SHitInfo
 {
-    float2 BaryCentrics;
+    float2 Barycentrics;
     float Dist;
 };
 
 #endif
+

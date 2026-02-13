@@ -356,6 +356,7 @@ SScene* SceneFactory::CreateScene(ESceneType SceneType)
     case ESceneType::RoughTransparentGlassSpheres:
     {
         // Match software glass-spheres camera.
+        pScene->m_Settings.BackgroundType = EBackgroundType::Skybox;
         pScene->m_Camera.Reset();
         pScene->m_Camera.Move(glm::vec3(0.0f, 8.0f, 24.0f));
         pScene->m_Camera.Rotate(glm::vec3(0.0f, glm::pi<float>(), 0.0f));

@@ -19,19 +19,21 @@ struct SBoundingBox
     float4 BoxMaxAndNumTriangles;
 };
 
-float IntersectRayAABB(float3 boxMin, float3 boxMax, float3 rayOrigin, float3 invRayDirection)
+float IntersectRayAABB(float3 BoxMin, float3 BoxMax, float3 RayOrigin, float3 InvRayDirection)
 {
-    const float3 minT = (boxMin - rayOrigin) * invRayDirection;
-    const float3 maxT = (boxMax - rayOrigin) * invRayDirection;
+    const float3 MinT = (BoxMin - RayOrigin) * InvRayDirection;
+    const float3 MaxT = (BoxMax - RayOrigin) * InvRayDirection;
 
-    const float3 t1 = min(minT, maxT);
-    const float3 t2 = max(minT, maxT);
+    const float3 t1 = min(MinT, MaxT);
+    const float3 t2 = max(MinT, MaxT);
 
-    const float distFar  = min(min(t2.x, t2.y), t2.z);
-    const float distNear = max(max(t1.x, t1.y), t1.z);
+    const float DistFar  = min(min(t2.x, t2.y), t2.z);
+    const float DistNear = max(max(t1.x, t1.y), t1.z);
 
-    const bool didHit = distFar >= distNear && distFar >= 0.0;
-    return didHit ? distNear : LARGE_NUMBER;
+    const bool DidHit = DistFar >= DistNear && DistFar >= 0.0;
+    return DidHit ? DistNear : LARGE_NUMBER;
 }
 
 #endif
+
+

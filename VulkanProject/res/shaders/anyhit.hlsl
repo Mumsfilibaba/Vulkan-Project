@@ -1,17 +1,21 @@
-#include "hw_ray_trace_common.hlsli"
+#include "common_structs.hlsli"
 #include "primitives.hlsli"
 
 struct SMeshInfo
 {
     uint64_t VertexBufferAddress;
     uint64_t IndexBufferAddress;
-    uint     MaterialIndex;
+    uint     MaterialIndexLocal;
     uint     Flags;
 };
 
-struct SSceneBuffer { SSceneSettings Settings; };
+struct SSceneBuffer
+{
+    SSceneSettings Settings;
+};
+
 [[vk::binding(16)]]
-ConstantBuffer<SSceneBuffer> uScene;
+ConstantBuffer<SSceneBuffer> Scene;
 
 [[vk::binding(5)]]
 StructuredBuffer<SMeshInfo> MeshInfos;
@@ -19,54 +23,58 @@ StructuredBuffer<SMeshInfo> MeshInfos;
 [[vk::binding(6)]]
 StructuredBuffer<SMaterial> Materials;
 
-[[vk::binding(0)]] Texture2D<float4> uTextures[];
-[[vk::binding(0)]] SamplerState uTexturesSampler : register(s0);
+[[vk::binding(0)]] Texture2D<float4> Textures[];
+[[vk::binding(0)]] SamplerState TexturesSampler : register(s0);
 
 static const uint VERTEX_STRIDE   = 44;
 static const uint TEXCOORD_OFFSET = 36;
 
 [shader("anyhit")]
-void main(inout SRayPayLoad rayPayload, in BuiltInTriangleIntersectionAttributes attr)
+void main(inout SRayPayload RayPayload, in BuiltInTriangleIntersectionAttributes attr)
 {
-    uint meshInfoOffset = InstanceID();
-    uint geometryIndex  = GeometryIndex();
-    uint meshInfoIndex  = meshInfoOffset + geometryIndex;
+    uint MeshInfoOffset = InstanceID();
+    uint GeometryIdx = GeometryIndex();
+    uint MeshInfoIndex  = MeshInfoOffset + GeometryIdx;
     
-    SMeshInfo meshInfo = MeshInfos[meshInfoIndex];
+    SMeshInfo MeshInfo = MeshInfos[MeshInfoIndex];
 
-    uint primitiveId = PrimitiveIndex();
-    
-    uint64_t indexBase = meshInfo.IndexBufferAddress + primitiveId * 12;
-    uint idx0 = vk::RawBufferLoad<uint>(indexBase + 0);
-    uint idx1 = vk::RawBufferLoad<uint>(indexBase + 4);
-    uint idx2 = vk::RawBufferLoad<uint>(indexBase + 8);
+    uint     PrimitiveIdLocal = PrimitiveIndex();
+    uint64_t IndexBase   = MeshInfo.IndexBufferAddress + PrimitiveIdLocal * 12;
 
-    float3 barycentricCoords = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
+    uint Idx0 = vk::RawBufferLoad<uint>(IndexBase + 0);
+    uint Idx1 = vk::RawBufferLoad<uint>(IndexBase + 4);
+    uint Idx2 = vk::RawBufferLoad<uint>(IndexBase + 8);
 
-    float2 texCoord = float2(0, 0);
+    float3 BarycentricCoords = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
+
+    float2 TexCoord = float2(0, 0);
     for (uint i = 0; i < 3; i++)
     {
-        uint idx = (i == 0) ? idx0 : ((i == 1) ? idx1 : idx2);
+        uint Idx = (i == 0) ? Idx0 : ((i == 1) ? Idx1 : Idx2);
         
-        float w = (i == 0) ? barycentricCoords.x : ((i == 1) ? barycentricCoords.y : barycentricCoords.z);
+        float Weight = (i == 0) ? BarycentricCoords.x : ((i == 1) ? BarycentricCoords.y : BarycentricCoords.z);
         
-        uint64_t vbase = meshInfo.VertexBufferAddress + idx * VERTEX_STRIDE;
-        float2 vtexCoord = float2(
-            vk::RawBufferLoad<float>(vbase + TEXCOORD_OFFSET + 0),
-            vk::RawBufferLoad<float>(vbase + TEXCOORD_OFFSET + 4));
+        uint64_t VBase = MeshInfo.VertexBufferAddress + Idx * VERTEX_STRIDE;
+        float2 VTexCoord = float2(
+            vk::RawBufferLoad<float>(VBase + TEXCOORD_OFFSET + 0),
+            vk::RawBufferLoad<float>(VBase + TEXCOORD_OFFSET + 4));
 
-        texCoord += vtexCoord * w;
+        TexCoord += VTexCoord * Weight;
     }
 
-    uint materialIndex = min(meshInfo.MaterialIndex, uScene.Settings.NumMaterials - 1);
-    SMaterial material = Materials[materialIndex];
+    uint MaterialIndexLocal = min(MeshInfo.MaterialIndexLocal, Scene.Settings.NumMaterials - 1);
+    SMaterial MaterialLocal = Materials[MaterialIndexLocal];
 
-    if (material.AlphaMaskTexIndex != INVALID_BINDLESS_ID)
+    if (MaterialLocal.AlphaMaskTexIndex != INVALID_BINDLESS_ID)
     {
-        float alpha = uTextures[material.AlphaMaskTexIndex].SampleLevel(uTexturesSampler, texCoord, 0.0).r;
-        if (alpha < 0.9)
+        float Alpha = Textures[MaterialLocal.AlphaMaskTexIndex].SampleLevel(TexturesSampler, TexCoord, 0.0).r;
+        if (Alpha < 0.9)
         {
             IgnoreHit();
         }
     }
 }
+
+
+
+

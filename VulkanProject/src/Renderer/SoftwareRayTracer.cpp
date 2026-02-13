@@ -329,67 +329,21 @@ void CSoftwareRayTracer::RenderUI()
                 PrevScene = CurrentScene;
             }
 
-            // Background
-            static const char* Background[] =
-            {
-                "None",
-                "Gradient",
-                "Skybox",
-            };
+        }
 
-            int CurrentBG = m_pScene->m_Settings.BackgroundType;
-            static int PrevBG = CurrentBG;
-            ImGui::Combo("Background", &CurrentBG, Background, IM_ARRAYSIZE(Background));
-
-            if (PrevBG != CurrentBG)
-            {
-                if (CurrentBG == 0)
-                {
-                    m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_NONE;
-                }
-                else if (CurrentBG == 1)
-                {
-                    m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_GRADIENT;
-                }
-                else if (CurrentBG == 2)
-                {
-                    m_pScene->m_Settings.BackgroundType = BACKGROUND_TYPE_SKYBOX;
-                }
-
-                ResetImage();
-                PrevBG = CurrentBG;
-            }
-
-            if (CurrentBG == 1)
-            {
-                float Strength = m_pScene->m_Settings.GradientLightStrength;
-                if (ImGui::DragFloat("Gradient Strength", &Strength, 0.1f, 1.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
-                {
-                    m_pScene->m_Settings.GradientLightStrength = Strength;
-                    ResetImage();
-                }
-            }
-
-            float Exposure = m_pScene->m_Settings.Exposure;
-            if (ImGui::DragFloat("Exposure", &Exposure, 0.01f, 0.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
-            {
-                m_pScene->m_Settings.Exposure = Exposure;
-                ResetImage();
-            }
-
-            float FieldOfView = m_pScene->m_Settings.FieldOfView;
-            if (ImGui::DragFloat("FieldOfView", &FieldOfView, 0.1f, 30.0f, 120.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
-            {
-                m_pScene->m_Settings.FieldOfView = FieldOfView;
-                ResetImage();
-            }
-
-            int NumBounces = m_pScene->m_Settings.NumBounces;
-            if (ImGui::DragInt("Num Bounces", &NumBounces, 1, 1, 1024, "%d", ImGuiSliderFlags_AlwaysClamp))
-            {
-                m_pScene->m_Settings.NumBounces = NumBounces;
-                ResetImage();
-            }
+        int CurrentBG = m_pScene->m_Settings.BackgroundType;
+        float GradientStrength = m_pScene->m_Settings.GradientLightStrength;
+        float Exposure = m_pScene->m_Settings.Exposure;
+        float FieldOfView = m_pScene->m_Settings.FieldOfView;
+        int NumBounces = m_pScene->m_Settings.NumBounces;
+        if (DrawCommonRayTracingSceneControls(CurrentBG, GradientStrength, Exposure, FieldOfView, NumBounces))
+        {
+            m_pScene->m_Settings.BackgroundType = CurrentBG;
+            m_pScene->m_Settings.GradientLightStrength = GradientStrength;
+            m_pScene->m_Settings.Exposure = Exposure;
+            m_pScene->m_Settings.FieldOfView = FieldOfView;
+            m_pScene->m_Settings.NumBounces = NumBounces;
+            ResetImage();
         }
 
         // Reset the scene
@@ -733,15 +687,7 @@ void CSoftwareRayTracer::CreateGlobalBuffers()
 
 void CSoftwareRayTracer::CreateRayTracingResources()
 {
-    // Create RayTracing PipelineLayout
-    SPipelineLayoutParams RayTracingPipelineLayoutParams;
-    RayTracingPipelineLayoutParams.ppLayouts       = nullptr;
-    RayTracingPipelineLayoutParams.NumLayouts      = 0;
-    RayTracingPipelineLayoutParams.bEnableBindless = true;
-
-    m_pRayTracingPipelineLayout = CPipelineLayout::Create(GetDevice(), RayTracingPipelineLayoutParams);
-    assert(m_pRayTracingPipelineLayout != nullptr);
-    m_pRayTracingPipelineLayout->SetDebugName("RayTracingPass PipelineLayout");
+    m_pRayTracingPipelineLayout = CreateBindlessPipelineLayout("RayTracingPass PipelineLayout");
 
     // Create RayTracing shader and pipeline
     CShaderModule* pComputeShader = CShaderModule::CreateFromFile(GetDevice(), "main", RESOURCE_PATH"/shaders/compiled_shaders/raytracer.spv");
@@ -1015,13 +961,7 @@ void CSoftwareRayTracer::UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer)
     }
 
     // Barrier before reading the buffer from the shader
-    VkMemoryBarrier MemoryBarrier;
-    MemoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    MemoryBarrier.pNext         = nullptr;
-    MemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    MemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    pCommandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &MemoryBarrier, 0, nullptr, 0, nullptr);
+    AddTransferToShaderReadBarrier(pCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 }
 
 void CSoftwareRayTracer::PerformRayTracing(CCommandBuffer* pCommandBuffer)
@@ -1042,13 +982,7 @@ void CSoftwareRayTracer::PerformRayTracing(CCommandBuffer* pCommandBuffer)
     pCommandBuffer->UpdateBuffer(m_pSceneSettingsBuffer, 0, sizeof(SSoftwareSceneBuffer), &SceneBuffer);
 
     // Barrier before reading the buffer from the shader
-    VkMemoryBarrier MemoryBarrier;
-    MemoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    MemoryBarrier.pNext         = nullptr;
-    MemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    MemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    pCommandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &MemoryBarrier, 0, nullptr, 0, nullptr);
+    AddTransferToShaderReadBarrier(pCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
     // Bind pipeline and descriptorSet
     pCommandBuffer->BindComputePipelineState(m_pRayTracingPipeline.load());

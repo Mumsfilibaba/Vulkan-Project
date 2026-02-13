@@ -15,19 +15,21 @@ float LengthSquared(float3 v)
     return v.x * v.x + v.y * v.y + v.z * v.z;
 }
 
-float3 RealRefract(float3 uv, float3 n, float etaiOverEtat)
+float3 RealRefract(float3 uv, float3 n, float EtaiOverEtat)
 {
-    const float cosTheta = min(dot(-uv, n), 1.0);
-    const float3 rOutPerp = etaiOverEtat * (uv + cosTheta * n);
-    const float3 rOutParallel = -sqrt(abs(1.0 - dot(rOutPerp, rOutPerp))) * n;
-    return rOutPerp + rOutParallel;
+    const float CosTheta = min(dot(-uv, n), 1.0);
+    const float3 ROutPerp = EtaiOverEtat * (uv + CosTheta * n);
+    const float3 ROutParallel = -sqrt(abs(1.0 - dot(ROutPerp, ROutPerp))) * n;
+    return ROutPerp + ROutParallel;
 }
 
-float Reflectance(float cosine, float refractionIndex)
+float Reflectance(float Cosine, float RefractionIndex)
 {
-    float r0 = (1.0 - refractionIndex) / (1.0 + refractionIndex);
+    float r0 = (1.0 - RefractionIndex) / (1.0 + RefractionIndex);
     r0 = r0 * r0;
-    return r0 + (1.0 - r0) * pow((1.0 - cosine), 5.0);
+    return r0 + (1.0 - r0) * pow((1.0 - Cosine), 5.0);
 }
 
 #endif
+
+

@@ -95,6 +95,9 @@ public:
     }
 
 protected:
+    CPipelineLayout* CreateBindlessPipelineLayout(const char* pDebugName) const;
+    void AddTransferToShaderReadBarrier(CCommandBuffer* pCommandBuffer, VkPipelineStageFlags DstStage) const;
+    bool DrawCommonRayTracingSceneControls(int& BackgroundType, float& GradientStrength, float& Exposure, float& FieldOfView, int& NumBounces);
 
     // Scene textures
     CTexture*         m_pSceneTexture0;

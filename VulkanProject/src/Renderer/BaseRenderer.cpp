@@ -631,6 +631,75 @@ void CBaseRenderer::CreateGlobalBuffers()
     m_pTonemappingBuffer->SetDebugName("TonemappingBuffer");
 }
 
+CPipelineLayout* CBaseRenderer::CreateBindlessPipelineLayout(const char* pDebugName) const
+{
+    SPipelineLayoutParams PipelineLayoutParams;
+    PipelineLayoutParams.ppLayouts       = nullptr;
+    PipelineLayoutParams.NumLayouts      = 0;
+    PipelineLayoutParams.bEnableBindless = true;
+
+    CPipelineLayout* pPipelineLayout = CPipelineLayout::Create(GetDevice(), PipelineLayoutParams);
+    assert(pPipelineLayout != nullptr);
+    pPipelineLayout->SetDebugName(pDebugName);
+    return pPipelineLayout;
+}
+
+void CBaseRenderer::AddTransferToShaderReadBarrier(CCommandBuffer* pCommandBuffer, VkPipelineStageFlags DstStage) const
+{
+    VkMemoryBarrier MemoryBarrier;
+    MemoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    MemoryBarrier.pNext         = nullptr;
+    MemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    MemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    pCommandBuffer->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, DstStage, 0, 1, &MemoryBarrier, 0, nullptr, 0, nullptr);
+}
+
+bool CBaseRenderer::DrawCommonRayTracingSceneControls(int& BackgroundType, float& GradientStrength, float& Exposure, float& FieldOfView, int& NumBounces)
+{
+    bool bHasChanged = false;
+
+    static const char* Background[] =
+    {
+        "None",
+        "Gradient",
+        "Skybox",
+    };
+
+    int CurrentBackground = BackgroundType;
+    ImGui::Combo("Background", &CurrentBackground, Background, IM_ARRAYSIZE(Background));
+    if (CurrentBackground != BackgroundType)
+    {
+        BackgroundType = CurrentBackground;
+        bHasChanged = true;
+    }
+
+    if (CurrentBackground == 1)
+    {
+        if (ImGui::DragFloat("Gradient Strength", &GradientStrength, 0.1f, 1.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+        {
+            bHasChanged = true;
+        }
+    }
+
+    if (ImGui::DragFloat("Exposure", &Exposure, 0.01f, 0.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+    {
+        bHasChanged = true;
+    }
+
+    if (ImGui::DragFloat("FieldOfView", &FieldOfView, 0.1f, 30.0f, 120.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp))
+    {
+        bHasChanged = true;
+    }
+
+    if (ImGui::DragInt("Num Bounces", &NumBounces, 1, 1, 1024, "%d", ImGuiSliderFlags_AlwaysClamp))
+    {
+        bHasChanged = true;
+    }
+
+    return bHasChanged;
+}
+
 void CBaseRenderer::CreateTonemappingResources()
 {
     // Create Tonemap DescriptorSetLayout

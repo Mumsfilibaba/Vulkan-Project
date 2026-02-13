@@ -1,4 +1,6 @@
-#include "hw_ray_trace_common.hlsli"
+#include "common_structs.hlsli"
+#define TRACE_COMMON_NO_TRACE_API
+#include "trace_common.hlsli"
 
 #define BACKGROUND_TYPE_NONE 0
 #define BACKGROUND_TYPE_GRADIENT 1
@@ -6,38 +8,24 @@
 
 struct SSceneBuffer
 {
-    SSceneSettings settings;
+    SSceneSettings Settings;
 };
 
 [[vk::binding(16)]]
-ConstantBuffer<SSceneBuffer> sceneBuffer : register(b16);
+ConstantBuffer<SSceneBuffer> SceneBuffer : register(b16);
 
 [[vk::combinedImageSampler]][[vk::binding(4)]]
-TextureCube<float4> cubeTexture : register(t0);
+TextureCube<float4> CubeTexture : register(t0);
 
 [[vk::combinedImageSampler]][[vk::binding(4)]]
-SamplerState cubeTextureSampler : register(s0);
+SamplerState CubeTextureSampler : register(s0);
 
 [shader("miss")]
-void main(inout SRayPayLoad rayPayload)
+void main(inout SRayPayload RayPayload)
 {
-    if (sceneBuffer.settings.BackgroundType == BACKGROUND_TYPE_NONE)
-    {
-        rayPayload.MissEmissive = float3(0.0, 0.0, 0.0);
-    }
-    else if (sceneBuffer.settings.BackgroundType == BACKGROUND_TYPE_GRADIENT)
-    {
-        const float3 rayDir = normalize(WorldRayDirection());
-        const float alpha = 0.5 * (rayDir.y + 1.0);
-        const float3 color = (1.0 - alpha) * float3(1.0, 1.0, 1.0) + alpha * float3(0.5, 0.7, 1.0);
-
-        const float strength = max(1.0, sceneBuffer.settings.GradientLightStrength);
-        rayPayload.MissEmissive = color * strength;
-    }
-    else if (sceneBuffer.settings.BackgroundType == BACKGROUND_TYPE_SKYBOX)
-    {
-        float3 rayDir = normalize(WorldRayDirection());
-        const float4 skyboxColor = cubeTexture.SampleLevel(cubeTextureSampler, rayDir, 0.0);
-        rayPayload.MissEmissive = skyboxColor.rgb;
-    }
+    uint  BackgroundType        = SceneBuffer.Settings.BackgroundType;
+    float GradientLightStrength = SceneBuffer.Settings.GradientLightStrength;
+    RayPayload.MissEmissive = GetEnvironmentLight(BackgroundType, GradientLightStrength, CubeTexture, CubeTextureSampler, WorldRayDirection(), 1.0);
 }
+
+

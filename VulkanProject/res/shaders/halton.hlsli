@@ -1,38 +1,38 @@
 #ifndef HALTON_HLSLI
 #define HALTON_HLSLI
 
-float RadicalInverse2(uint bits)
+float RadicalInverse2(uint Bits)
 {
-    bits = (bits << 16u) | (bits >> 16u);
-    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-    return float(bits) * 2.3283064365386963e-10;
+    Bits = (Bits << 16u) | (Bits >> 16u);
+    Bits = ((Bits & 0x55555555u) << 1u) | ((Bits & 0xAAAAAAAAu) >> 1u);
+    Bits = ((Bits & 0x33333333u) << 2u) | ((Bits & 0xCCCCCCCCu) >> 2u);
+    Bits = ((Bits & 0x0F0F0F0Fu) << 4u) | ((Bits & 0xF0F0F0F0u) >> 4u);
+    Bits = ((Bits & 0x00FF00FFu) << 8u) | ((Bits & 0xFF00FF00u) >> 8u);
+    return float(Bits) * 2.3283064365386963e-10;
 }
 
-float RadicalInverse3(uint a)
+float RadicalInverse3(uint A)
 {
-    const float oneMinusEpsilon = 0.99999994f;
+    const float OneMinusEpsilon = 0.99999994f;
 
-    const uint  base    = 3;
-    const float invBase = 1.0f / float(base);
+    const uint  Base    = 3;
+    const float InvBase = 1.0f / float(Base);
 
-    uint  reversedDigits = 0;
-    float invBaseN = 1.0f;
+    uint  ReversedDigits = 0;
+    float InvBaseN = 1.0f;
 
-    while (a != 0)
+    while (A != 0)
     {
-        const uint next  = a / base;
-        const uint digit = a - next * base;
+        const uint Next  = A / Base;
+        const uint Digit = A - Next * Base;
 
-        reversedDigits = reversedDigits * base + digit;
-        invBaseN *= invBase;
+        ReversedDigits = ReversedDigits * Base + Digit;
+        InvBaseN *= InvBase;
         
-        a = next;
+        A = Next;
     }
 
-    return min(reversedDigits * invBaseN, oneMinusEpsilon);
+    return min(ReversedDigits * InvBaseN, OneMinusEpsilon);
 }
 
 float2 Hammersley2(uint i, uint n)
@@ -46,3 +46,5 @@ float2 Halton23(uint i)
 }
 
 #endif
+
+

@@ -1,4 +1,4 @@
-#include "hw_ray_trace_common.hlsli"
+#include "common_structs.hlsli"
 #include "primitives.hlsli"
 
 struct SMeshInfo
@@ -20,93 +20,96 @@ static const uint TANGENT_OFFSET  = 24;
 static const uint TEXCOORD_OFFSET = 36;
 
 [shader("closesthit")]
-void main(inout SRayPayLoad rayPayload, in BuiltInTriangleIntersectionAttributes attr)
+void main(inout SRayPayload RayPayload, in BuiltInTriangleIntersectionAttributes attr)
 {
-    uint meshInfoOffset = InstanceID();
-    uint geometryIndex  = GeometryIndex();
-    uint meshInfoIndex  = meshInfoOffset + geometryIndex;
+    uint MeshInfoOffset = InstanceID();
+    uint GeometryIdx = GeometryIndex();
+    uint MeshInfoIndex  = MeshInfoOffset + GeometryIdx;
     
-    SMeshInfo meshInfo = MeshInfos[meshInfoIndex];
+    SMeshInfo MeshInfo = MeshInfos[MeshInfoIndex];
 
-    uint primitiveId = PrimitiveIndex();
-    uint64_t indexBase = meshInfo.IndexBufferAddress + primitiveId * 12;
+    uint PrimitiveIdLocal = PrimitiveIndex();
+    uint64_t IndexBase = MeshInfo.IndexBufferAddress + PrimitiveIdLocal * 12;
     
-    uint idx0 = vk::RawBufferLoad<uint>(indexBase + 0);
-    uint idx1 = vk::RawBufferLoad<uint>(indexBase + 4);
-    uint idx2 = vk::RawBufferLoad<uint>(indexBase + 8);
+    uint Idx0 = vk::RawBufferLoad<uint>(IndexBase + 0);
+    uint Idx1 = vk::RawBufferLoad<uint>(IndexBase + 4);
+    uint Idx2 = vk::RawBufferLoad<uint>(IndexBase + 8);
 
-    float3 barycentricCoords = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
-    rayPayload.HitBarycentrics = barycentricCoords;
+    float3 BarycentricCoords = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
+    RayPayload.HitBarycentrics = BarycentricCoords;
 
-    float3 position = float3(0, 0, 0);
-    float3 normal   = float3(0, 0, 0);
-    float3 tangent  = float3(0, 0, 0);
-    float2 texCoord = float2(0, 0);
+    float3 Position = float3(0, 0, 0);
+    float3 Normal   = float3(0, 0, 0);
+    float3 Tangent  = float3(0, 0, 0);
+    float2 TexCoord = float2(0, 0);
 
-    float3 trianglePositions[3];
-    float3 triangleNormals[3];
-    float2 triangleTexCoords[3];
+    float3 TrianglePositions[3];
+    float3 TriangleNormals[3];
+    float2 TriangleTexCoords[3];
 
-    uint indices[3] = { idx0, idx1, idx2 };
+    uint IndicesLocal[3] = { Idx0, Idx1, Idx2 };
     for (uint i = 0; i < 3; i++)
     {
-        uint64_t vbase = meshInfo.VertexBufferAddress + indices[i] * VERTEX_STRIDE;
+        uint64_t VBase = MeshInfo.VertexBufferAddress + IndicesLocal[i] * VERTEX_STRIDE;
         
-        float w = (i == 0) ? barycentricCoords.x : ((i == 1) ? barycentricCoords.y : barycentricCoords.z);
+        float Weight = (i == 0) ? BarycentricCoords.x : ((i == 1) ? BarycentricCoords.y : BarycentricCoords.z);
         
-        float3 vpos = float3(
-            vk::RawBufferLoad<float>(vbase + POSITION_OFFSET + 0),
-            vk::RawBufferLoad<float>(vbase + POSITION_OFFSET + 4),
-            vk::RawBufferLoad<float>(vbase + POSITION_OFFSET + 8));
+        float3 VPos = float3(
+            vk::RawBufferLoad<float>(VBase + POSITION_OFFSET + 0),
+            vk::RawBufferLoad<float>(VBase + POSITION_OFFSET + 4),
+            vk::RawBufferLoad<float>(VBase + POSITION_OFFSET + 8));
         
-        float3 vnormal = float3(
-            vk::RawBufferLoad<float>(vbase + NORMAL_OFFSET + 0),
-            vk::RawBufferLoad<float>(vbase + NORMAL_OFFSET + 4),
-            vk::RawBufferLoad<float>(vbase + NORMAL_OFFSET + 8));
+        float3 VNormal = float3(
+            vk::RawBufferLoad<float>(VBase + NORMAL_OFFSET + 0),
+            vk::RawBufferLoad<float>(VBase + NORMAL_OFFSET + 4),
+            vk::RawBufferLoad<float>(VBase + NORMAL_OFFSET + 8));
         
-        float3 vtangent = float3(
-            vk::RawBufferLoad<float>(vbase + TANGENT_OFFSET + 0),
-            vk::RawBufferLoad<float>(vbase + TANGENT_OFFSET + 4),
-            vk::RawBufferLoad<float>(vbase + TANGENT_OFFSET + 8));
+        float3 VTangent = float3(
+            vk::RawBufferLoad<float>(VBase + TANGENT_OFFSET + 0),
+            vk::RawBufferLoad<float>(VBase + TANGENT_OFFSET + 4),
+            vk::RawBufferLoad<float>(VBase + TANGENT_OFFSET + 8));
 
-        float2 vtexCoord = float2(
-            vk::RawBufferLoad<float>(vbase + TEXCOORD_OFFSET + 0),
-            vk::RawBufferLoad<float>(vbase + TEXCOORD_OFFSET + 4));
+        float2 VTexCoord = float2(
+            vk::RawBufferLoad<float>(VBase + TEXCOORD_OFFSET + 0),
+            vk::RawBufferLoad<float>(VBase + TEXCOORD_OFFSET + 4));
         
-        trianglePositions[i] = vpos;
-        triangleNormals[i]   = vnormal;
-        triangleTexCoords[i] = vtexCoord;
+        TrianglePositions[i] = VPos;
+        TriangleNormals[i]   = VNormal;
+        TriangleTexCoords[i] = VTexCoord;
 
-        position += vpos * w;
-        normal   += vnormal * w;
-        tangent  += vtangent * w;
-        texCoord += vtexCoord * w;
+        Position += VPos * Weight;
+        Normal   += VNormal * Weight;
+        Tangent  += VTangent * Weight;
+        TexCoord += VTexCoord * Weight;
     }
 
-    float3x4 objectToWorld = ObjectToWorld3x4();
-    rayPayload.HitNormal = normalize(mul((float3x3)objectToWorld, normal));
+    float3x4 ObjectToWorld = ObjectToWorld3x4();
+    RayPayload.HitNormal = normalize(mul((float3x3)ObjectToWorld, Normal));
 
-    if (any(isnan(rayPayload.HitNormal)) || any(isinf(rayPayload.HitNormal)))
+    if (any(isnan(RayPayload.HitNormal)) || any(isinf(RayPayload.HitNormal)))
     {
-        rayPayload.HitNormal = normalize(normal);
+        RayPayload.HitNormal = normalize(Normal);
     }
 
-    rayPayload.HitTangent = normalize(mul((float3x3)objectToWorld, tangent));
-    if (any(isnan(rayPayload.HitTangent)) || any(isinf(rayPayload.HitTangent)))
+    RayPayload.HitTangent = normalize(mul((float3x3)ObjectToWorld, Tangent));
+    if (any(isnan(RayPayload.HitTangent)) || any(isinf(RayPayload.HitTangent)))
     {
-        rayPayload.HitTangent = normalize(tangent);
+        RayPayload.HitTangent = normalize(Tangent);
     }
 
-    float3 worldRayDirection = normalize(WorldRayDirection());
-    rayPayload.bFromInside = dot(rayPayload.HitNormal, worldRayDirection) > 0.0 ? 1u : 0u;
-    if (rayPayload.bFromInside)
+    float3 WorldRayDirectionValue = normalize(WorldRayDirection());
+    RayPayload.FromInside = dot(RayPayload.HitNormal, WorldRayDirectionValue) > 0.0 ? 1u : 0u;
+    if (RayPayload.FromInside)
     {
-        rayPayload.HitNormal  = -rayPayload.HitNormal;
-        rayPayload.HitTangent = -rayPayload.HitTangent;
+        RayPayload.HitNormal  = -RayPayload.HitNormal;
+        RayPayload.HitTangent = -RayPayload.HitTangent;
     }
 
-    rayPayload.HitPosition      = mul(objectToWorld, float4(position, 1.0)).xyz;
-    rayPayload.HitTexCoord      = texCoord;
-    rayPayload.HitMaterialIndex = meshInfo.MaterialIndex;
-    rayPayload.HitT             = RayTCurrent();
+    RayPayload.HitPosition      = mul(ObjectToWorld, float4(Position, 1.0)).xyz;
+    RayPayload.HitTexCoord      = TexCoord;
+    RayPayload.HitMaterialIndex = MeshInfo.MaterialIndex;
+    RayPayload.HitT             = RayTCurrent();
 }
+
+
+
