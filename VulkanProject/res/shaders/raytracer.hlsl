@@ -325,33 +325,24 @@ void HitMesh(SMesh Mesh, SRay Ray, inout SRayPayload Payload, inout int2 Stats)
             uint ChildIndex1 = asuint(Node.BoxMinAndIndex.w);
             uint ChildIndex2 = asuint(Node.BoxMinAndIndex.w) + 1;
 
-            float Dist1 = IntersectRayAABB(BvhNodes[ChildIndex1].BoxMinAndIndex.xyz, BvhNodes[ChildIndex1].BoxMaxAndNumTriangles.xyz, LocalRay.Origin, LocalRay.InvDirection);
-            float Dist2 = IntersectRayAABB(BvhNodes[ChildIndex2].BoxMinAndIndex.xyz, BvhNodes[ChildIndex2].BoxMaxAndNumTriangles.xyz, LocalRay.Origin, LocalRay.InvDirection);
+            float Near1, Far1, Near2, Far2;
+            IntersectRayAABBWithFar(BvhNodes[ChildIndex1].BoxMinAndIndex.xyz, BvhNodes[ChildIndex1].BoxMaxAndNumTriangles.xyz, LocalRay.Origin, LocalRay.InvDirection, Near1, Far1);
+            IntersectRayAABBWithFar(BvhNodes[ChildIndex2].BoxMinAndIndex.xyz, BvhNodes[ChildIndex2].BoxMaxAndNumTriangles.xyz, LocalRay.Origin, LocalRay.InvDirection, Near2, Far2);
             Stats.x += 2;
 
-            if (Dist1 > Dist2)
+            const float MinT = LocalPayload.MinT;
+            const bool Hit1 = Near1 < LocalPayload.T && Far1 >= MinT;
+            const bool Hit2 = Near2 < LocalPayload.T && Far2 >= MinT;
+
+            if (Near1 > Near2)
             {
-                if (Dist1 < LocalPayload.T)
-                {
-                    Stack[++StackIndex] = ChildIndex1;
-                }
-                
-                if (Dist2 < LocalPayload.T)
-                {
-                    Stack[++StackIndex] = ChildIndex2;
-                }
+                if (Hit1) Stack[++StackIndex] = ChildIndex1;
+                if (Hit2) Stack[++StackIndex] = ChildIndex2;
             }
             else
             {
-                if (Dist2 < LocalPayload.T)
-                {
-                    Stack[++StackIndex] = ChildIndex2;
-                }
-
-                if (Dist1 < LocalPayload.T)
-                {
-                    Stack[++StackIndex] = ChildIndex1;
-                }
+                if (Hit2) Stack[++StackIndex] = ChildIndex2;
+                if (Hit1) Stack[++StackIndex] = ChildIndex1;
             }
         }
     }
@@ -415,8 +406,8 @@ void TraceTLAS(SRay Ray, inout SRayPayload Payload, inout int2 Stats)
         return;
     }
 
-    const uint MaxDepth = BVH_MAX_DEPTH;
-    uint Stack[MaxDepth];
+    uint Stack[TLAS_MAX_DEPTH];
+    const float MinT = Payload.MinT;
 
     int StackIndex = 0;
     Stack[StackIndex] = 0;
@@ -441,33 +432,24 @@ void TraceTLAS(SRay Ray, inout SRayPayload Payload, inout int2 Stats)
             uint ChildIndex1 = asuint(Node.BoxMinAndIndex.w);
             uint ChildIndex2 = asuint(Node.BoxMinAndIndex.w) + 1;
 
-            float Dist1 = IntersectRayAABB(TlasNodes[ChildIndex1].BoxMinAndIndex.xyz, TlasNodes[ChildIndex1].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection);
-            float Dist2 = IntersectRayAABB(TlasNodes[ChildIndex2].BoxMinAndIndex.xyz, TlasNodes[ChildIndex2].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection);
+            float Near1, Far1, Near2, Far2;
+            IntersectRayAABBWithFar(TlasNodes[ChildIndex1].BoxMinAndIndex.xyz, TlasNodes[ChildIndex1].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection, Near1, Far1);
+            IntersectRayAABBWithFar(TlasNodes[ChildIndex2].BoxMinAndIndex.xyz, TlasNodes[ChildIndex2].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection, Near2, Far2);
             Stats.x += 2;
 
-            if (Dist1 > Dist2)
-            {
-                if (Dist1 < Payload.T)
-                {
-                    Stack[++StackIndex] = ChildIndex1;
-                }
+            // Only traverse children that overlap [MinT, Payload.T] (skip nodes entirely behind the ray).
+            const bool Hit1 = Near1 < Payload.T && Far1 >= MinT;
+            const bool Hit2 = Near2 < Payload.T && Far2 >= MinT;
 
-                if (Dist2 < Payload.T)
-                {
-                    Stack[++StackIndex] = ChildIndex2;
-                }
+            if (Near1 > Near2)
+            {
+                if (Hit1) Stack[++StackIndex] = ChildIndex1;
+                if (Hit2) Stack[++StackIndex] = ChildIndex2;
             }
             else
             {
-                if (Dist2 < Payload.T)
-                {
-                    Stack[++StackIndex] = ChildIndex2;
-                }
-
-                if (Dist1 < Payload.T)
-                {
-                    Stack[++StackIndex] = ChildIndex1;
-                }
+                if (Hit2) Stack[++StackIndex] = ChildIndex2;
+                if (Hit1) Stack[++StackIndex] = ChildIndex1;
             }
         }
     }
