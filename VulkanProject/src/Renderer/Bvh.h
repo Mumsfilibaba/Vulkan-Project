@@ -5,15 +5,14 @@
 
 struct SBvhBuilder;
 
-struct SShaderBoundingBox
+struct SBoundingBoxHLSL
 {
     // 0-16
-    glm::vec3 BoxMin;
-    // Depending on the context this is either first child index or first triangle index
-    uint32_t PrimitiveIndex = 0; 
+    glm::vec3 BoxMin         = {};
+    uint32_t  PrimitiveIndex = 0; // Depending on the context this is either first child index or first triangle index
     // 16-32
-    glm::vec3 BoxMax;
-    uint32_t  NumTriangles = 0;
+    glm::vec3 BoxMax         = {};
+    uint32_t  NumTriangles   = 0;
 };
 
 struct SAABB
@@ -99,19 +98,54 @@ struct SBvhBuilder
     uint32_t                     Depth;
 };
 
+struct SBvhTLASBuilder
+{
+    struct SPrimitive
+    {
+        uint32_t  MeshIndex = 0;
+        glm::vec3 BoxMin    = glm::vec3(0.0f);
+        glm::vec3 BoxMax    = glm::vec3(0.0f);
+        glm::vec3 Center    = glm::vec3(0.0f);
+    };
+
+    SBvhTLASBuilder(const std::vector<SMeshHLSL>& InMeshes, const std::vector<SBoundingBoxHLSL>& InBLASNodes);
+
+    void Build();
+
+    std::vector<SBoundingBoxHLSL> BoundingBoxes;
+
+private:
+    SAABB TransformAABBToWorld(const glm::vec3& BoxMin, const glm::vec3& BoxMax, const glm::mat4& LocalToWorld) const;
+    void BuildNodeRecursive(uint32_t NodeIndex, size_t Start, size_t End);
+
+    std::vector<SPrimitive> m_Primitives;
+};
+
 struct SBvhAccelerationStructure
 {
+    struct SBLASInfo
+    {
+        uint32_t RootBoundingBoxIndex  = 0;
+        uint32_t FirstBoundingBoxIndex = 0;
+        uint32_t NumBoundingBoxes      = 0;
+        uint32_t FirstTriangleIndex    = 0;
+        uint32_t NumTriangles          = 0;
+    };
+
     SBvhAccelerationStructure();
 
+    void Clear();
     void Build(const SModel& Model, uint32_t MaxDepth);
+    uint32_t AddBLAS(const SModel& Model, uint32_t MaxDepth, uint32_t VertexIndexOffset = 0, int32_t MaterialIndexOffset = 0);
 
+    std::vector<SBLASInfo>          m_BLAS;
     std::vector<STriangleInfoHLSL>  m_TriangleInfo;
     std::vector<uint32_t>           m_Indicies;
-    std::vector<SShaderBoundingBox> m_BoundingBoxes;
+    std::vector<SBoundingBoxHLSL> m_BoundingBoxes;
 
     struct
     {
-        uint32_t MaxTrianglesInLeafNode;
-        uint32_t Depth;
+        uint32_t MaxTrianglesInLeafNode = 0;
+        uint32_t Depth                  = 0;
     } Stats;
 };

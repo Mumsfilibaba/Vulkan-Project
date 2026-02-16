@@ -112,7 +112,7 @@ public:
 
 private:
     using BindlessMap = std::unordered_map<VkImageView, uint32_t>;
-    static constexpr uint32_t MaxTrackedBindings = 17;
+    static constexpr uint32_t MaxTrackedBindings = 18;
 
     VkDescriptorSetLayout m_DescriptorSetLayout;
     CBuffer*              m_pDescriptorBuffer;

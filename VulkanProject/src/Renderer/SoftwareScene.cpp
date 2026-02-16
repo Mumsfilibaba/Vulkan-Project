@@ -5,12 +5,22 @@
 #include "Vulkan/Buffer.h"
 #include "Vulkan/BindlessManager.h"
 #include "Vulkan/Sampler.h"
+#include <unordered_map>
 
 template<typename T>
 static void ZeroVector(std::vector<T>& OutVector)
 {
     const size_t Size = sizeof(T) * OutVector.capacity();
     memset(OutVector.data(), 0, Size);
+}
+
+static glm::mat4 BuildModelTransform(const glm::vec3& Position, const glm::vec3& Scale, const glm::vec3& Rotation)
+{
+    glm::mat4 TransformMatrix = glm::identity<glm::mat4>();
+    TransformMatrix = glm::translate(TransformMatrix, Position);
+    TransformMatrix = TransformMatrix * glm::yawPitchRoll(Rotation.y, Rotation.x, Rotation.z);
+    TransformMatrix = glm::scale(TransformMatrix, Scale);
+    return TransformMatrix;
 }
 
 SSoftwareScene::SSoftwareScene()
@@ -23,6 +33,7 @@ SSoftwareScene::SSoftwareScene()
     , m_pIndexBuffer(nullptr)
     , m_pTriangleBuffer(nullptr)
     , m_pBoundingBoxBuffer(nullptr)
+    , m_pTLASBoundingBoxBuffer(nullptr)
     , m_pMaterialSampler(nullptr)
     , m_pAABBInstanceBuffer(nullptr)
 {
@@ -50,6 +61,9 @@ SSoftwareScene::SSoftwareScene()
 
     m_Meshes.reserve(MAX_TRIANGLEMESHES);
     ZeroVector(m_Meshes);
+
+    m_TLASBoundingBoxes.reserve(MAX_TLAS_NODES);
+    ZeroVector(m_TLASBoundingBoxes);
 
     m_bUpdateBuffers = true;
 }
@@ -81,6 +95,7 @@ SSoftwareScene::~SSoftwareScene()
     SAFE_DELETE(m_pIndexBuffer);
     SAFE_DELETE(m_pMaterialSampler);
     SAFE_DELETE(m_pAABBInstanceBuffer);
+    SAFE_DELETE(m_pTLASBoundingBoxBuffer);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -103,35 +118,96 @@ void SModelScene::Initialize()
     // Cache Device
     CDevice* pDevice = CApplication::Get().GetDevice();
 
-    // Load Model
-    SModel Model;
+    // Reset model-dependent data to allow rebuilding this scene safely.
+    m_ModelInstances.clear();
+    m_Quads.clear();
+    m_Spheres.clear();
+    m_Vertices.clear();
+    m_VertexPositions.clear();
+    m_Indicies.clear();
+    m_TriangleInfo.clear();
+    m_Meshes.clear();
+    m_TLASBoundingBoxes.clear();
+    m_Materials.clear();
+    m_GpuMaterials.clear();
+    m_AccelerationStructure.Clear();
+    m_bUpdateBuffers = true;
+
+    // Load scene model and register as instance data (software TLAS input).
+    std::shared_ptr<SModel> pModel = std::make_shared<SModel>();
     if (Type == EModelSceneType::Default)
     {
-        Model.LoadFromFile(RESOURCE_PATH"/models/queen.obj", pDevice);
+        pModel->LoadFromFile(RESOURCE_PATH"/models/queen.obj", pDevice);
         m_Settings.CameraSpeed = 1.5f;
     }
     else if (Type == EModelSceneType::Sponza)
     {
-        Model.LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj", pDevice);
+        pModel->LoadFromFile(RESOURCE_PATH"/models/sponza/sponza.obj", pDevice);
         m_Settings.CameraSpeed           = 150.0f;
         m_Settings.GradientLightStrength = 4.0f;
     }
 
-    // Copy data to the scene
-    m_Vertices  = Model.Vertices;
-    m_Materials = Model.Materials;
-
-    // Create position only buffer
-    m_VertexPositions.resize(m_Vertices.size());
-    for (size_t i = 0; i < m_Vertices.size(); i++)
+    if (Type == EModelSceneType::Default)
     {
-        m_VertexPositions[i].Position = m_Vertices[i].Position;
+        // Two instances of the same queen model to validate BLAS reuse + TLAS instancing.
+        AddModel(pModel, glm::vec3(-0.6f, 0.0f, 0.0f));
+        AddModel(pModel, glm::vec3(0.6f, 0.0f, 0.0f));
+    }
+    else
+    {
+        AddModel(pModel);
     }
 
-    // Build BVH
-    m_AccelerationStructure.Build(Model, 32);
+    struct SBLASCacheEntry
+    {
+        uint32_t RootBoundingBoxIndex = 0;
+    };
 
-    // Copy data from the AccelerationStructure to the scene
+    std::unordered_map<const SModel*, SBLASCacheEntry> BLASCache;
+    BLASCache.reserve(m_ModelInstances.size());
+
+    // Build software BLAS once per unique model and emit mesh instances (TLAS instances).
+    for (const SSceneModel& ModelInstance : m_ModelInstances)
+    {
+        assert(ModelInstance.Model != nullptr);
+        const SModel* pModelKey = ModelInstance.Model.get();
+
+        SBLASCacheEntry* pCacheEntry = nullptr;
+        auto CacheIt = BLASCache.find(pModelKey);
+        if (CacheIt == BLASCache.end())
+        {
+            const uint32_t VertexIndexOffset = static_cast<uint32_t>(m_Vertices.size());
+            const int32_t MaterialIndexOffset = static_cast<int32_t>(m_Materials.size());
+
+            // Unique model data is stored only once and referenced by multiple instances.
+            m_Vertices.insert(m_Vertices.end(), ModelInstance.Model->Vertices.begin(), ModelInstance.Model->Vertices.end());
+            m_VertexPositions.reserve(m_Vertices.size());
+            for (const SVertex& Vertex : ModelInstance.Model->Vertices)
+            {
+                m_VertexPositions.push_back({ Vertex.Position });
+            }
+
+            m_Materials.insert(m_Materials.end(), ModelInstance.Model->Materials.begin(), ModelInstance.Model->Materials.end());
+
+            const uint32_t BLASIndex = m_AccelerationStructure.AddBLAS(*ModelInstance.Model, 32, VertexIndexOffset, MaterialIndexOffset);
+            const SBvhAccelerationStructure::SBLASInfo& BLASInfo = m_AccelerationStructure.m_BLAS[BLASIndex];
+
+            CacheIt = BLASCache.emplace(pModelKey, SBLASCacheEntry{ BLASInfo.RootBoundingBoxIndex }).first;
+        }
+
+        pCacheEntry = &CacheIt->second;
+
+        SMeshHLSL& Mesh = m_Meshes.emplace_back();
+        Mesh.BoundingBoxIndex = pCacheEntry->RootBoundingBoxIndex;
+        Mesh.LocalToWorld     = BuildModelTransform(ModelInstance.Position, ModelInstance.Scale, ModelInstance.Rotation);
+        Mesh.WorldToLocal     = glm::inverse(Mesh.LocalToWorld);
+    }
+
+    SBvhTLASBuilder TLASBuilder(m_Meshes, m_AccelerationStructure.m_BoundingBoxes);
+    TLASBuilder.Build();
+    m_TLASBoundingBoxes = TLASBuilder.BoundingBoxes;
+
+    // Copy flattened BLAS data to the scene-level buffers.
     m_Indicies     = m_AccelerationStructure.m_Indicies;
     m_TriangleInfo = m_AccelerationStructure.m_TriangleInfo;
 
@@ -139,15 +215,9 @@ void SModelScene::Initialize()
     LOG("MaxTrianglesInLeafNode: %u\n", m_AccelerationStructure.Stats.MaxTrianglesInLeafNode);
     LOG("Num BoundingBoxes: %u\n", m_AccelerationStructure.m_BoundingBoxes.size());
 
-    // Mesh Data
-    m_Meshes.push_back(
-    {
-        0, // BoundingBoxIndex
-    });
-
     // BVH-Buffer
     SBufferParams BoundingBoxBufferParams;
-    BoundingBoxBufferParams.Size             = sizeof(SShaderBoundingBox) * m_AccelerationStructure.m_BoundingBoxes.size();
+    BoundingBoxBufferParams.Size             = sizeof(SBoundingBoxHLSL) * m_AccelerationStructure.m_BoundingBoxes.size();
     BoundingBoxBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
     BoundingBoxBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -155,6 +225,19 @@ void SModelScene::Initialize()
     m_pBoundingBoxBuffer = CBuffer::CreateWithData(pDevice, BoundingBoxBufferParams, nullptr, m_AccelerationStructure.m_BoundingBoxes.data());
     assert(m_pBoundingBoxBuffer != nullptr);
     m_pBoundingBoxBuffer->SetDebugName("CPU Bounding Box Buffer");
+
+    if (!m_TLASBoundingBoxes.empty())
+    {
+        SBufferParams TLASBoundingBoxBufferParams;
+        TLASBoundingBoxBufferParams.Size             = sizeof(SBoundingBoxHLSL) * m_TLASBoundingBoxes.size();
+        TLASBoundingBoxBufferParams.MemoryProperties = VK_CPU_BUFFER_USAGE;
+        TLASBoundingBoxBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+        assert(m_TLASBoundingBoxes.size() < MAX_TLAS_NODES);
+        m_pTLASBoundingBoxBuffer = CBuffer::CreateWithData(pDevice, TLASBoundingBoxBufferParams, nullptr, m_TLASBoundingBoxes.data());
+        assert(m_pTLASBoundingBoxBuffer != nullptr);
+        m_pTLASBoundingBoxBuffer->SetDebugName("CPU TLAS Bounding Box Buffer");
+    }
 
     // CPU Triangle Buffer
     SBufferParams TriangleBufferParams;
@@ -202,7 +285,7 @@ void SModelScene::Initialize()
 
     for (size_t i = 0; i < m_AccelerationStructure.m_BoundingBoxes.size(); i++)
     {
-        const SShaderBoundingBox& BoundingBox = m_AccelerationStructure.m_BoundingBoxes[i];
+        const SBoundingBoxHLSL& BoundingBox = m_AccelerationStructure.m_BoundingBoxes[i];
         if (BoundingBox.NumTriangles > 0)
         {
             glm::vec3 Scale    = glm::vec3(BoundingBox.BoxMax) - glm::vec3(BoundingBox.BoxMin);

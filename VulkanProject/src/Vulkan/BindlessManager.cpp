@@ -15,12 +15,14 @@ static constexpr uint32_t BindlessStorageBufferEndBinding = BindlessStorageBuffe
 static constexpr uint32_t BindlessUniformCameraBinding = 14;
 static constexpr uint32_t BindlessUniformRandomBinding = 15;
 static constexpr uint32_t BindlessUniformSceneBinding = 16;
+static constexpr uint32_t BindlessStorageTLASBinding = 17;
+static constexpr uint32_t BindlessMaxBinding = BindlessStorageTLASBinding;
 
 static bool CreateBindlessDescriptorSetLayout(CDevice* pDevice, uint32_t MaxTextureBinding, bool bDescriptorBufferLayout, VkDescriptorSetLayout& OutLayout)
 {
     const bool bRayTracingSupported = pDevice->IsRayTracingSupported();
 
-    VkDescriptorSetLayoutBinding Bindings[8 + BindlessStorageBufferCount] = {};
+    VkDescriptorSetLayoutBinding Bindings[9 + BindlessStorageBufferCount] = {};
     uint32_t BindingCount = 0;
 
     Bindings[BindingCount].binding         = BindlessSampledTextureBinding;
@@ -83,6 +85,12 @@ static bool CreateBindlessDescriptorSetLayout(CDevice* pDevice, uint32_t MaxText
     Bindings[BindingCount].stageFlags      = VK_SHADER_STAGE_ALL;
     BindingCount++;
 
+    Bindings[BindingCount].binding         = BindlessStorageTLASBinding;
+    Bindings[BindingCount].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    Bindings[BindingCount].descriptorCount = 1;
+    Bindings[BindingCount].stageFlags      = VK_SHADER_STAGE_ALL;
+    BindingCount++;
+
     VkDescriptorSetLayoutCreateInfo LayoutCreateInfo = {};
     LayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     LayoutCreateInfo.flags        = 0;
@@ -105,7 +113,7 @@ static bool CreateBindlessDescriptorSetLayout(CDevice* pDevice, uint32_t MaxText
         BindlessFlags |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
     }
 
-    VkDescriptorBindingFlags BindingFlags[8 + BindlessStorageBufferCount] = {};
+    VkDescriptorBindingFlags BindingFlags[9 + BindlessStorageBufferCount] = {};
     BindingFlags[0] = BindlessFlags;
 
     VkDescriptorSetLayoutBindingFlagsCreateInfoEXT BindingFlagsCreateInfo = {};
@@ -180,7 +188,7 @@ CDescriptorSetBindlessManager* CDescriptorSetBindlessManager::Create(CDevice* pD
     PoolSizeCount++;
 
     PoolSizes[PoolSizeCount].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    PoolSizes[PoolSizeCount].descriptorCount = BindlessStorageBufferCount;
+    PoolSizes[PoolSizeCount].descriptorCount = BindlessStorageBufferCount + 1;
     PoolSizeCount++;
 
     PoolSizes[PoolSizeCount].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -373,7 +381,7 @@ void CDescriptorSetBindlessManager::BindCombinedImageSampler(VkImageView ImageVi
 void CDescriptorSetBindlessManager::BindStorageBuffer(VkBuffer Buffer, VkDeviceSize Range, uint32_t Binding)
 {
     assert(m_DescriptorSet != VK_NULL_HANDLE);
-    assert(Binding >= BindlessStorageBufferBeginBinding && Binding <= BindlessStorageBufferEndBinding);
+    assert((Binding >= BindlessStorageBufferBeginBinding && Binding <= BindlessStorageBufferEndBinding) || Binding == BindlessStorageTLASBinding);
     assert(Buffer != VK_NULL_HANDLE);
     assert(Range > 0);
 
@@ -440,7 +448,7 @@ CDescriptorBufferBindlessManager* CDescriptorBufferBindlessManager::Create(CDevi
 
     Extensions::vkGetDescriptorSetLayoutSizeEXT(pDevice->GetDevice(), pBindlessManager->m_DescriptorSetLayout, &pBindlessManager->m_DescriptorBufferSize);
     pBindlessManager->m_DescriptorBufferBindingOffsets.fill(0);
-    for (uint32_t Binding = BindlessSampledTextureBinding; Binding <= BindlessUniformSceneBinding; Binding++)
+    for (uint32_t Binding = BindlessSampledTextureBinding; Binding <= BindlessMaxBinding; Binding++)
     {
         if ((Binding == BindlessAccelerationStructureBinding) && !pDevice->IsRayTracingSupported())
         {
@@ -654,7 +662,7 @@ void CDescriptorBufferBindlessManager::BindCombinedImageSampler(VkImageView Imag
 void CDescriptorBufferBindlessManager::BindStorageBuffer(VkBuffer Buffer, VkDeviceSize Range, uint32_t Binding)
 {
     assert(m_pMappedDescriptorBuffer != nullptr);
-    assert(Binding >= BindlessStorageBufferBeginBinding && Binding <= BindlessStorageBufferEndBinding);
+    assert((Binding >= BindlessStorageBufferBeginBinding && Binding <= BindlessStorageBufferEndBinding) || Binding == BindlessStorageTLASBinding);
     assert(Buffer != VK_NULL_HANDLE);
     assert(Range > 0);
 

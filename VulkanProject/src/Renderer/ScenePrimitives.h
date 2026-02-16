@@ -42,8 +42,18 @@ struct SQuadHLSL
 
 struct SMeshHLSL
 {
-    // 0-8
-    uint32_t BoundingBoxIndex;
+    // 0-16
+    uint32_t BoundingBoxIndex = 0;
+
+    // Padding for 16-byte alignment before matrix data.
+    uint32_t Padding0 = 0;
+    uint32_t Padding1 = 0;
+    uint32_t Padding2 = 0;
+
+    // 16-80
+    glm::mat4 LocalToWorld = glm::identity<glm::mat4>();
+    // 80-144
+    glm::mat4 WorldToLocal = glm::identity<glm::mat4>();
 };
 
 struct SMaterialHLSL

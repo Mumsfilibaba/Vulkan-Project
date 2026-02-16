@@ -30,7 +30,9 @@ CSoftwareRayTracer::CSoftwareRayTracer()
     , m_pMeshBuffer(nullptr)
     , m_pVertexPositionsBuffer(nullptr)
     , m_pVertexBuffer(nullptr)
+    , m_pIndexBuffer(nullptr)
     , m_pBvhBuffer(nullptr)
+    , m_pTlasBuffer(nullptr)
     , m_pAABBVertexBuffer(nullptr)
     , m_pAABBIndexBuffer(nullptr)
     , m_pAABBInstanceBuffer(nullptr)
@@ -118,6 +120,7 @@ void CSoftwareRayTracer::ReleaseResources()
     SAFE_DELETE(m_pVertexBuffer);
     SAFE_DELETE(m_pIndexBuffer);
     SAFE_DELETE(m_pBvhBuffer);
+    SAFE_DELETE(m_pTlasBuffer);
     SAFE_DELETE(m_pAABBVertexBuffer);
     SAFE_DELETE(m_pAABBIndexBuffer);
     SAFE_DELETE(m_pAABBInstanceBuffer);
@@ -162,6 +165,7 @@ void CSoftwareRayTracer::CreateDescriptorSets()
     GetDevice()->GetBindlessManager().BindUniformBuffer(m_pCameraBuffer->GetBuffer(), m_pCameraBuffer->GetSize(), 14);
     GetDevice()->GetBindlessManager().BindUniformBuffer(m_pRandomBuffer->GetBuffer(), m_pRandomBuffer->GetSize(), 15);
     GetDevice()->GetBindlessManager().BindUniformBuffer(m_pSceneSettingsBuffer->GetBuffer(), m_pSceneSettingsBuffer->GetSize(), 16);
+    GetDevice()->GetBindlessManager().BindStorageBuffer(m_pTlasBuffer->GetBuffer(), m_pTlasBuffer->GetSize(), 17);
 
     // Debug Pass
     m_pDebugDescriptorSet0 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
@@ -666,13 +670,23 @@ void CSoftwareRayTracer::CreateGlobalBuffers()
 
     // BoundingBoxBuffer
     SBufferParams BoundingBoxBufferParams;
-    BoundingBoxBufferParams.Size             = sizeof(SShaderBoundingBox) * MAX_BVH_NODES;
+    BoundingBoxBufferParams.Size             = sizeof(SBoundingBoxHLSL) * MAX_BVH_NODES;
     BoundingBoxBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
     BoundingBoxBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
 
     m_pBvhBuffer = CBuffer::Create(GetDevice(), BoundingBoxBufferParams, GetDeviceAllocator());
     assert(m_pBvhBuffer != nullptr);
     m_pBvhBuffer->SetDebugName("BVHBuffer");
+
+    // TLAS BoundingBoxBuffer
+    SBufferParams TlasBufferParams;
+    TlasBufferParams.Size             = sizeof(SBoundingBoxHLSL) * MAX_TLAS_NODES;
+    TlasBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    TlasBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | DescriptorBufferExtraUsage;
+
+    m_pTlasBuffer = CBuffer::Create(GetDevice(), TlasBufferParams, GetDeviceAllocator());
+    assert(m_pTlasBuffer != nullptr);
+    m_pTlasBuffer->SetDebugName("TLASBuffer");
 
     // Debug AABB instance buffer
     SBufferParams AABBInstanceBufferParams;
@@ -917,6 +931,17 @@ void CSoftwareRayTracer::UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer)
         pCommandBuffer->CopyBuffer(m_pScene->m_pBoundingBoxBuffer->GetBuffer(), m_pBvhBuffer->GetBuffer(), 1, &BufferCopy);
     }
 
+    if (m_pScene->m_bUpdateBuffers && m_pScene->m_pTLASBoundingBoxBuffer)
+    {
+        VkBufferCopy BufferCopy;
+        BufferCopy.size      = m_pScene->m_pTLASBoundingBoxBuffer->GetSize();
+        BufferCopy.dstOffset = 0;
+        BufferCopy.srcOffset = 0;
+
+        assert(m_pTlasBuffer->GetSize() >= m_pScene->m_pTLASBoundingBoxBuffer->GetSize());
+        pCommandBuffer->CopyBuffer(m_pScene->m_pTLASBoundingBoxBuffer->GetBuffer(), m_pTlasBuffer->GetBuffer(), 1, &BufferCopy);
+    }
+
     if (m_pScene->m_bUpdateBuffers && m_pScene->m_pAABBInstanceBuffer)
     {
         VkBufferCopy BufferCopy;
@@ -973,6 +998,7 @@ void CSoftwareRayTracer::PerformRayTracing(CCommandBuffer* pCommandBuffer)
     SceneBuffer.NumMaterials          = m_pScene->m_GpuMaterials.size();
     SceneBuffer.NumMeshes             = m_pScene->m_Meshes.size();
     SceneBuffer.NumBvhNodes           = m_pScene->m_AccelerationStructure.m_BoundingBoxes.size();
+    SceneBuffer.NumTlasNodes          = m_pScene->m_TLASBoundingBoxes.size();
     SceneBuffer.NumTriangles          = m_pScene->m_AccelerationStructure.m_TriangleInfo.size();
     SceneBuffer.BackgroundType        = m_pScene->m_Settings.BackgroundType;
     SceneBuffer.NumBounces            = m_pScene->m_Settings.NumBounces;

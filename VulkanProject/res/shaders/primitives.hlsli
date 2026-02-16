@@ -81,8 +81,16 @@ struct STriangle
 
 struct SMesh
 {
-    // 0-8
+    // 0-16
     uint BoundingBoxIndex;
+    uint Padding0;
+    uint Padding1;
+    uint Padding2;
+
+    // 16-80
+    float4x4 LocalToWorld;
+    // 80-144
+    float4x4 WorldToLocal;
 };
 
 struct SHitInfo

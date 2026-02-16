@@ -12,7 +12,8 @@
 #define MAX_VERTICES (MAX_TRIANGLES * 3)
 #define MAX_MATERIALS 1024
 #define MAX_BVH_NODES 300000
-#define MAX_TRIANGLEMESHES 3
+#define MAX_TRIANGLEMESHES 1024
+#define MAX_TLAS_NODES (MAX_TRIANGLEMESHES * 2)
 
 #define BACKGROUND_TYPE_NONE 0
 #define BACKGROUND_TYPE_GRADIENT 1
@@ -47,6 +48,14 @@ struct SSoftwareSceneSettings
 
 struct SSoftwareScene : public IScene
 {
+    struct SSceneModel
+    {
+        std::shared_ptr<SModel> Model;
+        glm::vec3               Position;
+        glm::vec3               Scale;
+        glm::vec3               Rotation;
+    };
+
     SSoftwareScene();
     virtual ~SSoftwareScene();
 
@@ -63,8 +72,14 @@ struct SSoftwareScene : public IScene
     virtual CCamera& GetCamera() override { return m_Camera; }
     virtual const CCamera& GetCamera() const override { return m_Camera; }
 
+    void AddModel(const std::shared_ptr<SModel>& Model, const glm::vec3& Position = glm::vec3(0.0f), const glm::vec3& Scale = glm::vec3(1.0f), const glm::vec3& Rotation = glm::vec3(0.0f))
+    {
+        m_ModelInstances.push_back({ Model, Position, Scale, Rotation });
+    }
+
     CCamera                m_Camera;
     SSoftwareSceneSettings m_Settings;
+    std::vector<SSceneModel> m_ModelInstances;
 
     // Materials
     std::vector<SMaterial>     m_Materials;
@@ -83,6 +98,7 @@ struct SSoftwareScene : public IScene
     std::vector<uint32_t>          m_Indicies;
     std::vector<SMeshHLSL>         m_Meshes;
     std::vector<STriangleInfoHLSL> m_TriangleInfo;
+    std::vector<SBoundingBoxHLSL> m_TLASBoundingBoxes;
 
     // CPU Buffers
     CBuffer*  m_pVertexPositionsBuffer;
@@ -90,6 +106,7 @@ struct SSoftwareScene : public IScene
     CBuffer*  m_pIndexBuffer;
     CBuffer*  m_pTriangleBuffer;
     CBuffer*  m_pBoundingBoxBuffer;
+    CBuffer*  m_pTLASBoundingBoxBuffer;
     bool      m_bUpdateBuffers;
 
     // Sampler for materials

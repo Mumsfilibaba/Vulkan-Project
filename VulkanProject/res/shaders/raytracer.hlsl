@@ -50,6 +50,7 @@ struct SSceneBuffer
     uint  NumMeshes;
     uint  NumMaterials;
     uint  NumBvhNodes;
+    uint  NumTlasNodes;
     uint  NumTriangles;
     uint  BackgroundType;
     uint  NumBounces;
@@ -58,6 +59,7 @@ struct SSceneBuffer
     // Padding
     uint  Padding0;
     uint  Padding1;
+    uint  Padding2;
 };
 
 [[vk::binding(14)]]
@@ -78,6 +80,7 @@ ConstantBuffer<SSceneBuffer> Scene;
 [[vk::binding(11)]] StructuredBuffer<STriangle>       Triangles;
 [[vk::binding(12)]] StructuredBuffer<SMesh>           Meshes;
 [[vk::binding(13)]] StructuredBuffer<SBoundingBox>    BvhNodes;
+[[vk::binding(17)]] StructuredBuffer<SBoundingBox>    TlasNodes;
 
 #include "shading.hlsli"
 #include "trace_common.hlsli"
@@ -225,8 +228,16 @@ SHitInfo HitTriangle(float3 Vertex0, float3 Vertex1, float3 Vertex2, float3 RayO
     return HitInfo;
 }
 
-void HitMesh(uint RootBoxIndex, SRay Ray, inout SRayPayload Payload, inout int2 Stats)
+void HitMesh(SMesh Mesh, SRay Ray, inout SRayPayload Payload, inout int2 Stats)
 {
+    SRay LocalRay;
+    LocalRay.Origin       = mul(Mesh.WorldToLocal, float4(Ray.Origin, 1.0)).xyz;
+    LocalRay.Direction    = mul((float3x3)Mesh.WorldToLocal, Ray.Direction);
+    LocalRay.InvDirection = 1.0 / LocalRay.Direction;
+
+    SRayPayload LocalPayload = Payload;
+
+    const uint RootBoxIndex = Mesh.BoundingBoxIndex;
     const uint MaxDepth = BVH_MAX_DEPTH;
     uint Stack[MaxDepth];
 
@@ -252,10 +263,10 @@ void HitMesh(uint RootBoxIndex, SRay Ray, inout SRayPayload Payload, inout int2 
                 float3 Position1 = VertexPositions[VertexIndices.y].Position.xyz;
                 float3 Position2 = VertexPositions[VertexIndices.z].Position.xyz;
 
-                SHitInfo HitInfo = HitTriangle(Position0, Position1, Position2, Ray.Origin, Ray.Direction);
+                SHitInfo HitInfo = HitTriangle(Position0, Position1, Position2, LocalRay.Origin, LocalRay.Direction);
                 Stats.y++;
 
-                if (HitInfo.Dist > Payload.MinT && HitInfo.Dist < Payload.MaxT && HitInfo.Dist < Payload.T)
+                if (HitInfo.Dist > LocalPayload.MinT && HitInfo.Dist < LocalPayload.MaxT && HitInfo.Dist < LocalPayload.T)
                 {
                     STriangle Triangle = Triangles[TriangleIndex];
                     uint MaterialIndex = min((uint)Triangle.MaterialIndex, Scene.NumMaterials - 1);
@@ -277,7 +288,7 @@ void HitMesh(uint RootBoxIndex, SRay Ray, inout SRayPayload Payload, inout int2 
                         }
                     }
 
-                    Payload.T            = HitInfo.Dist;
+                    LocalPayload.T       = HitInfo.Dist;
                     LastTriangleHitIndex = (int)TriangleIndex;
                     LastHitInfo          = HitInfo;
                 }
@@ -288,30 +299,30 @@ void HitMesh(uint RootBoxIndex, SRay Ray, inout SRayPayload Payload, inout int2 
             uint ChildIndex1 = asuint(Node.BoxMinAndIndex.w);
             uint ChildIndex2 = asuint(Node.BoxMinAndIndex.w) + 1;
 
-            float Dist1 = IntersectRayAABB(BvhNodes[ChildIndex1].BoxMinAndIndex.xyz, BvhNodes[ChildIndex1].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection);
-            float Dist2 = IntersectRayAABB(BvhNodes[ChildIndex2].BoxMinAndIndex.xyz, BvhNodes[ChildIndex2].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection);
+            float Dist1 = IntersectRayAABB(BvhNodes[ChildIndex1].BoxMinAndIndex.xyz, BvhNodes[ChildIndex1].BoxMaxAndNumTriangles.xyz, LocalRay.Origin, LocalRay.InvDirection);
+            float Dist2 = IntersectRayAABB(BvhNodes[ChildIndex2].BoxMinAndIndex.xyz, BvhNodes[ChildIndex2].BoxMaxAndNumTriangles.xyz, LocalRay.Origin, LocalRay.InvDirection);
             Stats.x += 2;
 
             if (Dist1 > Dist2)
             {
-                if (Dist1 < Payload.T)
+                if (Dist1 < LocalPayload.T)
                 {
                     Stack[++StackIndex] = ChildIndex1;
                 }
                 
-                if (Dist2 < Payload.T)
+                if (Dist2 < LocalPayload.T)
                 {
                     Stack[++StackIndex] = ChildIndex2;
                 }
             }
             else
             {
-                if (Dist2 < Payload.T)
+                if (Dist2 < LocalPayload.T)
                 {
                     Stack[++StackIndex] = ChildIndex2;
                 }
 
-                if (Dist1 < Payload.T)
+                if (Dist1 < LocalPayload.T)
                 {
                     Stack[++StackIndex] = ChildIndex1;
                 }
@@ -337,10 +348,15 @@ void HitMesh(uint RootBoxIndex, SRay Ray, inout SRayPayload Payload, inout int2 
 
         STriangle Triangle = Triangles[LastTriangleHitIndex];
         Payload.Barycentrics  = float3(LastHitInfo.Barycentrics, 1.0 - (LastHitInfo.Barycentrics.x + LastHitInfo.Barycentrics.y));
-        Payload.Normal        = normalize((Payload.Barycentrics.x * Normal1)  + (Payload.Barycentrics.y * Normal2)  + (Payload.Barycentrics.z * Normal0));
-        Payload.Tangent       = normalize((Payload.Barycentrics.x * Tangent1) + (Payload.Barycentrics.y * Tangent2) + (Payload.Barycentrics.z * Tangent0));
+
+        float3 LocalNormal  = normalize((Payload.Barycentrics.x * Normal1) + (Payload.Barycentrics.y * Normal2) + (Payload.Barycentrics.z * Normal0));
+        float3 LocalTangent = normalize((Payload.Barycentrics.x * Tangent1) + (Payload.Barycentrics.y * Tangent2) + (Payload.Barycentrics.z * Tangent0));
+
+        Payload.Normal        = normalize(mul(transpose((float3x3)Mesh.WorldToLocal), LocalNormal));
+        Payload.Tangent       = normalize(mul((float3x3)Mesh.LocalToWorld, LocalTangent));
         Payload.TexCoords     = (Payload.Barycentrics.x * TexCoords1) + (Payload.Barycentrics.y * TexCoords2) + (Payload.Barycentrics.z * TexCoords0);
         Payload.MaterialIndex = Triangle.MaterialIndex;
+        Payload.T             = LocalPayload.T;
         Payload.Position      = Ray.Origin + Payload.T * Ray.Direction;
         Payload.FromInside   = false;
 
@@ -352,6 +368,71 @@ void HitMesh(uint RootBoxIndex, SRay Ray, inout SRayPayload Payload, inout int2 
         else
         {
             Payload.FrontFace = false;
+        }
+    }
+}
+
+void TraceTLAS(SRay Ray, inout SRayPayload Payload, inout int2 Stats)
+{
+    if (Scene.NumTlasNodes == 0)
+    {
+        return;
+    }
+
+    const uint MaxDepth = BVH_MAX_DEPTH;
+    uint Stack[MaxDepth];
+
+    int StackIndex = 0;
+    Stack[StackIndex] = 0;
+
+    while (StackIndex >= 0)
+    {
+        uint NodeIndex = Stack[StackIndex];
+        StackIndex--;
+
+        SBoundingBox Node = TlasNodes[NodeIndex];
+        if (asuint(Node.BoxMaxAndNumTriangles.w) > 0)
+        {
+            uint FirstMeshIndex = asuint(Node.BoxMinAndIndex.w);
+            uint LastMeshIndex  = FirstMeshIndex + asuint(Node.BoxMaxAndNumTriangles.w);
+            for (uint MeshIndex = FirstMeshIndex; MeshIndex < LastMeshIndex && MeshIndex < Scene.NumMeshes; MeshIndex++)
+            {
+                HitMesh(Meshes[MeshIndex], Ray, Payload, Stats);
+            }
+        }
+        else
+        {
+            uint ChildIndex1 = asuint(Node.BoxMinAndIndex.w);
+            uint ChildIndex2 = asuint(Node.BoxMinAndIndex.w) + 1;
+
+            float Dist1 = IntersectRayAABB(TlasNodes[ChildIndex1].BoxMinAndIndex.xyz, TlasNodes[ChildIndex1].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection);
+            float Dist2 = IntersectRayAABB(TlasNodes[ChildIndex2].BoxMinAndIndex.xyz, TlasNodes[ChildIndex2].BoxMaxAndNumTriangles.xyz, Ray.Origin, Ray.InvDirection);
+            Stats.x += 2;
+
+            if (Dist1 > Dist2)
+            {
+                if (Dist1 < Payload.T)
+                {
+                    Stack[++StackIndex] = ChildIndex1;
+                }
+
+                if (Dist2 < Payload.T)
+                {
+                    Stack[++StackIndex] = ChildIndex2;
+                }
+            }
+            else
+            {
+                if (Dist2 < Payload.T)
+                {
+                    Stack[++StackIndex] = ChildIndex2;
+                }
+
+                if (Dist1 < Payload.T)
+                {
+                    Stack[++StackIndex] = ChildIndex1;
+                }
+            }
         }
     }
 }
@@ -370,10 +451,17 @@ bool TraceRay(SRay Ray, inout SRayPayload Payload, inout int2 Stats)
         HitQuad(Quad, Ray, Payload);
     }
 
-    for (uint i = 0; i < Scene.NumMeshes; i++)
+    if (Scene.NumTlasNodes > 0)
     {
-        SMesh Mesh = Meshes[i];
-        HitMesh(Mesh.BoundingBoxIndex, Ray, Payload, Stats);
+        TraceTLAS(Ray, Payload, Stats);
+    }
+    else
+    {
+        for (uint i = 0; i < Scene.NumMeshes; i++)
+        {
+            SMesh Mesh = Meshes[i];
+            HitMesh(Mesh, Ray, Payload, Stats);
+        }
     }
 
     return Payload.T < Payload.MaxT;

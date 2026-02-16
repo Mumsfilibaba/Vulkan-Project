@@ -13,16 +13,18 @@ struct SSoftwareSceneBuffer
     uint32_t NumMaterials = 0;
     // 16-32
     uint32_t NumBvhNodes    = 0;
+    uint32_t NumTlasNodes   = 0;
     uint32_t NumTriangles   = 0;
     uint32_t BackgroundType = 0;
-    uint32_t NumBounces     = 4;
-    // 32-40
+    // 32-48
+    uint32_t NumBounces            = 4;
     uint32_t ViewMode              = 0;
     float    GradientLightStrength = 1.0f;
     
     // Padding
-    uint32_t Padding0;
-    uint32_t Padding1;
+    uint32_t Padding0 = 0;
+    uint32_t Padding1 = 0;
+    uint32_t Padding2 = 0;
 };
 
 class CSoftwareRayTracer : public CBaseRenderer
@@ -74,6 +76,7 @@ private:
     CBuffer* m_pVertexBuffer;
     CBuffer* m_pIndexBuffer;
     CBuffer* m_pBvhBuffer;
+    CBuffer* m_pTlasBuffer;
 
     CBuffer* m_pAABBVertexBuffer;
     CBuffer* m_pAABBIndexBuffer;
