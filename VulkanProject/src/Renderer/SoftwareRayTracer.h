@@ -81,6 +81,7 @@ private:
     CBuffer* m_pAABBVertexBuffer;
     CBuffer* m_pAABBIndexBuffer;
     CBuffer* m_pAABBInstanceBuffer;
+    CBuffer* m_pTLASAABBInstanceBuffer;
     size_t   m_AABBIndexCount;
 
     // RayTracing Pass
@@ -99,6 +100,10 @@ private:
     CDescriptorSetLayout* m_pDebugDescriptorSetLayout;
     CDescriptorSet*       m_pDebugDescriptorSet0;
     CDescriptorSet*       m_pDebugDescriptorSet1;
+    CDescriptorSet*       m_pDebugAABBDescriptorSet0;
+    CDescriptorSet*       m_pDebugAABBDescriptorSet1;
+    CDescriptorSet*       m_pDebugTLASAABBDescriptorSet0;
+    CDescriptorSet*       m_pDebugTLASAABBDescriptorSet1;
     CTexture*             m_pDepthBufferTexture;
     CTextureView*         m_pDepthBufferTextureView;
 };

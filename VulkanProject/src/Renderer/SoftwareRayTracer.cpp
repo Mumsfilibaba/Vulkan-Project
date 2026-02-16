@@ -36,6 +36,7 @@ CSoftwareRayTracer::CSoftwareRayTracer()
     , m_pAABBVertexBuffer(nullptr)
     , m_pAABBIndexBuffer(nullptr)
     , m_pAABBInstanceBuffer(nullptr)
+    , m_pTLASAABBInstanceBuffer(nullptr)
     , m_AABBIndexCount(0)
     , m_pRayTracingPipeline(nullptr)
     , m_pRayTracingPipelineLayout(nullptr)
@@ -50,6 +51,10 @@ CSoftwareRayTracer::CSoftwareRayTracer()
     , m_pDebugDescriptorSetLayout(nullptr)
     , m_pDebugDescriptorSet0(nullptr)
     , m_pDebugDescriptorSet1(nullptr)
+    , m_pDebugAABBDescriptorSet0(nullptr)
+    , m_pDebugAABBDescriptorSet1(nullptr)
+    , m_pDebugTLASAABBDescriptorSet0(nullptr)
+    , m_pDebugTLASAABBDescriptorSet1(nullptr)
     , m_pDepthBufferTexture(nullptr)
     , m_pDepthBufferTextureView(nullptr)
 {
@@ -124,6 +129,7 @@ void CSoftwareRayTracer::ReleaseResources()
     SAFE_DELETE(m_pAABBVertexBuffer);
     SAFE_DELETE(m_pAABBIndexBuffer);
     SAFE_DELETE(m_pAABBInstanceBuffer);
+    SAFE_DELETE(m_pTLASAABBInstanceBuffer);
     
     SAFE_DELETE(m_pRayTracingPipeline);
     SAFE_DELETE(m_pRayTracingPipelineLayout);
@@ -167,20 +173,50 @@ void CSoftwareRayTracer::CreateDescriptorSets()
     GetDevice()->GetBindlessManager().BindUniformBuffer(m_pSceneSettingsBuffer->GetBuffer(), m_pSceneSettingsBuffer->GetSize(), 16);
     GetDevice()->GetBindlessManager().BindStorageBuffer(m_pTlasBuffer->GetBuffer(), m_pTlasBuffer->GetSize(), 17);
 
-    // Debug Pass
+    // Debug Pass: mesh transform data
     m_pDebugDescriptorSet0 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
     assert(m_pDebugDescriptorSet0 != nullptr);
-    m_pDebugDescriptorSet0->SetDebugName("DebugPass DescriptorSet0");
+    m_pDebugDescriptorSet0->SetDebugName("DebugPass Mesh DescriptorSet0");
 
     m_pDebugDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
-    m_pDebugDescriptorSet0->BindStorageBuffer(m_pAABBInstanceBuffer->GetBuffer(), 1);
+    m_pDebugDescriptorSet0->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 1);
     
     m_pDebugDescriptorSet1 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
     assert(m_pDebugDescriptorSet1 != nullptr);
-    m_pDebugDescriptorSet1->SetDebugName("DebugPass DescriptorSet1");
+    m_pDebugDescriptorSet1->SetDebugName("DebugPass Mesh DescriptorSet1");
 
     m_pDebugDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
-    m_pDebugDescriptorSet1->BindStorageBuffer(m_pAABBInstanceBuffer->GetBuffer(), 1);
+    m_pDebugDescriptorSet1->BindStorageBuffer(m_pMeshBuffer->GetBuffer(), 1);
+
+    // Debug Pass: BLAS AABB matrices
+    m_pDebugAABBDescriptorSet0 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
+    assert(m_pDebugAABBDescriptorSet0 != nullptr);
+    m_pDebugAABBDescriptorSet0->SetDebugName("DebugPass BLAS AABB DescriptorSet0");
+
+    m_pDebugAABBDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
+    m_pDebugAABBDescriptorSet0->BindStorageBuffer(m_pAABBInstanceBuffer->GetBuffer(), 1);
+
+    m_pDebugAABBDescriptorSet1 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
+    assert(m_pDebugAABBDescriptorSet1 != nullptr);
+    m_pDebugAABBDescriptorSet1->SetDebugName("DebugPass BLAS AABB DescriptorSet1");
+
+    m_pDebugAABBDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
+    m_pDebugAABBDescriptorSet1->BindStorageBuffer(m_pAABBInstanceBuffer->GetBuffer(), 1);
+
+    // Debug Pass: TLAS AABB matrices
+    m_pDebugTLASAABBDescriptorSet0 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
+    assert(m_pDebugTLASAABBDescriptorSet0 != nullptr);
+    m_pDebugTLASAABBDescriptorSet0->SetDebugName("DebugPass TLAS AABB DescriptorSet0");
+
+    m_pDebugTLASAABBDescriptorSet0->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
+    m_pDebugTLASAABBDescriptorSet0->BindStorageBuffer(m_pTLASAABBInstanceBuffer->GetBuffer(), 1);
+
+    m_pDebugTLASAABBDescriptorSet1 = CDescriptorSet::Create(GetDevice(), GetDescriptorPool(), m_pDebugDescriptorSetLayout);
+    assert(m_pDebugTLASAABBDescriptorSet1 != nullptr);
+    m_pDebugTLASAABBDescriptorSet1->SetDebugName("DebugPass TLAS AABB DescriptorSet1");
+
+    m_pDebugTLASAABBDescriptorSet1->BindUniformBuffer(m_pCameraBuffer->GetBuffer(), 0);
+    m_pDebugTLASAABBDescriptorSet1->BindStorageBuffer(m_pTLASAABBInstanceBuffer->GetBuffer(), 1);
 }
 
 void CSoftwareRayTracer::ReleaseDescriptorSets()
@@ -191,6 +227,10 @@ void CSoftwareRayTracer::ReleaseDescriptorSets()
     SAFE_DELETE(m_pRayTracingDescriptorSet1);
     SAFE_DELETE(m_pDebugDescriptorSet0);
     SAFE_DELETE(m_pDebugDescriptorSet1);
+    SAFE_DELETE(m_pDebugAABBDescriptorSet0);
+    SAFE_DELETE(m_pDebugAABBDescriptorSet1);
+    SAFE_DELETE(m_pDebugTLASAABBDescriptorSet0);
+    SAFE_DELETE(m_pDebugTLASAABBDescriptorSet1);
 }
 
 void CSoftwareRayTracer::RenderUI()
@@ -559,8 +599,9 @@ void CSoftwareRayTracer::Render(CCommandBuffer* pCommandBuffer)
         pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
         pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 
-        // Tonemapping
-        PerformTonemapping(pCommandBuffer);
+        // Tonemap only the final render mode; debug data views should remain un-tonemapped.
+        const bool bEnableTonemapping = (m_pScene->m_Settings.ViewMode == ESoftwareViewMode::Render);
+        PerformTonemapping(pCommandBuffer, bEnableTonemapping);
 
         // Scene textures are assumed to be in GENERAL when CBaseRenderer::Render is called so let's put it back into the correct format
         pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -697,6 +738,15 @@ void CSoftwareRayTracer::CreateGlobalBuffers()
     m_pAABBInstanceBuffer = CBuffer::Create(GetDevice(), AABBInstanceBufferParams, GetDeviceAllocator());
     assert(m_pAABBInstanceBuffer != nullptr);
     m_pAABBInstanceBuffer->SetDebugName("Debug AABB Instance Buffer");
+
+    SBufferParams TLASAABBInstanceBufferParams;
+    TLASAABBInstanceBufferParams.Size             = sizeof(glm::mat4) * MAX_TLAS_NODES;
+    TLASAABBInstanceBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+    TLASAABBInstanceBufferParams.Usage            = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    m_pTLASAABBInstanceBuffer = CBuffer::Create(GetDevice(), TLASAABBInstanceBufferParams, GetDeviceAllocator());
+    assert(m_pTLASAABBInstanceBuffer != nullptr);
+    m_pTLASAABBInstanceBuffer->SetDebugName("Debug TLAS AABB Instance Buffer");
 }
 
 void CSoftwareRayTracer::CreateRayTracingResources()
@@ -953,6 +1003,17 @@ void CSoftwareRayTracer::UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer)
         pCommandBuffer->CopyBuffer(m_pScene->m_pAABBInstanceBuffer->GetBuffer(), m_pAABBInstanceBuffer->GetBuffer(), 1, &BufferCopy);
     }
 
+    if (m_pScene->m_bUpdateBuffers && m_pScene->m_pTLASAABBInstanceBuffer)
+    {
+        VkBufferCopy BufferCopy;
+        BufferCopy.size      = m_pScene->m_pTLASAABBInstanceBuffer->GetSize();
+        BufferCopy.dstOffset = 0;
+        BufferCopy.srcOffset = 0;
+
+        assert(m_pTLASAABBInstanceBuffer->GetSize() >= m_pScene->m_pTLASAABBInstanceBuffer->GetSize());
+        pCommandBuffer->CopyBuffer(m_pScene->m_pTLASAABBInstanceBuffer->GetBuffer(), m_pTLASAABBInstanceBuffer->GetBuffer(), 1, &BufferCopy);
+    }
+
     // Do not update next frame
     m_pScene->m_bUpdateBuffers = false;
 
@@ -985,8 +1046,8 @@ void CSoftwareRayTracer::UpdateGlobalBuffers(CCommandBuffer* pCommandBuffer)
         pCommandBuffer->UpdateBuffer(m_pMaterialBuffer, 0, sizeof(SMaterialHLSL) * m_pScene->m_GpuMaterials.size(), m_pScene->m_GpuMaterials.data());
     }
 
-    // Barrier before reading the buffer from the shader
-    AddTransferToShaderReadBarrier(pCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    // Barrier before reading the buffer from compute/vertex shaders.
+    AddTransferToShaderReadBarrier(pCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
 }
 
 void CSoftwareRayTracer::PerformRayTracing(CCommandBuffer* pCommandBuffer)
@@ -1073,7 +1134,28 @@ void CSoftwareRayTracer::PerformDebugPass(CCommandBuffer* pCommandBuffer)
 
     VkRect2D scissor = { { 0, 0}, { GetViewportWidth(), GetViewportHeight() } };
     pCommandBuffer->SetScissorRect(scissor);
-    
+
+    const uint64_t Frame = GetFrameIndex() % 2;
+    CDescriptorSet* pMeshDescriptorSet      = (Frame == 0) ? m_pDebugDescriptorSet0 : m_pDebugDescriptorSet1;
+    CDescriptorSet* pBLASAABBDescriptorSet  = (Frame == 0) ? m_pDebugAABBDescriptorSet0 : m_pDebugAABBDescriptorSet1;
+    CDescriptorSet* pTLASAABBDescriptorSet  = (Frame == 0) ? m_pDebugTLASAABBDescriptorSet0 : m_pDebugTLASAABBDescriptorSet1;
+    assert(pMeshDescriptorSet != nullptr);
+    assert(pBLASAABBDescriptorSet != nullptr);
+    assert(pTLASAABBDescriptorSet != nullptr);
+
+    const auto FindBLASInfoForMesh = [&](uint32_t RootBoundingBoxIndex) -> const SBvhAccelerationStructure::SBLASInfo*
+    {
+        for (const SBvhAccelerationStructure::SBLASInfo& BLASInfo : m_pScene->m_AccelerationStructure.m_BLAS)
+        {
+            if (BLASInfo.RootBoundingBoxIndex == RootBoundingBoxIndex)
+            {
+                return &BLASInfo;
+            }
+        }
+
+        return nullptr;
+    };
+
     // Draw Mesh
     {
         pCommandBuffer->BindGraphicsPipelineState(m_pDebugPipeline);
@@ -1081,24 +1163,25 @@ void CSoftwareRayTracer::PerformDebugPass(CCommandBuffer* pCommandBuffer)
         const glm::vec4 Color = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
         pCommandBuffer->PushConstants(m_pDebugPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::vec4), glm::value_ptr(Color));
 
-        // Bind DescriptorSets
-        const uint64_t Frame = GetFrameIndex() % 2;
-        if (Frame == 0)
-        {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0, 0);
-        }
-        else
-        {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1, 0);
-        }
+        pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, pMeshDescriptorSet, 0);
 
         // Set Vertex- and IndexBuffer
         pCommandBuffer->BindVertexBuffer(m_pScene->m_pVertexPositionsBuffer, 0, 0);
         pCommandBuffer->BindIndexBuffer(m_pScene->m_pIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-        // Draw
-        const size_t IndexCount = m_pScene->m_Indicies.size();
-        pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
+        for (uint32_t MeshIndex = 0; MeshIndex < static_cast<uint32_t>(m_pScene->m_Meshes.size()); MeshIndex++)
+        {
+            const SMeshHLSL& Mesh = m_pScene->m_Meshes[MeshIndex];
+            const SBvhAccelerationStructure::SBLASInfo* pBLASInfo = FindBLASInfoForMesh(Mesh.BoundingBoxIndex);
+            if (pBLASInfo == nullptr || pBLASInfo->NumTriangles == 0)
+            {
+                continue;
+            }
+
+            const uint32_t FirstIndex = pBLASInfo->FirstTriangleIndex * 3;
+            const uint32_t IndexCount = pBLASInfo->NumTriangles * 3;
+            pCommandBuffer->DrawIndexInstanced(IndexCount, 1, FirstIndex, 0, MeshIndex);
+        }
     }
 
     // Draw wire-frame
@@ -1108,54 +1191,71 @@ void CSoftwareRayTracer::PerformDebugPass(CCommandBuffer* pCommandBuffer)
         const glm::vec4 Color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
         pCommandBuffer->PushConstants(m_pDebugPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::vec4), glm::value_ptr(Color));
 
-        // Bind DescriptorSets
-        const uint64_t Frame = GetFrameIndex() % 2;
-        if (Frame == 0)
-        {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet0, 0);
-        }
-        else
-        {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, m_pDebugDescriptorSet1, 0);
-        }
+        pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugPipelineLayout, pMeshDescriptorSet, 0);
 
         // Set Vertex- and IndexBuffer
         pCommandBuffer->BindVertexBuffer(m_pScene->m_pVertexPositionsBuffer, 0, 0);
         pCommandBuffer->BindIndexBuffer(m_pScene->m_pIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-        // Draw
-        const size_t IndexCount = m_pScene->m_Indicies.size();
-        pCommandBuffer->DrawIndexInstanced(IndexCount, 1, 0, 0, 0);
+        for (uint32_t MeshIndex = 0; MeshIndex < static_cast<uint32_t>(m_pScene->m_Meshes.size()); MeshIndex++)
+        {
+            const SMeshHLSL& Mesh = m_pScene->m_Meshes[MeshIndex];
+            const SBvhAccelerationStructure::SBLASInfo* pBLASInfo = FindBLASInfoForMesh(Mesh.BoundingBoxIndex);
+            if (pBLASInfo == nullptr || pBLASInfo->NumTriangles == 0)
+            {
+                continue;
+            }
+
+            const uint32_t FirstIndex = pBLASInfo->FirstTriangleIndex * 3;
+            const uint32_t IndexCount = pBLASInfo->NumTriangles * 3;
+            pCommandBuffer->DrawIndexInstanced(IndexCount, 1, FirstIndex, 0, MeshIndex);
+        }
     }
 
-    // Draw the bounding boxes
+    // Draw BLAS bounding boxes (green).
     {
-        pCommandBuffer->BindGraphicsPipelineState(m_pDebugAABBPipeline);
-
-        // Bind DescriptorSets
-        const uint64_t Frame = GetFrameIndex() % 2;
-        if (Frame == 0)
+        if (m_pScene->m_pAABBInstanceBuffer != nullptr)
         {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet0, 0);
+            pCommandBuffer->BindGraphicsPipelineState(m_pDebugAABBPipeline);
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, pBLASAABBDescriptorSet, 0);
+
+            pCommandBuffer->BindVertexBuffer(m_pAABBVertexBuffer, 0, 0);
+            pCommandBuffer->BindIndexBuffer(m_pAABBIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+            struct SAABBDebugData
+            {
+                glm::vec4 Color;
+            } DebugData;
+
+            DebugData.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+            pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(SAABBDebugData), &DebugData);
+
+            const uint32_t NumInstances = static_cast<uint32_t>(m_pScene->m_pAABBInstanceBuffer->GetSize() / sizeof(glm::mat4));
+            pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, NumInstances, 0, 0, 0);
         }
-        else
+    }
+
+    // Draw TLAS bounding boxes (blue).
+    {
+        if (m_pScene->m_pTLASAABBInstanceBuffer != nullptr)
         {
-            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, m_pDebugDescriptorSet1, 0);
+            pCommandBuffer->BindGraphicsPipelineState(m_pDebugAABBPipeline);
+            pCommandBuffer->BindGraphicsDescriptorSet(m_pDebugAABBPipelineLayout, pTLASAABBDescriptorSet, 0);
+
+            pCommandBuffer->BindVertexBuffer(m_pAABBVertexBuffer, 0, 0);
+            pCommandBuffer->BindIndexBuffer(m_pAABBIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+            struct SAABBDebugData
+            {
+                glm::vec4 Color;
+            } DebugData;
+
+            DebugData.Color = glm::vec4(0.1f, 0.3f, 1.0f, 1.0f);
+            pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(SAABBDebugData), &DebugData);
+
+            const uint32_t NumInstances = static_cast<uint32_t>(m_pScene->m_pTLASAABBInstanceBuffer->GetSize() / sizeof(glm::mat4));
+            pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, NumInstances, 0, 0, 0);
         }
-
-        pCommandBuffer->BindVertexBuffer(m_pAABBVertexBuffer, 0, 0);
-        pCommandBuffer->BindIndexBuffer(m_pAABBIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-        struct SAABBDebugData
-        {
-            glm::vec4 Color;
-        } DebugData;
-
-        DebugData.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
-        pCommandBuffer->PushConstants(m_pDebugAABBPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(SAABBDebugData), &DebugData);
-
-        const uint32_t NumInstances = static_cast<uint32_t>(m_pScene->m_AccelerationStructure.m_BoundingBoxes.size());
-        pCommandBuffer->DrawIndexInstanced(m_AABBIndexCount, NumInstances, 0, 0, 0);
     }
 
     pCommandBuffer->EndRendering();

@@ -1,14 +1,41 @@
 #ifndef TRACE_COMMON_HLSLI
 #define TRACE_COMMON_HLSLI
 
+float3 SafeNormalize(float3 Value, float3 Fallback)
+{
+    if (any(isnan(Value)) || any(isinf(Value)))
+    {
+        return Fallback;
+    }
+
+    const float LengthSq = dot(Value, Value);
+    if (LengthSq < 1e-8)
+    {
+        return Fallback;
+    }
+
+    return Value * rsqrt(LengthSq);
+}
+
+float3 EncodeDirectionForView(float3 Value)
+{
+    // Keep debug vectors in signed space [-1, 1] to preserve direction.
+    return SafeNormalize(Value, float3(0.0, 0.0, 1.0));
+}
+
 float3 EncodeNormal(float3 Value)
 {
-    return Value;
+    return EncodeDirectionForView(Value);
 }
 
 float3 EncodeGeometricNormal(float3 Value)
 {
-    return Value;
+    return EncodeDirectionForView(Value);
+}
+
+float3 EncodeTangent(float3 Value)
+{
+    return EncodeDirectionForView(Value);
 }
 
 float3 CalculateFilmTarget(float3 CameraPosition, float3 CameraForward, float FieldOfViewDegrees, float2 PixelCoord, float2 Size, float2 Jitter)
@@ -115,7 +142,13 @@ float3 GetColorForRay(SRayDesc RayInput, inout uint RandomSeed, uint NumBounces)
             break;
         }
 
-        const uint MaterialIndex = min(Hit.MaterialIndex, BackendGetNumMaterials() - 1);
+        const uint NumMaterials = BackendGetNumMaterials();
+        if (NumMaterials == 0)
+        {
+            break;
+        }
+
+        const uint MaterialIndex = min(Hit.MaterialIndex, NumMaterials - 1);
         const SMaterial Material = BackendGetMaterial(MaterialIndex);
 
         SShadingInput ShadingInput;
@@ -153,7 +186,13 @@ float3 GetNormalForRay(SRayDesc RayInput)
         return float3(0.0, 0.0, 0.0);
     }
 
-    const uint MaterialIndex = min(Hit.MaterialIndex, BackendGetNumMaterials() - 1);
+    const uint NumMaterials = BackendGetNumMaterials();
+    if (NumMaterials == 0)
+    {
+        return float3(0.0, 0.0, 0.0);
+    }
+
+    const uint MaterialIndex = min(Hit.MaterialIndex, NumMaterials - 1);
     const SMaterial Material = BackendGetMaterial(MaterialIndex);
 
     SShadingInput ShadingInput;
@@ -178,7 +217,7 @@ float3 GetGeometricNormalForRay(SRayDesc RayInput)
         return float3(0.0, 0.0, 0.0);
     }
 
-    return EncodeGeometricNormal(normalize(Hit.Normal));
+    return EncodeGeometricNormal(SafeNormalize(Hit.Normal, float3(0.0, 0.0, 1.0)));
 }
 
 float3 GetTangentForRay(SRayDesc RayInput)
@@ -191,7 +230,7 @@ float3 GetTangentForRay(SRayDesc RayInput)
         return float3(0.0, 0.0, 0.0);
     }
 
-    return Hit.Tangent;
+    return EncodeTangent(Hit.Tangent);
 }
 
 float3 GetBarycentricsForRay(SRayDesc RayInput)
@@ -204,7 +243,12 @@ float3 GetBarycentricsForRay(SRayDesc RayInput)
         return float3(0.0, 0.0, 0.0);
     }
 
-    return Hit.Barycentrics;
+    if (any(isnan(Hit.Barycentrics)) || any(isinf(Hit.Barycentrics)))
+    {
+        return float3(0.0, 0.0, 0.0);
+    }
+
+    return saturate(Hit.Barycentrics);
 }
 
 float3 GetTexCoordsForRay(SRayDesc RayInput)
@@ -217,7 +261,12 @@ float3 GetTexCoordsForRay(SRayDesc RayInput)
         return float3(0.0, 0.0, 0.0);
     }
 
-    return float3(Hit.TexCoords, 0.0);
+    if (any(isnan(Hit.TexCoords)) || any(isinf(Hit.TexCoords)))
+    {
+        return float3(0.0, 0.0, 0.0);
+    }
+
+    return float3(frac(Hit.TexCoords), 0.0);
 }
 
 float3 GetAlbedoForRay(SRayDesc RayInput)
@@ -230,9 +279,15 @@ float3 GetAlbedoForRay(SRayDesc RayInput)
         return float3(0.0, 0.0, 0.0);
     }
 
-    const uint MaterialIndex = min(Hit.MaterialIndex, BackendGetNumMaterials() - 1);
+    const uint NumMaterials = BackendGetNumMaterials();
+    if (NumMaterials == 0)
+    {
+        return float3(0.0, 0.0, 0.0);
+    }
+
+    const uint MaterialIndex = min(Hit.MaterialIndex, NumMaterials - 1);
     const SMaterial Material = BackendGetMaterial(MaterialIndex);
-    return GetMaterialAlbedo(Material, Hit.TexCoords);
+    return saturate(GetMaterialAlbedo(Material, Hit.TexCoords));
 }
 
 #if ENABLE_SOFTWARE_TRACING

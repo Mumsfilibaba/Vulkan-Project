@@ -23,6 +23,45 @@ static glm::mat4 BuildModelTransform(const glm::vec3& Position, const glm::vec3&
     return TransformMatrix;
 }
 
+static SAABB TransformBoundingBoxToWorld(const SBoundingBoxHLSL& BoundingBox, const glm::mat4& LocalToWorld)
+{
+    const glm::vec3 BoxMin = BoundingBox.BoxMin;
+    const glm::vec3 BoxMax = BoundingBox.BoxMax;
+    const glm::vec3 Corners[8] =
+    {
+        glm::vec3(BoxMin.x, BoxMin.y, BoxMin.z),
+        glm::vec3(BoxMin.x, BoxMin.y, BoxMax.z),
+        glm::vec3(BoxMin.x, BoxMax.y, BoxMin.z),
+        glm::vec3(BoxMin.x, BoxMax.y, BoxMax.z),
+        glm::vec3(BoxMax.x, BoxMin.y, BoxMin.z),
+        glm::vec3(BoxMax.x, BoxMin.y, BoxMax.z),
+        glm::vec3(BoxMax.x, BoxMax.y, BoxMin.z),
+        glm::vec3(BoxMax.x, BoxMax.y, BoxMax.z),
+    };
+
+    SAABB WorldAABB;
+    for (const glm::vec3& Corner : Corners)
+    {
+        const glm::vec4 WorldPos = LocalToWorld * glm::vec4(Corner, 1.0f);
+        WorldAABB.FitAroundPoint(glm::vec3(WorldPos));
+    }
+
+    return WorldAABB;
+}
+
+static glm::mat4 BuildAABBMatrix(const glm::vec3& BoxMin, const glm::vec3& BoxMax)
+{
+    glm::vec3 Scale = BoxMax - BoxMin;
+    Scale = glm::max(Scale, glm::vec3(1e-5f));
+
+    const glm::vec3 Position = BoxMin + (Scale * 0.5f);
+
+    glm::mat4 TransformMatrix = glm::identity<glm::mat4>();
+    TransformMatrix = glm::translate(TransformMatrix, Position);
+    TransformMatrix = glm::scale(TransformMatrix, Scale);
+    return TransformMatrix;
+}
+
 SSoftwareScene::SSoftwareScene()
     : m_Quads()
     , m_Spheres()
@@ -36,6 +75,7 @@ SSoftwareScene::SSoftwareScene()
     , m_pTLASBoundingBoxBuffer(nullptr)
     , m_pMaterialSampler(nullptr)
     , m_pAABBInstanceBuffer(nullptr)
+    , m_pTLASAABBInstanceBuffer(nullptr)
 {
     m_Settings.ViewMode              = ESoftwareViewMode::Render;
     m_Settings.Exposure              = 0.5f;
@@ -95,6 +135,7 @@ SSoftwareScene::~SSoftwareScene()
     SAFE_DELETE(m_pIndexBuffer);
     SAFE_DELETE(m_pMaterialSampler);
     SAFE_DELETE(m_pAABBInstanceBuffer);
+    SAFE_DELETE(m_pTLASAABBInstanceBuffer);
     SAFE_DELETE(m_pTLASBoundingBoxBuffer);
 }
 
@@ -279,33 +320,77 @@ void SModelScene::Initialize()
     assert(m_pIndexBuffer != nullptr);
     m_pIndexBuffer->SetDebugName("CPU Index Buffer");
 
-    // Create a matrix for each AABB
+    // Create world-space BLAS AABB matrices (one set per mesh instance).
     std::vector<glm::mat4> AABBMatrices;
-    AABBMatrices.reserve(m_AccelerationStructure.m_BoundingBoxes.size());
-
-    for (size_t i = 0; i < m_AccelerationStructure.m_BoundingBoxes.size(); i++)
+    const size_t EstimatedAABBCount = m_AccelerationStructure.m_BoundingBoxes.size() * (m_Meshes.empty() ? 1 : m_Meshes.size());
+    AABBMatrices.reserve(EstimatedAABBCount);
+    for (const SMeshHLSL& Mesh : m_Meshes)
     {
-        const SBoundingBoxHLSL& BoundingBox = m_AccelerationStructure.m_BoundingBoxes[i];
-        if (BoundingBox.NumTriangles > 0)
+        const SBvhAccelerationStructure::SBLASInfo* pBLASInfo = nullptr;
+        for (const SBvhAccelerationStructure::SBLASInfo& BLASInfo : m_AccelerationStructure.m_BLAS)
         {
-            glm::vec3 Scale    = glm::vec3(BoundingBox.BoxMax) - glm::vec3(BoundingBox.BoxMin);
-            glm::vec3 Position = glm::vec3(BoundingBox.BoxMin) + (Scale * 0.5f);
+            if (BLASInfo.RootBoundingBoxIndex == Mesh.BoundingBoxIndex)
+            {
+                pBLASInfo = &BLASInfo;
+                break;
+            }
+        }
 
-            glm::mat4 TransformMatrix = glm::identity<glm::mat4>();
-            TransformMatrix = glm::translate(TransformMatrix, Position);
-            TransformMatrix = glm::scale(TransformMatrix, Scale);
-            AABBMatrices.push_back(TransformMatrix);
+        if (pBLASInfo == nullptr)
+        {
+            continue;
+        }
+
+        const uint32_t FirstBox = pBLASInfo->FirstBoundingBoxIndex;
+        const uint32_t LastBox  = FirstBox + pBLASInfo->NumBoundingBoxes;
+        for (uint32_t BoxIndex = FirstBox; BoxIndex < LastBox; BoxIndex++)
+        {
+            const SBoundingBoxHLSL& BoundingBox = m_AccelerationStructure.m_BoundingBoxes[BoxIndex];
+            if (BoundingBox.NumTriangles == 0)
+            {
+                continue;
+            }
+
+            const SAABB WorldAABB = TransformBoundingBoxToWorld(BoundingBox, Mesh.LocalToWorld);
+            AABBMatrices.push_back(BuildAABBMatrix(WorldAABB.Min, WorldAABB.Max));
         }
     }
 
-    SBufferParams AABBInstanceBufferParams;
-    AABBInstanceBufferParams.Size             = sizeof(glm::mat4) * AABBMatrices.size();
-    AABBInstanceBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
-    AABBInstanceBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    if (!AABBMatrices.empty())
+    {
+        assert(AABBMatrices.size() <= MAX_BVH_NODES);
 
-    m_pAABBInstanceBuffer = CBuffer::CreateWithData(pDevice, AABBInstanceBufferParams, nullptr, AABBMatrices.data());
-    assert(m_pAABBInstanceBuffer != nullptr);
-    m_pAABBInstanceBuffer->SetDebugName("CPU Debug AABB Instance Buffer");
+        SBufferParams AABBInstanceBufferParams;
+        AABBInstanceBufferParams.Size             = sizeof(glm::mat4) * AABBMatrices.size();
+        AABBInstanceBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+        AABBInstanceBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+        m_pAABBInstanceBuffer = CBuffer::CreateWithData(pDevice, AABBInstanceBufferParams, nullptr, AABBMatrices.data());
+        assert(m_pAABBInstanceBuffer != nullptr);
+        m_pAABBInstanceBuffer->SetDebugName("CPU Debug BLAS AABB Instance Buffer");
+    }
+
+    // Create world-space TLAS AABB matrices (all TLAS nodes).
+    std::vector<glm::mat4> TLASAABBMatrices;
+    TLASAABBMatrices.reserve(m_TLASBoundingBoxes.size());
+    for (const SBoundingBoxHLSL& TLASBoundingBox : m_TLASBoundingBoxes)
+    {
+        TLASAABBMatrices.push_back(BuildAABBMatrix(TLASBoundingBox.BoxMin, TLASBoundingBox.BoxMax));
+    }
+
+    if (!TLASAABBMatrices.empty())
+    {
+        assert(TLASAABBMatrices.size() <= MAX_TLAS_NODES);
+
+        SBufferParams TLASAABBInstanceBufferParams;
+        TLASAABBInstanceBufferParams.Size             = sizeof(glm::mat4) * TLASAABBMatrices.size();
+        TLASAABBInstanceBufferParams.MemoryProperties = VK_GPU_BUFFER_USAGE;
+        TLASAABBInstanceBufferParams.Usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+        m_pTLASAABBInstanceBuffer = CBuffer::CreateWithData(pDevice, TLASAABBInstanceBufferParams, nullptr, TLASAABBMatrices.data());
+        assert(m_pTLASAABBInstanceBuffer != nullptr);
+        m_pTLASAABBInstanceBuffer->SetDebugName("CPU Debug TLAS AABB Instance Buffer");
+    }
 
     // Create Sampler for materials
     SSamplerParams SamplerParams = {};

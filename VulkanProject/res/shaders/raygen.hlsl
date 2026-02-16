@@ -53,7 +53,11 @@ void main()
     uint3 LaunchSize = DispatchRaysDimensions();
     uint  RandomSeed = InitRandom(LaunchId.xy, LaunchSize.x, Random.FrameIndex);
 
-    float2 Jitter      = float2(NextRandom(RandomSeed), NextRandom(RandomSeed)) - 0.5;
+    float2 Jitter = float2(0.0, 0.0);
+    if (Scene.Settings.ViewMode == VIEW_MODE_RENDER)
+    {
+        Jitter = float2(NextRandom(RandomSeed), NextRandom(RandomSeed)) - 0.5;
+    }
     float2 PixelCenter = float2(LaunchId.xy) + float2(0.5, 0.5);
 
     float3 Origin    = Camera.Position.xyz;

@@ -14,9 +14,9 @@ SamplerState SceneTextureSampler : register(s0, space0);
 struct SSettingsBuffer
 {
     float Exposure;
+    uint EnableTonemapping;
     uint Padding0;
     uint Padding1;
-    uint Padding2;
 };
 
 [[vk::binding(1, 0)]]
@@ -54,9 +54,13 @@ float3 LinearToSrgb(float3 LinearColor)
 float4 main(PSInput InputData) : SV_Target0
 {
     float3 Color = SceneTexture.SampleLevel(SceneTextureSampler, InputData.InFragCoord, 0.0).rgb;
-    Color *= SettingsBuffer.Exposure;
-    Color = AcesFilm(Color);
-    Color = LinearToSrgb(Color);
+    if (SettingsBuffer.EnableTonemapping != 0)
+    {
+        Color *= SettingsBuffer.Exposure;
+        Color = AcesFilm(Color);
+        Color = LinearToSrgb(Color);
+    }
+
     return float4(Color, 1.0);
 }
 

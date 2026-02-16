@@ -9,9 +9,15 @@ bool BackendTraceRay(SRayDesc RayInput, out STraceHit Hit, inout int2 Stats)
     Ray.InvDirection = 1.0 / Ray.Direction;
 
     SRayPayload Payload;
+    Payload.Normal      = float3(0.0, 0.0, 0.0);
+    Payload.Tangent     = float3(0.0, 0.0, 0.0);
+    Payload.Position    = float3(0.0, 0.0, 0.0);
+    Payload.Barycentrics = float3(0.0, 0.0, 0.0);
+    Payload.TexCoords   = float2(0.0, 0.0);
     Payload.MinT        = RayInput.MinT;
     Payload.MaxT        = RayInput.MaxT;
     Payload.T           = Payload.MaxT;
+    Payload.MaterialIndex = 0xFFFFFFFFu;
     Payload.FrontFace  = 0;
     Payload.FromInside = 0;
 

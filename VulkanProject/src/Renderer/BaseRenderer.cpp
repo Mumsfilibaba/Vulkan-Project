@@ -766,11 +766,12 @@ void CBaseRenderer::CreateTonemappingResources()
     delete pFragment;
 }
 
-void CBaseRenderer::PerformTonemapping(CCommandBuffer* pCommandBuffer)
+void CBaseRenderer::PerformTonemapping(CCommandBuffer* pCommandBuffer, bool bEnableTonemapping)
 {
     // Update Tonemap Settings
     STonemappingBuffer TonemappingBuffer = {};
-    TonemappingBuffer.Exposure = GetScene()->GetExposure();
+    TonemappingBuffer.Exposure          = GetScene()->GetExposure();
+    TonemappingBuffer.EnableTonemapping = bEnableTonemapping ? 1u : 0u;
     pCommandBuffer->UpdateBuffer(m_pTonemappingBuffer, 0, sizeof(STonemappingBuffer), &TonemappingBuffer);
 
     pCommandBuffer->TransitionImage(m_pOutputTexture->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);

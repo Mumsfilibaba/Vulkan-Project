@@ -97,7 +97,7 @@ void HitQuad(SQuad Quad, SRay Ray, inout SRayPayload Payload)
     float3 V      = Quad.Edge1.xyz;
     float3 N      = cross(U, V);
     float3 W      = N / dot(N, N);
-    float3 Normal = normalize(N);
+    float3 Normal = SafeNormalize(N, float3(0.0, 1.0, 0.0));
     float  D      = dot(Normal, Q);
     float  DDotN  = dot(Ray.Direction, Normal);
 
@@ -134,6 +134,9 @@ void HitQuad(SQuad Quad, SRay Ray, inout SRayPayload Payload)
             Payload.FrontFace    = 1;
             Payload.FromInside   = 0;
             Payload.Position      = Ray.Origin + Ray.Direction * Payload.T;
+            Payload.Barycentrics  = float3(Alpha, Beta, saturate(1.0 - Alpha - Beta));
+            Payload.TexCoords     = float2(Alpha, Beta);
+            Payload.Tangent       = SafeNormalize(U, float3(1.0, 0.0, 0.0));
 
             if (DDotN >= 0.0)
             {
@@ -186,7 +189,17 @@ void HitSphere(SSphere Sphere, SRay Ray, inout SRayPayload Payload)
         Payload.Position      = Ray.Origin + Ray.Direction * Payload.T;
         Payload.FromInside   = FromInside;
         Payload.FrontFace    = 1 - FromInside;
-        Payload.Normal        = normalize((Payload.Position - SpherePos) / SphereRadius) * (FromInside ? -1.0 : 1.0);
+
+        const float3 SphereNormal = SafeNormalize((Payload.Position - SpherePos) / SphereRadius, float3(0.0, 1.0, 0.0));
+        Payload.Normal = SphereNormal * (FromInside ? -1.0 : 1.0);
+
+        const float3 UpVector = (abs(Payload.Normal.y) > 0.999) ? float3(1.0, 0.0, 0.0) : float3(0.0, 1.0, 0.0);
+        Payload.Tangent = SafeNormalize(cross(UpVector, Payload.Normal), float3(1.0, 0.0, 0.0));
+
+        const float SphereU = 0.5 + atan2(SphereNormal.z, SphereNormal.x) / (2.0 * PI);
+        const float SphereV = 0.5 - asin(clamp(SphereNormal.y, -1.0, 1.0)) / PI;
+        Payload.TexCoords = float2(SphereU, SphereV);
+        Payload.Barycentrics = float3(0.0, 0.0, 0.0);
     }
 }
 
@@ -269,7 +282,17 @@ void HitMesh(SMesh Mesh, SRay Ray, inout SRayPayload Payload, inout int2 Stats)
                 if (HitInfo.Dist > LocalPayload.MinT && HitInfo.Dist < LocalPayload.MaxT && HitInfo.Dist < LocalPayload.T)
                 {
                     STriangle Triangle = Triangles[TriangleIndex];
-                    uint MaterialIndex = min((uint)Triangle.MaterialIndex, Scene.NumMaterials - 1);
+                    if (Scene.NumMaterials == 0)
+                    {
+                        continue;
+                    }
+
+                    uint MaterialIndex = 0;
+                    if (Triangle.MaterialIndex >= 0)
+                    {
+                        MaterialIndex = min((uint)Triangle.MaterialIndex, Scene.NumMaterials - 1);
+                    }
+
                     SMaterial Material = Materials[MaterialIndex];
 
                     if (Material.AlphaMaskTexIndex != INVALID_BINDLESS_ID)
@@ -278,8 +301,11 @@ void HitMesh(SMesh Mesh, SRay Ray, inout SRayPayload Payload, inout int2 Stats)
                         float2 TexCoords1 = Vertices[VertexIndices.y].TexCoord.xy;
                         float2 TexCoords2 = Vertices[VertexIndices.z].TexCoord.xy;
 
-                        float3 Barycentrics = float3(HitInfo.Barycentrics, 1.0 - (HitInfo.Barycentrics.x + HitInfo.Barycentrics.y));
-                        float2 TexCoords    = (Barycentrics.x * TexCoords1) + (Barycentrics.y * TexCoords2) + (Barycentrics.z * TexCoords0);
+                        const float3 Barycentrics = float3(
+                            1.0 - (HitInfo.Barycentrics.x + HitInfo.Barycentrics.y),
+                            HitInfo.Barycentrics.x,
+                            HitInfo.Barycentrics.y);
+                        float2 TexCoords = (Barycentrics.x * TexCoords0) + (Barycentrics.y * TexCoords1) + (Barycentrics.z * TexCoords2);
                         
                         float Alpha = Textures[Material.AlphaMaskTexIndex].SampleLevel(TexturesSampler, TexCoords, 0.0).r;
                         if (Alpha < 0.9)
@@ -347,15 +373,25 @@ void HitMesh(SMesh Mesh, SRay Ray, inout SRayPayload Payload, inout int2 Stats)
         float3 Tangent2   = Vertices[VertexIndices.z].Tangent.xyz;
 
         STriangle Triangle = Triangles[LastTriangleHitIndex];
-        Payload.Barycentrics  = float3(LastHitInfo.Barycentrics, 1.0 - (LastHitInfo.Barycentrics.x + LastHitInfo.Barycentrics.y));
+        Payload.Barycentrics = float3(
+            1.0 - (LastHitInfo.Barycentrics.x + LastHitInfo.Barycentrics.y),
+            LastHitInfo.Barycentrics.x,
+            LastHitInfo.Barycentrics.y);
 
-        float3 LocalNormal  = normalize((Payload.Barycentrics.x * Normal1) + (Payload.Barycentrics.y * Normal2) + (Payload.Barycentrics.z * Normal0));
-        float3 LocalTangent = normalize((Payload.Barycentrics.x * Tangent1) + (Payload.Barycentrics.y * Tangent2) + (Payload.Barycentrics.z * Tangent0));
+        float3 LocalNormal  = SafeNormalize((Payload.Barycentrics.x * Normal0) + (Payload.Barycentrics.y * Normal1) + (Payload.Barycentrics.z * Normal2), float3(0.0, 1.0, 0.0));
+        float3 LocalTangent = SafeNormalize((Payload.Barycentrics.x * Tangent0) + (Payload.Barycentrics.y * Tangent1) + (Payload.Barycentrics.z * Tangent2), float3(1.0, 0.0, 0.0));
 
-        Payload.Normal        = normalize(mul(transpose((float3x3)Mesh.WorldToLocal), LocalNormal));
-        Payload.Tangent       = normalize(mul((float3x3)Mesh.LocalToWorld, LocalTangent));
-        Payload.TexCoords     = (Payload.Barycentrics.x * TexCoords1) + (Payload.Barycentrics.y * TexCoords2) + (Payload.Barycentrics.z * TexCoords0);
-        Payload.MaterialIndex = Triangle.MaterialIndex;
+        Payload.Normal        = SafeNormalize(mul(transpose((float3x3)Mesh.WorldToLocal), LocalNormal), LocalNormal);
+        Payload.Tangent       = SafeNormalize(mul((float3x3)Mesh.LocalToWorld, LocalTangent), LocalTangent);
+        Payload.TexCoords     = (Payload.Barycentrics.x * TexCoords0) + (Payload.Barycentrics.y * TexCoords1) + (Payload.Barycentrics.z * TexCoords2);
+        if (Scene.NumMaterials > 0)
+        {
+            Payload.MaterialIndex = (Triangle.MaterialIndex >= 0) ? min((uint)Triangle.MaterialIndex, Scene.NumMaterials - 1) : 0;
+        }
+        else
+        {
+            Payload.MaterialIndex = 0;
+        }
         Payload.T             = LocalPayload.T;
         Payload.Position      = Ray.Origin + Payload.T * Ray.Direction;
         Payload.FromInside   = false;
@@ -504,7 +540,11 @@ void main(uint3 DispatchThreadId : SV_DispatchThreadID)
 
     uint RandomSeed = InitRandom(DispatchThreadId.xy, (uint)ActualSize.x, Random.FrameIndex);
 
-    float2 Jitter = float2(NextRandom(RandomSeed), NextRandom(RandomSeed)) - 0.5;
+    float2 Jitter = float2(0.0, 0.0);
+    if (Scene.ViewMode == VIEW_MODE_RENDER)
+    {
+        Jitter = float2(NextRandom(RandomSeed), NextRandom(RandomSeed)) - 0.5;
+    }
 
     const float3 CameraPosition = Camera.Position.xyz;
     const float3 FilmTarget     = CalculateFilmTarget(Camera.Position.xyz, Camera.Forward.xyz, Camera.FieldOfViewDegrees, float2(Pixel), float2(ActualSize.xy), Jitter);

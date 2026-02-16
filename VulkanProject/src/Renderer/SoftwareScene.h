@@ -113,6 +113,7 @@ struct SSoftwareScene : public IScene
     CSampler* m_pMaterialSampler;
     // Debugging
     CBuffer*  m_pAABBInstanceBuffer;
+    CBuffer*  m_pTLASAABBInstanceBuffer;
 };
 
 enum class EModelSceneType

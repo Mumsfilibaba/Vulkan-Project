@@ -17,13 +17,13 @@ class CDescriptorSetLayout;
 
 struct STonemappingBuffer
 {
-    // 0-4
+    // 0-8
     float Exposure = 0.5f;
+    uint32_t EnableTonemapping = 1;
 
     // Padding
     uint32_t Padding0 = 0;
     uint32_t Padding1 = 0;
-    uint32_t Padding2 = 0;
 };
 
 struct SRandomBuffer
@@ -72,7 +72,7 @@ public:
     virtual void CreateGlobalBuffers();
 
     void CreateTonemappingResources();
-    void PerformTonemapping(CCommandBuffer* pCommandBuffer);
+    void PerformTonemapping(CCommandBuffer* pCommandBuffer, bool bEnableTonemapping = true);
 
     void ResetImage()
     {

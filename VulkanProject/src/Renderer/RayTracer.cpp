@@ -312,8 +312,9 @@ void CRayTracer::Render(CCommandBuffer* pCommandBuffer)
     pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
     pCommandBuffer->TransitionImage(m_pSceneTexture1->GetImage(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 
-    // Tonemapping
-    PerformTonemapping(pCommandBuffer);
+    // Tonemap only the final render mode; debug data views should remain un-tonemapped.
+    const bool bEnableTonemapping = (m_pScene->m_Settings.ViewMode == EViewMode::Render);
+    PerformTonemapping(pCommandBuffer, bEnableTonemapping);
 
     // Scene textures are assumed to be in GENERAL when CBaseRenderer::Render is called so let's put it back into the correct format
     pCommandBuffer->TransitionImage(m_pSceneTexture0->GetImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
